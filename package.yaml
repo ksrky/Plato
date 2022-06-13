@@ -10,6 +10,10 @@ extra-source-files:
   - README.md
   - ChangeLog.md
 
+build-tools:
+  - alex
+  - happy
+
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -21,6 +25,12 @@ description: Please see the README on GitHub at <https://github.com/ksrky/Plato#
 
 dependencies:
   - base >= 4.7 && < 5
+  - array
+  - containers
+  - haskeline
+  - hspec
+  - mtl
+  - text
 
 library:
   source-dirs: src
