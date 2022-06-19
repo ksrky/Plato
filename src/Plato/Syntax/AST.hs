@@ -1,6 +1,6 @@
 module Plato.Syntax.AST where
 
-data Pos = Pos {line :: Int, col :: Int} deriving (Eq, Show)
+import Plato.Common.Position (Pos)
 
 type Name = String
 
@@ -26,8 +26,8 @@ data TopDecl
         deriving (Eq, Show)
 
 data Type
-        = TyCon Name Pos
-        | TyVar Name Pos
-        | TyApp Type Type
-        | TyFun Type Type Pos
+        = ConType Name Pos
+        | VarType Name Pos
+        | AppType Type Type
+        | FunType Type Type Pos
         deriving (Eq, Show)

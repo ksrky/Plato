@@ -1,6 +1,7 @@
 {
 module Plato.Syntax.Parser where
 
+import Plato.Common.Position
 import Plato.Syntax.Lexer
 import qualified Plato.Syntax.AST as A
 }
@@ -64,18 +65,18 @@ types       :: { [A.Type] }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : btype '->' type               { A.TyFun $1 $3 (pos $2) }
+            : btype '->' type               { A.FunType $1 $3 (pos $2) }
             | btype                         { $1 }
 
 btype       :: { A.Type }
-            : btype atype                   { A.TyApp $1 $2 }
+            : btype atype                   { A.AppType $1 $2 }
             | '(' type ')'                  { $2 }
             | atype                         { $1 }
 
 atype       :: { A.Type }
             : '(' btype ')'                 { $2 }
-            | conid                         { A.TyCon (fst $1) (pos $1) }
-            | varid                         { A.TyVar (fst $1) (pos $1) }
+            | conid                         { A.ConType (fst $1) (pos $1) }
+            | varid                         { A.VarType (fst $1) (pos $1) }
 
 constrs     :: { [(A.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
@@ -102,7 +103,7 @@ args        :: { [A.Expr] }
             : expr args                     { $1 : $2 }
             | {- empty -}                   { [] }
 
-pats        :: { [(A.Expr, A.Expr, A.Pos)] }
+pats        :: { [(A.Expr, A.Expr, Pos)] }
             : expr '->' expr pats           { ($1, $3, pos $2) : $4 }
             | {- empty -}                   { [] }
 
@@ -112,10 +113,10 @@ parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ prettyToken t
 
 class GetPos a where
-    pos :: a -> A.Pos
+    pos :: a -> Pos
 
 instance GetPos AlexPosn where
-    pos (AlexPn _ l c) = A.Pos l c
+    pos (AlexPn _ l c) = Pos l c
 
 instance GetPos (String, AlexPosn) where
     pos (_, p) = pos p

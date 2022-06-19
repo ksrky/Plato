@@ -98,7 +98,7 @@ data Symbol
     | SymEqual
     | SymLParen
     | SymRParen
-    | SymSemicolon
+    | SymSemicolon -- tmp
     | SymVBar
     deriving (Eq, Show)
 

@@ -1,5 +1,6 @@
 module Plato.ParserSpec where
 
+import Plato.Common.Position
 import Plato.Syntax.AST
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
@@ -16,9 +17,9 @@ spec = do
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =
-        [ (`shouldBe` [Decl (FuncTyDecl "id" (TyFun (TyCon "Int" (Pos{line = 3, col = 6})) (TyCon "Int" (Pos{line = 3, col = 13})) (Pos{line = 3, col = 10})) (Pos{line = 3, col = 1})), Decl (FuncDecl "id" (LamExpr "x" (CallExpr "x" [] (Pos{line = 4, col = 12})) (Pos{line = 4, col = 6})) (Pos{line = 4, col = 1}))])
+        [ (`shouldBe` [Decl (FuncTyDecl "id" (FunType (ConType "Int" (Pos{line = 3, col = 6})) (ConType "Int" (Pos{line = 3, col = 13})) (Pos{line = 3, col = 10})) (Pos{line = 3, col = 1})), Decl (FuncDecl "id" (LamExpr "x" (CallExpr "x" [] (Pos{line = 4, col = 12})) (Pos{line = 4, col = 6})) (Pos{line = 4, col = 1}))])
         , (`shouldBe` [DataDecl "Bool" [] [("True", []), ("False", [])] (Pos{line = 3, col = 1})])
-        , (`shouldBe` [TypeDecl "Number" [] (TyCon "Int" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
+        , (`shouldBe` [TypeDecl "Number" [] (ConType "Int" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
         ]
 
 -- Decl (FuncTyDecl "double" (TyApp "Int" (TyApp "Int" "Int") (Pos {line=3, col=1}))), FuncDecl "double" (LamExpr "x")

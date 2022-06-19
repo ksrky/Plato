@@ -1,22 +1,34 @@
 module Plato.Core.Syntax where
 
+import Plato.Core.Error as E
+
 import Control.Monad.State
+
+data Ty
+        = TyVar Int Int
+        | TyString
+        | TyFloat
+        | TyCon String
+        | TyArr Ty Ty
+        | TyAll String Ty
+        deriving (Eq, Show)
 
 data Term
         = TmVar Int Int
+        | TmString String
+        | TmFloat Integer
         | TmAbs String Ty Term
         | TmApp Term Term
         | TmTAbs String Term
         | TmTApp Term Ty
         deriving (Eq, Show)
 
-data Ty
-        = TyVar Int Int
-        | TyArr Ty Ty
-        | TyAll String Ty
-        deriving (Eq, Show)
-
-data Binding = NameBind | VarBind Ty | TyVarBind
+data Binding
+        = NameBind
+        | VarBind Ty
+        | TyVarBind
+        | TyAbbBind Ty
+        | TmAbbBind Term (Maybe Ty)
 
 type Context = [(String, Binding)]
 
@@ -26,9 +38,29 @@ type Context = [(String, Binding)]
 addbinding :: String -> Binding -> State Context ()
 addbinding x bind = modify $ \ctx -> (x, bind) : ctx
 
+getbinding :: Context -> Int -> Binding
+getbinding ctx i =
+        if i > length ctx
+                then bindingShift (i + 1) (snd $ ctx !! i)
+                else error $ "Variable lookup failure: offset: " ++ show i ++ ", ctx size: " ++ show (length ctx)
+
+bindingShift :: Int -> Binding -> Binding
+bindingShift d bind = case bind of
+        NameBind -> NameBind
+        TyVarBind -> TyVarBind
+        VarBind tyT -> VarBind (typeShift d tyT)
+        TyAbbBind tyT -> TyAbbBind (typeShift d tyT)
+        TmAbbBind t tyT_opt -> do
+                let tyT_opt' = case tyT_opt of
+                        Nothing -> Nothing
+                        Just tyT -> Just $ typeShift d tyT
+                TmAbbBind (termShift d t) tyT_opt'
+
 getTypeFromContext :: Context -> Int -> Ty
 getTypeFromContext ctx i = case ctx !! i of
         (_, VarBind tyT) -> tyT
+        (_, TmAbbBind _ (Just tyT)) -> tyT
+        (_, TmAbbBind _ Nothing) -> error $ "No type recorded for variable " ++ index2name ctx i
         _ -> error $ "getTypeFromContext: Wrong kind of binding for variable " ++ index2name ctx i
 
 pickfreshname :: Monad m => String -> StateT Context m String
@@ -42,22 +74,22 @@ index2name ctx x = fst (ctx !! x)
 ----------------------------------------------------------------
 -- Type
 ----------------------------------------------------------------
+tymap :: (Int -> Int -> Int -> Ty) -> Int -> Ty -> Ty
+tymap onvar c tyT = walk c tyT
+    where
+        walk c tyT = case tyT of
+                TyVar x n -> onvar c x n
+                TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
+                TyAll tyX tyT2 -> TyAll tyX (walk (c + 1) tyT2)
+                _ -> tyT
+
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
         tymap
                 ( \c x n -> case () of
                         _ | x < c -> TyVar x (n + d)
-                        _ | x + d < 0 -> error "Scoping error!"
                         _ -> TyVar (x + d) (n + d)
                 )
-
-tymap :: (Int -> Int -> Int -> Ty) -> Int -> Ty -> Ty
-tymap onvar c tyT = walk c tyT
-    where
-        walk c tyT = case tyT of
-                TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
-                TyVar x n -> onvar c x n
-                TyAll tyX tyT2 -> TyAll tyX (walk (c + 1) tyT2)
 
 typeShift :: Int -> Ty -> Ty
 typeShift d = typeShiftAbove d 0
@@ -86,6 +118,7 @@ tmmap onvar ontype c t = walk c t
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
                 TmTAbs tyX t2 -> TmTAbs tyX (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
+                _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =
