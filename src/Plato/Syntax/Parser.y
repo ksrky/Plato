@@ -1,6 +1,7 @@
 {
 module Plato.Syntax.Parser where
 
+import Plato.Common.Name as N
 import Plato.Common.Position
 import Plato.Syntax.Lexer
 import qualified Plato.Syntax.AST as A
@@ -48,8 +49,8 @@ topdecls    :: { [A.TopDecl] }
             | {- empty -}                   { [] }
 
 topdecl     :: { A.TopDecl }
-            : 'data' conid tyargs '=' constrs       { A.DataDecl (fst $2) $3 $5 (pos $1) }
-            | 'type' conid  tyargs'=' type          { A.TypeDecl (fst $2) $3 $5 (pos $1) }
+            : 'data' conid tyargs '=' constrs       { A.DataDecl (id2name $2) $3 $5 (pos $1) }
+            | 'type' conid  tyargs'=' type          { A.TypeDecl (id2name $2) $3 $5 (pos $1) }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -57,8 +58,8 @@ decls       :: { [A.Decl] }
             | {- empty -}                   { [] }
 
 decl        :: { A.Decl }
-            : varid ':' type                { A.FuncTyDecl (fst $1) $3 (pos $1) }
-            | varid '=' expr                { A.FuncDecl (fst $1) $3 (pos $1) }
+            : varid ':' type                { A.FuncTyDecl (id2name $1) $3 (pos $1) }
+            | varid '=' expr                { A.FuncDecl (id2name $1) $3 (pos $1) }
 
 types       :: { [A.Type] }
             : type types                    { $1 : $2 }
@@ -74,28 +75,27 @@ btype       :: { A.Type }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : '(' btype ')'                 { $2 }
-            | conid                         { A.ConType (fst $1) (pos $1) }
-            | varid                         { A.VarType (fst $1) (pos $1) }
+            : conid                         { A.ConType (id2name $1) (pos $1) }
+            | varid                         { A.VarType (id2name $1) (pos $1) }
 
-constrs     :: { [(A.Name, [A.Type])] }
+constrs     :: { [(N.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
             | constr                        { [$1] }
 
-constr      :: { (A.Name, [A.Type]) }
-            : conid types                   { (fst $1, $2) }
+constr      :: { (N.Name, [A.Type]) }
+            : conid types                   { (id2name $1, $2) }
 
-tyargs      :: { [A.Name] }
-            : varid tyargs                  { fst $1 : $2 }
+tyargs      :: { [N.Name] }
+            : varid tyargs                  { id2name $1 : $2 }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid                                     { A.VarExpr (fst $1) (pos $1) }
+            : varid                                     { A.VarExpr (id2name $1) (pos $1) }
             | int                                       { A.IntExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
-            | varid args                                { A.CallExpr (fst $1) $2 (pos $1) }
+            | varid args                                { A.CallExpr (id2name $1) $2 (pos $1) }
             | '(' expr ')'                              { $2 }
-            | '\\' varid '->' expr                      { A.LamExpr (fst $2) $4 (pos $1) }
+            | '\\' varid '->' expr                      { A.LamExpr (id2name $2) $4 (pos $1) }
             | 'let' decls 'in' expr                     { A.LetExpr $2 $4 (pos $1) }
             | 'case' expr 'of' pats                     { A.CaseExpr $2 $4 (pos $1) }
 
@@ -111,6 +111,9 @@ pats        :: { [(A.Expr, A.Expr, Pos)] }
 {
 parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ prettyToken t
+
+id2name :: (String,  AlexPosn) -> Name
+id2name = N.str2name . fst
 
 class GetPos a where
     pos :: a -> Pos

@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plato.ParserSpec where
+module Plato.TranslateSpec where
 
+import Plato.Common.Name
 import Plato.Common.Position
+import Plato.Core.Syntax
+import Plato.Core.Translate
 import Plato.Syntax.AST
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
 
-import Control.Monad.Trans
-
+import Control.Monad.State
 import System.Environment
 import Test.Hspec
 
@@ -17,11 +19,11 @@ spec = do
         describe "Plato.Parser" $ do
                 processFile [0 .. 2]
 
-iscorrect :: [[TopDecl] -> Expectation]
+iscorrect :: [[(Name, Term)] -> Expectation]
 iscorrect =
-        [ (`shouldBe` [Decl (FuncTyDecl "id" (FunType (ConType "Int" (Pos{line = 3, col = 6})) (ConType "Int" (Pos{line = 3, col = 13})) (Pos{line = 3, col = 10})) (Pos{line = 3, col = 1})), Decl (FuncDecl "id" (LamExpr "x" (CallExpr "x" [] (Pos{line = 4, col = 12})) (Pos{line = 4, col = 6})) (Pos{line = 4, col = 1}))])
-        , (`shouldBe` [DataDecl "Bool" [] [("True", []), ("False", [])] (Pos{line = 3, col = 1})])
-        , (`shouldBe` [TypeDecl "Number" [] (ConType "Int" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
+        [ (`shouldBe` [])
+        , (`shouldBe` [])
+        , (`shouldBe` [])
         ]
 
 -- Decl (FuncTyDecl "double" (TyApp "Int" (TyApp "Int" "Int") (Pos {line=3, col=1}))), FuncDecl "double" (LamExpr "x")
@@ -35,7 +37,9 @@ processFile (n : ns) = do
                 (iscorrect !! n) res
         processFile ns
 
-process :: String -> IO [TopDecl]
+process :: String -> IO [(Name, Term)]
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
-        Right res -> print res >> return res
+        Right ast -> do
+                let res = evalState (transProgram ast) emptyContext
+                print res >> return res

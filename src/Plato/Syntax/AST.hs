@@ -1,8 +1,7 @@
 module Plato.Syntax.AST where
 
+import Plato.Common.Name (Name)
 import Plato.Common.Position (Pos)
-
-type Name = String
 
 data Expr
         = VarExpr Name Pos
@@ -30,4 +29,5 @@ data Type
         | VarType Name Pos
         | AppType Type Type
         | FunType Type Type Pos
+        | AllType Name Type
         deriving (Eq, Show)

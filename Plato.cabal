@@ -25,8 +25,15 @@ source-repository head
 
 library
   exposed-modules:
+      Plato.Backend.GHC.Codegen
+      Plato.Backend.GHC.HsPretty
+      Plato.Backend.GHC.HsSyntax
+      Plato.Backend.Untyped
       Plato.Common.Name
       Plato.Common.Position
+      Plato.Common.Table
+      Plato.Core.Environment
+      Plato.Core.Erase
       Plato.Core.Error
       Plato.Core.Syntax
       Plato.Core.Translate
@@ -77,6 +84,7 @@ test-suite Plato-test
   main-is: Spec.hs
   other-modules:
       Plato.ParserSpec
+      Plato.TranslateSpec
       Paths_Plato
   hs-source-dirs:
       test

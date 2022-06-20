@@ -1,25 +1,34 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Plato.Core.Syntax where
 
-import Plato.Core.Error as E
+import qualified Plato.Common.Name as N
+import qualified Plato.Core.Error as E
 
 import Control.Monad.State
+
+data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
         = TyVar Int Int
         | TyString
         | TyFloat
-        | TyCon String
+        | TyCon N.Name
+        | TyVariant [(N.Name, Ty)]
         | TyArr Ty Ty
-        | TyAll String Ty
+        | TyApp Ty Ty
+        | TyAll N.Name Ty
         deriving (Eq, Show)
 
 data Term
         = TmVar Int Int
         | TmString String
         | TmFloat Integer
-        | TmAbs String Ty Term
+        | TmAbs N.Name Ty Term
+        | TmLet N.Name Term Term
+        | TmCase Term [(Term, Term)]
         | TmApp Term Term
-        | TmTAbs String Term
+        | TmTAbs N.Name Term
         | TmTApp Term Ty
         deriving (Eq, Show)
 
@@ -30,12 +39,15 @@ data Binding
         | TyAbbBind Ty
         | TmAbbBind Term (Maybe Ty)
 
-type Context = [(String, Binding)]
+type Context = [(N.Name, Binding)]
 
 ----------------------------------------------------------------
 -- Context
 ----------------------------------------------------------------
-addbinding :: String -> Binding -> State Context ()
+emptyContext :: Context
+emptyContext = []
+
+addbinding :: N.Name -> Binding -> State Context ()
 addbinding x bind = modify $ \ctx -> (x, bind) : ctx
 
 getbinding :: Context -> Int -> Binding
@@ -60,15 +72,15 @@ getTypeFromContext :: Context -> Int -> Ty
 getTypeFromContext ctx i = case ctx !! i of
         (_, VarBind tyT) -> tyT
         (_, TmAbbBind _ (Just tyT)) -> tyT
-        (_, TmAbbBind _ Nothing) -> error $ "No type recorded for variable " ++ index2name ctx i
-        _ -> error $ "getTypeFromContext: Wrong kind of binding for variable " ++ index2name ctx i
+        (_, TmAbbBind _ Nothing) -> error $ "No type recorded for variable " ++ N.name2str (index2name ctx i)
+        _ -> error $ "getTypeFromContext: Wrong kind of binding for variable " ++ N.name2str (index2name ctx i)
 
-pickfreshname :: Monad m => String -> StateT Context m String
+pickfreshname :: Monad m => N.Name -> StateT Context m N.Name
 pickfreshname x = state $ \ctx -> case lookup x ctx of
-        Just _ -> pickfreshname (x ++ "'") `runState` ctx
+        Just _ -> pickfreshname (N.appendstr x "'") `runState` ctx
         Nothing -> (x, (x, NameBind) : ctx)
 
-index2name :: Context -> Int -> String
+index2name :: Context -> Int -> N.Name
 index2name ctx x = fst (ctx !! x)
 
 ----------------------------------------------------------------
@@ -116,6 +128,8 @@ tmmap onvar ontype c t = walk c t
                 TmVar x n -> onvar c x n
                 TmAbs x tyT1 t2 -> TmAbs x (ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
+                TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
+                TmCase t cases -> TmCase (walk c t) (map (\(li, ti) -> (li, walk (c + 1) ti)) cases)
                 TmTAbs tyX t2 -> TmTAbs tyX (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
                 _ -> t
@@ -152,3 +166,11 @@ termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)
 
 tytermSubstTop :: Ty -> Term -> Term
 tytermSubstTop tyS t = termShift (-1) (tytermSubst (typeShift 1 tyS) 0 t)
+
+bindingshift :: Int -> Binding -> Binding
+bindingshift d bind = case bind of
+        NameBind -> NameBind
+        TyVarBind -> TyVarBind
+        VarBind tyT -> VarBind (typeShift d tyT)
+        TyAbbBind tyT -> TyAbbBind (typeShift d tyT)
+        TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)

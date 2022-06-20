@@ -37,6 +37,7 @@ tokens :-
 
 <0> case                        { keyword KwCase }
 <0> data                        { keyword KwData }
+<0> forall                      { keyword KwForall }
 <0> in                          { keyword KwIn }
 <0> of                          { keyword KwOf }
 <0> let                         { keyword KwLet }
@@ -83,6 +84,7 @@ data Token
 data Keyword
     = KwCase
     | KwData
+    | KwForall
     | KwIn
     | KwOf
     | KwLet

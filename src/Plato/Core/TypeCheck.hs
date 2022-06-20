@@ -31,6 +31,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmVar n _ -> case getbinding ctx n of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
+                TmLet x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
+                TmLet x t1 t2 -> do
+                        t1' <- eval1 t1
+                        Just $ TmLet x t1' t2
+                TmCase v branches | isval v -> termSubstTop v <$> lookup v branches
                 _ -> Nothing
 
 istyabb :: Context -> Int -> Bool
@@ -91,6 +96,12 @@ typeof t = case t of
                         TyArr tyT11 tyT12 | tyT2 == tyT11 -> return tyT12
                         TyArr tyT11 tyT12 -> error "parameter type mismatch"
                         _ -> error "arrow type expected"
+        TmLet x t1 t2 -> do
+                tyT1 <- typeof t1
+                addbinding x (VarBind tyT1)
+                tyT2 <- typeof t2
+                return $ typeShift (-1) tyT2
+        TmCase{} -> undefined
         TmTAbs tyX t2 -> do
                 addbinding tyX TyVarBind
                 tyT2 <- typeof t2

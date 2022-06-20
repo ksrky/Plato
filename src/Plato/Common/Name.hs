@@ -4,8 +4,13 @@ import Data.Text
 
 type Name = Text
 
-strtoname :: String -> Text
-strtoname = pack
+str2name :: String -> Text
+str2name = pack
 
-nametostr :: Text -> String
-nametostr = unpack
+name2str :: Text -> String
+name2str = unpack
+
+appendstr :: Text -> String -> Text
+appendstr t [] = t
+appendstr t [c] = snoc t c
+appendstr t (c : s) = appendstr (snoc t c) s
