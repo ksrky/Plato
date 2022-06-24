@@ -32,7 +32,7 @@ library
       Plato.Common.Name
       Plato.Common.Position
       Plato.Common.Table
-      Plato.Core.Environment
+      Plato.Core.Context
       Plato.Core.Erase
       Plato.Core.Error
       Plato.Core.Syntax

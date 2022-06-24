@@ -1,5 +1,6 @@
 module Plato.Core.TypeCheck where
 
+import Plato.Core.Context
 import Plato.Core.Syntax
 
 import Control.Monad.State

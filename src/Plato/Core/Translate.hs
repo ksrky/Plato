@@ -1,6 +1,8 @@
 module Plato.Core.Translate where
 
 import Plato.Common.Name
+import qualified Plato.Common.Name as N
+import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.Syntax.AST
 
@@ -8,7 +10,6 @@ import Control.Monad.State
 import Control.Monad.Writer
 import Data.List (elemIndex)
 import GHC.Float (int2Float)
-import qualified Plato.Common.Name as N
 
 transExpr :: Expr -> State Context Term
 transExpr (VarExpr x p) = do
