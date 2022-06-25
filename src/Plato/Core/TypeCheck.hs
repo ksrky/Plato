@@ -1,5 +1,6 @@
 module Plato.Core.TypeCheck where
 
+import qualified Plato.Common.Name as N
 import Plato.Core.Context
 import Plato.Core.Syntax
 
@@ -25,7 +26,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp t1 t2 -> do
                         t1' <- eval1 t1
                         return $ TmApp t1' t2
-                TmTApp (TmTAbs x t11) tyT2 -> return $ tytermSubstTop tyT2 t11
+                TmTApp (TmTAbs x _ t11) tyT2 -> return $ tytermSubstTop tyT2 t11
                 TmTApp t1 tyT2 -> do
                         t1' <- eval1 t1
                         return $ TmTApp t1' tyT2
@@ -37,16 +38,19 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         t1' <- eval1 t1
                         Just $ TmLet x t1' t2
                 TmCase v branches | isval v -> termSubstTop v <$> lookup v branches
+                TmCase t1 branches -> do
+                        t1' <- eval1 t1
+                        Just $ TmCase t1' branches
                 _ -> Nothing
 
 istyabb :: Context -> Int -> Bool
 istyabb ctx i = case getbinding ctx i of
-        TyAbbBind tyT -> True
+        TyAbbBind{} -> True
         _ -> False
 
 gettyabb :: Context -> Int -> Maybe Ty
 gettyabb ctx i = case getbinding ctx i of
-        TyAbbBind tyT -> Just tyT
+        TyAbbBind tyT _ -> Just tyT
         _ -> Nothing
 
 computety :: Context -> Ty -> Maybe Ty
@@ -72,12 +76,58 @@ tyeqv ctx tyS tyT = do
                         Just ty -> tyeqv ctx tyS ty
                         Nothing -> False
                 (TyVar i _, TyVar j _) -> i == j
-                (TyAll tyX1 tyS2, TyAll _ tyT2) -> do
+                (TyAll tyX1 knK1 tyS2, TyAll _ knK2 tyT2) -> do
                         let ctx' = addbinding tyX1 NameBind `execState` ctx
-                        tyeqv ctx' tyS2 tyT2
+                        knK1 == knK2 && tyeqv ctx' tyS2 tyT2
                 (TyString, TyString) -> True
                 (TyFloat, TyFloat) -> True
+                (TyVariant fields1, TyVariant fields2) -> (length fields1 == length fields2) && fseqv fields1 fields2
+                    where
+                        fseqv [] [] = True
+                        fseqv ((li1, tyTi1) : f1) ((li2, tyTi2) : f2) = (li1 == li2) && tyeqvs ctx tyTi1 tyTi2 && fseqv f1 f2
+                        fseqv _ _ = False
+                        tyeqvs ctx [] [] = True
+                        tyeqvs ctx (tyS : tySs) (tyT : tyTs) = tyeqv ctx tyS tyT && tyeqvs ctx tySs tyTs
+                        tyeqvs ctx _ _ = error "field length not match"
                 _ -> False
+
+getkind :: Context -> Int -> Kind
+getkind ctx i = case getbinding ctx i of
+        TyVarBind knK -> knK
+        TyAbbBind _ (Just knK) -> knK
+        TyAbbBind _ Nothing -> error $ "No kind recorded for variable " ++ N.name2str (index2name ctx i)
+        _ -> error $ "getkind: Wrong kind of binding for variable " ++ N.name2str (index2name ctx i)
+
+kindof :: Ty -> State Context Kind
+kindof tyT = case tyT of
+        TyArr tyT1 tyT2 -> do
+                knK1 <- kindof tyT1
+                knK2 <- kindof tyT2
+                unless (knK1 == KnStar && knK2 == KnStar) (error "star kind expected")
+                return KnStar
+        TyVar i _ -> do
+                ctx <- get
+                let knK = getkind ctx i
+                return knK
+        TyAbs tyX knK1 tyT2 -> do
+                addbinding tyX (TyVarBind knK1)
+                knK2 <- kindof tyT2
+                return $ KnArr knK1 knK2
+        TyApp tyT1 tyT2 -> do
+                knK1 <- kindof tyT1
+                knK2 <- kindof tyT2
+                case knK1 of
+                        KnArr knK11 knK12 ->
+                                if knK2 == knK11
+                                        then return knK12
+                                        else error "parameter kind mismatch"
+                        _ -> error "arrow kind expected"
+        TyAll tyX knK1 tyT2 -> do
+                addbinding tyX (TyVarBind knK1)
+                knK2 <- kindof tyT2
+                when (knK2 /= KnStar) (error "Kind * expected")
+                return KnStar
+        _ -> return KnStar
 
 typeof :: Term -> State Context Ty
 typeof t = case t of
@@ -103,14 +153,19 @@ typeof t = case t of
                 tyT2 <- typeof t2
                 return $ typeShift (-1) tyT2
         TmCase{} -> undefined
-        TmTAbs tyX t2 -> do
-                addbinding tyX TyVarBind
+        TmTAbs tyX knK1 t2 -> do
+                addbinding tyX (TyVarBind knK1)
                 tyT2 <- typeof t2
-                return $ TyAll tyX tyT2
+                return $ TyAll tyX knK1 tyT2
         TmTApp t1 tyT2 -> do
+                knKT2 <- kindof tyT2
                 tyT1 <- typeof t1
+                ctx <- get
                 case tyT1 of
-                        TyAll _ tyT12 -> return $ typeSubstTop tyT2 tyT12
+                        TyAll _ knK11 tyT12 ->
+                                if knK11 == knKT2
+                                        then return $ typeSubstTop tyT2 tyT12
+                                        else error "Type argument has wrong kind"
                         _ -> error "universal type expected"
 
 evalbinding :: Context -> Binding -> Binding

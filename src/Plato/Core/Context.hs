@@ -1,8 +1,9 @@
 module Plato.Core.Context where
 
-import Control.Monad.State
 import qualified Plato.Common.Name as N
 import Plato.Core.Syntax
+
+import Control.Monad.State
 
 type Context = [(N.Name, Binding)]
 
@@ -18,29 +19,32 @@ getbinding ctx i =
                 then bindingShift (i + 1) (snd $ ctx !! i)
                 else error $ "Variable lookup failure: offset: " ++ show i ++ ", ctx size: " ++ show (length ctx)
 
+getbindingFromName :: N.Name -> State Context Binding
+getbindingFromName n = do
+        ctx <- get
+        case lookup n ctx of
+                Just bind -> return bind
+                Nothing -> error $ "Variable lookup failure: " ++ show n
+
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of
         NameBind -> NameBind
-        TyVarBind -> TyVarBind
         VarBind tyT -> VarBind (typeShift d tyT)
-        TyAbbBind tyT -> TyAbbBind (typeShift d tyT)
-        TmAbbBind t tyT_opt -> do
-                let tyT_opt' = case tyT_opt of
-                        Nothing -> Nothing
-                        Just tyT -> Just $ typeShift d tyT
-                TmAbbBind (termShift d t) tyT_opt'
+        TyVarBind knK -> TyVarBind knK
+        TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
+        TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
 
 getTypeFromContext :: Context -> Int -> Ty
-getTypeFromContext ctx i = case ctx !! i of
-        (_, VarBind tyT) -> tyT
-        (_, TmAbbBind _ (Just tyT)) -> tyT
-        (_, TmAbbBind _ Nothing) -> error $ "No type recorded for variable " ++ N.name2str (index2name ctx i)
+getTypeFromContext ctx i = case getbinding ctx i of
+        VarBind tyT -> tyT
+        TmAbbBind _ (Just tyT) -> tyT
+        TmAbbBind _ Nothing -> error $ "No type recorded for variable " ++ N.name2str (index2name ctx i)
         _ -> error $ "getTypeFromContext: Wrong kind of binding for variable " ++ N.name2str (index2name ctx i)
 
-pickfreshname :: Monad m => N.Name -> StateT Context m N.Name
-pickfreshname x = state $ \ctx -> case lookup x ctx of
-        Just _ -> pickfreshname (N.appendstr x "'") `runState` ctx
-        Nothing -> (x, (x, NameBind) : ctx)
+pickfreshname :: Monad m => N.Name -> Binding -> StateT Context m N.Name
+pickfreshname x bind = state $ \ctx -> case lookup x ctx of
+        Just _ -> pickfreshname (N.appendstr x "'") bind `runState` ctx
+        Nothing -> (x, (x, bind) : ctx)
 
 index2name :: Context -> Int -> N.Name
 index2name ctx x = fst (ctx !! x)

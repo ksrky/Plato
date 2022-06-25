@@ -11,43 +11,51 @@ import Control.Monad.Writer
 import Data.List (elemIndex)
 import GHC.Float (int2Float)
 
-transExpr :: Expr -> State Context Term
-transExpr (VarExpr x p) = do
-        ctx <- get
-        return $ TmVar (getVarIndex x ctx) (length ctx)
-transExpr (IntExpr i) = do
-        return $ TmFloat i
-transExpr (StringExpr s) = return $ TmString s
-transExpr (CallExpr x as p) = do
-        v <- transExpr (VarExpr x p)
-        app v as
+transExpr :: Ty -> Expr -> State Context Term
+transExpr restty = traexpr
     where
-        app t [] = return t
-        app t (a : as) = do
-                a' <- transExpr a
-                app (TmApp t a') as
-transExpr (LamExpr x e p) = do
-        x' <- pickfreshname x
-        e' <- transExpr e
-        return $ TmAbs x' undefined e'
-transExpr (LetExpr ds e p) = do
-        e' <- transExpr e
-        mkLet e' ds
-    where
-        mkLet t (FuncDecl x e p : ds) = do
-                e' <- transExpr e
-                mkLet (TmLet x e' t) ds
-        mkLet t _ = return t
-transExpr (CaseExpr e pats p) = do
-        e' <- transExpr e
-        pats' <- forM pats $ \(pat, body, pos) -> do
-                pat' <- transExpr pat
-                body' <- transExpr body
-                return (pat', body')
-        return $ TmCase e' pats'
+        traexpr :: Expr -> State Context Term
+        traexpr (VarExpr x p) = do
+                ctx <- get
+                return $ TmVar (getVarIndex x ctx) (length ctx)
+        traexpr (IntExpr i) = do
+                return $ TmFloat i
+        traexpr (StringExpr s) = return $ TmString s
+        traexpr (CallExpr x as p) = do
+                v <- traexpr (VarExpr x p)
+                app v as
+            where
+                app t [] = return t
+                app t (a : as) = do
+                        a' <- traexpr a
+                        app (TmApp t a') as
+        traexpr (LamExpr x e p) = do
+                x' <- pickfreshname x NameBind
+                case restty of
+                        TyArr tyT1 tyT2 -> do
+                                t <- transExpr tyT2 e
+                                return $ TmAbs x' tyT1 t
+                        _ -> error "array type required"
+        traexpr (LetExpr ds e p) = do
+                e' <- traexpr e
+                mkLet e' ds
+            where
+                mkLet t (FuncDecl x e p : ds) = do
+                        e' <- traexpr e
+                        mkLet (TmLet x e' t) ds
+                mkLet t _ = return t
+        traexpr (CaseExpr e pats p) = do
+                e' <- traexpr e
+                pats' <- forM pats $ \(pat, body, pos) -> do
+                        pat' <- traexpr pat
+                        body' <- traexpr body
+                        return (pat', body')
+                return $ TmCase e' pats'
 
 transType :: Type -> State Context Ty
-transType (ConType x p) = return $ TyCon x
+transType (ConType x p) = do
+        ctx <- get
+        return $ TyVar (getVarIndex x ctx) (length ctx)
 transType (VarType x p) = do
         ctx <- get
         return $ TyVar (getVarIndex x ctx) (length ctx)
@@ -61,44 +69,45 @@ transType (FunType ty1 ty2 p) = do
         return $ TyArr ty1' ty2'
 transType (AllType x ty) = do
         ty' <- transType ty
-        return $ TyAll x ty'
+        return $ TyAll x KnStar ty' -- tmp: forall x.t = forall x::*.t
 
 getVarIndex :: N.Name -> Context -> Int
 getVarIndex var ctx = case elemIndex var (map fst ctx) of
         Just i -> i
         Nothing -> error $ "Unbound variable name: " ++ name2str var
 
-transDecl :: TopDecl -> WriterT [(Name, Term)] (State Context) ()
+transDecl :: TopDecl -> State Context [(Name, Term)]
 transDecl (Decl (FuncDecl n e p)) = do
-        e' <- lift $ transExpr e
-        tell [(n, e')]
-transDecl _ = return ()
+        bind <- getbindingFromName n
+        case bind of
+                VarBind ty -> do
+                        t <- transExpr ty e
+                        return [(n, t)]
+                _ -> error "VarBind required"
+transDecl _ = return []
 
-transTopDecl :: TopDecl -> WriterT [(Name, Ty)] (State Context) ()
+transTopDecl :: TopDecl -> State Context ()
 transTopDecl (DataDecl n params constrs p) = do
         constrs' <- forM constrs $ \(con, field) -> do
-                field' <- lift $ mapM transType field
-                let arr f = if null f then undefined {-self-} else TyArr (head f) (arr $ tail f)
-                return (con, arr field')
-        ty <- lift $ abstract (TyVariant constrs') params
-        tell [(n, ty)]
+                field' <- mapM transType field
+                return (con, field')
+        ty <- addbinders (zip params (repeat KnStar)) (TyVariant constrs')
+        addbinding n (TyAbbBind ty Nothing)
 transTopDecl (TypeDecl n params t p) = do
-        ty <- lift $ transType t
-        ty' <- lift $ abstract ty params
-        tell [(n, ty')]
+        ty <- transType t
+        ty' <- addbinders (zip params (repeat KnStar)) ty --tmp
+        addbinding n (TyAbbBind ty' Nothing)
 transTopDecl (Decl (FuncTyDecl n t p)) = do
-        t' <- lift $ transType t
-        tell [(n, t')]
+        ty <- transType t
+        addbinding n (VarBind ty)
+        return ()
 transTopDecl _ = return ()
 
-abstract :: Ty -> [Name] -> State Context Ty
-abstract ty [] = return ty
-abstract ty (p : ps) = do
-        p' <- pickfreshname p
-        TyAll p' <$> abstract ty ps
+addbinders :: [(Name, Kind)] -> Ty -> State Context Ty
+addbinders [] ty = return ty
+addbinders ((x, k) : ps) ty = TyAbs x k <$> addbinders ps ty
 
 transProgram :: [TopDecl] -> State Context [(Name, Term)]
 transProgram tds = do
-        x <- execWriterT $ mapM_ transTopDecl tds
-        y <- execWriterT $ mapM_ transDecl tds
-        return y
+        mapM_ transTopDecl tds
+        concat <$> mapM transDecl tds

@@ -4,6 +4,7 @@ module Plato.TranslateSpec where
 
 import Plato.Common.Name
 import Plato.Common.Position
+import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.Core.Translate
 import Plato.Syntax.AST
