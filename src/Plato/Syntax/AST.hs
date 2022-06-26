@@ -5,7 +5,7 @@ import Plato.Common.Position (Pos)
 
 data Expr
         = VarExpr Name Pos
-        | IntExpr Integer
+        | FloatExpr Float
         | StringExpr String
         | CallExpr Name [Expr] Pos
         | LamExpr Name Expr Pos

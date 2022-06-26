@@ -1,4 +1,4 @@
 -- function definition
 
-id : Int -> Int;
-id = \x -> x;
+id : forall x. x -> x;
+id = \a -> a;

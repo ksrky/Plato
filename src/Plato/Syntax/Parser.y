@@ -17,6 +17,7 @@ import qualified Plato.Syntax.AST as A
 
 'case'                          { TokKeyword (KwLet, $$) }
 'data'                          { TokKeyword (KwData, $$) }
+'forall'                        { TokKeyword (KwForall, $$) }
 'in'                            { TokKeyword (KwIn, _) }
 'of'                            { TokKeyword (KwOf, _) }
 'let'                           { TokKeyword (KwLet, $$) }
@@ -27,6 +28,7 @@ import qualified Plato.Syntax.AST as A
 '\\'                            { TokSymbol (SymBackslash, $$)}
 ','                             { TokSymbol (SymComma, _) }
 ':'                             { TokSymbol (SymColon, _) }
+'.'                             { TokSymbol (SymDot, $$) }
 '='                             { TokSymbol (SymEqual, _) }
 '('                             { TokSymbol (SymLParen, _) }
 ')'                             { TokSymbol (SymRParen, _) }
@@ -37,7 +39,7 @@ varid                           { TokVarId $$ }
 conid                           { TokConId $$ }
 varsym                          { TokVarSym $$ }
 
-int                             { TokInt $$ }
+float                           { TokFloat $$ }
 string                          { TokString $$ }
 
 %%
@@ -67,6 +69,7 @@ types       :: { [A.Type] }
 
 type        :: { A.Type }
             : btype '->' type               { A.FunType $1 $3 (pos $2) }
+            | 'forall' varid '.' type       { A.AllType (id2name $2) $4}
             | btype                         { $1 }
 
 btype       :: { A.Type }
@@ -91,7 +94,7 @@ tyargs      :: { [N.Name] }
 
 expr        :: { A.Expr }
             : varid                                     { A.VarExpr (id2name $1) (pos $1) }
-            | int                                       { A.IntExpr (fst $1) }
+            | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
             | varid args                                { A.CallExpr (id2name $1) $2 (pos $1) }
             | '(' expr ')'                              { $2 }
@@ -147,7 +150,7 @@ prettyToken (TokSymbol (s, p)) = "'" ++ case s of
 prettyToken (TokVarId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
 prettyToken (TokConId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
 prettyToken (TokVarSym (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-prettyToken (TokInt (i, p)) = show i ++ " at " ++ prettyPos p
+prettyToken (TokFloat (i, p)) = show i ++ " at " ++ prettyPos p
 prettyToken (TokString (s, p)) = "\"" ++ s ++ "\" at " ++ prettyPos p
 prettyToken TokEof = ""
 

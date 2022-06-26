@@ -23,7 +23,7 @@ data Ty
 data Term
         = TmVar Int Int
         | TmString String
-        | TmFloat Integer
+        | TmFloat Float
         | TmAbs N.Name Ty Term
         | TmLet N.Name Term Term
         | TmCase Term [(Term, Term)]

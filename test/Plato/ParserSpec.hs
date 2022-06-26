@@ -19,7 +19,11 @@ spec = do
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =
-        [ (`shouldBe` [Decl (FuncTyDecl "id" (FunType (ConType "Int" (Pos{line = 3, col = 6})) (ConType "Int" (Pos{line = 3, col = 13})) (Pos{line = 3, col = 10})) (Pos{line = 3, col = 1})), Decl (FuncDecl "id" (LamExpr "x" (CallExpr "x" [] (Pos{line = 4, col = 12})) (Pos{line = 4, col = 6})) (Pos{line = 4, col = 1}))])
+        [ ( `shouldBe`
+                [ Decl (FuncTyDecl "id" (AllType "x" (FunType (VarType "x" Pos{line = 3, col = 16}) (VarType "x" Pos{line = 3, col = 21}) Pos{line = 3, col = 18})) Pos{line = 3, col = 1})
+                , Decl (FuncDecl "id" (LamExpr "a" (CallExpr "a" [] Pos{line = 4, col = 12}) Pos{line = 4, col = 6}) Pos{line = 4, col = 1})
+                ]
+          )
         , (`shouldBe` [DataDecl "Bool" [] [("True", []), ("False", [])] (Pos{line = 3, col = 1})])
         , (`shouldBe` [TypeDecl "Number" [] (ConType "Int" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
         ]

@@ -9,17 +9,20 @@ import Plato.Syntax.AST
 import Control.Monad.State
 import Control.Monad.Writer
 import Data.List (elemIndex)
-import GHC.Float (int2Float)
 
 transExpr :: Ty -> Expr -> State Context Term
-transExpr restty = traexpr
+transExpr restty expr = case restty of
+        TyAll n knK1 tyT2 -> do
+                t2 <- transExpr tyT2 expr
+                return $ TmTAbs n knK1 t2
+        _ -> traexpr expr
     where
         traexpr :: Expr -> State Context Term
         traexpr (VarExpr x p) = do
                 ctx <- get
                 return $ TmVar (getVarIndex x ctx) (length ctx)
-        traexpr (IntExpr i) = do
-                return $ TmFloat i
+        traexpr (FloatExpr f) = do
+                return $ TmFloat f
         traexpr (StringExpr s) = return $ TmString s
         traexpr (CallExpr x as p) = do
                 v <- traexpr (VarExpr x p)
@@ -68,6 +71,7 @@ transType (FunType ty1 ty2 p) = do
         ty2' <- transType ty2
         return $ TyArr ty1' ty2'
 transType (AllType x ty) = do
+        x' <- pickfreshname x (TyVarBind KnStar) -- tmp
         ty' <- transType ty
         return $ TyAll x KnStar ty' -- tmp: forall x.t = forall x::*.t
 

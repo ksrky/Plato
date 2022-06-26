@@ -22,7 +22,7 @@ spec = do
 
 iscorrect :: [[(Name, Term)] -> Expectation]
 iscorrect =
-        [ (`shouldBe` [])
+        [ (`shouldBe` [("id", TmTAbs "x" KnStar (TmAbs "a" (TyVar 0 1) (TmVar 0 3)))])
         , (`shouldBe` [])
         , (`shouldBe` [])
         ]

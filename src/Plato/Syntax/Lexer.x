@@ -48,6 +48,7 @@ tokens :-
 <0> \\                          { symbol SymBackslash }
 <0> \:                          { symbol SymColon }
 <0> \,                          { symbol SymComma }
+<0> \.                          { symbol SymDot }
 <0> \=                          { symbol SymEqual }
 <0> \(                          { symbol SymLParen }
 <0> \)                          { symbol SymRParen }
@@ -57,7 +58,7 @@ tokens :-
 <0> @varid                      { varid }
 <0> @conid                      { conid }
 <0> @varsym                     { varsym }
-<0> @decimal                    { lex_int }
+<0> @decimal                    { lex_float }
 
 <0> \"                          { begin string }
 <string> @string \"             { lex_string }
@@ -74,7 +75,7 @@ data Token
     | TokVarId (String,  AlexPosn)
     | TokConId (String,  AlexPosn)
     | TokVarSym (String, AlexPosn)
-    | TokInt (Integer, AlexPosn)
+    | TokFloat (Float, AlexPosn)
     | TokString (String, AlexPosn)
     | TokVOBrace
     | TokVCBrace
@@ -97,6 +98,7 @@ data Symbol
     | SymBackslash
     | SymColon
     | SymComma
+    | SymDot
     | SymEqual
     | SymLParen
     | SymRParen
@@ -119,8 +121,8 @@ conid = \(pos,_,_,str) len -> return $ TokConId (take len str, pos)
 varsym :: Action
 varsym = \(pos,_,_,str) len -> return $ TokVarSym (take len str, pos)
 
-lex_int :: Action
-lex_int = \(pos,_,_,str) len -> return $ TokInt (read $ take len str, pos)
+lex_float :: Action
+lex_float = \(pos,_,_,str) len -> return $ TokFloat (read $ take len str, pos)
 
 lex_string :: Action
 lex_string = \(pos,_,_,str) len -> do
