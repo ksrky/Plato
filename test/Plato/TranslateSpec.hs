@@ -18,11 +18,12 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [0 .. 2]
+                processFile [0 .. 3]
 
 iscorrect :: [[(Name, Term)] -> Expectation]
 iscorrect =
         [ (`shouldBe` [("id", TmTAbs "x" KnStar (TmAbs "a" (TyVar 0 1) (TmVar 0 3)))])
+        , (`shouldBe` [])
         , (`shouldBe` [])
         , (`shouldBe` [])
         ]

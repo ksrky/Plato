@@ -5,6 +5,14 @@ import Plato.Core.Syntax
 
 import Control.Monad.State
 
+data Block = Block
+        { pointer :: Int
+        , context :: Context
+        }
+
+initBlock :: Context -> Block
+initBlock ctx = Block (length ctx) ctx
+
 type Context = [(N.Name, Binding)]
 
 emptyContext :: Context

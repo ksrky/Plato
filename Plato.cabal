@@ -35,7 +35,6 @@ library
       Plato.Core.Context
       Plato.Core.Erase
       Plato.Core.Error
-      Plato.Core.Pretty
       Plato.Core.Syntax
       Plato.Core.Translate
       Plato.Core.TypeCheck

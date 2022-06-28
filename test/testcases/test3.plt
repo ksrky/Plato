@@ -1,9 +1,5 @@
--- data type and function
+-- let expression
 
-data Bool = True | False;
-
-not : Bool -> Bool;
-not = \b -> case b of {
-    True -> False;
-    False -> True;
-};
+func : Float;
+func = let { f = 1 } in f;
+ 

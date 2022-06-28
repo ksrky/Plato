@@ -15,7 +15,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [0 .. 2]
+                processFile [0 .. 3]
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =
@@ -26,6 +26,7 @@ iscorrect =
           )
         , (`shouldBe` [DataDecl "Bool" [] [("True", []), ("False", [])] (Pos{line = 3, col = 1})])
         , (`shouldBe` [TypeDecl "Number" [] (ConType "Int" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
+        , (`shouldBe` [])
         ]
 
 -- Decl (FuncTyDecl "double" (TyApp "Int" (TyApp "Int" "Int") (Pos {line=3, col=1}))), FuncDecl "double" (LamExpr "x")

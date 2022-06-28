@@ -50,7 +50,9 @@ tokens :-
 <0> \,                          { symbol SymComma }
 <0> \.                          { symbol SymDot }
 <0> \=                          { symbol SymEqual }
+<0> \{                          { symbol SymLBrace }
 <0> \(                          { symbol SymLParen }
+<0> \}                          { symbol SymRBrace }
 <0> \)                          { symbol SymRParen }
 <0> \;                          { symbol SymSemicolon }
 <0> \|                          { symbol SymVBar }
@@ -100,7 +102,9 @@ data Symbol
     | SymComma
     | SymDot
     | SymEqual
+    | SymLBrace
     | SymLParen
+    | SymRBrace
     | SymRParen
     | SymSemicolon -- tmp
     | SymVBar

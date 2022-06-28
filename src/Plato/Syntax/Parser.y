@@ -30,7 +30,9 @@ import qualified Plato.Syntax.AST as A
 ':'                             { TokSymbol (SymColon, _) }
 '.'                             { TokSymbol (SymDot, $$) }
 '='                             { TokSymbol (SymEqual, _) }
+'{'                             { TokSymbol (SymLBrace, _) }
 '('                             { TokSymbol (SymLParen, _) }
+'}'                             { TokSymbol (SymRBrace, _) }
 ')'                             { TokSymbol (SymRParen, _) }
 ';'                             { TokSymbol (SymSemicolon, _) }
 '|'                             { TokSymbol (SymVBar, _) }
@@ -56,8 +58,8 @@ topdecl     :: { A.TopDecl }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
-            : decl decls                    { $1 : $2 }
-            | {- empty -}                   { [] }
+            : decl ';' decls                { $1 : $3 }
+            | decl                          { [$1] }
 
 decl        :: { A.Decl }
             : varid ':' type                { A.FuncTyDecl (id2name $1) $3 (pos $1) }
@@ -99,8 +101,8 @@ expr        :: { A.Expr }
             | varid args                                { A.CallExpr (id2name $1) $2 (pos $1) }
             | '(' expr ')'                              { $2 }
             | '\\' varid '->' expr                      { A.LamExpr (id2name $2) $4 (pos $1) }
-            | 'let' decls 'in' expr                     { A.LetExpr $2 $4 (pos $1) }
-            | 'case' expr 'of' pats                     { A.CaseExpr $2 $4 (pos $1) }
+            | 'let' '{' decls '}' 'in' expr             { A.LetExpr $3 $6 (pos $1) }
+            | 'case' expr 'of' '{' pats '}'             { A.CaseExpr $2 $5 (pos $1) }
 
 args        :: { [A.Expr] }
             : expr args                     { $1 : $2 }
@@ -141,8 +143,11 @@ prettyToken (TokSymbol (s, p)) = "'" ++ case s of
     SymBackslash -> "\\"
     SymColon -> ":"
     SymComma -> ","
+    SymDot -> "."
     SymEqual -> "="
+    SymLBrace -> "{"
     SymLParen -> "("
+    SymRBrace -> "{"
     SymRParen -> ")"
     SymSemicolon -> ";"
     SymVBar -> "|"
