@@ -18,20 +18,18 @@ transExpr restty expr = case restty of
         _ -> traexpr expr
     where
         traexpr :: Expr -> State Context Term
-        traexpr (VarExpr x p) = do
+        traexpr (VarExpr x as p) = do
                 ctx <- get
-                return $ TmVar (getVarIndex x ctx) (length ctx)
-        traexpr (FloatExpr f) = do
-                return $ TmFloat f
-        traexpr (StringExpr s) = return $ TmString s
-        traexpr (CallExpr x as p) = do
-                v <- traexpr (VarExpr x p)
+                let v = TmVar (getVarIndex x ctx) (length ctx)
                 app v as
             where
                 app t [] = return t
                 app t (a : as) = do
                         a' <- traexpr a
                         app (TmApp t a') as
+        traexpr (FloatExpr f) = do
+                return $ TmFloat f
+        traexpr (StringExpr s) = return $ TmString s
         traexpr (LamExpr x e p) = do
                 x' <- pickfreshname x NameBind
                 case restty of

@@ -1,4 +1,4 @@
-module Plato.Core.TypeCheck where
+module Plato.Core.Evaluate where
 
 import qualified Plato.Common.Name as N
 import Plato.Core.Context

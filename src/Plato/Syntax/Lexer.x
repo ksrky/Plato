@@ -55,6 +55,7 @@ tokens :-
 <0> \}                          { symbol SymRBrace }
 <0> \)                          { symbol SymRParen }
 <0> \;                          { symbol SymSemicolon }
+<0> \_                          { symbol SymUnderscore }         
 <0> \|                          { symbol SymVBar }
 
 <0> @varid                      { varid }
@@ -107,6 +108,7 @@ data Symbol
     | SymRBrace
     | SymRParen
     | SymSemicolon -- tmp
+    | SymUnderscore
     | SymVBar
     deriving (Eq, Show)
 

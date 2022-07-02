@@ -7,11 +7,12 @@ import Control.Monad.State
 
 data Block = Block
         { pointer :: Int
+        , outer :: Block
         , context :: Context
         }
 
-initBlock :: Context -> Block
-initBlock ctx = Block (length ctx) ctx
+initBlock :: Block -> Context -> Block
+initBlock blk ctx = Block (length ctx) blk ctx
 
 type Context = [(N.Name, Binding)]
 

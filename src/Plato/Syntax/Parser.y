@@ -15,7 +15,7 @@ import qualified Plato.Syntax.AST as A
 
 %token
 
-'case'                          { TokKeyword (KwLet, $$) }
+'case'                          { TokKeyword (KwCase, $$) }
 'data'                          { TokKeyword (KwData, $$) }
 'forall'                        { TokKeyword (KwForall, $$) }
 'in'                            { TokKeyword (KwIn, _) }
@@ -35,6 +35,7 @@ import qualified Plato.Syntax.AST as A
 '}'                             { TokSymbol (SymRBrace, _) }
 ')'                             { TokSymbol (SymRParen, _) }
 ';'                             { TokSymbol (SymSemicolon, _) }
+'_'                             { TokSymbol (SymUnderscore, _) }
 '|'                             { TokSymbol (SymVBar, _) }
 
 varid                           { TokVarId $$ }
@@ -58,8 +59,8 @@ topdecl     :: { A.TopDecl }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
-            : decl ';' decls                { $1 : $3 }
-            | decl                          { [$1] }
+            : decl ';'                      { [$1] }
+            | decl ';' decls                { $1 : $3 }
 
 decl        :: { A.Decl }
             : varid ':' type                { A.FuncTyDecl (id2name $1) $3 (pos $1) }
@@ -95,10 +96,9 @@ tyargs      :: { [N.Name] }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid                                     { A.VarExpr (id2name $1) (pos $1) }
+            : varid args                                { A.VarExpr (id2name $1) $2 (pos $1) }
             | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
-            | varid args                                { A.CallExpr (id2name $1) $2 (pos $1) }
             | '(' expr ')'                              { $2 }
             | '\\' varid '->' expr                      { A.LamExpr (id2name $2) $4 (pos $1) }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr $3 $6 (pos $1) }
@@ -108,14 +108,31 @@ args        :: { [A.Expr] }
             : expr args                     { $1 : $2 }
             | {- empty -}                   { [] }
 
-pats        :: { [(A.Expr, A.Expr, Pos)] }
-            : expr '->' expr pats           { ($1, $3, pos $2) : $4 }
-            | {- empty -}                   { [] }
+alts        :: { [(A.Expr, A.Expr, Pos)] }
+            : alt ';' alts
+            | {- empty -}
 
+alt         :: { (A.Expr, A.Expr, Pos) }
+            : pat '->' expr       { ($1, $3, pos $2) }
+
+pat         :: { A.Expr }
+            : apat
+
+apat        :: { A.Expr }
+        	: varid
+            | float
+            | string
+            | _
 
 {
 parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ prettyToken t
+    {-where
+        (_, p) = t
+        l = line $ pos p
+        llen = length l
+        offset = replicate (llen + 1) " "
+        out = offset ++ "|\n" ++ l ++ " |" ++ prettyToken ++ "\n" ++ offset ++ " |\n"-}
 
 id2name :: (String,  AlexPosn) -> Name
 id2name = N.str2name . fst

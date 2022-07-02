@@ -4,10 +4,9 @@ import Plato.Common.Name (Name)
 import Plato.Common.Position (Pos)
 
 data Expr
-        = VarExpr Name Pos
+        = VarExpr Name [Expr] Pos
         | FloatExpr Float
         | StringExpr String
-        | CallExpr Name [Expr] Pos
         | LamExpr Name Expr Pos
         | LetExpr [Decl] Expr Pos
         | CaseExpr Expr [(Expr, Expr, Pos)] Pos
