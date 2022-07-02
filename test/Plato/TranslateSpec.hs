@@ -25,7 +25,7 @@ iscorrect =
         [ (`shouldBe` [("id", TmTAbs "x" KnStar (TmAbs "a" (TyVar 0 1) (TmVar 0 3)))])
         , (`shouldBe` [])
         , (`shouldBe` [])
-        , (`shouldBe` [])
+        , (`shouldBe` [("func", TmLet "f" (TmFloat 1.0) (TmVar 0 2))])
         ]
 
 -- Decl (FuncTyDecl "double" (TyApp "Int" (TyApp "Int" "Int") (Pos {line=3, col=1}))), FuncDecl "double" (LamExpr "x")

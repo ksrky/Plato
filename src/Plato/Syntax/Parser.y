@@ -35,7 +35,7 @@ import qualified Plato.Syntax.AST as A
 '}'                             { TokSymbol (SymRBrace, _) }
 ')'                             { TokSymbol (SymRParen, _) }
 ';'                             { TokSymbol (SymSemicolon, _) }
-'_'                             { TokSymbol (SymUnderscore, _) }
+'_'                             { TokSymbol (SymUScore, _) }
 '|'                             { TokSymbol (SymVBar, _) }
 
 varid                           { TokVarId $$ }
@@ -97,32 +97,27 @@ tyargs      :: { [N.Name] }
 
 expr        :: { A.Expr }
             : varid args                                { A.VarExpr (id2name $1) $2 (pos $1) }
+            | conid args                                { A.ConExpr (id2name $1) $2 (pos $1) }
             | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
             | '(' expr ')'                              { $2 }
             | '\\' varid '->' expr                      { A.LamExpr (id2name $2) $4 (pos $1) }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr $3 $6 (pos $1) }
-            | 'case' expr 'of' '{' pats '}'             { A.CaseExpr $2 $5 (pos $1) }
+            | 'case' expr 'of' '{' alts '}'             { A.CaseExpr $2 $5 (pos $1) }
 
 args        :: { [A.Expr] }
             : expr args                     { $1 : $2 }
             | {- empty -}                   { [] }
 
 alts        :: { [(A.Expr, A.Expr, Pos)] }
-            : alt ';' alts
-            | {- empty -}
+            : alt ';' alts                  { $1 : $3 }
+            | {- empty -}                   { [] }
 
 alt         :: { (A.Expr, A.Expr, Pos) }
-            : pat '->' expr       { ($1, $3, pos $2) }
+            : pat '->' expr                 { ($1, $3, pos $2) }
 
 pat         :: { A.Expr }
-            : apat
-
-apat        :: { A.Expr }
-        	: varid
-            | float
-            | string
-            | _
+            : expr                          { $1 }
 
 {
 parseError :: Token -> Alex a

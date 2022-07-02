@@ -31,7 +31,12 @@ iscorrect =
                 , Decl (FuncDecl "func" (LetExpr [FuncDecl "f" (FloatExpr 1.0) Pos{line = 4, col = 14}] (VarExpr "f" [] Pos{line = 4, col = 24}) Pos{line = 4, col = 8}) Pos{line = 4, col = 1})
                 ]
           )
-        , (`shouldBe` [])
+        , ( `shouldBe`
+                [ DataDecl "Bool" [] [("True", []), ("False", [])] Pos{line = 3, col = 1}
+                , Decl (FuncTyDecl "not" (FunType (ConType "Bool" Pos{line = 5, col = 7}) (ConType "Bool" Pos{line = 5, col = 15}) Pos{line = 5, col = 12}) Pos{line = 5, col = 1})
+                , Decl (FuncDecl "not" (LamExpr "b" (CaseExpr (VarExpr "b" [] Pos{line = 6, col = 18}) [(ConExpr "True" [] Pos{line = 6, col = 25}, ConExpr "False" [] Pos{line = 6, col = 33}, Pos{line = 6, col = 30}), (ConExpr "False" [] Pos{line = 6, col = 40}, ConExpr "True" [] Pos{line = 6, col = 49}, Pos{line = 6, col = 46})] Pos{line = 6, col = 13}) Pos{line = 6, col = 7}) Pos{line = 6, col = 1})
+                ]
+          )
         ]
 
 processFile :: [Int] -> SpecWith ()

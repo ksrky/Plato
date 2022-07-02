@@ -11,3 +11,6 @@ instance Show Error' where
 
 err :: P.Pos -> String -> Error a
 err pos msg = Left $ Error' msg pos
+
+unreachable :: String -> a
+unreachable s = error $ "unreachable: " ++ s

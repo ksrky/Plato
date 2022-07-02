@@ -1,6 +1,6 @@
--- data type and function
+-- data type and case expression
 
 data Bool = True | False;
 
 not : Bool -> Bool;
-not = \b -> case b of { True -> False; False -> True; };
+not = \b -> case b of { True -> False; False -> True; } ;
