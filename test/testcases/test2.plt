@@ -1,3 +1,3 @@
 -- type synonim definition
 
-type Number = Int;
+type Number = Float;

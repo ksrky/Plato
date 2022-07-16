@@ -5,28 +5,24 @@ import Plato.Core.Syntax
 
 import Control.Monad.State
 
-data Block = Block
-        { pointer :: Int
-        , outer :: Block
-        , context :: Context
-        }
-
-initBlock :: Block -> Context -> Block
-initBlock blk ctx = Block (length ctx) blk ctx
-
 type Context = [(N.Name, Binding)]
 
 emptyContext :: Context
 emptyContext = []
 
+initContext :: Context
+initContext = (N.str2name "String", TyVarBind KnStar) : (N.str2name "Float", TyVarBind KnStar) : emptyContext
+
 addbinding :: N.Name -> Binding -> State Context ()
 addbinding x bind = modify $ \ctx -> (x, bind) : ctx
 
-getbinding :: Context -> Int -> Binding
-getbinding ctx i =
-        if i > length ctx
-                then bindingShift (i + 1) (snd $ ctx !! i)
+getbinding :: Context -> Int -> Int -> Binding
+getbinding ctx i n =
+        if i < n
+                then bindingShift (i + 1) (snd $ takefb ctx n !! i)
                 else error $ "Variable lookup failure: offset: " ++ show i ++ ", ctx size: " ++ show (length ctx)
+    where
+        takefb l n = drop (length l - n) l
 
 getbindingFromName :: N.Name -> State Context Binding
 getbindingFromName n = do
@@ -43,8 +39,8 @@ bindingShift d bind = case bind of
         TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
         TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
 
-getTypeFromContext :: Context -> Int -> Ty
-getTypeFromContext ctx i = case getbinding ctx i of
+getTypeFromContext :: Context -> Int -> Int -> Ty
+getTypeFromContext ctx i n = case getbinding ctx i n of
         VarBind tyT -> tyT
         TmAbbBind _ (Just tyT) -> tyT
         TmAbbBind _ Nothing -> error $ "No type recorded for variable " ++ N.name2str (index2name ctx i)

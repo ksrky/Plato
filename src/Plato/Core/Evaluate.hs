@@ -30,7 +30,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmTApp t1 tyT2 -> do
                         t1' <- eval1 t1
                         return $ TmTApp t1' tyT2
-                TmVar n _ -> case getbinding ctx n of
+                TmVar i n -> case getbinding ctx i n of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
                 TmLet x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
@@ -43,6 +43,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         Just $ TmCase t1' branches
                 _ -> Nothing
 
+{-
 istyabb :: Context -> Int -> Bool
 istyabb ctx i = case getbinding ctx i of
         TyAbbBind{} -> True
@@ -172,3 +173,4 @@ evalbinding :: Context -> Binding -> Binding
 evalbinding ctx b = case b of
         TmAbbBind t tyT -> let t' = eval ctx t in TmAbbBind t' tyT
         bind -> bind
+-}

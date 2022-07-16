@@ -78,17 +78,24 @@ getVarIndex var ctx = case elemIndex var (map fst ctx) of
         Just i -> i
         Nothing -> error $ "Unbound variable name: " ++ name2str var
 
-transDecl :: TopDecl -> State Context [(Name, Term)]
+entryPoint :: N.Name
+entryPoint = str2name "main"
+
+transDecl :: TopDecl -> State Context [Command]
 transDecl (Decl (FuncDecl n e p)) = do
         bind <- getbindingFromName n
         case bind of
                 VarBind ty -> do
                         t <- transExpr ty e
-                        return [(n, t)]
+                        addbinding n (TmAbbBind t (Just ty))
+                        return $
+                                if n == entryPoint
+                                        then [Eval t]
+                                        else [Bind n (TmAbbBind t (Just ty))]
                 _ -> unreachable "VarBind required"
 transDecl _ = return []
 
-transTopDecl :: TopDecl -> State Context ()
+transTopDecl :: TopDecl -> State Context [Command]
 transTopDecl (DataDecl name params constrs p) = do
         constrs' <- forM constrs $ \(con, field) -> do
                 field' <- mapM transType field
@@ -98,20 +105,24 @@ transTopDecl (DataDecl name params constrs p) = do
                 let aty = foldr TyArr tyT tys
                 addbinding n (VarBind aty)
         addbinding name (TyAbbBind tyT Nothing)
+        return [Bind name (TyAbbBind tyT Nothing)]
 transTopDecl (TypeDecl n params t p) = do
         ty <- transType t
         ty' <- addbinders (zip params (repeat KnStar)) ty --tmp
         addbinding n (TyAbbBind ty' Nothing)
+        return [Bind n (TyAbbBind ty' Nothing)]
 transTopDecl (Decl (FuncTyDecl n t p)) = do
         ty <- transType t
         addbinding n (VarBind ty)
-transTopDecl _ = return ()
+        return [Bind n (VarBind ty)]
+transTopDecl _ = return []
 
 addbinders :: [(Name, Kind)] -> Ty -> State Context Ty
 addbinders [] ty = return ty
 addbinders ((x, k) : ps) ty = TyAbs x k <$> addbinders ps ty
 
-transProgram :: [TopDecl] -> State Context [(Name, Term)]
+transProgram :: [TopDecl] -> State Context [Command]
 transProgram tds = do
-        mapM_ transTopDecl tds
-        concat <$> mapM transDecl tds
+        bs1 <- mapM transTopDecl tds
+        bs2 <- mapM transDecl tds
+        return $ concat bs1 ++ concat bs2

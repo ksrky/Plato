@@ -38,6 +38,13 @@ data Binding
         | TyVarBind Kind
         | TyAbbBind Ty (Maybe Kind)
         | TmAbbBind Term (Maybe Ty)
+        deriving (Eq, Show)
+
+data Command
+        = Import N.Name
+        | Bind N.Name Binding
+        | Eval Term
+        deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Type
