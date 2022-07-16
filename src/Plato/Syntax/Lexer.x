@@ -12,7 +12,7 @@ $white_no_nl = $white # \n
 
 $small = [a-z]
 $large = [A-Z]
-$special    = [\.\;\,\$\|\*\+\?\#\~\-\{\}\(\)\[\]\^\/]
+$special    = [\.\,\$\*\+\?\#\~\-\[\]\^\/]
 
 @reservedid = case | data | else | if | in
             | of | let | then | if | type | where
@@ -163,13 +163,11 @@ alexEOF = do
 
 data AlexUserState = AlexUserState {
       lexerCommentDepth  :: Int
-    , lexerStringValue   :: String
 }
 
 alexInitUserState :: AlexUserState
 alexInitUserState = AlexUserState {
       lexerCommentDepth  = 0
-    , lexerStringValue   = ""
 }
 
 getLexerCommentDepth :: Alex Int

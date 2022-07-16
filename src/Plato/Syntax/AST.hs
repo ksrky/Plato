@@ -1,33 +1,33 @@
 module Plato.Syntax.AST where
 
+import Plato.Common.Info
 import Plato.Common.Name (Name)
-import Plato.Common.Position (Pos)
 
 data Expr
-        = VarExpr Name [Expr] Pos
-        | ConExpr Name [Expr] Pos
+        = VarExpr Info Name [Expr]
+        | ConExpr Info Name [Expr]
         | FloatExpr Float
         | StringExpr String
-        | LamExpr Name Expr Pos
-        | LetExpr [Decl] Expr Pos
-        | CaseExpr Expr [(Expr, Expr, Pos)] Pos
+        | LamExpr Info Name Expr
+        | LetExpr Info [Decl] Expr
+        | CaseExpr Info Expr [(Expr, Expr, Info)]
         deriving (Eq, Show)
 
 data Decl
-        = FuncDecl Name Expr Pos
-        | FuncTyDecl Name Type Pos
+        = FuncDecl Info Name Expr
+        | FuncTyDecl Info Name Type
         deriving (Eq, Show)
 
 data TopDecl
-        = DataDecl Name [Name] [(Name, [Type])] Pos
-        | TypeDecl Name [Name] Type Pos
+        = DataDecl Info Name [Name] [(Name, [Type])]
+        | TypeDecl Info Name [Name] Type
         | Decl Decl
         deriving (Eq, Show)
 
 data Type
-        = ConType Name Pos
-        | VarType Name Pos
+        = ConType Info Name
+        | VarType Info Name
         | AppType Type Type
-        | FunType Type Type Pos
+        | FunType Info Type Type
         | AllType Name Type
         deriving (Eq, Show)

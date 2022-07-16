@@ -29,8 +29,8 @@ library
       Plato.Backend.GHC.HsPretty
       Plato.Backend.GHC.HsSyntax
       Plato.Backend.Untyped
+      Plato.Common.Info
       Plato.Common.Name
-      Plato.Common.Position
       Plato.Common.Table
       Plato.Core.Context
       Plato.Core.Erase
@@ -38,6 +38,8 @@ library
       Plato.Core.Evaluate
       Plato.Core.Syntax
       Plato.Core.Translate
+      Plato.Debug.Parser
+      Plato.Debug.PrettyAST
       Plato.Syntax.AST
       Plato.Syntax.Lexer
       Plato.Syntax.Parser

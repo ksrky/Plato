@@ -19,52 +19,52 @@ transExpr restty expr = case restty of
         _ -> traexpr expr
     where
         traexpr :: Expr -> State Context Term
-        traexpr (VarExpr x as p) = do
+        traexpr (VarExpr fi x as) = do
                 ctx <- get
                 let t1 = TmVar (getVarIndex x ctx) (length ctx)
                 foldM (\t a -> TmApp t <$> traexpr a) t1 as
-        traexpr (ConExpr c as p) = do
+        traexpr (ConExpr fi c as) = do
                 ctx <- get
                 let t1 = TmVar (getVarIndex c ctx) (length ctx)
                 foldM (\t a -> TmApp t <$> traexpr a) t1 as
         traexpr (FloatExpr f) = do
                 return $ TmFloat f
         traexpr (StringExpr s) = return $ TmString s
-        traexpr (LamExpr x e p) = do
+        traexpr (LamExpr fi x e) = do
                 x' <- pickfreshname x NameBind
                 case restty of
                         TyArr tyT1 tyT2 -> do
                                 t <- transExpr tyT2 e
                                 return $ TmAbs x' tyT1 t
                         _ -> error "array type required"
-        traexpr (LetExpr ds e p) = mkLet ds e
+        traexpr (LetExpr fi ds e) = mkLet ds e
             where
                 mkLet :: [Decl] -> Expr -> State Context Term
-                mkLet (FuncDecl x e p : ds) body = do
+                mkLet (FuncDecl fi x e : ds) body = do
                         x' <- pickfreshname x NameBind
                         e' <- traexpr e
                         TmLet x' e' <$> mkLet ds body
                 mkLet _ body = traexpr body
-        traexpr (CaseExpr e pats p) = do
+        traexpr (CaseExpr fi e pats) = do
                 e' <- traexpr e
-                pats' <- forM pats $ \(pat, body, pos) -> do
+                pats' <- forM pats $ \(pat, body, _) -> do
                         pat' <- traexpr pat
                         body' <- traexpr body
                         return (pat', body')
                 return $ TmCase e' pats'
 
 transType :: Type -> State Context Ty
-transType (ConType x p) = do
+transType (ConType fi x) = do
         ctx <- get
         return $ TyVar (getVarIndex x ctx) (length ctx)
-transType (VarType x p) = do
+transType (VarType fi x) = do
         ctx <- get
         return $ TyVar (getVarIndex x ctx) (length ctx)
 transType (AppType ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
         return $ TyApp ty1' ty2'
-transType (FunType ty1 ty2 p) = do
+transType (FunType fi ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
         return $ TyArr ty1' ty2'
@@ -82,7 +82,7 @@ entryPoint :: N.Name
 entryPoint = str2name "main"
 
 transDecl :: TopDecl -> State Context [Command]
-transDecl (Decl (FuncDecl n e p)) = do
+transDecl (Decl (FuncDecl fi n e)) = do
         bind <- getbindingFromName n
         case bind of
                 VarBind ty -> do
@@ -92,11 +92,11 @@ transDecl (Decl (FuncDecl n e p)) = do
                                 if n == entryPoint
                                         then [Eval t]
                                         else [Bind n (TmAbbBind t (Just ty))]
-                _ -> unreachable "VarBind required"
+                _ -> error "VarBind required"
 transDecl _ = return []
 
 transTopDecl :: TopDecl -> State Context [Command]
-transTopDecl (DataDecl name params constrs p) = do
+transTopDecl (DataDecl fi name params constrs) = do
         constrs' <- forM constrs $ \(con, field) -> do
                 field' <- mapM transType field
                 return (con, field')
@@ -106,12 +106,12 @@ transTopDecl (DataDecl name params constrs p) = do
                 addbinding n (VarBind aty)
         addbinding name (TyAbbBind tyT Nothing)
         return [Bind name (TyAbbBind tyT Nothing)]
-transTopDecl (TypeDecl n params t p) = do
+transTopDecl (TypeDecl fi name params t) = do
         ty <- transType t
         ty' <- addbinders (zip params (repeat KnStar)) ty --tmp
-        addbinding n (TyAbbBind ty' Nothing)
-        return [Bind n (TyAbbBind ty' Nothing)]
-transTopDecl (Decl (FuncTyDecl n t p)) = do
+        addbinding name (TyAbbBind ty' Nothing)
+        return [Bind name (TyAbbBind ty' Nothing)]
+transTopDecl (Decl (FuncTyDecl fi n t)) = do
         ty <- transType t
         addbinding n (VarBind ty)
         return [Bind n (VarBind ty)]

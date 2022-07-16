@@ -2,7 +2,8 @@
 
 module Plato.ParserSpec where
 
-import Plato.Common.Position
+import Plato.Common.Info
+import Plato.Debug.Parser
 import Plato.Syntax.AST
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
@@ -15,29 +16,17 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [0 .. 5]
+                processFile [0 .. 6]
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =
-        [ ( `shouldBe`
-                [ Decl (FuncTyDecl "id" (AllType "x" (FunType (VarType "x" Pos{line = 3, col = 16}) (VarType "x" Pos{line = 3, col = 21}) Pos{line = 3, col = 18})) Pos{line = 3, col = 1})
-                , Decl (FuncDecl "id" (LamExpr "a" (VarExpr "a" [] Pos{line = 4, col = 12}) Pos{line = 4, col = 6}) Pos{line = 4, col = 1})
-                ]
-          )
-        , (`shouldBe` [DataDecl "Bool" [] [("True", []), ("False", [])] (Pos{line = 3, col = 1})])
-        , (`shouldBe` [TypeDecl "Number" [] (ConType "Float" (Pos{line = 3, col = 15})) (Pos{line = 3, col = 1})])
-        , ( `shouldBe`
-                [ Decl (FuncTyDecl "func" (ConType "Float" Pos{line = 3, col = 8}) Pos{line = 3, col = 1})
-                , Decl (FuncDecl "func" (LetExpr [FuncDecl "f" (FloatExpr 1.0) Pos{line = 4, col = 14}] (VarExpr "f" [] Pos{line = 4, col = 24}) Pos{line = 4, col = 8}) Pos{line = 4, col = 1})
-                ]
-          )
-        , ( `shouldBe`
-                [ DataDecl "Bool" [] [("True", []), ("False", [])] Pos{line = 3, col = 1}
-                , Decl (FuncTyDecl "not" (FunType (ConType "Bool" Pos{line = 5, col = 7}) (ConType "Bool" Pos{line = 5, col = 15}) Pos{line = 5, col = 12}) Pos{line = 5, col = 1})
-                , Decl (FuncDecl "not" (LamExpr "b" (CaseExpr (VarExpr "b" [] Pos{line = 6, col = 18}) [(ConExpr "True" [] Pos{line = 6, col = 25}, ConExpr "False" [] Pos{line = 6, col = 33}, Pos{line = 6, col = 30}), (ConExpr "False" [] Pos{line = 6, col = 40}, ConExpr "True" [] Pos{line = 6, col = 49}, Pos{line = 6, col = 46})] Pos{line = 6, col = 13}) Pos{line = 6, col = 7}) Pos{line = 6, col = 1})
-                ]
-          )
-        , (`shouldBe` [Decl (FuncTyDecl "id" (FunType (ConType "Float" (Pos 3 6)) (ConType "Float" (Pos 3 15)) (Pos 3 12)) (Pos 3 1)), Decl (FuncDecl "id" (LamExpr "a" (VarExpr "a" [] (Pos 4 12)) (Pos 4 6)) (Pos 4 1)), Decl (FuncTyDecl "main" (ConType "Float" (Pos 6 8)) (Pos 6 1)), Decl (FuncDecl "main" (VarExpr "id" [FloatExpr 3.0] (Pos 7 8)) (Pos 7 1))])
+        [ (`shouldBe` [Decl (FuncTyDecl dummyInfo "id" (AllType "x" (FunType dummyInfo (VarType dummyInfo "x") (VarType dummyInfo "x")))), Decl (FuncDecl dummyInfo "id" (LamExpr dummyInfo "a" (VarExpr dummyInfo "a" [])))])
+        , (`shouldBe` [DataDecl dummyInfo "Bool" [] [("True", []), ("False", [])]])
+        , (`shouldBe` [TypeDecl dummyInfo "Number" [] (ConType dummyInfo "Float")])
+        , (`shouldBe` [Decl (FuncTyDecl dummyInfo "func" (ConType dummyInfo "Float")), Decl (FuncDecl dummyInfo "func" (LetExpr dummyInfo [FuncDecl dummyInfo "f" (FloatExpr 1.0)] (VarExpr dummyInfo "f" [])))])
+        , (`shouldBe` [DataDecl dummyInfo "Bool" [] [("True", []), ("False", [])], Decl (FuncTyDecl dummyInfo "not" (FunType dummyInfo (ConType dummyInfo "Bool") (ConType dummyInfo "Bool"))), Decl (FuncDecl dummyInfo "not" (LamExpr dummyInfo "b" (CaseExpr dummyInfo (VarExpr dummyInfo "b" []) [(ConExpr dummyInfo "True" [], ConExpr dummyInfo "False" [], dummyInfo), (ConExpr dummyInfo "False" [], ConExpr dummyInfo "True" [], dummyInfo)])))])
+        , (`shouldBe` [Decl (FuncTyDecl dummyInfo "id" (FunType dummyInfo (ConType dummyInfo "Float") (ConType dummyInfo "Float"))), Decl (FuncDecl dummyInfo "id" (LamExpr dummyInfo "a" (VarExpr dummyInfo "a" []))), Decl (FuncTyDecl dummyInfo "main" (ConType dummyInfo "Float")), Decl (FuncDecl dummyInfo "main" (VarExpr dummyInfo "id" [FloatExpr 3.0]))])
+        , (`shouldBe` [DataDecl dummyInfo "Nat" [] [("Zero", []), ("Succ", [ConType dummyInfo "Nat"])], Decl (FuncTyDecl dummyInfo "plus" (FunType dummyInfo (ConType dummyInfo "Nat") (FunType dummyInfo (ConType dummyInfo "Nat") (ConType dummyInfo "Nat")))), Decl (FuncDecl dummyInfo "plus" (LamExpr dummyInfo "m" (LamExpr dummyInfo "n" (CaseExpr dummyInfo (VarExpr dummyInfo "m" []) [(ConExpr dummyInfo "Zero" [], VarExpr dummyInfo "n" [], dummyInfo), (ConExpr dummyInfo "Succ" [VarExpr dummyInfo "m'" []], ConExpr dummyInfo "Succ" [VarExpr dummyInfo "plus" [VarExpr dummyInfo "m'" [VarExpr dummyInfo "n" []]]], dummyInfo)])))), Decl (FuncTyDecl dummyInfo "main" (ConType dummyInfo "Nat")), Decl (FuncDecl dummyInfo "main" (VarExpr dummyInfo "plus" [ConExpr dummyInfo "Succ" [ConExpr dummyInfo "Succ" [ConExpr dummyInfo "Zero" []]], ConExpr dummyInfo "Succ" [ConExpr dummyInfo "Succ" [ConExpr dummyInfo "Succ" [ConExpr dummyInfo "Zero" []]]]]))])
         ]
 
 processFile :: [Int] -> SpecWith ()
@@ -47,10 +36,13 @@ processFile (n : ns) = do
         it fname $ do
                 contents <- readFile fname
                 res <- process contents
-                (iscorrect !! n) res
+                let res' = map reduceTopDecl res
+                (iscorrect !! n) res'
         processFile ns
 
 process :: String -> IO [TopDecl]
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
-        Right res -> print res >> return res
+        Right res -> do
+                let res' = map reduceTopDecl res
+                print res' >> return res

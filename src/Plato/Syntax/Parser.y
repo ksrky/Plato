@@ -2,7 +2,7 @@
 module Plato.Syntax.Parser where
 
 import Plato.Common.Name as N
-import Plato.Common.Position
+import Plato.Common.Info
 import Plato.Syntax.Lexer
 import qualified Plato.Syntax.AST as A
 }
@@ -54,8 +54,8 @@ topdecls    :: { [A.TopDecl] }
             | {- empty -}                   { [] }
 
 topdecl     :: { A.TopDecl }
-            : 'data' conid tyargs '=' constrs       { A.DataDecl (id2name $2) $3 $5 (pos $1) }
-            | 'type' conid  tyargs'=' type          { A.TypeDecl (id2name $2) $3 $5 (pos $1) }
+            : 'data' conid tyargs '=' constrs       { A.DataDecl (info $1) (id2name $2) $3 $5 }
+            | 'type' conid  tyargs'=' type          { A.TypeDecl (info $1) (id2name $2) $3 $5 }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -63,15 +63,15 @@ decls       :: { [A.Decl] }
             | decl ';' decls                { $1 : $3 }
 
 decl        :: { A.Decl }
-            : varid ':' type                { A.FuncTyDecl (id2name $1) $3 (pos $1) }
-            | varid '=' expr                { A.FuncDecl (id2name $1) $3 (pos $1) }
+            : varid ':' type                { A.FuncTyDecl (info $1) (id2name $1) $3 }
+            | varid '=' expr                { A.FuncDecl (info $1) (id2name $1) $3 }
 
 types       :: { [A.Type] }
             : type types                    { $1 : $2 }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : btype '->' type               { A.FunType $1 $3 (pos $2) }
+            : btype '->' type               { A.FunType (info $2) $1 $3 }
             | 'forall' varid '.' type       { A.AllType (id2name $2) $4}
             | btype                         { $1 }
 
@@ -81,8 +81,8 @@ btype       :: { A.Type }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : conid                         { A.ConType (id2name $1) (pos $1) }
-            | varid                         { A.VarType (id2name $1) (pos $1) }
+            : conid                         { A.ConType (info $1) (id2name $1) }
+            | varid                         { A.VarType (info $1) (id2name $1) }
 
 constrs     :: { [(N.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
@@ -96,25 +96,25 @@ tyargs      :: { [N.Name] }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid args                                { A.VarExpr (id2name $1) $2 (pos $1) }
-            | conid args                                { A.ConExpr (id2name $1) $2 (pos $1) }
+            : varid args                                { A.VarExpr (info $1) (id2name $1) $2 }
+            | conid args                                { A.ConExpr (info $1) (id2name $1) $2 }
             | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
             | '(' expr ')'                              { $2 }
-            | '\\' varid '->' expr                      { A.LamExpr (id2name $2) $4 (pos $1) }
-            | 'let' '{' decls '}' 'in' expr             { A.LetExpr $3 $6 (pos $1) }
-            | 'case' expr 'of' '{' alts '}'             { A.CaseExpr $2 $5 (pos $1) }
+            | '\\' varid '->' expr                      { A.LamExpr (info $1) (id2name $2) $4 }
+            | 'let' '{' decls '}' 'in' expr             { A.LetExpr (info $1) $3 $6 }
+            | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (info $1) $2 $5 }
 
 args        :: { [A.Expr] }
             : expr args                     { $1 : $2 }
             | {- empty -}                   { [] }
 
-alts        :: { [(A.Expr, A.Expr, Pos)] }
+alts        :: { [(A.Expr, A.Expr, Info)] }
             : alt ';' alts                  { $1 : $3 }
             | {- empty -}                   { [] }
 
-alt         :: { (A.Expr, A.Expr, Pos) }
-            : pat '->' expr                 { ($1, $3, pos $2) }
+alt         :: { (A.Expr, A.Expr, Info) }
+            : pat '->' expr                 { ($1, $3, info $2) }
 
 pat         :: { A.Expr }
             : expr                          { $1 }
@@ -132,14 +132,14 @@ parseError t = alexError $ "parse error: " ++ prettyToken t
 id2name :: (String,  AlexPosn) -> Name
 id2name = N.str2name . fst
 
-class GetPos a where
-    pos :: a -> Pos
+class MkInfo a where
+    info :: a -> Info
 
-instance GetPos AlexPosn where
-    pos (AlexPn _ l c) = Pos l c
+instance MkInfo AlexPosn where
+    info (AlexPn _ l c) = Info{ posInfo = Pos l c }
 
-instance GetPos (String, AlexPosn) where
-    pos (_, p) = pos p
+instance MkInfo (String, AlexPosn) where
+    info (_, p) = info p
 
 prettyToken :: Token -> String
 prettyToken (TokKeyword (k, p)) = "'" ++ case k of
