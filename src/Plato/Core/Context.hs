@@ -19,10 +19,8 @@ addbinding x bind = modify $ \ctx -> (x, bind) : ctx
 getbinding :: Context -> Int -> Int -> Binding
 getbinding ctx i n =
         if i < n
-                then bindingShift (i + 1) (snd $ takefb ctx n !! i)
+                then bindingShift (i + 1) (snd $ ctx !! i)
                 else error $ "Variable lookup failure: offset: " ++ show i ++ ", ctx size: " ++ show (length ctx)
-    where
-        takefb l n = drop (length l - n) l
 
 getbindingFromName :: N.Name -> State Context Binding
 getbindingFromName n = do
@@ -50,6 +48,11 @@ pickfreshname :: Monad m => N.Name -> Binding -> StateT Context m N.Name
 pickfreshname x bind = state $ \ctx -> case lookup x ctx of
         Just _ -> pickfreshname (N.appendstr x "'") bind `runState` ctx
         Nothing -> (x, (x, bind) : ctx)
+
+isuniquename :: Monad m => N.Name -> Binding -> StateT Context m ()
+isuniquename x bind = state $ \ctx -> case lookup x ctx of
+        Just _ -> error $ N.name2str x ++ " is already used."
+        Nothing -> ((), (x, bind) : ctx)
 
 index2name :: Context -> Int -> N.Name
 index2name ctx x = fst (ctx !! x)

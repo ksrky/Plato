@@ -5,8 +5,6 @@ module Plato.Core.Syntax where
 import qualified Plato.Common.Name as N
 import qualified Plato.Core.Error as E
 
-import qualified Control.Arrow as Data.Bifunctor
-
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
@@ -14,6 +12,7 @@ data Ty
         | TyString
         | TyFloat
         | TyVariant [(N.Name, [Ty])]
+        | TyRec N.Name Ty
         | TyAbs N.Name Kind Ty
         | TyArr Ty Ty
         | TyApp Ty Ty
@@ -22,14 +21,17 @@ data Ty
 
 data Term
         = TmVar Int Int
-        | TmString String
-        | TmFloat Float
         | TmAbs N.Name Ty Term
-        | TmLet N.Name Term Term
-        | TmCase Term [(Term, Term)]
         | TmApp Term Term
         | TmTAbs N.Name Kind Term
         | TmTApp Term Ty
+        | TmFloat Float
+        | TmString String
+        | TmLet N.Name Term Term
+        | TmCase Term [(Term, Term)]
+        | TmTag N.Name [Term] Ty
+        | TmFold Ty
+        | TmUnfold Ty
         deriving (Eq, Show)
 
 data Binding
@@ -58,7 +60,8 @@ tymap onvar c tyT = walk c tyT
                 TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
-                TyVariant fieldtys -> TyVariant (map (Data.Bifunctor.second (map (walk c))) fieldtys)
+                TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
+                TyRec x tyT -> TyRec x (walk (c + 1) tyT)
                 TyFloat -> TyFloat
                 TyString -> TyString
 
@@ -96,9 +99,12 @@ tmmap onvar ontype c t = walk c t
                 TmAbs x tyT1 t2 -> TmAbs x (ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
                 TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
-                TmCase t cases -> TmCase (walk c t) (map (Data.Bifunctor.second (walk (c + 1))) cases)
+                TmCase t cases -> TmCase (walk c t) (map (\(pi, ti) -> (pi, walk (c + 1) ti)) cases)
+                TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
                 TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
+                TmFold tyT -> TmFold (ontype c tyT)
+                TmUnfold tyT -> TmUnfold (ontype c tyT)
                 _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term

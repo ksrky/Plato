@@ -11,7 +11,7 @@ import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
 
 import Control.Monad.State
-import qualified Data.Foldable
+import Control.Monad.Writer.Lazy
 import System.Environment
 import Test.Hspec
 
@@ -54,8 +54,8 @@ process :: String -> IO (Maybe Term)
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                let cmds = transProgram ast `evalState` initContext
+                let cmds = execWriterT (transProgram ast) `evalState` initContext
                     ctx = mapM processCommand cmds `execState` initContext
                     res = processEval ctx cmds
-                Data.Foldable.forM_ res print
+                forM_ res print
                 return res

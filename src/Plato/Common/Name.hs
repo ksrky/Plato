@@ -14,3 +14,6 @@ appendstr :: Text -> String -> Text
 appendstr t [] = t
 appendstr t [c] = snoc t c
 appendstr t (c : s) = appendstr (snoc t c) s
+
+dummyName :: Text
+dummyName = str2name "?"

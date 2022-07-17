@@ -11,7 +11,9 @@ isval t = case t of
         TmString{} -> True
         TmFloat{} -> True
         TmAbs{} -> True
+        TmTag l t1 _ -> all isval t1
         TmTAbs{} -> True
+        TmApp (TmFold _) v -> isval v
         _ -> False
 
 eval :: Context -> Term -> Term
@@ -20,6 +22,13 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
                 TmApp (TmAbs x _ t12) v2 | isval v2 -> return $ termSubstTop v2 t12
+                TmApp (TmUnfold tyS) (TmApp (TmFold tyT) v) | isval v -> return v
+                TmApp (TmFold tyS) t2 -> do
+                        t2' <- eval1 t2
+                        return $ TmApp (TmFold tyS) t2'
+                TmApp (TmUnfold tyS) t2 -> do
+                        t2' <- eval1 t2
+                        return $ TmApp (TmUnfold tyS) t2'
                 TmApp v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
                         return $ TmApp v1 t2'
@@ -37,11 +46,22 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmLet x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet x t1' t2
-                TmCase v branches | isval v -> termSubstTop v <$> lookup v branches
+                TmTag l ts tyT -> do
+                        ts' <- mapM eval1 ts
+                        Just $ TmTag l ts' tyT
+                TmCase v1 branches | isval v1 -> undefined {-case match ctx v1 branches of
+                                                           Just body -> Just $ termSubstTop v1 body
+                                                           Nothing -> Nothing-}
                 TmCase t1 branches -> do
                         t1' <- eval1 t1
                         Just $ TmCase t1' branches
                 _ -> Nothing
+
+match :: Context -> Term -> (Term, Term) -> Maybe Term
+match ctx tm (pat, body) = undefined --match' tm pat
+    where
+        match' :: Term -> Term -> Bool
+        match' t p = undefined
 
 {-
 istyabb :: Context -> Int -> Bool
