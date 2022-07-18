@@ -49,12 +49,12 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmTag l ts tyT -> do
                         ts' <- mapM eval1 ts
                         Just $ TmTag l ts' tyT
-                TmCase v1 branches | isval v1 -> undefined {-case match ctx v1 branches of
-                                                           Just body -> Just $ termSubstTop v1 body
-                                                           Nothing -> Nothing-}
-                TmCase t1 branches -> do
+                TmCase v1 brchs excp | isval v1 -> undefined {-case match ctx v1 branches of
+                                                             Just body -> Just $ termSubstTop v1 body
+                                                             Nothing -> Nothing-}
+                TmCase t1 brchs excp -> do
                         t1' <- eval1 t1
-                        Just $ TmCase t1' branches
+                        Just $ TmCase t1' brchs excp
                 _ -> Nothing
 
 match :: Context -> Term -> (Term, Term) -> Maybe Term

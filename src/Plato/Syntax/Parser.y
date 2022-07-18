@@ -35,7 +35,7 @@ import qualified Plato.Syntax.AST as A
 '}'                             { TokSymbol (SymRBrace, _) }
 ')'                             { TokSymbol (SymRParen, _) }
 ';'                             { TokSymbol (SymSemicolon, _) }
-'_'                             { TokSymbol (SymUScore, _) }
+'_'                             { TokSymbol (SymUScore, $$) }
 '|'                             { TokSymbol (SymVBar, _) }
 
 varid                           { TokVarId $$ }
@@ -118,6 +118,7 @@ alt         :: { (A.Expr, A.Expr, Info) }
 
 pat         :: { A.Expr }
             : expr                          { $1 }
+            | '_'                           { wildcard $1 }
 
 {
 parseError :: Token -> Alex a
@@ -131,6 +132,9 @@ parseError t = alexError $ "parse error: " ++ prettyToken t
 
 id2name :: (String,  AlexPosn) -> Name
 id2name = N.str2name . fst
+
+wildcard :: AlexPosn -> Expr
+wildcard p = ConExpr (info p) (N.str2name "_") []
 
 class MkInfo a where
     info :: a -> Info

@@ -30,6 +30,7 @@ dependencies:
   - haskeline
   - hspec
   - mtl
+  - safe-exceptions
   - text
 
 library:
