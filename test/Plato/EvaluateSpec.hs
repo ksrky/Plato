@@ -26,7 +26,7 @@ iscorrect =
         , (`shouldBe` Nothing)
         , (`shouldBe` Nothing)
         , (`shouldBe` Nothing)
-        , (`shouldBe` Nothing)
+        , (`shouldBe` Just (TmTag "False" [] (TyVariant [("True", []), ("False", [])])))
         , (`shouldBe` Just (TmFloat 3.0))
         ]
 
@@ -54,8 +54,8 @@ process :: String -> IO (Maybe Term)
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                let cmds = execWriterT (transProgram ast) `evalState` initContext
-                    ctx = mapM processCommand cmds `execState` initContext
+                cmds <- execWriterT (transProgram ast) `evalStateT` initContext
+                let ctx = mapM processCommand cmds `execState` initContext
                     res = processEval ctx cmds
                 forM_ res print
                 return res

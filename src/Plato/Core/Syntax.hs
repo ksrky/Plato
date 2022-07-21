@@ -28,7 +28,7 @@ data Term
         | TmFloat Float
         | TmString String
         | TmLet N.Name Term Term
-        | TmCase Term [(N.Name, ([N.Name], Term))] (Maybe (N.Name, Term))
+        | TmCase Term [(N.Name, Term)]
         | TmTag N.Name [Term] Ty
         | TmFold Ty
         | TmUnfold Ty
@@ -90,7 +90,7 @@ typeSubstTop tyS tyT = typeShift (-1) (typeSubst (typeShift 1 tyS) 0 tyT)
 
 ----------------------------------------------------------------
 -- Term
-----------------------------------------------------------------z
+----------------------------------------------------------------
 tmmap :: (Int -> Int -> Int -> Term) -> (Int -> Ty -> Ty) -> Int -> Term -> Term
 tmmap onvar ontype c t = walk c t
     where
@@ -99,7 +99,7 @@ tmmap onvar ontype c t = walk c t
                 TmAbs x tyT1 t2 -> TmAbs x (ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
                 TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
-                TmCase t alts excp -> TmCase (walk c t) (map (\(li, (xi, ti)) -> (li, (xi, walk (c + 1) ti))) alts) ((\(xi, ti) -> (xi, walk c ti)) <$> excp)
+                TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk (c + 1) ti)) alts)
                 TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
                 TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
@@ -139,3 +139,11 @@ termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)
 
 tytermSubstTop :: Ty -> Term -> Term
 tytermSubstTop tyS t = termShift (-1) (tytermSubst (typeShift 1 tyS) 0 t)
+
+----------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------
+getTyArr :: Ty -> [Ty]
+getTyArr tyT1 = case tyT1 of
+        TyArr tyT11 tyT12 -> tyT11 : getTyArr tyT12
+        _ -> []

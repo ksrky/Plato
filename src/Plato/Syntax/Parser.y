@@ -133,8 +133,8 @@ parseError t = alexError $ "parse error: " ++ prettyToken t
 id2name :: (String,  AlexPosn) -> Name
 id2name = N.str2name . fst
 
-wildcard :: AlexPosn -> Expr
-wildcard p = ConExpr (info p) (N.str2name "_") []
+wildcard :: AlexPosn -> A.Expr
+wildcard p = A.ConExpr (info p) (N.str2name "_") []
 
 class MkInfo a where
     info :: a -> Info

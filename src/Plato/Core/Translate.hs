@@ -33,13 +33,12 @@ transExpr restty expr = case restty of
         traexpr (FloatExpr f) = do
                 return $ TmFloat f
         traexpr (StringExpr s) = return $ TmString s
-        traexpr (LamExpr fi x e) = do
-                case restty of
-                        TyArr tyT1 tyT2 -> do
-                                x' <- pickfreshname x (VarBind tyT1)
-                                t2 <- transExpr tyT2 e
-                                return $ TmAbs x' tyT1 t2
-                        _ -> throwError fi "array type required"
+        traexpr (LamExpr fi x e) = case restty of
+                TyArr tyT1 tyT2 -> do
+                        x' <- pickfreshname x (VarBind tyT1)
+                        t2 <- transExpr tyT2 e
+                        return $ TmAbs x' tyT1 t2
+                _ -> throwError fi "array type required"
         traexpr (LetExpr fi ds e) = mkLet ds e
             where
                 mkLet :: (MonadThrow m, MonadFail m) => [Decl] -> Expr -> Core m Term
@@ -49,38 +48,34 @@ transExpr restty expr = case restty of
                         TmLet x' e' <$> mkLet ds body
                 mkLet _ body = traexpr body
         traexpr (CaseExpr fi e alts) = do
-                e' <- traexpr e
-                mkCase alts
-            where
-                mkCase :: (MonadThrow m, MonadFail m) => [(Expr, Expr, Info)] -> Core m Term
-                mkCase [] = do
-                        t <- traexpr e
-                        return $ TmCase t [] Nothing
-                mkCase ((pat, body, fi1) : alts) = case pat of
-                        VarExpr fi2 x as ->
-                                if null as
-                                        then do
-                                                t <- traexpr e
-                                                ti <- traexpr body
-                                                return $ TmCase t [] (Just (x, ti))
-                                        else throwError fi2 "function type cannot be pattern"
-                        ConExpr fi2 c as -> do
-                                xs <- mapM (\_ -> pickfreshname dummyName NameBind) as
+                t <- traexpr e
+                alts' <- forM alts $ \(pat, body, fi1) -> case pat of
+                        VarExpr fi2 x as | null as -> do
+                                t <- traexpr e
                                 ti <- traexpr body
-                                TmCase t alts' excp <- mkCase alts
-                                return $ TmCase t ((c, (xs, ti)) : alts') excp {-
-                                                                               where
-                                                                                   mkalt [] [] = undefined
-                                                                                   mkalt (ai : as) (xi : xs) = case ai of
-                                                                                           VarExpr _ aixi _ -> TmApp (TmAbs a undefined (TmCase ))
-                                                                                           ConExpr{} -> undefined
-                                                                                           FloatExpr f -> undefined
-                                                                                           StringExpr s -> undefined
-                                                                                           _ -> throwError fi2 "illegal expression for pattern matching"
-                                                                                   mkalt _ _ = unreachable ""-}
+                                return (x, ti) --tmp
+                        VarExpr fi2 _ _ -> throwError fi2 "function type cannot be a pattern"
+                        ConExpr fi2 c as -> do
+                                mapM_ addarg as
+                                ti <- traexpr body
+                                bind <- getbindingFromName c
+                                case bind of
+                                        VarBind tyT21 -> do
+                                                --tmp: Check whether it's tycon or function
+                                                let tys = getTyArr tyT21
+                                                when (length as /= length tys) $ throwError fi2 "Wrong number of arguments"
+                                        _ -> throwError fi2 "Type constructor required"
+                                return (c, ti)
+                            where
+                                addarg :: MonadThrow m => Expr -> Core m ()
+                                addarg (VarExpr fi3 x as) = do
+                                        unless (null as) (throwError fi3 "function type cannot be a pattern")
+                                        addbinding x NameBind
+                                addarg _ = throwError fi2 "illegal expression for pattern matching"
                         FloatExpr f -> undefined
                         StringExpr s -> undefined
                         _ -> throwError fi1 "illegal expression for pattern matching"
+                return $ TmCase t alts'
 
 transType :: MonadThrow m => Type -> Core m Ty
 transType (ConType fi x) = do

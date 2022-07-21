@@ -28,7 +28,7 @@ iscorrect =
         , (`shouldBe` [Bind "Number" (TyAbbBind (TyVar 1 2) Nothing)])
         , (`shouldBe` [Bind "func" (VarBind (TyVar 1 2)), Bind "func" (TmAbbBind (TmLet "f" (TmFloat 1.0) (TmVar 0 4)) (Just (TyVar 1 2)))])
         , ( `shouldBe`
-                [Bind "True" (TmAbbBind (TmTag "True" [] (TyVariant [("True", []), ("False", [])])) (Just (TyVariant [("True", []), ("False", [])]))), Bind "False" (TmAbbBind (TmTag "False" [] (TyVariant [("True", []), ("False", [])])) (Just (TyVariant [("True", []), ("False", [])]))), Bind "Bool" (TyAbbBind (TyVariant [("True", []), ("False", [])]) Nothing), Bind "not" (VarBind (TyArr (TyVar 0 6) (TyVar 0 6))), Bind "main" (VarBind (TyVar 1 7)), Bind "not" (TmAbbBind (TmAbs "b" (TyVar 0 6) (TmCase (TmVar 0 9) [(TmTag "True" [] (TyVariant [("True", []), ("False", [])]), TmVar 4 9), (TmTag "False" [] (TyVariant [("True", []), ("False", [])]), TmVar 5 9)])) (Just (TyArr (TyVar 0 6) (TyVar 0 6)))), Eval (TmApp (TmVar 0 9) (TmVar 5 9))]
+                [Bind "True" (TmAbbBind (TmTag "True" [] (TyVariant [("True", []), ("False", [])])) (Just (TyVariant [("True", []), ("False", [])]))), Bind "False" (TmAbbBind (TmTag "False" [] (TyVariant [("True", []), ("False", [])])) (Just (TyVariant [("True", []), ("False", [])]))), Bind "Bool" (TyAbbBind (TyVariant [("True", []), ("False", [])]) Nothing), Bind "not" (VarBind (TyArr (TyVar 0 6) (TyVar 0 6))), Bind "main" (VarBind (TyVar 1 7)), Bind "not" (TmAbbBind (TmAbs "b" (TyVar 0 6) (TmCase (TmVar 0 9) [("True", TmVar 4 9), ("False", TmVar 5 9)])) (Just (TyArr (TyVar 0 6) (TyVar 0 6)))), Eval (TmApp (TmVar 0 9) (TmVar 5 9))]
           )
         , (`shouldBe` [Bind "id" (VarBind (TyArr (TyVar 1 2) (TyVar 1 2))), Bind "main" (VarBind (TyVar 2 3)), Bind "id" (TmAbbBind (TmAbs "a" (TyVar 1 2) (TmVar 0 5)) (Just (TyArr (TyVar 1 2) (TyVar 1 2)))), Eval (TmApp (TmVar 0 5) (TmFloat 3.0))])
         ]
@@ -47,5 +47,5 @@ process :: String -> IO [Command]
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                let cmds = (execWriterT $ transProgram ast) `evalState` initContext
+                cmds <- execWriterT (transProgram ast) `evalStateT` initContext
                 print cmds >> return cmds
