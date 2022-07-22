@@ -54,8 +54,8 @@ topdecls    :: { [A.TopDecl] }
             | {- empty -}                   { [] }
 
 topdecl     :: { A.TopDecl }
-            : 'data' conid tyargs '=' constrs       { A.DataDecl (info $1) (id2name $2) $3 $5 }
-            | 'type' conid  tyargs'=' type          { A.TypeDecl (info $1) (id2name $2) $3 $5 }
+            : 'data' conid tyargs '=' constrs       { A.DataDecl (mkInfo $1) (id2name $2) $3 $5 }
+            | 'type' conid  tyargs'=' type          { A.TypeDecl (mkInfo $1) (id2name $2) $3 $5 }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -63,15 +63,15 @@ decls       :: { [A.Decl] }
             | decl ';' decls                { $1 : $3 }
 
 decl        :: { A.Decl }
-            : varid ':' type                { A.FuncTyDecl (info $1) (id2name $1) $3 }
-            | varid '=' expr                { A.FuncDecl (info $1) (id2name $1) $3 }
+            : varid ':' type                { A.FuncTyDecl (mkInfo $1) (id2name $1) $3 }
+            | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2name $1) $3 }
 
 types       :: { [A.Type] }
-            : type types                    { $1 : $2 }
+            : btype types                   { $1 : $2 }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : btype '->' type               { A.FunType (info $2) $1 $3 }
+            : btype '->' type               { A.FunType (mkInfo $2) $1 $3 }
             | 'forall' varid '.' type       { A.AllType (id2name $2) $4}
             | btype                         { $1 }
 
@@ -81,8 +81,8 @@ btype       :: { A.Type }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : conid                         { A.ConType (info $1) (id2name $1) }
-            | varid                         { A.VarType (info $1) (id2name $1) }
+            : conid                         { A.ConType (mkInfo $1) (id2name $1) }
+            | varid                         { A.VarType (mkInfo $1) (id2name $1) }
 
 constrs     :: { [(N.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
@@ -96,17 +96,21 @@ tyargs      :: { [N.Name] }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid args                                { A.VarExpr (info $1) (id2name $1) $2 }
-            | conid args                                { A.ConExpr (info $1) (id2name $1) $2 }
+            : varid args                                { A.VarExpr (mkInfo $1) (id2name $1) $2 }
+            | conid args                                { A.ConExpr (mkInfo $1) (id2name $1) $2 }
             | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
             | '(' expr ')'                              { $2 }
-            | '\\' varid '->' expr                      { A.LamExpr (info $1) (id2name $2) $4 }
-            | 'let' '{' decls '}' 'in' expr             { A.LetExpr (info $1) $3 $6 }
-            | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (info $1) $2 $5 }
+            | '\\' varid '->' expr                      { A.LamExpr (mkInfo $1) (id2name $2) $4 }
+            | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
+            | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
 
 args        :: { [A.Expr] }
-            : expr args                     { $1 : $2 }
+            : '(' expr ')' args             { $2 : $4 }
+            | varid args                    { A.VarExpr (mkInfo $1) (id2name $1) [] : $2 }
+            | conid args                    { A.ConExpr (mkInfo $1) (id2name $1) [] : $2 }
+            | float args                    { A.FloatExpr (fst $1) : $2 }
+            | string args                   { A.StringExpr (fst $1) : $2 }
             | {- empty -}                   { [] }
 
 alts        :: { [(A.Expr, A.Expr, Info)] }
@@ -114,7 +118,7 @@ alts        :: { [(A.Expr, A.Expr, Info)] }
             | {- empty -}                   { [] }
 
 alt         :: { (A.Expr, A.Expr, Info) }
-            : pat '->' expr                 { ($1, $3, info $2) }
+            : pat '->' expr                 { ($1, $3, mkInfo $2) }
 
 pat         :: { A.Expr }
             : expr                          { $1 }
@@ -134,16 +138,16 @@ id2name :: (String,  AlexPosn) -> Name
 id2name = N.str2name . fst
 
 wildcard :: AlexPosn -> A.Expr
-wildcard p = A.ConExpr (info p) (N.str2name "_") []
+wildcard p = A.ConExpr (mkInfo p) (N.str2name "_") []
 
 class MkInfo a where
-    info :: a -> Info
+    mkInfo :: a -> Info
 
 instance MkInfo AlexPosn where
-    info (AlexPn _ l c) = Info{ posInfo = Pos l c }
+    mkInfo (AlexPn _ l c) = Info{ line = l, col = c }
 
 instance MkInfo (String, AlexPosn) where
-    info (_, p) = info p
+    mkInfo (_, p) = mkInfo p
 
 prettyToken :: Token -> String
 prettyToken (TokKeyword (k, p)) = "'" ++ case k of

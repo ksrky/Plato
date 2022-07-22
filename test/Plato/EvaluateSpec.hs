@@ -2,11 +2,11 @@
 
 module Plato.EvaluateSpec where
 
-import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Evaluate
 import Plato.Core.Syntax
 import Plato.Core.Translate
+import Plato.Debug.PrettyCore
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
 
@@ -18,16 +18,17 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [0 .. 5]
+                processFile [5 .. 6]
 
-iscorrect :: [Maybe Term -> Expectation]
+iscorrect :: [Maybe String -> Expectation]
 iscorrect =
         [ (`shouldBe` Nothing)
         , (`shouldBe` Nothing)
         , (`shouldBe` Nothing)
         , (`shouldBe` Nothing)
-        , (`shouldBe` Just (TmTag "False" [] (TyVariant [("True", []), ("False", [])])))
-        , (`shouldBe` Just (TmFloat 3.0))
+        , (`shouldBe` Just "False")
+        , (`shouldBe` Just "3.0")
+        , (`shouldBe` Nothing)
         ]
 
 processFile :: [Int] -> SpecWith ()
@@ -50,12 +51,13 @@ processEval ctx (Eval t : _) = Just $ eval ctx t
 processEval ctx (cmd : cmds) = processEval ctx cmds
 processEval ctx _ = Nothing
 
-process :: String -> IO (Maybe Term)
+process :: String -> IO (Maybe String)
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
                 cmds <- execWriterT (transProgram ast) `evalStateT` initContext
                 let ctx = mapM processCommand cmds `execState` initContext
                     res = processEval ctx cmds
+                    ppres = prettyTerm <$> res
                 forM_ res print
-                return res
+                return ppres

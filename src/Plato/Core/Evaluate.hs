@@ -11,9 +11,8 @@ isval t = case t of
         TmString{} -> True
         TmFloat{} -> True
         TmAbs{} -> True
-        TmTag l t1 _ -> all isval t1
+        TmTag _ ts1 _ -> all isval ts1
         TmTAbs{} -> True
-        TmApp (TmFold _) v -> isval v
         _ -> False
 
 eval :: Context -> Term -> Term
@@ -21,14 +20,8 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
     where
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
-                TmApp (TmAbs _ _ t12) v2 | isval v2 -> return $ termSubstTop v2 t12
-                TmApp (TmUnfold tyS) (TmApp (TmFold tyT) v) | isval v -> return v
-                TmApp (TmFold tyS) t2 -> do
-                        t2' <- eval1 t2
-                        return $ TmApp (TmFold tyS) t2'
-                TmApp (TmUnfold tyS) t2 -> do
-                        t2' <- eval1 t2
-                        return $ TmApp (TmUnfold tyS) t2'
+                TmApp (TmAbs _ _ t12) v2 | isval v2 -> do
+                        return $ termSubstTop v2 t12
                 TmApp v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
                         return $ TmApp v1 t2'

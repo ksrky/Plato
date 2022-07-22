@@ -1,6 +1,5 @@
 module Plato.Core.Translate where
 
-import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Error
@@ -30,8 +29,7 @@ transExpr restty expr = case restty of
                 i <- getVarIndex c ctx
                 let t1 = TmVar i (length ctx)
                 foldM (\t a -> TmApp t <$> traexpr a) t1 as
-        traexpr (FloatExpr f) = do
-                return $ TmFloat f
+        traexpr (FloatExpr f) = return $ TmFloat f
         traexpr (StringExpr s) = return $ TmString s
         traexpr (LamExpr fi x e) = case restty of
                 TyArr tyT1 tyT2 -> do
@@ -122,7 +120,7 @@ transDecl (Decl (FuncDecl fi n e)) = do
                 _ -> throwError fi "VarBind required"
 transDecl _ = return ()
 
-transTopDecl :: MonadThrow m => TopDecl -> WriterT [Command] (Core m) ()
+transTopDecl :: (MonadThrow m, MonadFail m) => TopDecl -> WriterT [Command] (Core m) ()
 transTopDecl (DataDecl fi name params fields) = do
         ctx <- get
         fields' <- lift $
@@ -130,11 +128,16 @@ transTopDecl (DataDecl fi name params fields) = do
                         tyargs <- lift $ mapM transType f `evalStateT` ctx
                         return (l, tyargs)
         let tybody = addbinders (zip params (repeat KnStar)) (TyVariant fields') -- tmp: param::*
-        forM_ fields' $ \(l, tyargs) -> do
+        tell [Bind name (TyAbbBind tybody Nothing)] --tmp: kind
+        lift $ addbinding name (TyAbbBind tybody Nothing)
+        ctx <- get
+        forM_ fields $ \(l, f) -> do
+                ctx <- get
+                tyargs <- lift $ mapM transType f `evalStateT` ctx
+                TyAbbBind tybody _ <- lift $ getbindingFromName name
                 let mkCtor :: [Ty] -> State Context Term
                     mkCtor [] = do
-                        ctx <- get
-                        let args = reverse (map (\i -> TmVar i (length ctx - i)) [1 .. (length tyargs)])
+                        let args = reverse (map (\i -> TmVar i (length ctx - i)) [0 .. (length tyargs -1)])
                         return (TmTag l args tybody)
                     mkCtor (a : as) = do
                         x <- pickfreshname dummyName (VarBind a) -- tmp: dummyName
@@ -143,8 +146,6 @@ transTopDecl (DataDecl fi name params fields) = do
                     tyctor = foldr TyArr tybody tyargs
                 tell [Bind l (TmAbbBind ctor (Just tyctor))]
                 lift $ addbinding l (VarBind tyctor)
-        tell [Bind name (TyAbbBind tybody Nothing)] --tmp: kind
-        lift $ addbinding name NameBind
 transTopDecl (TypeDecl fi name params ty) = do
         ctx <- get
         tybody <- lift $ lift $ transType ty `evalStateT` ctx

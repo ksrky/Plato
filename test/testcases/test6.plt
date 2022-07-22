@@ -7,4 +7,4 @@ plus = \m -> \n -> case m of {
 };
 
 main : Nat;
-main = plus (Succ (Succ Zero)) (Succ (Succ (Succ Zero)));
+main = plus Zero Zero;

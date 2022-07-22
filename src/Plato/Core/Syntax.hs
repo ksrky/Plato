@@ -30,8 +30,6 @@ data Term
         | TmLet N.Name Term Term
         | TmCase Term [(N.Name, Term)]
         | TmTag N.Name [Term] Ty
-        | TmFold Ty
-        | TmUnfold Ty
         deriving (Eq, Show)
 
 data Binding
@@ -103,8 +101,6 @@ tmmap onvar ontype c t = walk c t
                 TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
                 TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
-                TmFold tyT -> TmFold (ontype c tyT)
-                TmUnfold tyT -> TmUnfold (ontype c tyT)
                 _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term

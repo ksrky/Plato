@@ -16,7 +16,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [0 .. 6]
+                processFile [6]
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =

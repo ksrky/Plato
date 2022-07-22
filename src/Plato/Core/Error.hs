@@ -3,15 +3,15 @@ module Plato.Core.Error where
 import Control.Exception.Safe
 import Plato.Common.Info
 
-data Error' = Error' {message :: String, position :: Pos}
+data Error' = Error' {message :: String, info :: Info}
 
 instance Show Error' where
-    show (Error' msg pos) = show pos ++ " " ++ msg
+    show (Error' msg fi) = show fi ++ " " ++ msg
 
 instance Exception Error'
 
 throwError :: MonadThrow m => Info -> String -> m a
-throwError (Info pos) msg = throw $ Error' msg pos
+throwError fi msg = throw $ Error' msg fi
 
 unreachable :: String -> a
 unreachable s = error $ "unreachable: " ++ s
