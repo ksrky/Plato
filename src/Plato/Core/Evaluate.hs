@@ -20,7 +20,9 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
     where
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
-                TmApp (TmAbs _ _ t12) v2 | isval v2 -> do
+                TmApp (TmAbs (x, _) t12) v2 | isval v2 -> do
+                        --error $ show v2 ++ "\n" ++ show t12 ++ "\n" ++ show (termSubstTop v2 t12)
+                        --when (x == N.str2name "n") (error $ show v2 ++ "\n" ++ show t12 ++ "\n" ++ show (termSubstTop v2 t12))
                         return $ termSubstTop v2 t12
                 TmApp v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
@@ -35,17 +37,18 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmVar i n -> case getbinding ctx i n of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
-                TmLet x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
-                TmLet x t1 t2 -> do
+                TmLet (x, v1) t2 | isval v1 -> Just $ termSubstTop v1 t2
+                TmLet (x, t1) t2 -> do
                         t1' <- eval1 t1
-                        Just $ TmLet x t1' t2
+                        Just $ TmLet (x, t1') t2
                 TmTag l vs tyT | all isval vs -> Nothing
                 TmTag l ts tyT -> do
                         ts' <- mapM eval1 ts
                         Just $ TmTag l ts' tyT
-                TmCase (TmTag li vs11 _) alts | all isval vs11 -> case lookup li alts of
+                (TmCase p@(TmTag li vs11 _) alts) | all isval vs11 -> case lookup li alts of
                         Just body -> do
                                 return $ foldr termSubstTop body vs11
+                        --error $ show p ++ "\n" ++ show alts ++ "\n" ++ show (foldr termSubstTop body vs11)
                         Nothing -> Nothing
                 TmCase t1 alts -> do
                         t1' <- eval1 t1

@@ -2,8 +2,8 @@
 
 module Plato.Core.Syntax where
 
+import qualified Plato.Common.Error as E
 import qualified Plato.Common.Name as N
-import qualified Plato.Core.Error as E
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
@@ -13,7 +13,7 @@ data Ty
         | TyFloat
         | TyVariant [(N.Name, [Ty])]
         | TyRec N.Name Ty
-        | TyAbs N.Name Kind Ty
+        | TyAbs (N.Name, Kind) Ty
         | TyArr Ty Ty
         | TyApp Ty Ty
         | TyAll N.Name Kind Ty
@@ -21,13 +21,13 @@ data Ty
 
 data Term
         = TmVar Int Int
-        | TmAbs N.Name Ty Term
+        | TmAbs (N.Name, Ty) Term
         | TmApp Term Term
         | TmTAbs N.Name Kind Term
         | TmTApp Term Ty
         | TmFloat Float
         | TmString String
-        | TmLet N.Name Term Term
+        | TmLet (N.Name, Term) Term
         | TmCase Term [(N.Name, Term)]
         | TmTag N.Name [Term] Ty
         deriving (Eq, Show)
@@ -55,7 +55,7 @@ tymap onvar c tyT = walk c tyT
         walk c tyT = case tyT of
                 TyVar x n -> onvar c x n
                 TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
-                TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
+                TyAbs (tyX, knK1) tyT2 -> TyAbs (tyX, knK1) (walk (c + 1) tyT2)
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
@@ -94,10 +94,10 @@ tmmap onvar ontype c t = walk c t
     where
         walk c t = case t of
                 TmVar x n -> onvar c x n
-                TmAbs x tyT1 t2 -> TmAbs x (ontype c tyT1) (walk (c + 1) t2)
+                TmAbs (x, tyT1) t2 -> TmAbs (x, ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
-                TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
-                TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk (c + 1) ti)) alts)
+                TmLet (x, t1) t2 -> TmLet (x, walk c t1) (walk (c + 1) t2)
+                TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk c ti)) alts)
                 TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
                 TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)

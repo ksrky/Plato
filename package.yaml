@@ -32,6 +32,7 @@ dependencies:
   - mtl
   - safe-exceptions
   - text
+  - vector
 
 library:
   source-dirs: src
@@ -39,7 +40,7 @@ library:
 executables:
   Plato-exe:
     main: Main.hs
-    source-dirs: app
+    source-dirs: src
     ghc-options:
       - -threaded
       - -rtsopts

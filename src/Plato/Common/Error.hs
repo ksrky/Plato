@@ -1,4 +1,4 @@
-module Plato.Core.Error where
+module Plato.Common.Error where
 
 import Control.Exception.Safe
 import Plato.Common.Info

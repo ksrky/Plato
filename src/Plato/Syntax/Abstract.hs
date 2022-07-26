@@ -1,4 +1,4 @@
-module Plato.Syntax.AST where
+module Plato.Syntax.Abstract where
 
 import Plato.Common.Info
 import Plato.Common.Name (Name)
@@ -8,7 +8,7 @@ data Expr
         | ConExpr Info Name [Expr]
         | FloatExpr Float
         | StringExpr String
-        | LamExpr Info Name Expr
+        | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
         | CaseExpr Info Expr [(Expr, Expr, Info)]
         deriving (Eq, Show)
@@ -28,6 +28,6 @@ data Type
         = ConType Info Name
         | VarType Info Name
         | AppType Type Type
-        | FunType Info Type Type
-        | AllType Name Type
+        | ArrType Info Type Type
+        | AllType Info [Name] Type
         deriving (Eq, Show)

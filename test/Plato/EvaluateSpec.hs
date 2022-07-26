@@ -2,13 +2,14 @@
 
 module Plato.EvaluateSpec where
 
+import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Evaluate
 import Plato.Core.Syntax
-import Plato.Core.Translate
 import Plato.Debug.PrettyCore
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
+import Plato.Translation.AbstractToCore
 
 import Control.Monad.State
 import Control.Monad.Writer.Lazy
@@ -18,7 +19,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [5 .. 6]
+                processFile [6]
 
 iscorrect :: [Maybe String -> Expectation]
 iscorrect =
@@ -43,7 +44,10 @@ processFile (n : ns) = do
 
 processCommand :: Command -> State Context ()
 processCommand (Import mod) = undefined
-processCommand (Bind x bind) = modify ((x, bind) :)
+processCommand (Bind x bind) = state $ \ctx ->
+        case getVarIndex x ctx of
+                Just idx -> ((), cons (x, bind) (update idx (x, bind) ctx))
+                Nothing -> ((), cons (x, bind) ctx)
 processCommand (Eval t) = return ()
 
 processEval :: Context -> [Command] -> Maybe Term
@@ -60,4 +64,6 @@ process input = case runAlex input parse of
                     res = processEval ctx cmds
                     ppres = prettyTerm <$> res
                 forM_ res print
+                --putStrLn ""
+                --print ctx
                 return ppres

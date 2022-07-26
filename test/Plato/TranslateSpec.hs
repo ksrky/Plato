@@ -5,9 +5,9 @@ module Plato.TranslateSpec where
 import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Core.Translate
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
+import Plato.Translation.AbstractToCore
 
 import Control.Monad.State
 import Control.Monad.Writer.Lazy
@@ -17,7 +17,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [5 .. 6]
+                processFile [6]
 
 iscorrect :: [[Command] -> Expectation]
 iscorrect =

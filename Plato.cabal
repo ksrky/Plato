@@ -25,25 +25,28 @@ source-repository head
 
 library
   exposed-modules:
+      Main
       Plato.Backend.GHC.Codegen
       Plato.Backend.GHC.HsPretty
       Plato.Backend.GHC.HsSyntax
       Plato.Backend.Untyped
+      Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name
-      Plato.Common.Table
+      Plato.Common.Vect
       Plato.Core.Context
       Plato.Core.Erase
-      Plato.Core.Error
       Plato.Core.Evaluate
+      Plato.Core.Pretty
       Plato.Core.Syntax
-      Plato.Core.Translate
       Plato.Debug.Parser
-      Plato.Debug.PrettyAST
+      Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
-      Plato.Syntax.AST
+      Plato.Syntax.Abstract
+      Plato.Syntax.Canon
       Plato.Syntax.Lexer
       Plato.Syntax.Parser
+      Plato.Translation.AbstractToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -60,14 +63,36 @@ library
     , mtl
     , safe-exceptions
     , text
+    , vector
   default-language: Haskell2010
 
 executable Plato-exe
   main-is: Main.hs
   other-modules:
+      Plato.Backend.GHC.Codegen
+      Plato.Backend.GHC.HsPretty
+      Plato.Backend.GHC.HsSyntax
+      Plato.Backend.Untyped
+      Plato.Common.Error
+      Plato.Common.Info
+      Plato.Common.Name
+      Plato.Common.Vect
+      Plato.Core.Context
+      Plato.Core.Erase
+      Plato.Core.Evaluate
+      Plato.Core.Pretty
+      Plato.Core.Syntax
+      Plato.Debug.Parser
+      Plato.Debug.PrettyAbstract
+      Plato.Debug.PrettyCore
+      Plato.Syntax.Abstract
+      Plato.Syntax.Canon
+      Plato.Syntax.Lexer
+      Plato.Syntax.Parser
+      Plato.Translation.AbstractToCore
       Paths_Plato
   hs-source-dirs:
-      app
+      src
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -82,6 +107,7 @@ executable Plato-exe
     , mtl
     , safe-exceptions
     , text
+    , vector
   default-language: Haskell2010
 
 test-suite Plato-test
@@ -108,4 +134,5 @@ test-suite Plato-test
     , mtl
     , safe-exceptions
     , text
+    , vector
   default-language: Haskell2010

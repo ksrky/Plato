@@ -4,7 +4,7 @@ module Plato.Syntax.Parser where
 import Plato.Common.Name as N
 import Plato.Common.Info
 import Plato.Syntax.Lexer
-import qualified Plato.Syntax.AST as A
+import qualified Plato.Syntax.Abstract as A
 }
 
 %name parse
@@ -71,8 +71,8 @@ types       :: { [A.Type] }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : btype '->' type               { A.FunType (mkInfo $2) $1 $3 }
-            | 'forall' varid '.' type       { A.AllType (id2name $2) $4}
+            : btype '->' type               { A.ArrType (mkInfo $2) $1 $3 }
+            | 'forall' vars '.' type        { A.AllType (mkInfo $1) $2 $4 }
             | btype                         { $1 }
 
 btype       :: { A.Type }
@@ -101,7 +101,7 @@ expr        :: { A.Expr }
             | float                                     { A.FloatExpr (fst $1) }
             | string                                    { A.StringExpr (fst $1) }
             | '(' expr ')'                              { $2 }
-            | '\\' varid '->' expr                      { A.LamExpr (mkInfo $1) (id2name $2) $4 }
+            | '\\' vars '->' expr                       { A.LamExpr (mkInfo $1) $2 $4 }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
             | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
 
@@ -112,6 +112,10 @@ args        :: { [A.Expr] }
             | float args                    { A.FloatExpr (fst $1) : $2 }
             | string args                   { A.StringExpr (fst $1) : $2 }
             | {- empty -}                   { [] }
+
+vars        :: { [N.Name] }
+            : varid vars                    { id2name $1 : $2 }
+            | varid                         { [id2name $1] }
 
 alts        :: { [(A.Expr, A.Expr, Info)] }
             : alt ';' alts                  { $1 : $3 }

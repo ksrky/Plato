@@ -4,7 +4,7 @@ module Plato.ParserSpec where
 
 import Plato.Common.Info
 import Plato.Debug.Parser
-import Plato.Syntax.AST
+import Plato.Syntax.Abstract
 import Plato.Syntax.Lexer
 import Plato.Syntax.Parser
 
@@ -16,7 +16,7 @@ import Test.Hspec
 spec :: Spec
 spec = do
         describe "Plato.Parser" $ do
-                processFile [6]
+                processFile []
 
 iscorrect :: [[TopDecl] -> Expectation]
 iscorrect =
