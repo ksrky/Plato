@@ -12,23 +12,22 @@ data Ty
         | TyString
         | TyFloat
         | TyVariant [(N.Name, [Ty])]
-        | TyRec N.Name Ty
         | TyAbs (N.Name, Kind) Ty
         | TyArr Ty Ty
         | TyApp Ty Ty
-        | TyAll N.Name Kind Ty
+        | TyAll (N.Name, Kind) Ty
         deriving (Eq, Show)
 
 data Term
         = TmVar Int Int
         | TmAbs (N.Name, Ty) Term
         | TmApp Term Term
-        | TmTAbs N.Name Kind Term
+        | TmTAbs (N.Name, Kind) Term
         | TmTApp Term Ty
         | TmFloat Float
         | TmString String
         | TmLet (N.Name, Term) Term
-        | TmCase Term [(N.Name, Term)]
+        | TmCase Term [(N.Name, (Int, Term))]
         | TmTag N.Name [Term] Ty
         deriving (Eq, Show)
 
@@ -56,10 +55,9 @@ tymap onvar c tyT = walk c tyT
                 TyVar x n -> onvar c x n
                 TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
                 TyAbs (tyX, knK1) tyT2 -> TyAbs (tyX, knK1) (walk (c + 1) tyT2)
-                TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
+                TyAll (tyX, knK1) tyT2 -> TyAll (tyX, knK1) (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
-                TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
-                TyRec x tyT -> TyRec x (walk (c + 1) tyT)
+                TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
                 TyFloat -> TyFloat
                 TyString -> TyString
 
@@ -97,9 +95,9 @@ tmmap onvar ontype c t = walk c t
                 TmAbs (x, tyT1) t2 -> TmAbs (x, ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
                 TmLet (x, t1) t2 -> TmLet (x, walk c t1) (walk (c + 1) t2)
-                TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk c ti)) alts)
+                TmCase t alts -> TmCase (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
                 TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
-                TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
+                TmTAbs (tyX, knK1) t2 -> TmTAbs (tyX, knK1) (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
                 _ -> t
 
@@ -139,7 +137,7 @@ tytermSubstTop tyS t = termShift (-1) (tytermSubst (typeShift 1 tyS) 0 t)
 ----------------------------------------------------------------
 -- Utils
 ----------------------------------------------------------------
-getTyArr :: Ty -> [Ty]
-getTyArr tyT1 = case tyT1 of
-        TyArr tyT11 tyT12 -> tyT11 : getTyArr tyT12
-        _ -> []
+countTyArr :: Ty -> Int
+countTyArr tyT1 = case tyT1 of
+        TyArr _ tyT12 -> 1 + countTyArr tyT12
+        _ -> 0

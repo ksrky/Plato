@@ -9,12 +9,13 @@ import Plato.Syntax.Abstract
 import Control.Exception.Safe
 import Control.Monad.State
 import Control.Monad.Writer
+import Plato.Common.Vect
 
 transExpr :: (MonadThrow m, MonadFail m) => Ty -> Expr -> Core m Term
 transExpr restty expr = case restty of
-        TyAll n knK1 tyT2 -> do
+        TyAll (n, knK1) tyT2 -> do
                 t2 <- transExpr tyT2 expr
-                return $ TmTAbs n knK1 t2
+                return $ TmTAbs (n, knK1) t2
         _ -> traexpr expr
     where
         traexpr :: (MonadThrow m, MonadFail m) => Expr -> Core m Term
@@ -22,6 +23,7 @@ transExpr restty expr = case restty of
                 ctx <- get
                 i <- getVarIndex x ctx
                 let t1 = TmVar i (length ctx)
+                {-if (x == str2name "plus") && length ctx == 10 then error $ show i ++ show (vmap fst ctx) else-}
                 foldM (\t a -> TmApp t <$> traexpr a) t1 as
         traexpr (ConExpr fi c as) = do
                 ctx <- get
@@ -30,38 +32,35 @@ transExpr restty expr = case restty of
                 foldM (\t a -> TmApp t <$> traexpr a) t1 as
         traexpr (FloatExpr f) = return $ TmFloat f
         traexpr (StringExpr s) = return $ TmString s
-        traexpr (LamExpr fi [x] e) = case restty of
+        traexpr (LamExpr fi [x] e) = case typeShift 1 restty of
                 TyArr tyT1 tyT2 -> do
-                        x' <- pickfreshname x (VarBind tyT1)
+                        x' <- pickfreshname x NameBind
                         t2 <- transExpr tyT2 e
                         return $ TmAbs (x', tyT1) t2
                 _ -> throwError fi "array type required"
-        traexpr (LetExpr fi ds e) = mkLet ds e
-            where
-                mkLet :: (MonadThrow m, MonadFail m) => [Decl] -> Expr -> Core m Term
-                mkLet (FuncDecl fi x e : ds) body = do
+        traexpr (LetExpr fi [d] e1) = case d of
+                FuncDecl fi x e2 -> do
                         x' <- pickfreshname x NameBind
-                        t <- traexpr e
-                        TmLet (x', t) <$> mkLet ds body
-                mkLet _ body = traexpr body
+                        t1 <- transExpr (typeShift 1 restty) e1
+                        t2 <- transExpr (typeShift 1 restty) e2
+                        return $ TmLet (x', t1) t2
+                _ -> traexpr e1
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
                 alts' <- forM alts $ \(pat, body, fi1) -> case pat of
                         VarExpr fi2 x as | null as -> do
                                 ti <- traexpr body
-                                return (x, ti) --tmp
+                                return (x, (0, ti)) -- tmp
                         VarExpr fi2 _ _ -> throwError fi2 "function type cannot be a pattern"
                         ConExpr fi2 c as -> do
-                                mapM_ addarg as
-                                ti <- traexpr body
+                                ti <- evalLocal (mapM_ addarg as) (traexpr body)
                                 bind <- getbindingFromName c
                                 case bind of
                                         VarBind tyT21 -> do
                                                 --tmp: Check whether it's tycon or function
-                                                let tys = getTyArr tyT21
-                                                when (length as /= length tys) (throwError fi2 "Wrong number of arguments")
+                                                when (length as /= countTyArr tyT21) (throwError fi2 "Wrong number of arguments")
                                         _ -> throwError fi2 "Type constructor required"
-                                return (c, ti)
+                                return (c, (length as, ti))
                             where
                                 addarg :: MonadThrow m => Expr -> Core m ()
                                 addarg (VarExpr fi3 x as) = do
@@ -73,6 +72,14 @@ transExpr restty expr = case restty of
                         _ -> throwError fi1 "illegal expression for pattern matching"
                 return $ TmCase t alts'
         traexpr e = unreachable $ "canonicalize failed at " ++ show e
+
+evalLocal :: MonadThrow m => Core m () -> Core m a -> Core m a
+evalLocal local f = do
+        ctx <- get
+        ctx' <- lift $ local `execStateT` ctx
+        val <- lift $ f `evalStateT` ctx'
+        put ctx
+        return val
 
 transType :: MonadThrow m => Type -> Core m Ty
 transType (ConType fi x) = do
@@ -92,9 +99,9 @@ transType (ArrType fi ty1 ty2) = do
         ty2' <- transType ty2
         return $ TyArr ty1' ty2'
 transType (AllType fi [x] ty) = do
-        x' <- pickfreshname x (TyVarBind KnStar) -- tmp: KnStar, multi abstraction
+        x' <- pickfreshname x (TyVarBind KnStar) -- tmp: KnStar
         ty' <- transType ty
-        return $ TyAll x' KnStar ty' -- tmp: forall x.t = forall x::*.t
+        return $ TyAll (x', KnStar) ty' -- tmp: forall x.t = forall x::*.t
 transType ty = unreachable $ "canonicalize failed at " ++ show ty
 
 entryPoint :: Name
@@ -130,14 +137,18 @@ transTopDecl (DataDecl fi name params fields) = do
         tell [Bind name (TyAbbBind tyT Nothing)] -- tmp: kind
         lift $ addbinding name (TyAbbBind tyT Nothing)
         -- Define constructors as function
-        forM_ fields $ \(l, f) -> do
+        forM_ fields $ \(l, field) -> do
                 ctx <- get
-                paramtys <- lift $ mapM transType f `evalStateT` ctx
-                params <- lift $ forM [1 .. length paramtys] (\_ -> pickfreshname dummyName NameBind)
+                params <- lift $
+                        (`evalStateT` ctx) $
+                                forM field $ \tyi -> do
+                                        pi <- pickfreshname dummyName NameBind
+                                        ptyi <- transType tyi
+                                        return (pi, ptyi)
                 TyAbbBind tyT _ <- lift $ getbindingFromName name
-                let tag = TmTag l (reverse (map (\i -> TmVar i (length ctx - i)) [0 .. (length params -1)])) tyT
-                    ctor = foldr TmAbs tag (zip params paramtys)
-                    ctorty = foldr TyArr tyT paramtys
+                let tag = TmTag l (reverse (map (\i -> TmVar i (length ctx)) [0 .. (length params -1)])) tyT
+                    ctor = foldr TmAbs tag params
+                    ctorty = foldr (TyArr . snd) tyT params
                 tell [Bind l (TmAbbBind ctor (Just ctorty))]
                 lift $ addbinding l (VarBind ctorty)
 transTopDecl (TypeDecl fi name params ty) = do

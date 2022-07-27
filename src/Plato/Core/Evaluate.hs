@@ -21,8 +21,6 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
                 TmApp (TmAbs (x, _) t12) v2 | isval v2 -> do
-                        --error $ show v2 ++ "\n" ++ show t12 ++ "\n" ++ show (termSubstTop v2 t12)
-                        --when (x == N.str2name "n") (error $ show v2 ++ "\n" ++ show t12 ++ "\n" ++ show (termSubstTop v2 t12))
                         return $ termSubstTop v2 t12
                 TmApp v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
@@ -30,7 +28,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp t1 t2 -> do
                         t1' <- eval1 t1
                         return $ TmApp t1' t2
-                TmTApp (TmTAbs x _ t11) tyT2 -> return $ tytermSubstTop tyT2 t11
+                TmTApp (TmTAbs (x, _) t11) tyT2 -> return $ tytermSubstTop tyT2 t11
                 TmTApp t1 tyT2 -> do
                         t1' <- eval1 t1
                         return $ TmTApp t1' tyT2
@@ -46,13 +44,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         ts' <- mapM eval1 ts
                         Just $ TmTag l ts' tyT
                 (TmCase p@(TmTag li vs11 _) alts) | all isval vs11 -> case lookup li alts of
-                        Just body -> do
+                        Just (_, body) -> do
                                 return $ foldr termSubstTop body vs11
-                        --error $ show p ++ "\n" ++ show alts ++ "\n" ++ show (foldr termSubstTop body vs11)
                         Nothing -> Nothing
                 TmCase t1 alts -> do
                         t1' <- eval1 t1
-                        error $ show t1'
                         Just $ TmCase t1' alts
                 _ -> Nothing
 
