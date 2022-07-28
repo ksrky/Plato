@@ -49,7 +49,7 @@ processCommand :: Command -> State Context ()
 processCommand (Import mod) = undefined
 processCommand (Bind x bind) = state $ \ctx ->
         case name2index dummyInfo ctx x of
-                Just idx -> ((), cons (x, bind) (update idx (x, bind) ctx))
+                Just i -> ((), cons (x, bind) (update i (x, bindingShift (- i - 1) bind) ctx))
                 Nothing -> ((), cons (x, bind) ctx)
 processCommand (Eval t) = return ()
 

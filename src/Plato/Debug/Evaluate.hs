@@ -6,6 +6,8 @@ import Plato.Core.Evaluate
 import Plato.Core.Syntax
 import Plato.Debug.PrettyCore
 
+import Control.Monad.State
+
 evalIO :: Context -> Term -> IO Term
 evalIO ctx t = case eval1 t of
         Just t' -> do
@@ -19,6 +21,9 @@ evalIO ctx t = case eval1 t of
         eval1 t = case t of
                 TmApp _ (TmAbs _ (x, _) t12) v2 | isval v2 -> do
                         return $ termSubstTop v2 t12
+                TmApp fi v1@(TmTAbs _ (x1, _) t12) v2 | isval v2 -> do
+                        tyT2 <- typeof v2 `evalStateT` ctx
+                        return $ TmApp fi (TmTApp fi v1 tyT2) v2
                 TmApp fi v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
                         return $ TmApp fi v1 t2'

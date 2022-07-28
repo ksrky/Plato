@@ -143,7 +143,8 @@ transTopDecl (DataDecl fi name params fields) = do
                                         ptyi <- transType tyi
                                         return (pi, ptyi)
                 tyT <- lift $ getTyAbb fi name
-                let tag = TmTag dummyInfo l (reverse (map (\i -> TmVar dummyInfo i (length ctx)) [0 .. (length ps -1)])) tyT
+                let arity = length field
+                    tag = TmTag dummyInfo l (reverse (map (\i -> TmVar dummyInfo i (length ctx + arity)) [0 .. (arity -1)])) tyT
                     ctor = foldr (TmAbs dummyInfo) tag ps
                     ctorty = foldr (TyArr . snd) tyT ps
                 tell [Bind l (TmAbbBind ctor (Just ctorty))]
