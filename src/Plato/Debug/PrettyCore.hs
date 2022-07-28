@@ -11,33 +11,37 @@ class PrettyCore a where
 
 instance PrettyCore Term where
         prcore ctx t = case t of
-                TmVar i n -> name2str $ fst (ctx ! i)
-                TmAbs (x, tyT1) t2 ->
+                TmVar _ i n ->
+                        if length ctx == n
+                                then name2str $ fst (ctx ! i)
+                                else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
+                TmAbs _ (x, tyT1) t2 ->
                         let ctx' = cons (x, NameBind) ctx
                          in "\\(" ++ name2str x ++ ":" ++ prcore ctx' tyT1 ++ "). " ++ prcore ctx' t2
-                TmApp t1 t2 -> paren (prcore ctx t1) ++ " " ++ paren (prcore ctx t2)
-                TmTAbs (x, knK1) tyT2 ->
+                TmApp _ t1 t2 -> paren (prcore ctx t1) ++ " " ++ paren (prcore ctx t2)
+                TmTAbs _ (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
-                TmTApp t1 tyT2 -> paren (prcore ctx t1) ++ " [" ++ prcore ctx tyT2 ++ "]"
-                TmFloat f -> show f
-                TmString s -> show s
-                TmLet (x, t1) t2 -> "let (" ++ name2str x ++ " = " ++ prcore ctx t1 ++ ") in " ++ prcore ctx t2
-                TmCase t alts ->
-                        "case " ++ prcore ctx t ++ " of {"
+                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
+                TmTApp _ t1 tyT2 -> paren (prcore ctx t1) ++ " [" ++ prcore ctx tyT2 ++ "]"
+                TmFloat _ f -> show f
+                TmString _ s -> show s
+                TmLet _ (x, t1) t2 -> "let (" ++ name2str x ++ " = " ++ prcore ctx t1 ++ ") in " ++ prcore ctx t2
+                TmCase _ t alts ->
+                        "case " ++ prcore ctx t ++ " of { "
                                 ++ intercalate
                                         " | "
                                         ( map
                                                 ( \(li, (ki, ti)) ->
                                                         let binds = replicate ki (dummyName, NameBind)
                                                             ctx' = foldr cons ctx binds
-                                                         in name2str li ++ " -> " ++ prcore ctx' (termShift ki ti)
+                                                         in name2str li ++ " -> " ++ prcore ctx' ti
                                                 )
                                                 alts
                                         )
-                TmTag l ts1 _ ->
+                                ++ " }"
+                TmTag _ l ts1 _ ->
                         let prettyArg t = paren $ prcore ctx t
-                         in name2str l ++ if null ts1 then "{}" else "{" ++ unwords (map prettyArg ts1) ++ "}"
+                         in name2str l ++ if null ts1 then "[]" else "[" ++ unwords (map prettyArg ts1) ++ "]"
 
 instance PrettyCore Ty where
         prcore ctx ty = case ty of

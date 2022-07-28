@@ -11,6 +11,7 @@ import Plato.Translation.AbstractToCore
 
 import Control.Monad.State
 import Control.Monad.Writer.Lazy
+import Plato.Common.Info
 import Plato.Syntax.Canon
 import System.Console.Haskeline
 import System.Environment
@@ -20,7 +21,10 @@ main = do
         args <- getArgs
         case args of
                 [] -> repl
-                fname : _ -> processFile fname
+                src : _ -> do
+                        contents <- readFile src
+                        process initContext contents
+                        return ()
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop initContext)
@@ -35,18 +39,12 @@ repl = runInputT defaultSettings (loop initContext)
                                 loop ctx
 
 processFile :: String -> IO ()
-processFile [] = return ()
-processFile fname = do
-        let src = "examples/" ++ fname
-        contents <- readFile src
-        putStrLn $ "----------" ++ fname ++ "----------"
-        process initContext contents
-        putStrLn ""
+processFile src = undefined
 
 processCommand :: Command -> State Context ()
 processCommand (Import mod) = undefined
 processCommand (Bind x bind) = state $ \ctx ->
-        case getVarIndex x ctx of
+        case name2index dummyInfo ctx x of
                 Just idx -> ((), cons (x, bind) (update idx (x, bind) ctx))
                 Nothing -> ((), cons (x, bind) ctx)
 processCommand (Eval t) = return ()

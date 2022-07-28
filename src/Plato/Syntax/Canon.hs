@@ -21,9 +21,11 @@ instance Canon Type where
         reorganize ty = return ty
 
 instance Canon Decl where
-        reorganize d = return d
+        reorganize (FuncDecl fi f e) = FuncDecl fi f <$> reorganize e
+        reorganize (FuncTyDecl fi f ty) = FuncTyDecl fi f <$> reorganize ty
 
 instance Canon TopDecl where
+        reorganize (Decl d) = Decl <$> reorganize d
         reorganize td = return td
 
 instance Canon a => Canon [a] where

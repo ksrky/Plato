@@ -6,8 +6,8 @@ import Plato.Common.Name (Name)
 data Expr
         = VarExpr Info Name [Expr]
         | ConExpr Info Name [Expr]
-        | FloatExpr Float
-        | StringExpr String
+        | FloatExpr Info Float
+        | StringExpr Info String
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
         | CaseExpr Info Expr [(Expr, Expr, Info)]
@@ -31,3 +31,12 @@ data Type
         | ArrType Info Type Type
         | AllType Info [Name] Type
         deriving (Eq, Show)
+
+getInfo :: Expr -> Info
+getInfo (VarExpr fi _ _) = fi
+getInfo (ConExpr fi _ _) = fi
+getInfo (FloatExpr fi _) = fi
+getInfo (StringExpr fi _) = fi
+getInfo (LamExpr fi _ _) = fi
+getInfo (LetExpr fi _ _) = fi
+getInfo (CaseExpr fi _ _) = fi

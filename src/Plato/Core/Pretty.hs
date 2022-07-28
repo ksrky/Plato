@@ -7,9 +7,9 @@ class PrettyCore a where
         pretty :: a -> String
 
 instance PrettyCore Term where
-        pretty (TmFloat f) = show f
-        pretty (TmString s) = show s
-        pretty (TmTag l ts1 _) =
+        pretty (TmFloat _ f) = show f
+        pretty (TmString _ s) = show s
+        pretty (TmTag _ l ts1 _) =
                 let prettyArg t =
                         let pptm = pretty t
                          in if ' ' `elem` pptm then "(" ++ pptm ++ ")" else pptm

@@ -39,8 +39,8 @@ library
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
-      Plato.Debug.EvaluateIO
-      Plato.Debug.Parser
+      Plato.Debug.Evaluate
+      Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
@@ -84,8 +84,8 @@ executable Plato-exe
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
-      Plato.Debug.EvaluateIO
-      Plato.Debug.Parser
+      Plato.Debug.Evaluate
+      Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL

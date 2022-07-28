@@ -3,6 +3,7 @@
 module Plato.Core.Syntax where
 
 import qualified Plato.Common.Error as E
+import Plato.Common.Info
 import qualified Plato.Common.Name as N
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
@@ -19,16 +20,16 @@ data Ty
         deriving (Eq, Show)
 
 data Term
-        = TmVar Int Int
-        | TmAbs (N.Name, Ty) Term
-        | TmApp Term Term
-        | TmTAbs (N.Name, Kind) Term
-        | TmTApp Term Ty
-        | TmFloat Float
-        | TmString String
-        | TmLet (N.Name, Term) Term
-        | TmCase Term [(N.Name, (Int, Term))]
-        | TmTag N.Name [Term] Ty
+        = TmVar Info Int Int
+        | TmAbs Info (N.Name, Ty) Term
+        | TmApp Info Term Term
+        | TmTAbs Info (N.Name, Kind) Term
+        | TmTApp Info Term Ty
+        | TmFloat Info Float
+        | TmString Info String
+        | TmLet Info (N.Name, Term) Term
+        | TmCase Info Term [(N.Name, (Int, Term))]
+        | TmTag Info N.Name [Term] Ty
         deriving (Eq, Show)
 
 data Binding
@@ -87,27 +88,27 @@ typeSubstTop tyS tyT = typeShift (-1) (typeSubst (typeShift 1 tyS) 0 tyT)
 ----------------------------------------------------------------
 -- Term
 ----------------------------------------------------------------
-tmmap :: (Int -> Int -> Int -> Term) -> (Int -> Ty -> Ty) -> Int -> Term -> Term
+tmmap :: (Info -> Int -> Int -> Int -> Term) -> (Int -> Ty -> Ty) -> Int -> Term -> Term
 tmmap onvar ontype c t = walk c t
     where
         walk c t = case t of
-                TmVar x n -> onvar c x n
-                TmAbs (x, tyT1) t2 -> TmAbs (x, ontype c tyT1) (walk (c + 1) t2)
-                TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
-                TmLet (x, t1) t2 -> TmLet (x, walk c t1) (walk (c + 1) t2)
-                TmCase t alts -> TmCase (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
-                TmTag l t1 tyT -> TmTag l (map (walk c) t1) (ontype c tyT)
-                TmTAbs (tyX, knK1) t2 -> TmTAbs (tyX, knK1) (walk (c + 1) t2)
-                TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
+                TmVar fi x n -> onvar fi c x n
+                TmAbs fi (x, tyT1) t2 -> TmAbs fi (x, ontype c tyT1) (walk (c + 1) t2)
+                TmApp fi t1 t2 -> TmApp fi (walk c t1) (walk c t2)
+                TmLet fi (x, t1) t2 -> TmLet fi (x, walk c t1) (walk (c + 1) t2)
+                TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
+                TmTag fi l t1 tyT -> TmTag fi l (map (walk c) t1) (ontype c tyT)
+                TmTAbs fi (tyX, knK1) t2 -> TmTAbs fi (tyX, knK1) (walk (c + 1) t2)
+                TmTApp fi t1 tyT2 -> TmTApp fi (walk c t1) (ontype c tyT2)
                 _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =
         tmmap
-                ( \c x n ->
+                ( \fi c x n ->
                         if x >= c
-                                then TmVar (x + d) (n + d)
-                                else TmVar x (n + d)
+                                then TmVar fi (x + d) (n + d)
+                                else TmVar fi x (n + d)
                 )
                 (typeShiftAbove d)
 
@@ -117,16 +118,16 @@ termShift d = termShiftAbove d 0
 termSubst :: Int -> Term -> Term -> Term
 termSubst j s =
         tmmap
-                ( \j x n ->
+                ( \fi j x n ->
                         if x == j
                                 then termShift j s
-                                else TmVar x n
+                                else TmVar fi x n
                 )
                 (\j tyT -> tyT)
                 j
 
 tytermSubst :: Ty -> Int -> Term -> Term
-tytermSubst tyS = tmmap (\c x n -> TmVar x n) (typeSubst tyS)
+tytermSubst tyS = tmmap (\fi c x n -> TmVar fi x n) (typeSubst tyS)
 
 termSubstTop :: Term -> Term -> Term
 termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)

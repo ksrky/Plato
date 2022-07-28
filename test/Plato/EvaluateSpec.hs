@@ -62,7 +62,7 @@ process input = case runAlex input parse of
                 cmds <- execWriterT (transProgram ast) `evalStateT` initContext
                 let ctx = mapM processCommand cmds `execState` initContext
                     res = processEval ctx cmds
-                    ppres = prettyTerm <$> res
+                    ppres = pretty <$> res
                 forM_ res print
                 --putStrLn ""
                 --print ctx

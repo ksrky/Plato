@@ -71,8 +71,8 @@ types       :: { [A.Type] }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : btype '->' type               { A.ArrType (mkInfo $2) $1 $3 }
-            | 'forall' vars '.' type        { A.AllType (mkInfo $1) $2 $4 }
+            : 'forall' vars '.' type        { A.AllType (mkInfo $1) $2 $4 }
+            | btype '->' type               { A.ArrType (mkInfo $2) $1 $3 }
             | btype                         { $1 }
 
 btype       :: { A.Type }
@@ -98,8 +98,8 @@ tyargs      :: { [N.Name] }
 expr        :: { A.Expr }
             : varid args                                { A.VarExpr (mkInfo $1) (id2name $1) $2 }
             | conid args                                { A.ConExpr (mkInfo $1) (id2name $1) $2 }
-            | float                                     { A.FloatExpr (fst $1) }
-            | string                                    { A.StringExpr (fst $1) }
+            | float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
+            | string                                    { A.StringExpr (mkInfo $1) (fst $1) }
             | '(' expr ')'                              { $2 }
             | '\\' vars '->' expr                       { A.LamExpr (mkInfo $1) $2 $4 }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
@@ -109,8 +109,8 @@ args        :: { [A.Expr] }
             : '(' expr ')' args             { $2 : $4 }
             | varid args                    { A.VarExpr (mkInfo $1) (id2name $1) [] : $2 }
             | conid args                    { A.ConExpr (mkInfo $1) (id2name $1) [] : $2 }
-            | float args                    { A.FloatExpr (fst $1) : $2 }
-            | string args                   { A.StringExpr (fst $1) : $2 }
+            | float args                    { A.FloatExpr (mkInfo $1) (fst $1) : $2 }
+            | string args                   { A.StringExpr (mkInfo $1) (fst $1) : $2 }
             | {- empty -}                   { [] }
 
 vars        :: { [N.Name] }
@@ -151,6 +151,9 @@ instance MkInfo AlexPosn where
     mkInfo (AlexPn _ l c) = Info{ line = l, col = c }
 
 instance MkInfo (String, AlexPosn) where
+    mkInfo (_, p) = mkInfo p
+
+instance MkInfo (Float, AlexPosn) where
     mkInfo (_, p) = mkInfo p
 
 prettyToken :: Token -> String
