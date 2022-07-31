@@ -47,19 +47,19 @@ instance PrettyCore Ty where
         prcore ctx ty = case ty of
                 TyVar i n ->
                         if length ctx == n
-                                then name2str $ fst (ctx ! i)
+                                then name2str (fst (ctx ! i)) -- ++ " " ++ show i ++ " " ++ show (vmap fst ctx)
                                 else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
                 TyString -> "String"
                 TyFloat -> "Float"
                 TyVariant fields -> undefined
                 TyAbs (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
+                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
                 TyArr tyT1 tyT2 -> prcore ctx tyT1 ++ " -> " ++ paren (prcore ctx tyT2)
-                TyApp tyT1 tyT2 -> paren (prcore ctx tyT1) ++ " -> " ++ paren (prcore ctx tyT2)
+                TyApp tyT1 tyT2 -> paren (prcore ctx tyT1) ++ " " ++ paren (prcore ctx tyT2)
                 TyAll (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
+                         in "forall " ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ ". " ++ prcore ctx' tyT2
 
 instance PrettyCore Kind where
         prcore ctx KnStar = "*"

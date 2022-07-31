@@ -1,18 +1,29 @@
-module Plato.Syntax.Canon where
+{-# LANGUAGE LambdaCase #-}
 
+module Plato.Abstract.Canon where
+
+import Plato.Abstract.Syntax
 import Plato.Common.Error
 import Plato.Common.Info
-import Plato.Syntax.Abstract
 
 import Control.Exception.Safe
 import Control.Monad.State
+import Data.List
 
 class Canon a where
         reorganize :: MonadThrow m => a -> m a
 
 instance Canon Expr where
         reorganize (LamExpr fi xs e) = return $ foldr (LamExpr fi . (: [])) e xs
-        reorganize (LetExpr fi ds e) = return $ foldr (LetExpr fi . (: [])) e ds
+        reorganize (LetExpr fi ds e) = do
+                let mi = (`findIndex` ds) $ \case
+                        FuncTyDecl{} -> True
+                        _ -> False
+                case mi of
+                        Just i -> do
+                                let ds' = ds !! i : (take i ds ++ drop (i + 1) ds)
+                                return $ foldr (LetExpr fi . (: [])) e ds'
+                        Nothing -> throwError fi "Type annotation required"
         reorganize exp@(CaseExpr fi e alts) = return exp -- tmp
         reorganize e = return e
 

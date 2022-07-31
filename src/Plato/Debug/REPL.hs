@@ -1,19 +1,19 @@
 module Plato.Debug.REPL where
 
+import Plato.Abstract.Canon
+import Plato.Abstract.Lexer
+import Plato.Abstract.Parser
+import Plato.Common.Info
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Evaluate
 import Plato.Core.Pretty
 import Plato.Core.Syntax
-import Plato.Syntax.Lexer
-import Plato.Syntax.Parser
+import Plato.Debug.Evaluate
 import Plato.Translation.AbstractToCore
 
 import Control.Monad.State
 import Control.Monad.Writer.Lazy
-import Plato.Common.Info
-import Plato.Debug.Evaluate
-import Plato.Syntax.Canon
 import System.Console.Haskeline
 import System.Environment
 

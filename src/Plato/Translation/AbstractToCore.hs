@@ -1,10 +1,10 @@
 module Plato.Translation.AbstractToCore where
 
+import Plato.Abstract.Syntax
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Syntax.Abstract
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -15,7 +15,7 @@ import Plato.Common.Vect
 transExpr :: (MonadThrow m, MonadFail m) => Ty -> Expr -> Core m Term
 transExpr restty expr = case restty of
         TyAll (x, knK1) tyT2 -> do
-                addbinding x (TyVarBind knK1)
+                pickfreshname x (TyVarBind knK1)
                 t2 <- transExpr tyT2 expr
                 return $ TmTAbs dummyInfo (x, knK1) t2
         _ -> traexpr expr
@@ -41,12 +41,12 @@ transExpr restty expr = case restty of
                         return $ TmAbs fi (x', tyT1) t2
                 _ -> throwError fi "Couldn't match expected type"
         traexpr (LetExpr fi [d] e1) = case d of
-                FuncDecl fi x e2 -> do
-                        x' <- pickfreshname x NameBind
+                FuncDecl fi f e2 -> do
+                        f' <- pickfreshname f NameBind
                         t1 <- transExpr (typeShift 1 restty) e1
-                        t2 <- transExpr (typeShift 1 restty) e2
-                        return $ TmLet fi (x', t1) t2
-                _ -> traexpr e1
+                        t2 <- transExpr (typeShift 1 restty) e2 --tmp
+                        return $ TmLet fi (f', t1) t2
+                FuncTyDecl fi f ty -> traexpr e1
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
                 alts' <- forM alts $ \(pat, body, fi1) -> case pat of
@@ -56,7 +56,7 @@ transExpr restty expr = case restty of
                         VarExpr fi2 _ _ -> throwError fi2 "function type cannot be a pattern"
                         ConExpr fi2 c as -> do
                                 ti <- evalLocal (mapM_ addarg as) (traexpr body)
-                                tyT21 <- getVarBind fi c
+                                tyT21 <- getVarBindFromName fi c
                                 when (length as /= countTyArr tyT21) (throwError fi2 "Wrong number of arguments")
                                 return (c, (length as, ti))
                             where
@@ -108,16 +108,15 @@ entryPoint = str2name "main"
 
 transDecl :: (MonadThrow m, MonadFail m) => TopDecl -> WriterT [Command] (Core m) ()
 transDecl (Decl (FuncDecl fi f e)) = do
-        tyT <- lift $ getVarBind fi f
         ctx <- get
-        idx <- name2index fi ctx f
-        let tyT' = typeShift (idx + 1) tyT
-        t <- lift $ lift $ transExpr tyT' e `evalStateT` ctx
+        tyT <- lift $ getVarBindFromName fi f
+        when (f == str2name "id") $ error $ show (vmap fst ctx) ++ "\n" ++ show tyT
+        t <- lift $ lift $ transExpr tyT e `evalStateT` ctx
         lift $ addbinding f NameBind
         tell $
                 if f == entryPoint
                         then [Eval t]
-                        else [Bind f (TmAbbBind t (Just tyT'))]
+                        else [Bind f (TmAbbBind t (Just tyT))]
 transDecl _ = return ()
 
 transTopDecl :: (MonadThrow m, MonadFail m) => TopDecl -> WriterT [Command] (Core m) ()
@@ -135,18 +134,18 @@ transTopDecl (DataDecl fi name params fields) = do
         -- Define constructors as function
         forM_ fields $ \(l, field) -> do
                 ctx <- get
-                ps <- lift $
-                        (`evalStateT` ctx) $ do
-                                zipWithM_ pickfreshname params (repeat NameBind)
-                                forM field $ \tyi -> do
-                                        pi <- pickfreshname dummyName NameBind
-                                        ptyi <- transType tyi
-                                        return (pi, ptyi)
-                tyT <- lift $ getTyAbb fi name
+                ps <- lift $ do
+                        zipWithM_ pickfreshname params (repeat NameBind)
+                        forM field $ \tyi -> do
+                                pi <- pickfreshname dummyName NameBind
+                                ptyi <- transType tyi
+                                return (pi, ptyi)
+                tyT <- lift $ getTyAbbFromName fi name
                 let arity = length field
                     tag = TmTag dummyInfo l (reverse (map (\i -> TmVar dummyInfo i (length ctx + arity)) [0 .. (arity -1)])) tyT
                     ctor = foldr (TmAbs dummyInfo) tag ps
                     ctorty = foldr (TyArr . snd) tyT ps
+                put ctx
                 tell [Bind l (TmAbbBind ctor (Just ctorty))]
                 lift $ addbinding l (VarBind ctorty)
 transTopDecl (TypeDecl fi name params ty) = do

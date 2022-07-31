@@ -1,5 +1,5 @@
 {
-module Plato.Syntax.Lexer where
+module Plato.Abstract.Lexer where
 }
 
 %wrapper "monadUserState"

@@ -17,8 +17,6 @@ type Core m = StateT Context m
 ----------------------------------------------------------------
 -- Context
 ----------------------------------------------------------------
---type Context = [(N.Name, Binding)]
-
 type Context = Vect (N.Name, Binding)
 
 emptyContext :: Context
@@ -33,21 +31,21 @@ addbinding x bind = modify $ \ctx -> cons (x, bind) ctx
 addbinding_ :: N.Name -> Binding -> Context -> Context
 addbinding_ x bind = cons (x, bind)
 
+pickfreshname :: Monad m => N.Name -> Binding -> Core m N.Name
+pickfreshname x bind = state $ \ctx -> case look x ctx of
+        Just _ -> pickfreshname (N.appendstr x "'") bind `runState` ctx
+        Nothing -> (x, cons (x, bind) ctx)
+
+isuniquename :: MonadThrow m => Info -> N.Name -> Binding -> Core m ()
+isuniquename fi x bind = do
+        ctx <- get
+        case look x ctx of
+                Just _ -> throwError fi $ N.name2str x ++ " is already used."
+                Nothing -> addbinding x bind
+
+-- from index
 getbinding :: Context -> Int -> Binding
 getbinding ctx i = bindingShift (i + 1) (snd $ ctx ! i)
-
-getTyAbb :: MonadThrow m => Info -> N.Name -> Core m Ty
-getTyAbb fi n = do
-        ctx <- get
-        case look n ctx of
-                Just (TyAbbBind tyT _) -> return tyT
-                _ -> throwError fi $ "Wrong kind of binding for type: " ++ N.name2str n
-getVarBind :: MonadThrow m => Info -> N.Name -> Core m Ty
-getVarBind fi n = do
-        ctx <- get
-        case look n ctx of
-                Just (VarBind tyT) -> return tyT
-                _ -> throwError fi $ "Wrong kind of binding for variable: " ++ N.name2str n
 
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of
@@ -64,17 +62,32 @@ getTypeFromContext ctx i = case getbinding ctx i of
         TmAbbBind _ Nothing -> unreachable $ "No type recorded for variable " ++ N.name2str (index2name ctx i)
         _ -> unreachable $ "getTypeFromContext: Wrong kind of binding for variable " ++ N.name2str (index2name ctx i)
 
-pickfreshname :: Monad m => N.Name -> Binding -> StateT Context m N.Name
-pickfreshname x bind = state $ \ctx -> case look x ctx of
-        Just _ -> pickfreshname (N.appendstr x "'") bind `runState` ctx
-        Nothing -> (x, cons (x, bind) ctx)
-
-isuniquename :: MonadThrow m => Info -> N.Name -> Binding -> Core m ()
-isuniquename fi x bind = do
+getTyAbb :: MonadThrow m => Info -> Int -> Core m Ty
+getTyAbb fi i = do
         ctx <- get
-        case look x ctx of
-                Just _ -> throwError fi $ N.name2str x ++ " is already used."
-                Nothing -> addbinding x bind
+        case getbinding ctx i of
+                TyAbbBind tyT _ -> return tyT
+                b -> throwError fi $ "Wrong kind of binding for type: " ++ N.name2str (index2name ctx i)
+
+getVarBind :: MonadThrow m => Info -> Int -> Core m Ty
+getVarBind fi i = do
+        ctx <- get
+        case getbinding ctx i of
+                VarBind tyT -> return tyT
+                _ -> throwError fi $ "Wrong kind of binding for variable: " ++ N.name2str (index2name ctx i)
+
+-- from Name
+getTyAbbFromName :: MonadThrow m => Info -> N.Name -> Core m Ty
+getTyAbbFromName fi n = do
+        ctx <- get
+        i <- name2index fi ctx n
+        getTyAbb fi i
+
+getVarBindFromName :: MonadThrow m => Info -> N.Name -> Core m Ty
+getVarBindFromName fi n = do
+        ctx <- get
+        i <- name2index fi ctx n
+        getVarBind fi i
 
 index2name :: Context -> Int -> N.Name
 index2name ctx i = fst (ctx ! i)

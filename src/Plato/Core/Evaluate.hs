@@ -2,7 +2,7 @@ module Plato.Core.Evaluate where
 
 import Plato.Common.Error
 import Plato.Common.Info
-import qualified Plato.Common.Name as N
+import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
 
@@ -68,8 +68,8 @@ getkind :: MonadThrow m => Context -> Int -> m Kind
 getkind ctx i = case getbinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ (Just knK) -> return knK
-        TyAbbBind _ Nothing -> throwString $ "No kind recorded for variable " ++ N.name2str (index2name ctx i)
-        _ -> throwString $ "getkind: Wrong kind of binding for variable " ++ N.name2str (index2name ctx i)
+        TyAbbBind _ Nothing -> throwString $ "No kind recorded for variable " ++ name2str (index2name ctx i)
+        _ -> throwString $ "getkind: Wrong kind of binding for variable " ++ name2str (index2name ctx i)
 
 kindof :: MonadThrow m => Ty -> Core m Kind
 kindof tyT = case tyT of
@@ -124,7 +124,25 @@ typeof t = case t of
                 addbinding x (VarBind tyT1)
                 tyT2 <- typeof t2
                 return $ typeShift (-1) tyT2
-        TmCase{} -> undefined
+        TmCase fi t alts -> do
+                t' <- typeof t
+                ctx <- get
+                case simplifyty ctx t' of
+                        TyVariant fieldtys -> do
+                                forM_ alts $ \(li, (xi, ti)) -> case lookup li fieldtys of
+                                        Just _ -> return ()
+                                        Nothing -> throwError fi $ "label " ++ name2str li ++ " not in type"
+                                casetypes <- forM alts $ \(li, (xi, ti)) -> case lookup li fieldtys of
+                                        Just tysi -> do
+                                                forM_ tysi $ \tyT -> addbinding dummyName (VarBind tyT)
+                                                ti' <- typeof ti
+                                                return $ typeShift (-1) ti'
+                                        Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
+                                let (tyT1 : restTy) = casetypes
+                                ctx <- get
+                                forM_ restTy $ \tyTi -> unless (tyeqv ctx tyTi tyT1) $ throwError fi "fields do not have the same type"
+                                return tyT1
+                        _ -> throwError fi "Expected variant type"
         TmTAbs fi (tyX, knK1) t2 -> do
                 addbinding tyX (TyVarBind knK1)
                 tyT2 <- typeof t2
@@ -139,7 +157,17 @@ typeof t = case t of
                                         then return $ typeSubstTop tyT2 tyT12
                                         else throwError fi "Type argument has wrong kind"
                         _ -> throwError fi "universal type expected"
-        _ -> error ""
+        TmTag fi li tsi tyT -> do
+                ctx <- get
+                case simplifyty ctx tyT of
+                        TyVariant fieldtys -> case lookup li fieldtys of
+                                Just tyTiExpected -> do
+                                        tyTi <- mapM typeof tsi
+                                        if all (uncurry $ tyeqv ctx) (zip tyTi tyTiExpected)
+                                                then return tyT
+                                                else throwError fi "field does not have expected type"
+                                Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
+                        _ -> throwError fi "Annotation is not a variant type"
 
 ----------------------------------------------------------------
 -- tyeqv

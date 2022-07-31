@@ -65,9 +65,10 @@ tymap onvar c tyT = walk c tyT
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
         tymap
-                ( \c x n -> case () of
-                        _ | x < c -> TyVar x (n + d)
-                        _ -> TyVar (x + d) (n + d)
+                ( \c x n ->
+                        if x < c
+                                then TyVar x (n + d)
+                                else TyVar (x + d) (n + d)
                 )
 
 typeShift :: Int -> Ty -> Ty
@@ -93,7 +94,7 @@ tmmap onvar ontype c t = walk c t
     where
         walk c t = case t of
                 TmVar fi x n -> onvar fi c x n
-                TmAbs fi (x, tyT1) t2 -> TmAbs fi (x, ontype c tyT1) (walk (c + 1) t2)
+                TmAbs fi (x, tyT1) t2 -> TmAbs fi (x, ontype (c + 1) tyT1) (walk (c + 1) t2)
                 TmApp fi t1 t2 -> TmApp fi (walk c t1) (walk c t2)
                 TmLet fi (x, t1) t2 -> TmLet fi (x, walk c t1) (walk (c + 1) t2)
                 TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
@@ -106,9 +107,9 @@ termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =
         tmmap
                 ( \fi c x n ->
-                        if x >= c
-                                then TmVar fi (x + d) (n + d)
-                                else TmVar fi x (n + d)
+                        if x < c
+                                then TmVar fi x (n + d)
+                                else TmVar fi (x + d) (n + d)
                 )
                 (typeShiftAbove d)
 

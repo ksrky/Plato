@@ -1,10 +1,10 @@
 {
-module Plato.Syntax.Parser where
+module Plato.Abstract.Parser where
 
 import Plato.Common.Name as N
 import Plato.Common.Info
-import Plato.Syntax.Lexer
-import qualified Plato.Syntax.Abstract as A
+import Plato.Abstract.Lexer
+import qualified Plato.Abstract.Syntax as A
 }
 
 %name parse

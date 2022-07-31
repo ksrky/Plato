@@ -1,4 +1,4 @@
-module Plato.Syntax.Abstract where
+module Plato.Abstract.Syntax where
 
 import Plato.Common.Info
 import Plato.Common.Name (Name)

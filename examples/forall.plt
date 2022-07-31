@@ -1,5 +1,5 @@
-id : forall x. x -> x;
-id = \a -> a;
+id : forall a. a -> a;
+id = \x -> x;
 
 main : Float;
 main = id 1;

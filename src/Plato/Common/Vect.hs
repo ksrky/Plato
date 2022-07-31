@@ -27,6 +27,13 @@ look k v = do
         ((x, y), tl) <- uncons v
         if k == x then Just y else look k tl
 
+find :: Eq a => a -> Vect (a, b) -> Maybe (Int, b)
+find = find' 0
+    where
+        find' i k v = do
+                ((x, y), tl) <- uncons v
+                if k == x then Just (i, y) else find' (i + 1) k tl
+
 elemIndex :: Eq a => a -> Vect a -> Maybe Int
 elemIndex = V.elemIndex
 

@@ -26,6 +26,10 @@ source-repository head
 library
   exposed-modules:
       Main
+      Plato.Abstract.Canon
+      Plato.Abstract.Lexer
+      Plato.Abstract.Parser
+      Plato.Abstract.Syntax
       Plato.Backend.GHC.Codegen
       Plato.Backend.GHC.HsPretty
       Plato.Backend.GHC.HsSyntax
@@ -44,10 +48,7 @@ library
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
-      Plato.Syntax.Abstract
-      Plato.Syntax.Canon
-      Plato.Syntax.Lexer
-      Plato.Syntax.Parser
+      Plato.Debug.TranslateREPL
       Plato.Translation.AbstractToCore
   other-modules:
       Paths_Plato
@@ -71,6 +72,10 @@ library
 executable Plato-exe
   main-is: Main.hs
   other-modules:
+      Plato.Abstract.Canon
+      Plato.Abstract.Lexer
+      Plato.Abstract.Parser
+      Plato.Abstract.Syntax
       Plato.Backend.GHC.Codegen
       Plato.Backend.GHC.HsPretty
       Plato.Backend.GHC.HsSyntax
@@ -89,10 +94,7 @@ executable Plato-exe
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
-      Plato.Syntax.Abstract
-      Plato.Syntax.Canon
-      Plato.Syntax.Lexer
-      Plato.Syntax.Parser
+      Plato.Debug.TranslateREPL
       Plato.Translation.AbstractToCore
       Paths_Plato
   hs-source-dirs:
