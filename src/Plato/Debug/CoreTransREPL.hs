@@ -1,11 +1,11 @@
-module Plato.Debug.TranslateREPL where
+module Plato.Debug.CoreTransREPL where
 
-import Plato.Abstract.Canon
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Translation.AbstractToCore
+import Plato.Translation.AbstractToInternal
+import Plato.Translation.InternalToCore
 
 import System.Console.Haskeline
 import System.Environment
@@ -45,6 +45,6 @@ process :: String -> IO [Command]
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                ast' <- reorganize ast
-                cmds <- execWriterT (transProgram ast') `evalStateT` initContext
+                inner <- abstract2internal ast
+                cmds <- internal2core initContext inner
                 mapM_ print cmds >> return cmds

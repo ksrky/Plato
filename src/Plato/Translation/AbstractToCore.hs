@@ -49,7 +49,7 @@ transExpr restty expr = case restty of
                 FuncTyDecl fi f ty -> traexpr e1
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
-                alts' <- forM alts $ \(pat, body, fi1) -> case pat of
+                alts' <- forM alts $ \(fi1, pat, body) -> case pat of
                         VarExpr fi2 x as | null as -> do
                                 ti <- traexpr body
                                 return (x, (0, ti)) -- tmp
@@ -124,7 +124,7 @@ transTopDecl (DataDecl fi name params fields) = do
         -- Define a data type
         ctx <- get
         params' <- lift $ zipWithM pickfreshname params (repeat NameBind)
-        fields' <- forM fields $ \(l, f) -> lift $ do
+        fields' <- forM fields $ \(_, l, f) -> lift $ do
                 paramtys <- mapM transType f
                 return (l, paramtys)
         let tyT = foldr TyAbs (TyVariant fields') (zip params' (repeat KnStar)) -- tmp: param::*
@@ -132,7 +132,7 @@ transTopDecl (DataDecl fi name params fields) = do
         tell [Bind name (TyAbbBind tyT Nothing)] -- tmp: kind
         lift $ addbinding name (TyAbbBind tyT Nothing)
         -- Define constructors as function
-        forM_ fields $ \(l, field) -> do
+        forM_ fields $ \(_, l, field) -> do
                 ctx <- get
                 ps <- lift $ do
                         zipWithM_ pickfreshname params (repeat NameBind)

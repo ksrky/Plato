@@ -43,13 +43,17 @@ library
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
+      Plato.Debug.CoreTransREPL
       Plato.Debug.Evaluate
+      Plato.Debug.InternalTransREPL
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
-      Plato.Debug.TranslateREPL
+      Plato.Internal.Syntax
       Plato.Translation.AbstractToCore
+      Plato.Translation.AbstractToInternal
+      Plato.Translation.InternalToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -89,13 +93,17 @@ executable Plato-exe
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
+      Plato.Debug.CoreTransREPL
       Plato.Debug.Evaluate
+      Plato.Debug.InternalTransREPL
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
-      Plato.Debug.TranslateREPL
+      Plato.Internal.Syntax
       Plato.Translation.AbstractToCore
+      Plato.Translation.AbstractToInternal
+      Plato.Translation.InternalToCore
       Paths_Plato
   hs-source-dirs:
       src

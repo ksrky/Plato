@@ -14,6 +14,13 @@ import Plato.Common.Info
 ----------------------------------------------------------------
 type Core m = StateT Context m
 
+evalCore :: Monad m => Core m a -> Core m a
+evalCore f = do
+        ctx <- get
+        val <- f
+        put ctx
+        return val
+
 ----------------------------------------------------------------
 -- Context
 ----------------------------------------------------------------
@@ -76,6 +83,13 @@ getVarBind fi i = do
                 VarBind tyT -> return tyT
                 _ -> throwError fi $ "Wrong kind of binding for variable: " ++ N.name2str (index2name ctx i)
 
+getTmAbb :: MonadThrow m => Info -> Int -> Core m Ty
+getTmAbb fi i = do
+        ctx <- get
+        case getbinding ctx i of
+                TmAbbBind _ (Just tyT) -> return tyT
+                b -> throwError fi $ "Wrong kind of binding for variable: " ++ show b ++ "\n" ++ N.name2str (index2name ctx i)
+
 -- from Name
 getTyAbbFromName :: MonadThrow m => Info -> N.Name -> Core m Ty
 getTyAbbFromName fi n = do
@@ -88,6 +102,12 @@ getVarBindFromName fi n = do
         ctx <- get
         i <- name2index fi ctx n
         getVarBind fi i
+
+getTmAbbFromName :: MonadThrow m => Info -> N.Name -> Core m Ty
+getTmAbbFromName fi n = do
+        ctx <- get
+        i <- name2index fi ctx n
+        getTmAbb fi i
 
 index2name :: Context -> Int -> N.Name
 index2name ctx i = fst (ctx ! i)

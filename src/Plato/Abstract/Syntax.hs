@@ -10,7 +10,7 @@ data Expr
         | StringExpr Info String
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
-        | CaseExpr Info Expr [(Expr, Expr, Info)]
+        | CaseExpr Info Expr [(Info, Expr, Expr)]
         deriving (Eq, Show)
 
 data Decl
@@ -19,7 +19,7 @@ data Decl
         deriving (Eq, Show)
 
 data TopDecl
-        = DataDecl Info Name [Name] [(Name, [Type])]
+        = DataDecl Info Name [Name] [(Info, Name, [Type])]
         | TypeDecl Info Name [Name] Type
         | Decl Decl
         deriving (Eq, Show)

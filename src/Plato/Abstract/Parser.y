@@ -84,12 +84,12 @@ atype       :: { A.Type }
             : conid                         { A.ConType (mkInfo $1) (id2name $1) }
             | varid                         { A.VarType (mkInfo $1) (id2name $1) }
 
-constrs     :: { [(N.Name, [A.Type])] }
+constrs     :: { [(Info, N.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
             | constr                        { [$1] }
 
-constr      :: { (N.Name, [A.Type]) }
-            : conid types                   { (id2name $1, $2) }
+constr      :: { (Info, N.Name, [A.Type]) }
+            : conid types                   { (mkInfo $1, id2name $1, $2) }
 
 tyargs      :: { [N.Name] }
             : varid tyargs                  { id2name $1 : $2 }
@@ -117,12 +117,12 @@ vars        :: { [N.Name] }
             : varid vars                    { id2name $1 : $2 }
             | varid                         { [id2name $1] }
 
-alts        :: { [(A.Expr, A.Expr, Info)] }
+alts        :: { [(Info, A.Expr, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
             | {- empty -}                   { [] }
 
-alt         :: { (A.Expr, A.Expr, Info) }
-            : pat '->' expr                 { ($1, $3, mkInfo $2) }
+alt         :: { (Info, A.Expr, A.Expr) }
+            : pat '->' expr                 { (mkInfo $2, $1, $3) }
 
 pat         :: { A.Expr }
             : expr                          { $1 }

@@ -13,7 +13,7 @@ instance PrettyCore Term where
         prcore ctx t = case t of
                 TmVar _ i n ->
                         if length ctx == n
-                                then name2str $ fst (ctx ! i)
+                                then if i < 0 then show i ++ show (vmap fst ctx) else name2str $ fst (ctx ! i)
                                 else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
                 TmAbs _ (x, tyT1) t2 ->
                         let ctx' = cons (x, NameBind) ctx
@@ -47,7 +47,7 @@ instance PrettyCore Ty where
         prcore ctx ty = case ty of
                 TyVar i n ->
                         if length ctx == n
-                                then name2str (fst (ctx ! i)) -- ++ " " ++ show i ++ " " ++ show (vmap fst ctx)
+                                then if i < 0 then show i ++ show (vmap fst ctx) else name2str $ fst (ctx ! i)
                                 else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
                 TyString -> "String"
                 TyFloat -> "Float"

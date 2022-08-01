@@ -1,6 +1,5 @@
 module Plato.Debug.REPL where
 
-import Plato.Abstract.Canon
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Common.Info
@@ -10,10 +9,10 @@ import Plato.Core.Evaluate
 import Plato.Core.Pretty
 import Plato.Core.Syntax
 import Plato.Debug.Evaluate
-import Plato.Translation.AbstractToCore
+import Plato.Translation.AbstractToInternal
+import Plato.Translation.InternalToCore
 
 import Control.Monad.State
-import Control.Monad.Writer.Lazy
 import System.Console.Haskeline
 import System.Environment
 
@@ -62,8 +61,8 @@ process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                ast' <- reorganize ast
-                cmds <- execWriterT (transProgram ast') `evalStateT` ctx
+                inner <- abstract2internal ast
+                cmds <- internal2core initContext inner
                 let ctx' = mapM processCommand cmds `execState` ctx
                 res <- processEval ctx' cmds
                 print (pretty <$> res)
