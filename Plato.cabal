@@ -26,7 +26,6 @@ source-repository head
 library
   exposed-modules:
       Main
-      Plato.Abstract.Canon
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
@@ -51,7 +50,6 @@ library
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
       Plato.Internal.Syntax
-      Plato.Translation.AbstractToCore
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore
   other-modules:
@@ -76,7 +74,6 @@ library
 executable Plato-exe
   main-is: Main.hs
   other-modules:
-      Plato.Abstract.Canon
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
@@ -101,7 +98,6 @@ executable Plato-exe
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
       Plato.Internal.Syntax
-      Plato.Translation.AbstractToCore
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore
       Paths_Plato

@@ -17,11 +17,11 @@ instance PrettyCore Term where
                                 else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
                 TmAbs _ (x, tyT1) t2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "\\(" ++ name2str x ++ ":" ++ prcore ctx' tyT1 ++ "). " ++ prcore ctx' t2
+                         in "\\(" ++ name2str x ++ ":" ++ prcore ctx tyT1 ++ "). " ++ prcore ctx' t2
                 TmApp _ t1 t2 -> paren (prcore ctx t1) ++ " " ++ paren (prcore ctx t2)
                 TmTAbs _ (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
+                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx knK1 ++ "). " ++ prcore ctx' tyT2
                 TmTApp _ t1 tyT2 -> paren (prcore ctx t1) ++ " [" ++ prcore ctx tyT2 ++ "]"
                 TmFloat _ f -> show f
                 TmString _ s -> show s
@@ -54,12 +54,12 @@ instance PrettyCore Ty where
                 TyVariant fields -> undefined
                 TyAbs (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ "). " ++ prcore ctx' tyT2
+                         in "/\\(" ++ name2str x ++ ":" ++ prcore ctx knK1 ++ "). " ++ prcore ctx' tyT2
                 TyArr tyT1 tyT2 -> prcore ctx tyT1 ++ " -> " ++ paren (prcore ctx tyT2)
                 TyApp tyT1 tyT2 -> paren (prcore ctx tyT1) ++ " " ++ paren (prcore ctx tyT2)
                 TyAll (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
-                         in "forall " ++ name2str x ++ ":" ++ prcore ctx' knK1 ++ ". " ++ prcore ctx' tyT2
+                         in "forall " ++ name2str x ++ ":" ++ prcore ctx knK1 ++ ". " ++ prcore ctx' tyT2
 
 instance PrettyCore Kind where
         prcore ctx KnStar = "*"

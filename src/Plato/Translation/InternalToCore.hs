@@ -33,14 +33,13 @@ transExpr restty exp = case restty of
                 foldM (\t a -> TmApp (getInfo a) t <$> traexpr a) t1 as
         traexpr (FloatExpr fi f) = return $ TmFloat fi f
         traexpr (StringExpr fi s) = return $ TmString fi s
-        traexpr (LamExpr fi x e) = do
-                x' <- pickfreshname x NameBind
-                case restty of
-                        ArrType _ ty1 ty2 -> do
-                                tyT1 <- evalCore $ transType ty1
-                                t2 <- transExpr ty2 e
-                                return $ TmAbs fi (x', tyT1) t2
-                        _ -> throwError fi "Couldn't match expected type"
+        traexpr (LamExpr fi x e) = case restty of
+                ArrType _ ty1 ty2 -> do
+                        tyT1 <- evalCore $ transType ty1
+                        x' <- pickfreshname x NameBind
+                        t2 <- transExpr ty2 e
+                        return $ TmAbs fi (x', tyT1) t2
+                _ -> throwError fi "Couldn't match expected type"
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl _ f e2 ty -> do
                         f' <- pickfreshname f NameBind
@@ -70,12 +69,12 @@ transExpr restty exp = case restty of
                         _ -> throwError fi1 "illegal expression for pattern matching"
                 return $ TmCase fi t alts'
         traexpr (TagExpr fi l as) = do
-                as' <- mapM traexpr as
                 tyT <- case restty of
                         SumType{} -> transType restty
                         AllType{} -> transType restty
                         ArrType{} -> transType restty
                         _ -> throwError fi $ "illegal type for TagExpr: " ++ show restty
+                as' <- mapM traexpr as
                 return $ TmTag fi l as' tyT
 
 transType :: MonadThrow m => Type -> Core m Ty

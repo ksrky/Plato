@@ -1,8 +1,8 @@
 module Plato.Debug.ParseREPL where
 
-import Plato.Abstract.Canon
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
+import Plato.Translation.AbstractToInternal
 
 import Control.Monad.State
 import System.Console.Haskeline
@@ -40,5 +40,5 @@ process :: String -> IO ()
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                ast' <- reorganize ast
-                mapM_ print ast'
+                inner <- abstract2internal ast
+                mapM_ print inner
