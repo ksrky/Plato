@@ -42,9 +42,9 @@ library
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
-      Plato.Debug.CoreTransREPL
+      Plato.Debug.CoreTrans
       Plato.Debug.Evaluate
-      Plato.Debug.InternalTransREPL
+      Plato.Debug.InternalTrans
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore
@@ -90,9 +90,9 @@ executable Plato-exe
       Plato.Core.Evaluate
       Plato.Core.Pretty
       Plato.Core.Syntax
-      Plato.Debug.CoreTransREPL
+      Plato.Debug.CoreTrans
       Plato.Debug.Evaluate
-      Plato.Debug.InternalTransREPL
+      Plato.Debug.InternalTrans
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
       Plato.Debug.PrettyCore

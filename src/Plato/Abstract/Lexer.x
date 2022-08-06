@@ -14,7 +14,7 @@ $small = [a-z]
 $large = [A-Z]
 $special    = [\.\,\$\*\+\?\#\~\-\[\]\^\/]
 
-@reservedid = case | data | else | if | in
+@reservedid = case | data | else | if | import | in
             | of | let | then | if | type | where
 @varid = $small [$alpha $digit \_ \']*
 @conid = $large [$alpha $digit \_ \']*
@@ -38,6 +38,7 @@ tokens :-
 <0> case                        { keyword KwCase }
 <0> data                        { keyword KwData }
 <0> forall                      { keyword KwForall }
+<0> import                      { keyword KwImport }
 <0> in                          { keyword KwIn }
 <0> of                          { keyword KwOf }
 <0> let                         { keyword KwLet }
@@ -89,6 +90,7 @@ data Keyword
     = KwCase
     | KwData
     | KwForall
+    | KwImport
     | KwIn
     | KwOf
     | KwLet

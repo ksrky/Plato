@@ -1,7 +1,7 @@
 module Plato.Abstract.Syntax where
 
 import Plato.Common.Info
-import Plato.Common.Name (Name)
+import Plato.Common.Name
 
 data Expr
         = VarExpr Info Name [Expr]
@@ -11,6 +11,14 @@ data Expr
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
         | CaseExpr Info Expr [(Info, Expr, Expr)]
+        deriving (Eq, Show)
+
+data Type
+        = ConType Info Name
+        | VarType Info Name
+        | AppType Type Type
+        | ArrType Info Type Type
+        | AllType Info [Name] Type
         deriving (Eq, Show)
 
 data Decl
@@ -24,19 +32,4 @@ data TopDecl
         | Decl Decl
         deriving (Eq, Show)
 
-data Type
-        = ConType Info Name
-        | VarType Info Name
-        | AppType Type Type
-        | ArrType Info Type Type
-        | AllType Info [Name] Type
-        deriving (Eq, Show)
-
-getInfo :: Expr -> Info
-getInfo (VarExpr fi _ _) = fi
-getInfo (ConExpr fi _ _) = fi
-getInfo (FloatExpr fi _) = fi
-getInfo (StringExpr fi _) = fi
-getInfo (LamExpr fi _ _) = fi
-getInfo (LetExpr fi _ _) = fi
-getInfo (CaseExpr fi _ _) = fi
+newtype ImpDecl = ImpDecl ModuleName deriving (Eq, Show)

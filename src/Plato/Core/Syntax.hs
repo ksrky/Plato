@@ -41,7 +41,7 @@ data Binding
         deriving (Eq, Show)
 
 data Command
-        = Import N.Name
+        = Import N.ModuleName
         | Bind N.Name Binding
         | Eval Term
         deriving (Eq, Show)

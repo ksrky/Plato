@@ -83,6 +83,9 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
+transImpDecl :: MonadThrow m => A.ImpDecl -> WriterT [I.Decl] m ()
+transImpDecl = undefined
+
 transProgram :: MonadThrow m => [A.TopDecl] -> WriterT [I.Decl] m ()
 transProgram tds = do
         mapM_ transTopDecl tds

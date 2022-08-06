@@ -24,7 +24,8 @@ data Type
         deriving (Eq, Show)
 
 data Decl
-        = TypeDecl Info Name Type
+        = ImpDecl [Name]
+        | TypeDecl Info Name Type
         | FuncDecl Info Name Expr Type
         deriving (Eq, Show)
 

@@ -18,6 +18,7 @@ import qualified Plato.Abstract.Syntax as A
 'case'                          { TokKeyword (KwCase, $$) }
 'data'                          { TokKeyword (KwData, $$) }
 'forall'                        { TokKeyword (KwForall, $$) }
+'import'                        { TokKeyword (KwImport, _) }
 'in'                            { TokKeyword (KwIn, _) }
 'of'                            { TokKeyword (KwOf, _) }
 'let'                           { TokKeyword (KwLet, $$) }
@@ -47,7 +48,18 @@ string                          { TokString $$ }
 
 %%
 
-program     : topdecls                      { $1 }
+program     : impdecls ';' topdecls         { $3 }
+
+impdecls    :: { [A.ImpDecl] }
+            : impdecl ';' impdecls          { $1 : $3 }
+            | {- empty -}                   { [] }
+
+impdecl     :: { A.ImpDecl }
+            : 'import' modid                { A.ImpDecl $2 }
+
+modid       :: { [N.Name] }
+            : varid '.' modid               { id2name $1 : $3 }
+            | varid                         { [id2name $1] }
 
 topdecls    :: { [A.TopDecl] }
             : topdecl ';' topdecls          { $1 : $3 }
