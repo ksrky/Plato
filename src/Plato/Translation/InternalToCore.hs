@@ -15,9 +15,9 @@ transExpr :: MonadThrow m => Type -> Expr -> Core m Term
 transExpr restty exp = case restty of
         AllType fi x ty -> do
                 let knK1 = KnStar -- tmp
-                x' <- pickfreshname x (TyVarBind knK1)
+                addbinding x (TyVarBind knK1)
                 t2 <- transExpr ty exp
-                return $ TmTAbs fi (x', knK1) t2
+                return $ TmTAbs fi (x, knK1) t2
         _ -> traexpr exp
     where
         traexpr :: MonadThrow m => Expr -> Core m Term
@@ -36,16 +36,16 @@ transExpr restty exp = case restty of
         traexpr (LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do
                         tyT1 <- evalCore $ transType ty1
-                        x' <- pickfreshname x NameBind
+                        addbinding x NameBind
                         t2 <- transExpr ty2 e
-                        return $ TmAbs fi (x', tyT1) t2
+                        return $ TmAbs fi (x, tyT1) t2
                 _ -> throwError fi "Couldn't match expected type"
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl _ f e2 ty -> do
-                        f' <- pickfreshname f NameBind
-                        t2 <- transExpr ty e2
+                        addbinding f NameBind
+                        t2 <- evalCore $ transExpr ty e2
                         t1 <- traexpr e1
-                        return $ TmLet fi (f', t2) t1
+                        return $ TmLet fi (f, t2) t1
                 _ -> unreachable "Type declaration in let binding"
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
@@ -92,14 +92,14 @@ transType (ArrType fi ty1 ty2) = do
         return $ TyArr ty1' ty2'
 transType (AbsType fi x ty) = do
         let knK1 = KnStar -- tmp: \x.t = \x:*.t
-        x' <- pickfreshname x (TyVarBind knK1)
+        addbinding x (TyVarBind knK1)
         ty' <- transType ty
-        return $ TyAll (x', knK1) ty'
+        return $ TyAll (x, knK1) ty'
 transType (AllType fi x ty) = do
         let knK1 = KnStar -- tmp: forall x.t = forall x::*.t
-        x' <- pickfreshname x (TyVarBind knK1)
+        addbinding x (TyVarBind knK1)
         ty' <- transType ty
-        return $ TyAll (x', knK1) ty'
+        return $ TyAll (x, knK1) ty'
 transType (SumType fields) = do
         fields' <- forM fields $ \(_, l, field) -> do
                 field' <- mapM transType field

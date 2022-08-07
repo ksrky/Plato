@@ -60,6 +60,7 @@ instance PrettyCore Ty where
                 TyAll (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
                          in "forall " ++ name2str x ++ ":" ++ prcore ctx knK1 ++ ". " ++ prcore ctx' tyT2
+                TyCon n -> name2str n
 
 instance PrettyCore Kind where
         prcore ctx KnStar = "*"

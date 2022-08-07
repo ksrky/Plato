@@ -36,7 +36,7 @@ evalIO ctx t = case eval1 t of
                         t1' <- eval1 t1
                         return $ TmTApp fi t1' tyT2
                 TmVar _ i n -> case getbinding ctx i of
-                        TmAbbBind t _ -> Just t --error $ (show $ snd (ctx ! i)) ++ "\n" ++ show t --Just t
+                        TmAbbBind t _ -> Just t --error $ (show $ snd (ctx ! i)) ++ "\n" ++ show t
                         _ -> Nothing
                 TmLet _ (x, v1) t2 | isval v1 -> Just $ termSubstTop v1 t2
                 TmLet fi (x, t1) t2 -> do
