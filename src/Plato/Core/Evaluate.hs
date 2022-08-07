@@ -104,8 +104,14 @@ kindof tyT = case tyT of
 
 typeof :: MonadThrow m => Term -> Core m Ty
 typeof t = case t of
-        TmString{} -> return TyString
-        TmFloat{} -> return TyFloat
+        TmString fi _ -> do
+                ctx <- get
+                i <- name2index fi ctx (str2tyConName "String")
+                return $ getTypeFromContext ctx i
+        TmFloat fi _ -> do
+                ctx <- get
+                i <- name2index fi ctx (str2tyConName "Float")
+                return $ getTypeFromContext ctx i
         TmVar fi i _ -> do
                 ctx <- get
                 return $ getTypeFromContext ctx i
@@ -209,8 +215,6 @@ tyeqv ctx tyS tyT = do
                 (TyAll (tyX1, knK1) tyS2, TyAll (_, knK2) tyT2) -> do
                         let ctx' = addbinding_ tyX1 NameBind ctx
                         knK1 == knK2 && tyeqv ctx' tyS2 tyT2
-                (TyString, TyString) -> True
-                (TyFloat, TyFloat) -> True
                 (TyVariant fields1, TyVariant fields2) -> (length fields1 == length fields2) && fseqv fields1 fields2
                     where
                         fseqv [] [] = True

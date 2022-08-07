@@ -25,6 +25,7 @@ import qualified Plato.Abstract.Syntax as A
 'type'                          { TokKeyword (KwType, $$) }
 'where'                         { TokKeyword (KwWhere, _) }
 
+'\''                            { TokSymbol (SymApost, _) }
 '->'                            { TokSymbol (SymArrow, $$) }
 '\\'                            { TokSymbol (SymBackslash, $$)}
 ','                             { TokSymbol (SymComma, _) }
@@ -59,16 +60,16 @@ impdecl     :: { A.ImpDecl }
             : 'import' modid                { A.ImpDecl $2 }
 
 modid       :: { [N.Name] }
-            : varid '.' modid               { id2name $1 : $3 }
-            | varid                         { [id2name $1] }
+            : varid '.' modid               { id2conName $1 : $3 } -- todo: module name
+            | varid                         { [id2conName $1] } --todo: module name
 
 topdecls    :: { [A.TopDecl] }
             : topdecl ';' topdecls          { $1 : $3 }
             | {- empty -}                   { [] }
 
 topdecl     :: { A.TopDecl }
-            : 'data' conid tyargs '=' constrs       { A.DataDecl (mkInfo $1) (id2name $2) $3 $5 }
-            | 'type' conid  tyargs'=' type          { A.TypeDecl (mkInfo $1) (id2name $2) $3 $5 }
+            : 'data' conid tyargs '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
+            | 'type' conid tyargs'=' type           { A.TypeDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -76,8 +77,8 @@ decls       :: { [A.Decl] }
             | decl ';' decls                { $1 : $3 }
 
 decl        :: { A.Decl }
-            : varid ':' type                { A.FuncTyDecl (mkInfo $1) (id2name $1) $3 }
-            | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2name $1) $3 }
+            : varid ':' type                { A.FuncTyDecl (mkInfo $1) (id2varName $1) $3 }
+            | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2varName $1) $3 }
 
 types       :: { [A.Type] }
             : btype types                   { $1 : $2 }
@@ -94,23 +95,23 @@ btype       :: { A.Type }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : conid                         { A.ConType (mkInfo $1) (id2name $1) }
-            | varid                         { A.VarType (mkInfo $1) (id2name $1) }
+            : conid                         { A.ConType (mkInfo $1) (id2tyConName $1) }
+            | varid                         { A.VarType (mkInfo $1) (id2tyVarName $1) }
 
 constrs     :: { [(Info, N.Name, [A.Type])] }
             : constr '|' constrs            { $1 : $3 }
             | constr                        { [$1] }
 
 constr      :: { (Info, N.Name, [A.Type]) }
-            : conid types                   { (mkInfo $1, id2name $1, $2) }
+            : conid types                   { (mkInfo $1, id2conName $1, $2) }
 
 tyargs      :: { [N.Name] }
-            : varid tyargs                  { id2name $1 : $2 }
+            : varid tyargs                  { id2tyVarName $1 : $2 }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid args                                { A.VarExpr (mkInfo $1) (id2name $1) $2 }
-            | conid args                                { A.ConExpr (mkInfo $1) (id2name $1) $2 }
+            : varid args                                { A.VarExpr (mkInfo $1) (id2varName $1) $2 }
+            | conid args                                { A.ConExpr (mkInfo $1) (id2conName $1) $2 }
             | float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
             | string                                    { A.StringExpr (mkInfo $1) (fst $1) }
             | '(' expr ')'                              { $2 }
@@ -120,15 +121,18 @@ expr        :: { A.Expr }
 
 args        :: { [A.Expr] }
             : '(' expr ')' args             { $2 : $4 }
-            | varid args                    { A.VarExpr (mkInfo $1) (id2name $1) [] : $2 }
-            | conid args                    { A.ConExpr (mkInfo $1) (id2name $1) [] : $2 }
+            | varid args                    { A.VarExpr (mkInfo $1) (id2varName $1) [] : $2 }
+            | conid args                    { A.ConExpr (mkInfo $1) (id2conName $1) [] : $2 }
+            | '\'' conid args               { A.ConExpr (mkInfo $1) (id2tyConName $1) [] : $2 }
             | float args                    { A.FloatExpr (mkInfo $1) (fst $1) : $2 }
             | string args                   { A.StringExpr (mkInfo $1) (fst $1) : $2 }
             | {- empty -}                   { [] }
 
 vars        :: { [N.Name] }
-            : varid vars                    { id2name $1 : $2 }
-            | varid                         { [id2name $1] }
+            : varid vars                    { id2varName $1 : $2 }
+            | conid vars                    { id2tyConName $1 : $2 }
+            | varid                         { [id2varName $1] }
+            | conid                         { [id2tyConName $1] }
 
 alts        :: { [(Info, A.Expr, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
@@ -144,18 +148,21 @@ pat         :: { A.Expr }
 {
 parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ prettyToken t
-    {-where
-        (_, p) = t
-        l = line $ pos p
-        llen = length l
-        offset = replicate (llen + 1) " "
-        out = offset ++ "|\n" ++ l ++ " |" ++ prettyToken ++ "\n" ++ offset ++ " |\n"-}
-
-id2name :: (String,  AlexPosn) -> Name
-id2name = N.str2name . fst
 
 wildcard :: AlexPosn -> A.Expr
-wildcard p = A.ConExpr (mkInfo p) (N.str2name "_") []
+wildcard p = A.ConExpr (mkInfo p) (N.str2varName "_") []
+
+id2varName :: String -> Name
+id2varName = N.str2varName . fst
+
+id2conName :: String -> Name
+id2conName = N.str2conName . fst
+
+id2tyVarName :: String -> Name
+id2tyVarName = N.str2tyVarName . fst
+
+id2tyConName :: String -> Name
+id2tyConName = N.str2tyConName . fst
 
 class MkInfo a where
     mkInfo :: a -> Info
@@ -179,6 +186,7 @@ prettyToken (TokKeyword (k, p)) = "'" ++ case k of
     KwWhere -> "where"
     ++ "' at " ++ prettyPos p
 prettyToken (TokSymbol (s, p)) = "'" ++ case s of
+    SymApost -> "'"
     SymArrow -> "->"
     SymBackslash -> "\\"
     SymColon -> ":"

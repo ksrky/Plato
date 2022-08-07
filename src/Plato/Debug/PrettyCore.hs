@@ -49,8 +49,6 @@ instance PrettyCore Ty where
                         if length ctx == n
                                 then if i < 0 then show i ++ show (vmap fst ctx) else name2str $ fst (ctx ! i)
                                 else "<bad index: " ++ show i ++ "/" ++ show (length ctx) ++ " => " ++ show i ++ "/" ++ show n ++ " in " ++ show (vmap fst ctx) ++ ">"
-                TyString -> "String"
-                TyFloat -> "Float"
                 TyVariant fields -> undefined
                 TyAbs (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
@@ -60,7 +58,6 @@ instance PrettyCore Ty where
                 TyAll (x, knK1) tyT2 ->
                         let ctx' = cons (x, NameBind) ctx
                          in "forall " ++ name2str x ++ ":" ++ prcore ctx knK1 ++ ". " ++ prcore ctx' tyT2
-                TyCon n -> name2str n
 
 instance PrettyCore Kind where
         prcore ctx KnStar = "*"

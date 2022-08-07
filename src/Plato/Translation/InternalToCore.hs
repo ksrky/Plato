@@ -12,13 +12,7 @@ import Control.Monad.State
 import Plato.Common.Name
 
 transExpr :: MonadThrow m => Type -> Expr -> Core m Term
-transExpr restty exp = case restty of
-        AllType fi x ty -> do
-                let knK1 = KnStar -- tmp
-                addbinding x (TyVarBind knK1)
-                t2 <- transExpr ty exp
-                return $ TmTAbs fi (x, knK1) t2
-        _ -> traexpr exp
+transExpr restty = traexpr
     where
         traexpr :: MonadThrow m => Expr -> Core m Term
         traexpr (VarExpr fi x as) = do
@@ -33,6 +27,13 @@ transExpr restty exp = case restty of
                 foldM (\t a -> TmApp (getInfo a) t <$> traexpr a) t1 as
         traexpr (FloatExpr fi f) = return $ TmFloat fi f
         traexpr (StringExpr fi s) = return $ TmString fi s
+        traexpr (LamExpr fi tyX e) | isCon tyX = case restty of
+                AllType _ tyX ty -> do
+                        let knK1 = KnStar -- tmp
+                        addbinding tyX NameBind
+                        t2 <- transExpr ty e
+                        return $ TmTAbs fi (tyX, knK1) t2
+                _ -> throwError fi "Couldn't match expected type"
         traexpr (LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do
                         tyT1 <- evalCore $ transType ty1
@@ -107,7 +108,7 @@ transType (SumType fields) = do
         return $ TyVariant fields'
 
 entryPoint :: Name
-entryPoint = str2name "main"
+entryPoint = str2varName "main"
 
 transDecl :: MonadThrow m => Decl -> Core m Command
 transDecl (TypeDecl fi name ty) = do

@@ -1,21 +1,53 @@
 module Plato.Common.Name where
 
-import Data.Text
+import Data.Char (isLower, isUpper)
+import Data.Text (Text, pack, snoc, unpack)
 
-type Name = Text
+----------------------------------------------------------------
+-- Name
+----------------------------------------------------------------
+data Name = Name {nameSpace :: NameSpace, nameText :: Text} deriving (Eq)
 
-str2name :: String -> Text
-str2name = pack
+instance Show Name where
+        show (Name _ t) = unpack t
 
-name2str :: Text -> String
-name2str = unpack
+str2varName :: String -> Name
+str2varName s = Name VarName (pack s)
+
+str2conName :: String -> Name
+str2conName s = Name ConName (pack s)
+
+str2tyVarName :: String -> Name
+str2tyVarName s = Name TyConName (pack s)
+
+str2tyConName :: String -> Name
+str2tyConName s = Name TyConName (pack s)
+
+name2str :: Name -> String
+name2str = unpack . nameText
 
 appendstr :: Text -> String -> Text
 appendstr t [] = t
 appendstr t [c] = snoc t c
 appendstr t (c : s) = appendstr (snoc t c) s
 
-dummyName :: Text
-dummyName = str2name "?"
+dummyName :: Name
+dummyName = str2varName "v?"
 
+isVar :: Name -> Bool
+isVar n = isLower $ head $ name2str n
+
+isCon :: Name -> Bool
+isCon n = isUpper $ head $ name2str n
+
+data NameSpace
+        = VarName
+        | ConName
+        | TyVarName
+        | TyConName
+        deriving (Eq, Show)
+
+----------------------------------------------------------------
+-- Module
+----------------------------------------------------------------
 type ModuleName = [Name]

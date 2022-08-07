@@ -10,9 +10,6 @@ data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
         = TyVar Int Int
-        | TyCon Name
-        | TyString
-        | TyFloat
         | TyVariant [(Name, [Ty])]
         | TyAbs (Name, Kind) Ty
         | TyArr Ty Ty
@@ -60,9 +57,6 @@ tymap onvar c tyT = walk c tyT
                 TyAll (tyX, knK1) tyT2 -> TyAll (tyX, knK1) (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
-                TyFloat -> TyFloat
-                TyString -> TyString
-                TyCon n -> TyCon n
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =

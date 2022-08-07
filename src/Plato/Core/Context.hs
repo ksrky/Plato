@@ -29,8 +29,8 @@ type Context = Vect (N.Name, Binding)
 emptyContext :: Context
 emptyContext = empty
 
-initContext :: Context
-initContext = cons (N.str2name "String", TyVarBind KnStar) $ cons (N.str2name "Float", TyVarBind KnStar) emptyContext
+initContext :: Context --tmp
+initContext = cons (N.str2tyConName "String", TyVarBind KnStar) $ cons (N.str2tyConName "Float", TyVarBind KnStar) emptyContext
 
 addbinding :: MonadThrow m => N.Name -> Binding -> Core m ()
 addbinding x bind = modify $ \ctx -> cons (x, bind) ctx
@@ -38,11 +38,11 @@ addbinding x bind = modify $ \ctx -> cons (x, bind) ctx
 addbinding_ :: N.Name -> Binding -> Context -> Context
 addbinding_ x bind = cons (x, bind)
 
-pickfreshname :: Monad m => N.Name -> Binding -> Core m N.Name
+{-pickfreshname :: Monad m => N.Name -> Binding -> Core m N.Name
 pickfreshname x bind = state $ \ctx -> case look x ctx of
         Just _ -> pickfreshname (N.appendstr x "'") bind `runState` ctx
         Nothing -> (x, cons (x, bind) ctx)
-
+-}
 isuniquename :: MonadThrow m => Info -> N.Name -> Binding -> Core m ()
 isuniquename fi x bind = do
         ctx <- get

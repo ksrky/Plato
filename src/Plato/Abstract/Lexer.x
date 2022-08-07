@@ -45,6 +45,7 @@ tokens :-
 <0> type                        { keyword KwType }
 <0> where                       { keyword KwWhere }
 
+<0> \'                          { symbol SymApost }
 <0> \-\>                        { symbol SymArrow }
 <0> \\                          { symbol SymBackslash }
 <0> \:                          { symbol SymColon }
@@ -99,7 +100,8 @@ data Keyword
     deriving (Eq, Show)
 
 data Symbol
-    = SymArrow
+    = SymApost
+    | SymArrow
     | SymBackslash
     | SymColon
     | SymComma
