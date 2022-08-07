@@ -1,4 +1,4 @@
-module Plato.Debug.InternalTransREPL where
+module Plato.Debug.InternalTrans where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
@@ -44,4 +44,4 @@ process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
                 inner <- abstract2internal ast
-                mapM_ print inner
+                print inner

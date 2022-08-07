@@ -56,7 +56,7 @@ processEval ctx _ = Nothing
 
 process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
-        Left msg -> putStrLn msg >> error msg
+        Left msg -> putStrLn msg >> return ctx
         Right ast -> do
                 inner <- abstract2internal ast
                 cmds <- internal2core initContext inner

@@ -131,8 +131,9 @@ registerDecl (FuncDecl fi f e ty) = do
         isuniquename fi f NameBind
         return $ Bind f NameBind
 
-internal2core :: MonadThrow m => Context -> [Decl] -> m [Command]
-internal2core ctx decs = (`evalStateT` ctx) $ do
-        cmd1 <- mapM registerDecl decs
-        cmd2 <- mapM transDecl decs
-        return $ cmd1 ++ cmd2
+internal2core :: MonadThrow m => Context -> Decls -> m [Command]
+internal2core ctx (Decls mns decs) = (`evalStateT` ctx) $ do
+        let imps = map Import mns
+        cmds1 <- mapM registerDecl decs
+        cmds2 <- mapM transDecl decs
+        return $ imps ++ cmds1 ++ cmds2

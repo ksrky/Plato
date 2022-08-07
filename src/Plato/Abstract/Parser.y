@@ -48,7 +48,8 @@ string                          { TokString $$ }
 
 %%
 
-program     : impdecls ';' topdecls         { $3 }
+program     : impdecls ';' topdecls         { ($1, $3) }
+            | topdecls                      { ([], $1) }
 
 impdecls    :: { [A.ImpDecl] }
             : impdecl ';' impdecls          { $1 : $3 }

@@ -1,4 +1,4 @@
-module Plato.Debug.CoreTransREPL where
+module Plato.Debug.CoreTrans where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
@@ -47,4 +47,4 @@ process input = case runAlex input parse of
         Right ast -> do
                 inner <- abstract2internal ast
                 cmds <- internal2core initContext inner
-                mapM_ print cmds >> return cmds
+                print cmds >> return cmds

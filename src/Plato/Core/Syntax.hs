@@ -4,32 +4,33 @@ module Plato.Core.Syntax where
 
 import qualified Plato.Common.Error as E
 import Plato.Common.Info
-import qualified Plato.Common.Name as N
+import Plato.Common.Name
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
         = TyVar Int Int
+        | TyCon Name
         | TyString
         | TyFloat
-        | TyVariant [(N.Name, [Ty])]
-        | TyAbs (N.Name, Kind) Ty
+        | TyVariant [(Name, [Ty])]
+        | TyAbs (Name, Kind) Ty
         | TyArr Ty Ty
         | TyApp Ty Ty
-        | TyAll (N.Name, Kind) Ty
+        | TyAll (Name, Kind) Ty
         deriving (Eq, Show)
 
 data Term
         = TmVar Info Int Int
-        | TmAbs Info (N.Name, Ty) Term
+        | TmAbs Info (Name, Ty) Term
         | TmApp Info Term Term
-        | TmTAbs Info (N.Name, Kind) Term
+        | TmTAbs Info (Name, Kind) Term
         | TmTApp Info Term Ty
         | TmFloat Info Float
         | TmString Info String
-        | TmLet Info (N.Name, Term) Term
-        | TmCase Info Term [(N.Name, (Int, Term))]
-        | TmTag Info N.Name [Term] Ty
+        | TmLet Info (Name, Term) Term
+        | TmCase Info Term [(Name, (Int, Term))]
+        | TmTag Info Name [Term] Ty
         deriving (Eq, Show)
 
 data Binding
@@ -41,8 +42,8 @@ data Binding
         deriving (Eq, Show)
 
 data Command
-        = Import N.ModuleName
-        | Bind N.Name Binding
+        = Import ModuleName
+        | Bind Name Binding
         | Eval Term
         deriving (Eq, Show)
 
@@ -61,6 +62,7 @@ tymap onvar c tyT = walk c tyT
                 TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
                 TyFloat -> TyFloat
                 TyString -> TyString
+                TyCon n -> TyCon n
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =

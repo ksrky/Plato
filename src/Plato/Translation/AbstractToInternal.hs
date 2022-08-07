@@ -83,7 +83,7 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-transImpDecl :: MonadThrow m => A.ImpDecl -> WriterT [I.Decl] m ()
+transImpDecl :: MonadThrow m => A.ImpDecl -> WriterT [ModuleName] m ()
 transImpDecl = undefined
 
 transProgram :: MonadThrow m => [A.TopDecl] -> WriterT [I.Decl] m ()
@@ -91,5 +91,8 @@ transProgram tds = do
         mapM_ transTopDecl tds
         transDecls tds
 
-abstract2internal :: MonadThrow m => [A.TopDecl] -> m [I.Decl]
-abstract2internal tds = execWriterT $ transProgram tds
+abstract2internal :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
+abstract2internal (ids, tds) = do
+        let imps = map (\(A.ImpDecl mn) -> mn) ids
+        ds <- execWriterT $ transProgram tds
+        return $ I.Decls{I.imports = imps, I.decls = ds}

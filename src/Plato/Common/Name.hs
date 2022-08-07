@@ -18,4 +18,4 @@ appendstr t (c : s) = appendstr (snoc t c) s
 dummyName :: Text
 dummyName = str2name "?"
 
-newtype ModuleName = ModuleName [Name] deriving (Eq, Show)
+type ModuleName = [Name]

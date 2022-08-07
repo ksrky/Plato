@@ -1,7 +1,7 @@
 module Plato.Internal.Syntax where
 
 import Plato.Common.Info (Info)
-import Plato.Common.Name (Name)
+import Plato.Common.Name (ModuleName, Name)
 
 data Expr
         = VarExpr Info Name [Expr]
@@ -24,11 +24,11 @@ data Type
         deriving (Eq, Show)
 
 data Decl
-        = ImpDecl [Name]
-        | TypeDecl Info Name Type
+        = TypeDecl Info Name Type
         | FuncDecl Info Name Expr Type
         deriving (Eq, Show)
 
+data Decls = Decls {imports :: [ModuleName], decls :: [Decl]} deriving (Eq, Show)
 class GetInfo a where
         getInfo :: a -> Info
 
