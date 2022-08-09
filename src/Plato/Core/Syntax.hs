@@ -6,14 +6,17 @@ import qualified Plato.Common.Error as E
 import Plato.Common.Info
 import Plato.Common.Name
 
+----------------------------------------------------------------
+-- Syntax
+----------------------------------------------------------------
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
-        = TyVar Int Int
-        | TyArr Ty Ty
-        | TyAll Name Kind Ty
-        | TyAbs Name Kind Ty
-        | TyApp Ty Ty
+        = TyVar Info Int Int
+        | TyArr Info Ty Ty
+        | TyAll Info Name Kind Ty
+        | TyAbs Info Name Kind Ty
+        | TyApp Info Ty Ty
         | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
 
@@ -47,24 +50,24 @@ data Command
 ----------------------------------------------------------------
 -- Type
 ----------------------------------------------------------------
-tymap :: (Int -> Int -> Int -> Ty) -> Int -> Ty -> Ty
+tymap :: (Info -> Int -> Int -> Int -> Ty) -> Int -> Ty -> Ty
 tymap onvar c tyT = walk c tyT
     where
         walk c tyT = case tyT of
-                TyVar x n -> onvar c x n
-                TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
-                TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
-                TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
-                TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
+                TyVar fi x n -> onvar fi c x n
+                TyArr fi tyT1 tyT2 -> TyArr fi (walk c tyT1) (walk c tyT2)
+                TyAll fi tyX knK1 tyT2 -> TyAll fi tyX knK1 (walk (c + 1) tyT2)
+                TyAbs fi tyX knK1 tyT2 -> TyAbs fi tyX knK1 (walk (c + 1) tyT2)
+                TyApp fi tyT1 tyT2 -> TyApp fi (walk c tyT1) (walk c tyT2)
                 TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
         tymap
-                ( \c x n ->
+                ( \fi c x n ->
                         if x < c
-                                then TyVar x (n + d)
-                                else TyVar (x + d) (n + d)
+                                then TyVar fi x (n + d)
+                                else TyVar fi (x + d) (n + d)
                 )
 
 typeShift :: Int -> Ty -> Ty
@@ -73,10 +76,10 @@ typeShift d = typeShiftAbove d 0
 typeSubst :: Ty -> Int -> Ty -> Ty
 typeSubst tyS =
         tymap
-                ( \j x n ->
+                ( \fi j x n ->
                         if x == j
                                 then typeShift j tyS
-                                else TyVar x n
+                                else TyVar fi x n
                 )
 
 typeSubstTop :: Ty -> Ty -> Ty
@@ -131,11 +134,3 @@ termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)
 
 tytermSubstTop :: Ty -> Term -> Term
 tytermSubstTop tyS t = termShift (-1) (tytermSubst (typeShift 1 tyS) 0 t)
-
-----------------------------------------------------------------
--- Utils
-----------------------------------------------------------------
-countTyArr :: Ty -> Int
-countTyArr tyT1 = case tyT1 of
-        TyArr _ tyT12 -> 1 + countTyArr tyT12
-        _ -> 0

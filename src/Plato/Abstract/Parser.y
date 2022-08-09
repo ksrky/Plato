@@ -25,7 +25,7 @@ import qualified Plato.Abstract.Syntax as A
 'type'                          { TokKeyword (KwType, $$) }
 'where'                         { TokKeyword (KwWhere, _) }
 
-'\''                            { TokSymbol (SymApost, _) }
+'\''                            { TokSymbol (SymApost, $$) }
 '->'                            { TokSymbol (SymArrow, $$) }
 '\\'                            { TokSymbol (SymBackslash, $$)}
 ','                             { TokSymbol (SymComma, _) }
@@ -123,7 +123,7 @@ args        :: { [A.Expr] }
             : '(' expr ')' args             { $2 : $4 }
             | varid args                    { A.VarExpr (mkInfo $1) (id2varName $1) [] : $2 }
             | conid args                    { A.ConExpr (mkInfo $1) (id2conName $1) [] : $2 }
-            | '\'' conid args               { A.ConExpr (mkInfo $1) (id2tyConName $1) [] : $2 }
+            | '\'' conid args               { A.ConExpr (mkInfo $1) (id2tyConName $2) [] : $3 }
             | float args                    { A.FloatExpr (mkInfo $1) (fst $1) : $2 }
             | string args                   { A.StringExpr (mkInfo $1) (fst $1) : $2 }
             | {- empty -}                   { [] }
@@ -152,16 +152,16 @@ parseError t = alexError $ "parse error: " ++ prettyToken t
 wildcard :: AlexPosn -> A.Expr
 wildcard p = A.ConExpr (mkInfo p) (N.str2varName "_") []
 
-id2varName :: String -> Name
+id2varName :: (String, AlexPosn) -> Name
 id2varName = N.str2varName . fst
 
-id2conName :: String -> Name
+id2conName :: (String, AlexPosn) -> Name
 id2conName = N.str2conName . fst
 
-id2tyVarName :: String -> Name
+id2tyVarName :: (String, AlexPosn) -> Name
 id2tyVarName = N.str2tyVarName . fst
 
-id2tyConName :: String -> Name
+id2tyConName :: (String, AlexPosn) -> Name
 id2tyConName = N.str2tyConName . fst
 
 class MkInfo a where

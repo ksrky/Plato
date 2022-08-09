@@ -32,11 +32,13 @@ emptyContext = empty
 initContext :: Context --tmp
 initContext = cons (str2tyConName "String", TyVarBind KnStar) $ cons (str2tyConName "Float", TyVarBind KnStar) emptyContext
 
-addbinding :: Name -> Binding -> Context -> Context
-addbinding x bind = cons (x, bind)
+addbinding :: MonadThrow m => Info -> Name -> Binding -> Context -> m Context
+addbinding fi x bind ctx = case look x ctx of
+        Just _ -> throwError fi $ "Conflicting definition of " ++ show x
+        _ -> return $ cons (x, bind) ctx
 
-addname :: Name -> Context -> Context
-addname x = cons (x, NameBind)
+addname :: MonadThrow m => Info -> Name -> Context -> m Context
+addname fi x = addbinding fi x NameBind
 
 pickfreshname :: Name -> Context -> (Name, Context)
 pickfreshname x ctx = case look x ctx of
@@ -64,7 +66,7 @@ getTypeFromContext fi ctx i = case getbinding ctx i of
         TmAbbBind _ Nothing -> throwError fi $ "No type recorded for variable " ++ show (index2name ctx i)
         _ -> throwError fi $ "Wrong kind of binding for variable " ++ show (index2name ctx i)
 
-getVarIndex :: MonadFail m => Name -> Context -> m Int
-getVarIndex x ctx = case elemIndex x (vmap fst ctx) of
+getVarIndex :: MonadThrow m => Info -> Context -> Name -> m Int
+getVarIndex fi ctx x = case elemIndex x (vmap fst ctx) of
         Just i -> return i
-        Nothing -> fail $ "Unbound variable name: '" ++ show x ++ "'"
+        Nothing -> throwError fi $ "Unbound variable name: '" ++ show x ++ "'"

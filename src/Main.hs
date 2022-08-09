@@ -6,8 +6,8 @@ import Plato.Common.Info
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Evaluate
-import Plato.Core.Pretty
 import Plato.Core.Syntax
+import Plato.Core.Utils
 import Plato.Translation.AbstractToInternal
 import Plato.Translation.InternalToCore
 

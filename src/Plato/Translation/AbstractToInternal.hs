@@ -14,10 +14,10 @@ import Control.Monad.Writer
 transExpr :: MonadThrow m => A.Expr -> m I.Expr
 transExpr (A.VarExpr fi x es) = do
         es' <- mapM transExpr es
-        return $ I.VarExpr fi x es'
+        return $ foldl (\l r -> I.AppExpr (I.getInfo l) l r) (I.VarExpr fi x) es'
 transExpr (A.ConExpr fi x es) = do
         es' <- mapM transExpr es
-        return $ I.ConExpr fi x es'
+        return $ foldl (\l r -> I.AppExpr (I.getInfo l) l r) (I.ConExpr fi x) es'
 transExpr (A.FloatExpr fi f) = return $ I.FloatExpr fi f
 transExpr (A.StringExpr fi s) = return $ I.StringExpr fi s
 transExpr (A.LamExpr fi xs e) = do
@@ -41,7 +41,7 @@ transType (A.VarType fi x) = return $ I.VarType fi x
 transType (A.AppType ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
-        return $ I.AppType ty1' ty2'
+        return $ I.AppType (I.getInfo ty2') ty1' ty2'
 transType (A.ArrType fi ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
@@ -75,7 +75,7 @@ transTopDecl (A.DataDecl fi1 name params fields) = do
         forM_ fields' $ \(fi2, l, field) -> do
                 let ty = foldr (I.AllType fi2) (foldr (I.ArrType fi2) fieldty field) params
                     args = map (str2varName . show) [1 .. length field]
-                    tag = I.TagExpr fi2 l (map (\a -> I.VarExpr fi2 a []) args)
+                    tag = I.TagExpr fi2 l (map (I.VarExpr fi2) args)
                     exp = foldr (I.LamExpr fi2) tag args
                 tell [I.FuncDecl fi2 l exp ty]
 transTopDecl (A.TypeDecl fi name params ty) = do

@@ -6,6 +6,7 @@ import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Syntax
 
+{-}
 class PrettyCore a where
         prcore :: Context -> a -> String
 
@@ -65,3 +66,4 @@ instance PrettyCore Kind where
 
 paren :: String -> String
 paren s = if ' ' `elem` s then "(" ++ s ++ ")" else s
+-}

@@ -40,8 +40,8 @@ library
       Plato.Core.Context
       Plato.Core.Erase
       Plato.Core.Evaluate
-      Plato.Core.Pretty
       Plato.Core.Syntax
+      Plato.Core.Utils
       Plato.Debug.CoreTrans
       Plato.Debug.Evaluate
       Plato.Debug.InternalTrans
@@ -88,8 +88,8 @@ executable Plato-exe
       Plato.Core.Context
       Plato.Core.Erase
       Plato.Core.Evaluate
-      Plato.Core.Pretty
       Plato.Core.Syntax
+      Plato.Core.Utils
       Plato.Debug.CoreTrans
       Plato.Debug.Evaluate
       Plato.Debug.InternalTrans
