@@ -10,24 +10,24 @@ data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
         = TyVar Int Int
-        | TyVariant [(Name, [Ty])]
-        | TyAbs (Name, Kind) Ty
         | TyArr Ty Ty
+        | TyAll Name Kind Ty
+        | TyAbs Name Kind Ty
         | TyApp Ty Ty
-        | TyAll (Name, Kind) Ty
+        | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
 
 data Term
         = TmVar Info Int Int
-        | TmAbs Info (Name, Ty) Term
+        | TmAbs Info Name Ty Term
         | TmApp Info Term Term
-        | TmTAbs Info (Name, Kind) Term
+        | TmTAbs Info Name Kind Term
         | TmTApp Info Term Ty
         | TmFloat Info Float
         | TmString Info String
-        | TmLet Info (Name, Term) Term
-        | TmCase Info Term [(Name, (Int, Term))]
+        | TmLet Info Name Term Term
         | TmTag Info Name [Term] Ty
+        | TmCase Info Term [(Name, (Int, Term))]
         deriving (Eq, Show)
 
 data Binding
@@ -53,8 +53,8 @@ tymap onvar c tyT = walk c tyT
         walk c tyT = case tyT of
                 TyVar x n -> onvar c x n
                 TyArr tyT1 tyT2 -> TyArr (walk c tyT1) (walk c tyT2)
-                TyAbs (tyX, knK1) tyT2 -> TyAbs (tyX, knK1) (walk (c + 1) tyT2)
-                TyAll (tyX, knK1) tyT2 -> TyAll (tyX, knK1) (walk (c + 1) tyT2)
+                TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
+                TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
 
@@ -90,13 +90,13 @@ tmmap onvar ontype c t = walk c t
     where
         walk c t = case t of
                 TmVar fi x n -> onvar fi c x n
-                TmAbs fi (x, tyT1) t2 -> TmAbs fi (x, ontype (c + 1) tyT1) (walk (c + 1) t2)
+                TmAbs fi x tyT1 t2 -> TmAbs fi x (ontype (c + 1) tyT1) (walk (c + 1) t2)
                 TmApp fi t1 t2 -> TmApp fi (walk c t1) (walk c t2)
-                TmLet fi (x, t1) t2 -> TmLet fi (x, walk c t1) (walk (c + 1) t2)
-                TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
-                TmTag fi l t1 tyT -> TmTag fi l (map (walk c) t1) (ontype c tyT)
-                TmTAbs fi (tyX, knK1) t2 -> TmTAbs fi (tyX, knK1) (walk (c + 1) t2)
+                TmTAbs fi tyX knK1 t2 -> TmTAbs fi tyX knK1 (walk (c + 1) t2)
                 TmTApp fi t1 tyT2 -> TmTApp fi (walk c t1) (ontype c tyT2)
+                TmLet fi x t1 t2 -> TmLet fi x (walk c t1) (walk (c + 1) t2)
+                TmTag fi l t1 tyT -> TmTag fi l (map (walk c) t1) (ontype c tyT)
+                TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
                 _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term

@@ -26,10 +26,10 @@ str2tyConName s = Name TyConName (pack s)
 name2str :: Name -> String
 name2str = unpack . nameText
 
-appendstr :: Text -> String -> Text
-appendstr t [] = t
-appendstr t [c] = snoc t c
-appendstr t (c : s) = appendstr (snoc t c) s
+appendstr :: Name -> String -> Name
+appendstr n [] = n
+appendstr (Name ns tx) [c] = Name ns (snoc tx c)
+appendstr (Name ns tx) (c : s) = appendstr (Name ns (snoc tx c)) s
 
 dummyName :: Name
 dummyName = str2varName "v?"
