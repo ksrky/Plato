@@ -1,5 +1,6 @@
 module Plato.Debug.REPL where
 
+{-}
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Common.Info
@@ -67,3 +68,4 @@ process ctx input = case runAlex input parse of
                 res <- processEval ctx' cmds
                 print (pretty <$> res)
                 return ctx'
+                -}

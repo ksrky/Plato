@@ -12,8 +12,13 @@ data Expr
         | StringExpr Info String
         | LamExpr Info Name Expr
         | LetExpr Info Decl Expr
-        | CaseExpr Info Expr [(Info, Expr, Expr)]
+        | CaseExpr Info Expr [(Info, Pat, Expr)]
         | TagExpr Info Name [Expr]
+        deriving (Eq, Show)
+
+data Pat
+        = ConPat Info Name [Name]
+        | AnyPat Info (Maybe Name)
         deriving (Eq, Show)
 
 data Type

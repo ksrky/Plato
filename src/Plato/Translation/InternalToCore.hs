@@ -3,13 +3,14 @@
 module Plato.Translation.InternalToCore where
 
 import Plato.Common.Error
+import Plato.Common.Info
+import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.Internal.Syntax
 
 import Control.Exception.Safe
 import Control.Monad.State
-import Plato.Common.Name
 
 transExpr :: MonadThrow m => Context -> Type -> Expr -> m Term
 transExpr ctx restty = traexpr
@@ -56,25 +57,25 @@ transExpr ctx restty = traexpr
                         _ -> throwError fi $ "illegal type for TagExpr: " ++ show restty
                 as' <- mapM traexpr as
                 return $ TmTag fi l as' tyT
-        traexpr (CaseExpr fi e alts) = undefined {-do
-                                                 t <- traexpr e
-                                                 alts' <- forM alts $ \(fi1, pat, body) -> case pat of
-                                                         VarExpr fi2 x -> do
-                                                                 ti <- traexpr body
-                                                                 return (x, (0, ti)) -- tmp
-                                                         ConExpr fi2 c -> do
-                                                                 ti <- evalCore (mapM_ addarg as >> traexpr body)
-                                                                 tyT21 <- getVarBindFromName fi c
-                                                                 return (c, (length as, ti))
-                                                             where
-                                                                 addarg :: MonadThrow m => Expr -> Core m ()
-                                                                 addarg (VarExpr fi3 x) = do
-                                                                         addname x
-                                                                 addarg _ = throwError fi2 "illegal pattern"
-                                                         FloatExpr _ f -> undefined
-                                                         StringExpr _ s -> undefined
-                                                         _ -> throwError fi1 "illegal expression for pattern matching"
-                                                 return $ TmCase fi t alts' -}
+        traexpr (CaseExpr fi e alts) = do
+                t <- traexpr e
+                alts' <- forM alts $ \(fi1, pat, body) -> case pat of
+                        ConPat fi li xs -> do
+                                ctx' <- (`execStateT` ctx) $
+                                        forM_ xs $ \x -> StateT $ \ctx -> do
+                                                ctx' <- addname fi x ctx
+                                                return ((), ctx')
+                                ti <- traexpr body
+                                return (li, (length xs, ti))
+                        AnyPat fi (Just x) -> do
+                                ctx' <- addname fi x ctx
+                                ti <- traexpr body
+                                return (str2varName "", (1, ti))
+                        AnyPat fi Nothing -> do
+                                ctx' <- addname fi dummyName ctx
+                                ti <- traexpr body
+                                return (str2varName "", (1, ti))
+                return $ TmCase fi t alts'
 
 transType :: MonadThrow m => Context -> Type -> m Ty
 transType ctx = tratype

@@ -10,7 +10,13 @@ data Expr
         | StringExpr Info String
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
-        | CaseExpr Info Expr [(Info, Expr, Expr)]
+        | CaseExpr Info Expr [(Info, Pat, Expr)]
+        deriving (Eq, Show)
+
+data Pat
+        = ConPat Info Name [Pat]
+        | VarPat Info Name
+        | WildPat Info
         deriving (Eq, Show)
 
 data Type

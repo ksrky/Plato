@@ -4,6 +4,7 @@ module Plato.Translation.AbstractToInternal where
 
 import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
+import Plato.Common.Info
 import Plato.Common.Name
 import qualified Plato.Internal.Syntax as I
 
@@ -27,13 +28,41 @@ transExpr (A.LetExpr fi ds e) = do
         e' <- transExpr e
         ds' <- execWriterT $ transDecls (map A.Decl ds)
         return $ foldr (I.LetExpr fi) e' ds'
-transExpr (A.CaseExpr fi1 e alts) = do
-        e' <- transExpr e
-        alts' <- forM alts $ \(fi2, pat, body) -> do
-                pat' <- transExpr pat
-                body' <- transExpr body
-                return (fi2, pat', body')
-        return $ I.CaseExpr fi1 e' alts'
+transExpr (A.CaseExpr fi1 e alts) = undefined {-do
+                                              e' <- transExpr e
+                                              alts' <- forM alts $ \(fi2, pat, body) -> do
+                                                      pat' <- transExpr pat
+                                                      body' <- transExpr body
+                                                      return (fi2, pat', body')
+                                              return $ I.CaseExpr fi1 e' alts'-}
+
+{-
+canonCase :: MonadThrow m => A.Expr -> [(Info, I.Pat, I.Expr)] -> m A.Expr
+canonCase e alts = do
+        wild <- execWriterT $ let
+                transAlts [] = return ()
+                transAlts (alt@(_, pat, _): alts) = case pat of
+                        A.WildPat{} -> tell [alt]
+                        _ -> tell [alt] >> transAlts alts
+                 in transAlts alts
+        undefined
+
+transAlts :: MonadThrow m => [(Info, A.Pat, A.Expr)] -> WriterT [(Info, I.Pat, I.Expr)] m ()
+transAlts [] = return ()
+transAlts ((fi, pat, body) : alts) = do
+        body' <- transExpr body
+    where
+        transPat :: MonadThrow m => A.Pat -> WriterT [(Info, I.Pat, I.Expr)] m ()
+        transPat pat = case pat of
+                A.ConPat fi1 c ps -> do
+                        forM ps $ \p -> do
+                                transPat p
+                        transAlts alts
+                A.VarPat fi1 x -> do
+                        tell [(fi, I.AnyPat fi1 (Just x), body')]
+                A.WildPat fi1 -> do
+                        tell [(fi, I.AnyPat fi1 Nothing, body')]
+-}
 
 transType :: MonadThrow m => A.Type -> m I.Type
 transType (A.ConType fi x) = return $ I.VarType fi x

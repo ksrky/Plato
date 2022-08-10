@@ -149,7 +149,7 @@ kindof ctx tyT = case tyT of
                 return KnStar
         TyVariant fields -> undefined
 
-typeof :: MonadThrow m => Context -> Term -> m Ty
+typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
         TmVar fi i _ -> getTypeFromContext fi ctx i
         TmAbs fi x tyT1 t2 -> do
@@ -194,19 +194,20 @@ typeof ctx t = case t of
                 t' <- typeof ctx t
                 case simplifyty ctx t' of
                         TyVariant fieldtys -> do
-                                forM_ alts $ \(li, (xi, ti)) -> case lookup li fieldtys of
-                                        Just _ -> return ()
-                                        Nothing -> throwError fi $ "label " ++ name2str li ++ " not in type"
-                                casetypes <- forM alts $ \(li, (xi, ti)) -> case lookup li fieldtys of
+                                when (null fieldtys) $ return ()
+                                (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
                                         Just tys -> do
-                                                ctx' <- forM tys $ \tyT -> do
-                                                        ctx' <- addbinding dummyInfo dummyName (VarBind tyT) ctx
-                                                        return ctx'
-                                                undefined {-
-                                                              ti' <- typeof ctx' ti
-                                                              return $ typeShift (-1) ti'-}
+                                                ctx' <- (`execStateT` ctx) $
+                                                        forM_ tys $ \tyT -> StateT $ \ctx -> do
+                                                                ctx' <- addbinding dummyInfo dummyName (VarBind tyT) ctx
+                                                                return ((), ctx')
+                                                tyTi <- typeof ctx' ti
+                                                return $ typeShift (- ki) tyTi
+                                        Nothing | nullName li -> do
+                                                ctx' <- addname dummyInfo dummyName ctx
+                                                tyTi <- typeof ctx' ti
+                                                return $ typeShift (- ki) tyTi
                                         Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
-                                let (tyT1 : restTy) = casetypes
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
                         _ -> throwError fi "Expected variant type"

@@ -134,23 +134,30 @@ vars        :: { [N.Name] }
             | varid                         { [id2varName $1] }
             | conid                         { [id2tyConName $1] }
 
-alts        :: { [(Info, A.Expr, A.Expr)] }
+alts        :: { [(Info, A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
             | {- empty -}                   { [] }
 
-alt         :: { (Info, A.Expr, A.Expr) }
+alt         :: { (Info, A.Pat, A.Expr) }
             : pat '->' expr                 { (mkInfo $2, $1, $3) }
 
-pat         :: { A.Expr }
-            : expr                          { $1 }
-            | '_'                           { wildcard $1 }
+pat         :: { A.Pat }
+            : conid apats                   { A.ConPat (mkInfo $1) (id2conName $1) $2 }
+            | apat                          { $1 }
+
+apats        :: { [A.Pat] }
+            : apat apats                    { $1 : $2 }
+            | apat                          { [$1] }
+
+apat        :: { A.Pat }
+            : '(' pat ')'                   { $2 }
+            | conid                         { A.ConPat (mkInfo $1) (id2conName $1) [] }
+            | varid                         { A.VarPat (mkInfo $1) (id2varName $1) }
+            | '_'                           { A.WildPat (mkInfo $1) }
 
 {
 parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ prettyToken t
-
-wildcard :: AlexPosn -> A.Expr
-wildcard p = A.ConExpr (mkInfo p) (N.str2varName "_") []
 
 id2varName :: (String, AlexPosn) -> Name
 id2varName = N.str2varName . fst

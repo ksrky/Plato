@@ -40,6 +40,9 @@ isVar n = isLower $ head $ name2str n
 isCon :: Name -> Bool
 isCon n = isUpper $ head $ name2str n
 
+nullName :: Name -> Bool
+nullName n = null $ name2str n
+
 data NameSpace
         = VarName
         | ConName

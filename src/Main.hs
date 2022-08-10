@@ -16,6 +16,9 @@ import Control.Monad.Writer.Lazy
 import System.Console.Haskeline
 import System.Environment
 
+main = putStrLn "Plato"
+
+{-}
 main :: IO ()
 main = do
         args <- getArgs
@@ -65,3 +68,4 @@ process ctx input = case runAlex input parse of
                     ppres = pretty <$> res
                 forM_ ppres putStrLn
                 return ctx'
+-}
