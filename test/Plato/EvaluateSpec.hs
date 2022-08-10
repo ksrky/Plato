@@ -4,7 +4,7 @@ module Plato.EvaluateSpec where
 
 import Plato.Common.Vect
 import Plato.Core.Context
-import Plato.Core.Evaluate
+import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Debug.PrettyCore
 import Plato.Syntax.Lexer

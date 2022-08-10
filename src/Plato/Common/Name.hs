@@ -11,6 +11,13 @@ data Name = Name {nameSpace :: NameSpace, nameText :: Text} deriving (Eq)
 instance Show Name where
         show (Name _ t) = unpack t
 
+data NameSpace
+        = VarName
+        | ConName
+        | TyVarName
+        | TyConName
+        deriving (Eq, Show)
+
 str2varName :: String -> Name
 str2varName s = Name VarName (pack s)
 
@@ -42,13 +49,6 @@ isCon n = isUpper $ head $ name2str n
 
 nullName :: Name -> Bool
 nullName n = null $ name2str n
-
-data NameSpace
-        = VarName
-        | ConName
-        | TyVarName
-        | TyConName
-        deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Module

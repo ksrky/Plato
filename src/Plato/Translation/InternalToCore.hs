@@ -112,7 +112,7 @@ transType ctx = tratype
 entryPoint :: Name
 entryPoint = str2varName "main"
 
-transDecl :: MonadThrow m => Decl -> Core m Command
+transDecl :: MonadThrow m => Decl -> StateT Context m Command
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
@@ -127,7 +127,7 @@ transDecl decl = StateT $ \ctx -> case decl of
                 ctx' <- addbinding fi f (VarBind tyT) ctx
                 return (Bind f (TmAbbBind t (Just tyT)), ctx')
 
-registerDecl :: MonadThrow m => Decl -> Core m Command
+registerDecl :: MonadThrow m => Decl -> StateT Context m Command
 registerDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 ctx' <- addname fi name ctx

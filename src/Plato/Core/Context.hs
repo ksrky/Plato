@@ -9,21 +9,6 @@ import Control.Exception.Safe
 import Control.Monad.State
 import Plato.Common.Info
 
-----------------------------------------------------------------
--- Core monad
-----------------------------------------------------------------
-type Core m = StateT Context m
-
-evalCore :: Monad m => Core m a -> Core m a
-evalCore f = do
-        ctx <- get
-        val <- f
-        put ctx
-        return val
-
-----------------------------------------------------------------
--- Context
-----------------------------------------------------------------
 type Context = Vect (Name, Binding)
 
 emptyContext :: Context

@@ -1,8 +1,8 @@
-module Plato.Debug.Evaluate where
+module Plato.Debug.EvalIO where
 
 import Plato.Common.Vect
 import Plato.Core.Context
-import Plato.Core.Evaluate
+import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Core.Utils
 
@@ -11,8 +11,6 @@ import Control.Monad.State
 evalIO :: Context -> Term -> IO Term
 evalIO ctx t = case eval1 t of
         Just t' -> do
-                --print (vmap fst ctx)
-                --putStrLn ""
                 putStrLn $ pretty ctx t ++ "\n"
                 evalIO ctx t'
         Nothing -> return t

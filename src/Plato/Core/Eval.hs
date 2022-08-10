@@ -1,4 +1,4 @@
-module Plato.Core.Evaluate where
+module Plato.Core.Eval where
 
 import Plato.Common.Error
 import Plato.Common.Info

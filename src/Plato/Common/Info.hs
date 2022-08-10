@@ -1,8 +1,5 @@
 module Plato.Common.Info where
 
-----------------------------------------------------------------
--- Info
-----------------------------------------------------------------
 data Info = Info {line :: Int, col :: Int} deriving (Eq)
 
 dummyInfo :: Info

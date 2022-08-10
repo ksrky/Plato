@@ -5,7 +5,7 @@ import Plato.Abstract.Parser
 import Plato.Common.Info
 import Plato.Common.Vect
 import Plato.Core.Context
-import Plato.Core.Evaluate
+import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Core.Utils
 import Plato.Translation.AbstractToInternal

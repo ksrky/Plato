@@ -2,7 +2,6 @@
 
 module Plato.Core.Syntax where
 
-import qualified Plato.Common.Error as E
 import Plato.Common.Info
 import Plato.Common.Name
 

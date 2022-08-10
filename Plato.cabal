@@ -38,12 +38,11 @@ library
       Plato.Common.Name
       Plato.Common.Vect
       Plato.Core.Context
-      Plato.Core.Erase
-      Plato.Core.Evaluate
+      Plato.Core.Eval
       Plato.Core.Syntax
       Plato.Core.Utils
       Plato.Debug.CoreTrans
-      Plato.Debug.Evaluate
+      Plato.Debug.EvalIO
       Plato.Debug.InternalTrans
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
@@ -86,12 +85,11 @@ executable Plato-exe
       Plato.Common.Name
       Plato.Common.Vect
       Plato.Core.Context
-      Plato.Core.Erase
-      Plato.Core.Evaluate
+      Plato.Core.Eval
       Plato.Core.Syntax
       Plato.Core.Utils
       Plato.Debug.CoreTrans
-      Plato.Debug.Evaluate
+      Plato.Debug.EvalIO
       Plato.Debug.InternalTrans
       Plato.Debug.ParseREPL
       Plato.Debug.PrettyAbstract
