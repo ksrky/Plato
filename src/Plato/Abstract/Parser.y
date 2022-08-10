@@ -68,8 +68,8 @@ topdecls    :: { [A.TopDecl] }
             | {- empty -}                   { [] }
 
 topdecl     :: { A.TopDecl }
-            : 'data' conid tyargs '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
-            | 'type' conid tyargs'=' type           { A.TypeDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
+            : 'data' conid tyvars '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
+            | 'type' conid tyvars'=' type           { A.TypeDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -85,17 +85,18 @@ types       :: { [A.Type] }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
-            : 'forall' vars '.' type        { A.AllType (mkInfo $1) $2 $4 }
+            : 'forall' tyvars '.' type      { A.AllType (mkInfo $1) $2 $4 }
             | btype '->' type               { A.ArrType (mkInfo $2) $1 $3 }
+            | '(' type ')'                  { $2 }
             | btype                         { $1 }
 
 btype       :: { A.Type }
             : btype atype                   { A.AppType $1 $2 }
-            | '(' type ')'                  { $2 }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : conid                         { A.ConType (mkInfo $1) (id2tyConName $1) }
+            : '(' btype ')'                 { $2 }
+            | conid                         { A.ConType (mkInfo $1) (id2tyConName $1) }
             | varid                         { A.VarType (mkInfo $1) (id2tyVarName $1) }
 
 constrs     :: { [(Info, N.Name, [A.Type])] }
@@ -105,8 +106,8 @@ constrs     :: { [(Info, N.Name, [A.Type])] }
 constr      :: { (Info, N.Name, [A.Type]) }
             : conid types                   { (mkInfo $1, id2conName $1, $2) }
 
-tyargs      :: { [N.Name] }
-            : varid tyargs                  { id2tyVarName $1 : $2 }
+tyvars      :: { [N.Name] }
+            : varid tyvars                  { id2tyVarName $1 : $2 }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
@@ -130,9 +131,9 @@ args        :: { [A.Expr] }
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }
-            | conid vars                    { id2tyConName $1 : $2 }
+            | conid vars                    { id2conName $1 : $2 }
             | varid                         { [id2varName $1] }
-            | conid                         { [id2tyConName $1] }
+            | conid                         { [id2conName $1] }
 
 alts        :: { [(A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
