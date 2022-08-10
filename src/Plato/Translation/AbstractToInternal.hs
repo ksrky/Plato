@@ -11,6 +11,8 @@ import qualified Plato.Internal.Syntax as I
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Writer
+import Data.List (partition)
+import Data.Maybe (fromMaybe)
 
 transExpr :: MonadThrow m => A.Expr -> m I.Expr
 transExpr (A.VarExpr fi x es) = do
@@ -28,41 +30,40 @@ transExpr (A.LetExpr fi ds e) = do
         e' <- transExpr e
         ds' <- execWriterT $ transDecls (map A.Decl ds)
         return $ foldr (I.LetExpr fi) e' ds'
-transExpr (A.CaseExpr fi1 e alts) = undefined {-do
-                                              e' <- transExpr e
-                                              alts' <- forM alts $ \(fi2, pat, body) -> do
-                                                      pat' <- transExpr pat
-                                                      body' <- transExpr body
-                                                      return (fi2, pat', body')
-                                              return $ I.CaseExpr fi1 e' alts'-}
+transExpr (A.CaseExpr fi e alts) = do
+        (def, alts') <-
+                runWriterT $
+                        let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m (I.Pat, I.Expr)
+                            transAlts [] = return (I.AnyPat dummyInfo Nothing, error "No match")
+                            transAlts (alt@(pi, ei) : alts) =
+                                transExpr ei >>= \ei' -> case pi of
+                                        A.ConPat fi1 l ps -> do
+                                                ps' <- mapM transPat ps
+                                                tell [(I.ConPat fi1 l ps', ei')]
+                                                transAlts alts
+                                        A.VarPat fi1 x -> return (I.AnyPat fi (Just x), ei')
+                                        A.WildPat fi1 -> return (I.AnyPat fi1 Nothing, ei')
+                         in transAlts alts
+        e' <- transExpr e
+        let linearize :: [(I.Pat, I.Expr)] -> I.Expr
+            linearize [] = I.CaseExpr fi e' [def]
+            linearize [alt] = I.CaseExpr fi e' (alt : [def])
+            linearize (alt : alts) =
+                let (I.ConPat _ l _, _) = alt
+                    (matches, notmatches) = (`partition` alts) $ \(pi, _) -> case pi of
+                        I.ConPat _ li _ | l == li -> True
+                        _ -> False
+                 in I.CaseExpr fi e' (alt : matches ++ [(I.AnyPat dummyInfo Nothing, linearize notmatches)])
+        return $ linearize alts'
 
-{-
-canonCase :: MonadThrow m => A.Expr -> [(Info, I.Pat, I.Expr)] -> m A.Expr
-canonCase e alts = do
-        wild <- execWriterT $ let
-                transAlts [] = return ()
-                transAlts (alt@(_, pat, _): alts) = case pat of
-                        A.WildPat{} -> tell [alt]
-                        _ -> tell [alt] >> transAlts alts
-                 in transAlts alts
-        undefined
-
-transAlts :: MonadThrow m => [(Info, A.Pat, A.Expr)] -> WriterT [(Info, I.Pat, I.Expr)] m ()
-transAlts [] = return ()
-transAlts ((fi, pat, body) : alts) = do
-        body' <- transExpr body
-    where
-        transPat :: MonadThrow m => A.Pat -> WriterT [(Info, I.Pat, I.Expr)] m ()
-        transPat pat = case pat of
-                A.ConPat fi1 c ps -> do
-                        forM ps $ \p -> do
-                                transPat p
-                        transAlts alts
-                A.VarPat fi1 x -> do
-                        tell [(fi, I.AnyPat fi1 (Just x), body')]
-                A.WildPat fi1 -> do
-                        tell [(fi, I.AnyPat fi1 Nothing, body')]
--}
+transPat :: MonadThrow m => A.Pat -> m I.Pat
+transPat (A.ConPat fi c ps) = do
+        ps' <- mapM transPat ps
+        return $ I.ConPat fi c ps'
+transPat (A.VarPat fi x) = do
+        return $ I.AnyPat fi (Just x)
+transPat (A.WildPat fi) = do
+        return $ I.AnyPat fi Nothing
 
 transType :: MonadThrow m => A.Type -> m I.Type
 transType (A.ConType fi x) = return $ I.VarType fi x

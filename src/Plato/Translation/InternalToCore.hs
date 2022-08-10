@@ -59,20 +59,21 @@ transExpr ctx restty = traexpr
                 return $ TmTag fi l as' tyT
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
-                alts' <- forM alts $ \(fi1, pat, body) -> case pat of
-                        ConPat fi li xs -> do
+                let def = last alts
+                alts' <- forM alts $ \(pat, body) -> case pat of
+                        ConPat fi1 li ps -> do
                                 ctx' <- (`execStateT` ctx) $
-                                        forM_ xs $ \x -> StateT $ \ctx -> do
-                                                ctx' <- addname fi x ctx
+                                        forM_ ps $ \p -> StateT $ \ctx -> do
+                                                ctx' <- addname fi1 dummyName ctx
                                                 return ((), ctx')
                                 ti <- traexpr body
-                                return (li, (length xs, ti))
-                        AnyPat fi (Just x) -> do
-                                ctx' <- addname fi x ctx
+                                return (li, (length ps, ti))
+                        AnyPat fi1 (Just x) -> do
+                                ctx' <- addname fi1 x ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
-                        AnyPat fi Nothing -> do
-                                ctx' <- addname fi dummyName ctx
+                        AnyPat fi1 Nothing -> do
+                                ctx' <- addname fi1 dummyName ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
                 return $ TmCase fi t alts'

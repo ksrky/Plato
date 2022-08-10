@@ -134,12 +134,12 @@ vars        :: { [N.Name] }
             | varid                         { [id2varName $1] }
             | conid                         { [id2tyConName $1] }
 
-alts        :: { [(Info, A.Pat, A.Expr)] }
+alts        :: { [(A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
             | {- empty -}                   { [] }
 
-alt         :: { (Info, A.Pat, A.Expr) }
-            : pat '->' expr                 { (mkInfo $2, $1, $3) }
+alt         :: { (A.Pat, A.Expr) }
+            : pat '->' expr                 { ($1, $3) }
 
 pat         :: { A.Pat }
             : conid apats                   { A.ConPat (mkInfo $1) (id2conName $1) $2 }

@@ -12,12 +12,12 @@ data Expr
         | StringExpr Info String
         | LamExpr Info Name Expr
         | LetExpr Info Decl Expr
-        | CaseExpr Info Expr [(Info, Pat, Expr)]
+        | CaseExpr Info Expr [(Pat, Expr)]
         | TagExpr Info Name [Expr]
         deriving (Eq, Show)
 
 data Pat
-        = ConPat Info Name [Name]
+        = ConPat Info Name [Pat]
         | AnyPat Info (Maybe Name)
         deriving (Eq, Show)
 
