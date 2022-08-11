@@ -11,6 +11,7 @@ import Plato.Internal.Syntax
 
 import Control.Exception.Safe
 import Control.Monad.State
+import Data.List
 
 transExpr :: MonadThrow m => Context -> Type -> Expr -> m Term
 transExpr ctx restty = traexpr
@@ -60,11 +61,14 @@ transExpr ctx restty = traexpr
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
                 let def = last alts
+                let altss = (`groupBy` alts) $ \(p1, _) (p2, _) -> case (p1, p2) of
+                        (ConPat _ l1 _, ConPat _ l2 _) -> l1 == l2
+                        _ -> False
                 alts' <- forM alts $ \(pat, body) -> case pat of
                         ConPat fi1 li ps -> do
                                 ctx' <- (`execStateT` ctx) $
                                         forM_ ps $ \p -> StateT $ \ctx -> do
-                                                ctx' <- addname fi1 dummyName ctx
+                                                ctx' <- addname fi1 dummyVarName ctx
                                                 return ((), ctx')
                                 ti <- traexpr body
                                 return (li, (length ps, ti))
@@ -73,7 +77,7 @@ transExpr ctx restty = traexpr
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
                         AnyPat fi1 Nothing -> do
-                                ctx' <- addname fi1 dummyName ctx
+                                ctx' <- addname fi1 dummyVarName ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
                 return $ TmCase fi t alts'

@@ -6,6 +6,7 @@ import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
+import Plato.Internal.Canon
 import qualified Plato.Internal.Syntax as I
 
 import Control.Exception.Safe
@@ -31,6 +32,7 @@ transExpr (A.LetExpr fi ds e) = do
         ds' <- execWriterT $ transDecls (map A.Decl ds)
         return $ foldr (I.LetExpr fi) e' ds'
 transExpr (A.CaseExpr fi e alts) = do
+        e' <- transExpr e
         (def, alts') <-
                 runWriterT $
                         let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m (I.Pat, I.Expr)
@@ -44,17 +46,7 @@ transExpr (A.CaseExpr fi e alts) = do
                                         A.VarPat fi1 x -> return (I.AnyPat fi (Just x), ei')
                                         A.WildPat fi1 -> return (I.AnyPat fi1 Nothing, ei')
                          in transAlts alts
-        e' <- transExpr e
-        let linearize :: [(I.Pat, I.Expr)] -> I.Expr
-            linearize [] = I.CaseExpr fi e' [def]
-            linearize [alt] = I.CaseExpr fi e' (alt : [def])
-            linearize (alt : alts) =
-                let (I.ConPat _ l _, _) = alt
-                    (matches, notmatches) = (`partition` alts) $ \(pi, _) -> case pi of
-                        I.ConPat _ li _ | l == li -> True
-                        _ -> False
-                 in I.CaseExpr fi e' (alt : matches ++ [(I.AnyPat dummyInfo Nothing, linearize notmatches)])
-        return $ linearize alts'
+        return $ I.CaseExpr fi e' alts'
 
 transPat :: MonadThrow m => A.Pat -> m I.Pat
 transPat (A.ConPat fi c ps) = do

@@ -199,12 +199,12 @@ typeof ctx t = case t of
                                         Just tys -> do
                                                 ctx' <- (`execStateT` ctx) $
                                                         forM_ tys $ \tyT -> StateT $ \ctx -> do
-                                                                ctx' <- addbinding dummyInfo dummyName (VarBind tyT) ctx
+                                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind tyT) ctx
                                                                 return ((), ctx')
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing | nullName li -> do
-                                                ctx' <- addname dummyInfo dummyName ctx
+                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"

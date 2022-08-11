@@ -38,8 +38,8 @@ appendstr n [] = n
 appendstr (Name ns tx) [c] = Name ns (snoc tx c)
 appendstr (Name ns tx) (c : s) = appendstr (Name ns (snoc tx c)) s
 
-dummyName :: Name
-dummyName = str2varName "v?"
+dummyVarName :: Name
+dummyVarName = str2varName "?v"
 
 isVar :: Name -> Bool
 isVar n = isLower $ head $ name2str n
