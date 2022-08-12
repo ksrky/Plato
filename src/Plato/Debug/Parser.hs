@@ -1,4 +1,4 @@
-module Plato.Debug.ParseREPL where
+module Plato.Debug.Parser where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser

@@ -1,13 +1,13 @@
 data Maybe a = Nothing | Just a;
 
 fmap : forall a b. (a -> b) -> Maybe a -> Maybe b;
-fmap = \f mx -> case mx of {
-    Just x -> Just (f x);
-    Nothing -> Nothing;
+fmap = \X Y f mx -> case mx of {
+    Just 'X x -> Just 'Y (f x);
+    Nothing 'X -> Nothing 'Y;
 };
 
 id : forall a. a -> a;
-id = \x -> x;
+id = \X -> \x -> x;
 
 main : Maybe Float;
-main = fmap id (Just 3);
+main = (fmap 'Float 'Float) (id 'Float) (Just 3);

@@ -8,8 +8,6 @@ import System.Console.Haskeline
 import System.Environment
 
 import Control.Monad.State
-import Control.Monad.Writer
-import Plato.Internal.Syntax (Decl)
 
 main :: IO ()
 main = do

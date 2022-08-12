@@ -6,14 +6,12 @@ import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
-import Plato.Internal.Canon
 import qualified Plato.Internal.Syntax as I
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Writer
 import Data.List (partition)
-import Data.Maybe (fromMaybe)
 
 transExpr :: MonadThrow m => A.Expr -> m I.Expr
 transExpr (A.VarExpr fi x es) = do
@@ -95,10 +93,11 @@ transTopDecl (A.DataDecl fi1 name params fields) = do
         let fieldty = I.SumType fields'
         tell [I.TypeDecl fi1 name (foldr (I.AbsType fi1) fieldty params)]
         forM_ fields' $ \(fi2, l, field) -> do
-                let ty = foldr (I.AllType fi2) (foldr (I.ArrType fi2) fieldty field) params
-                    args = map (str2varName . show) [1 .. length field]
+                let ty = foldr (I.AllType fi2) (foldr (I.ArrType fi2) (I.VarType dummyInfo name) field) params
+                    tyargs = map (str2conName . show) [1 .. length params]
+                    args = map (str2varName . show) [length params + 1 .. length params + length field]
                     tag = I.TagExpr fi2 l (map (I.VarExpr fi2) args)
-                    exp = foldr (I.LamExpr fi2) tag args
+                    exp = foldr (I.LamExpr fi2) tag (tyargs ++ args)
                 tell [I.FuncDecl fi2 l exp ty]
 transTopDecl (A.TypeDecl fi name params ty) = do
         ty' <- transType ty

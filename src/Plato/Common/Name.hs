@@ -25,7 +25,7 @@ str2conName :: String -> Name
 str2conName s = Name ConName (pack s)
 
 str2tyVarName :: String -> Name
-str2tyVarName s = Name TyConName (pack s)
+str2tyVarName s = Name TyVarName (pack s)
 
 str2tyConName :: String -> Name
 str2tyConName s = Name TyConName (pack s)
@@ -39,7 +39,7 @@ appendstr (Name ns tx) [c] = Name ns (snoc tx c)
 appendstr (Name ns tx) (c : s) = appendstr (Name ns (snoc tx c)) s
 
 dummyVarName :: Name
-dummyVarName = str2varName "?v"
+dummyVarName = str2varName "_"
 
 isVar :: Name -> Bool
 isVar n = isLower $ head $ name2str n

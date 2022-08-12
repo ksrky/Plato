@@ -11,7 +11,7 @@ import Plato.Internal.Syntax
 
 import Control.Exception.Safe
 import Control.Monad.State
-import Data.List
+import Data.Maybe (fromMaybe)
 
 transExpr :: MonadThrow m => Context -> Type -> Expr -> m Term
 transExpr ctx restty = traexpr
@@ -19,6 +19,9 @@ transExpr ctx restty = traexpr
         traexpr :: MonadThrow m => Expr -> m Term
         traexpr (VarExpr fi x) = do
                 i <- getVarIndex fi ctx x
+                return $ TmVar fi i (length ctx)
+        traexpr (ConExpr fi c) | nameSpace c == TyConName = do
+                i <- getVarIndex fi ctx c
                 return $ TmVar fi i (length ctx)
         traexpr (ConExpr fi c) = do
                 i <- getVarIndex fi ctx c
@@ -29,20 +32,20 @@ transExpr ctx restty = traexpr
                 return $ TmApp fi t1 t2
         traexpr (FloatExpr fi f) = return $ TmFloat fi f
         traexpr (StringExpr fi s) = return $ TmString fi s
-        traexpr (LamExpr fi tyX e) | isCon tyX = case restty of
+        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of
                 AllType _ tyX ty -> do
                         let knK1 = KnStar -- tmp
                         ctx' <- addname fi tyX ctx
                         t2 <- transExpr ctx' ty e
                         return $ TmTAbs fi tyX knK1 t2
-                _ -> throwError fi "Couldn't match expected type"
+                _ -> throwError fi $ "Expected all type, but got " ++ show restty
         traexpr (LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do
                         tyT1 <- transType ctx ty1
                         ctx' <- addname fi x ctx
                         t2 <- transExpr ctx' ty2 e
                         return $ TmAbs fi x tyT1 t2
-                _ -> throwError fi "Couldn't match expected type"
+                _ -> throwError fi $ "Expected arrow type, but got " ++ show restty
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl _ f e2 ty -> do
                         ctx' <- addname fi f ctx
@@ -51,45 +54,19 @@ transExpr ctx restty = traexpr
                         return $ TmLet fi f t1 t2
                 _ -> unreachable "Type declaration in let binding"
         traexpr (TagExpr fi l as) = do
-                tyT <- case restty of
-                        SumType{} -> transType ctx restty
-                        AllType{} -> transType ctx restty
-                        ArrType{} -> transType ctx restty
-                        _ -> throwError fi $ "illegal type for TagExpr: " ++ show restty
+                tyT <- transType ctx restty
                 as' <- mapM traexpr as
                 return $ TmTag fi l as' tyT
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
-                let def = last alts
-                let altss = (`groupBy` alts) $ \(p1, _) (p2, _) -> case (p1, p2) of
-                        (ConPat _ l1 _, ConPat _ l2 _) -> l1 == l2
-                        _ -> False
                 alts' <- forM alts $ \(pat, body) -> case pat of
                         ConPat fi1 li ps -> do
                                 ctx' <- (`execStateT` ctx) $
-                                        forM_ ps $ \p -> StateT $ \ctx -> do
-                                                ctx' <- addname fi1 dummyVarName ctx
+                                        forM_ ps $ \(AnyPat fi2 mx) -> StateT $ \ctx -> do
+                                                let x = fromMaybe dummyVarName mx
+                                                ctx' <- addname fi1 x ctx
                                                 return ((), ctx')
-                                ti <- traexpr body
-                                return (li, (length ps, ti))
-                        AnyPat fi1 (Just x) -> do
-                                ctx' <- addname fi1 x ctx
-                                ti <- traexpr body
-                                return (str2varName "", (1, ti))
-                        AnyPat fi1 Nothing -> do
-                                ctx' <- addname fi1 dummyVarName ctx
-                                ti <- traexpr body
-                                return (str2varName "", (1, ti))
-                return $ TmCase fi t alts'
-        traexpr (CaseExpr' fi es alts) = do
-                ts <- mapM traexpr es
-                alts' <- forM alts $ \(pats, body) -> case pats of
-                        ConPat fi1 li ps -> do
-                                ctx' <- (`execStateT` ctx) $
-                                        forM_ ps $ \p -> StateT $ \ctx -> do
-                                                ctx' <- addname fi1 dummyVarName ctx
-                                                return ((), ctx')
-                                ti <- traexpr body
+                                ti <- transExpr ctx' restty body
                                 return (li, (length ps, ti))
                         AnyPat fi1 (Just x) -> do
                                 ctx' <- addname fi1 x ctx
@@ -139,7 +116,7 @@ transDecl :: MonadThrow m => Decl -> StateT Context m Command
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
-                ctx' <- addbinding fi name (TyAbbBind tyT Nothing) ctx
+                let ctx' = addbinding_ fi name (TyAbbBind tyT Nothing) ctx
                 return (Bind name (TyAbbBind tyT Nothing), ctx')
         (FuncDecl fi f e ty) | f == entryPoint -> do
                 t <- transExpr ctx ty e
@@ -147,7 +124,7 @@ transDecl decl = StateT $ \ctx -> case decl of
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
                 tyT <- transType ctx ty
-                ctx' <- addbinding fi f (VarBind tyT) ctx
+                let ctx' = addbinding_ fi f (VarBind tyT) ctx
                 return (Bind f (TmAbbBind t (Just tyT)), ctx')
 
 registerDecl :: MonadThrow m => Decl -> StateT Context m Command

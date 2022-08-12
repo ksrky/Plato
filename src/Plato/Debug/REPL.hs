@@ -1,15 +1,14 @@
 module Plato.Debug.REPL where
 
-{-}
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Common.Info
 import Plato.Common.Vect
 import Plato.Core.Context
-import Plato.Core.Evaluate
+import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Core.Utils
-import Plato.Debug.Evaluate
+import Plato.Debug.EvalIO
 import Plato.Translation.AbstractToInternal
 import Plato.Translation.InternalToCore
 
@@ -48,7 +47,7 @@ processFile fname = do
 processCommand :: Command -> State Context ()
 processCommand (Import mod) = undefined
 processCommand (Bind x bind) = state $ \ctx ->
-        case name2index dummyInfo ctx x of
+        case getVarIndex dummyInfo ctx x of
                 Just i -> ((), cons (x, bind) (update i (x, bindingShift (- i - 1) bind) ctx))
                 Nothing -> ((), cons (x, bind) ctx)
 processCommand (Eval t) = return ()
@@ -66,6 +65,5 @@ process ctx input = case runAlex input parse of
                 cmds <- internal2core initContext inner
                 let ctx' = mapM processCommand cmds `execState` ctx
                 res <- processEval ctx' cmds
-                print (pretty <$> res)
+                print (pretty ctx' <$> res)
                 return ctx'
-                -}

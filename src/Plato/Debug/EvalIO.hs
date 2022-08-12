@@ -6,8 +6,6 @@ import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Core.Utils
 
-import Control.Monad.State
-
 evalIO :: Context -> Term -> IO Term
 evalIO ctx t = case eval1 t of
         Just t' -> do

@@ -1,5 +1,7 @@
 module Plato.Core.Utils where
 
+import Control.Monad.State
+import Data.List
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
@@ -25,12 +27,24 @@ instance PrettyCore Term where
                 TmTApp _ t1 tyT2 -> "(" ++ pretty ctx t1 ++ " [" ++ pretty ctx tyT2 ++ "]" ++ ")"
                 TmFloat _ f -> show f
                 TmString _ s -> show s
+                TmLet _ x t1 t2 -> "(let {" ++ show x ++ "=" ++ pretty ctx t1 ++ "} in " ++ pretty ctx t2 ++ ")"
                 TmTag _ li ts1 tyT2 ->
                         let prettyArg t =
                                 let pptm = pretty ctx t
                                  in if ' ' `elem` pptm then "(" ++ pptm ++ ")" else pptm
                          in name2str li ++ if null ts1 then "" else " " ++ unwords (map prettyArg ts1)
-                _ -> error $ "simplification failed.\n" ++ show t
+                TmCase _ t1 alts ->
+                        let prettyAlt ctx (li, (ki, ti)) =
+                                let (xs, ctx') = (`runState` ctx) $
+                                        forM [1 .. ki] $ \i -> state $ \ctx -> pickfreshname (str2varName $ show i) ctx
+                                 in show li ++ " " ++ unwords (map show xs) ++ " -> " ++ pretty ctx' ti
+                         in "(case " ++ pretty ctx t1 ++ " of {" ++ intercalate " | " (map (prettyAlt ctx) alts) ++ "}"
+
+prettyAlt :: Context -> (Name, (Int, Term)) -> String
+prettyAlt ctx (li, (ki, ti)) =
+        let (xs, ctx') = (`runState` ctx) $
+                forM [1 .. ki] $ \i -> state $ \ctx -> pickfreshname (str2varName $ show i) ctx
+         in show li ++ " " ++ unwords (map show xs) ++ " -> " ++ pretty ctx' ti
 
 instance PrettyCore Ty where
         pretty ctx ty = case ty of

@@ -22,6 +22,9 @@ addbinding fi x bind ctx = case look x ctx of
         Just _ -> throwError fi $ "Conflicting definition of " ++ show x
         _ -> return $ cons (x, bind) ctx
 
+addbinding_ :: Info -> Name -> Binding -> Context -> Context
+addbinding_ fi x bind = cons (x, bind)
+
 addname :: MonadThrow m => Info -> Name -> Context -> m Context
 addname fi x = addbinding fi x NameBind
 

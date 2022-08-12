@@ -16,9 +16,6 @@ import Control.Monad.Writer.Lazy
 import System.Console.Haskeline
 import System.Environment
 
-main = putStrLn "Plato"
-
-{-}
 main :: IO ()
 main = do
         args <- getArgs
@@ -47,7 +44,7 @@ processFile src = undefined
 processCommand :: Command -> State Context ()
 processCommand (Import mod) = undefined
 processCommand (Bind x bind) = state $ \ctx ->
-        case name2index dummyInfo ctx x of
+        case getVarIndex dummyInfo ctx x of
                 Just i -> ((), cons (x, bind) (update i (x, bindingShift (- i - 1) bind) ctx))
                 Nothing -> ((), cons (x, bind) ctx)
 processCommand (Eval t) = return ()
@@ -65,7 +62,6 @@ process ctx input = case runAlex input parse of
                 cmds <- internal2core initContext inner
                 let ctx' = mapM processCommand cmds `execState` ctx
                     res = processEval ctx' cmds
-                    ppres = pretty <$> res
+                    ppres = pretty ctx' <$> res
                 forM_ ppres putStrLn
                 return ctx'
--}

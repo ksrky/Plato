@@ -11,7 +11,6 @@ import System.Console.Haskeline
 import System.Environment
 
 import Control.Monad.State
-import Control.Monad.Writer
 
 main :: IO ()
 main = do

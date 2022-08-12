@@ -95,7 +95,7 @@ btype       :: { A.Type }
             | atype                         { $1 }
 
 atype       :: { A.Type }
-            : '(' btype ')'                 { $2 }
+            : '(' type ')'                  { $2 }
             | conid                         { A.ConType (mkInfo $1) (id2tyConName $1) }
             | varid                         { A.VarType (mkInfo $1) (id2tyVarName $1) }
 
@@ -131,9 +131,9 @@ args        :: { [A.Expr] }
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }
-            | conid vars                    { id2conName $1 : $2 }
+            | conid vars                    { id2tyVarName $1 : $2 }
             | varid                         { [id2varName $1] }
-            | conid                         { [id2conName $1] }
+            | conid                         { [id2tyVarName $1] }
 
 alts        :: { [(A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }
@@ -151,8 +151,8 @@ apats        :: { [A.Pat] }
             | apat                          { [$1] }
 
 apat        :: { A.Pat }
-            : '(' pat ')'                   { $2 }
-            | conid                         { A.ConPat (mkInfo $1) (id2conName $1) [] }
+            : {-'(' pat ')'                 { $2 }
+            |-} conid                       { A.ConPat (mkInfo $1) (id2conName $1) [] }
             | varid                         { A.VarPat (mkInfo $1) (id2varName $1) }
             | '_'                           { A.WildPat (mkInfo $1) }
 
