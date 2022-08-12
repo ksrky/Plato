@@ -20,16 +20,14 @@ transExpr ctx restty = traexpr
         traexpr (VarExpr fi x) = do
                 i <- getVarIndex fi ctx x
                 return $ TmVar fi i (length ctx)
-        traexpr (ConExpr fi c) | nameSpace c == TyConName = do
-                i <- getVarIndex fi ctx c
-                return $ TmVar fi i (length ctx)
-        traexpr (ConExpr fi c) = do
-                i <- getVarIndex fi ctx c
-                return $ TmVar fi i (length ctx)
         traexpr (AppExpr fi e1 e2) = do
                 t1 <- traexpr e1
                 t2 <- traexpr e2
                 return $ TmApp fi t1 t2
+        traexpr (TAppExpr fi e1 t2) = do
+                t1 <- traexpr e1
+                tyT2 <- transType ctx t2
+                return $ TmTApp fi t1 tyT2
         traexpr (FloatExpr fi f) = return $ TmFloat fi f
         traexpr (StringExpr fi s) = return $ TmString fi s
         traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of

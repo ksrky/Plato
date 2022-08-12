@@ -6,8 +6,8 @@ import Plato.Common.Name (ModuleName, Name)
 
 data Expr
         = VarExpr Info Name
-        | ConExpr Info Name
         | AppExpr Info Expr Expr
+        | TAppExpr Info Expr Type
         | FloatExpr Info Float
         | StringExpr Info String
         | LamExpr Info Name Expr
@@ -42,8 +42,8 @@ class GetInfo a where
 
 instance GetInfo Expr where
         getInfo (VarExpr fi _) = fi
-        getInfo (ConExpr fi _) = fi
         getInfo (AppExpr fi _ _) = fi
+        getInfo (TAppExpr fi _ _) = fi
         getInfo (FloatExpr fi _) = fi
         getInfo (StringExpr fi _) = fi
         getInfo (LamExpr fi _ _) = fi

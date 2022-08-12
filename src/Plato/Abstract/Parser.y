@@ -25,7 +25,7 @@ import qualified Plato.Abstract.Syntax as A
 'type'                          { TokKeyword (KwType, $$) }
 'where'                         { TokKeyword (KwWhere, _) }
 
-'\''                            { TokSymbol (SymApost, $$) }
+'\''                            { TokSymbol (SymApost, _) }
 '->'                            { TokSymbol (SymArrow, $$) }
 '\\'                            { TokSymbol (SymBackslash, $$)}
 ','                             { TokSymbol (SymComma, _) }
@@ -33,8 +33,10 @@ import qualified Plato.Abstract.Syntax as A
 '.'                             { TokSymbol (SymDot, $$) }
 '='                             { TokSymbol (SymEqual, _) }
 '{'                             { TokSymbol (SymLBrace, _) }
+'['                             { TokSymbol (SymLBrack, $$) }
 '('                             { TokSymbol (SymLParen, _) }
 '}'                             { TokSymbol (SymRBrace, _) }
+']'                             { TokSymbol (SymRBrack, _) }
 ')'                             { TokSymbol (SymRParen, _) }
 ';'                             { TokSymbol (SymSemicolon, _) }
 '_'                             { TokSymbol (SymUScore, $$) }
@@ -81,7 +83,7 @@ decl        :: { A.Decl }
             | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2varName $1) $3 }
 
 types       :: { [A.Type] }
-            : btype types                   { $1 : $2 }
+            : type types                    { $1 : $2 }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
@@ -111,23 +113,19 @@ tyvars      :: { [N.Name] }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : varid args                                { A.VarExpr (mkInfo $1) (id2varName $1) $2 }
-            | conid args                                { A.ConExpr (mkInfo $1) (id2conName $1) $2 }
-            | float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
-            | string                                    { A.StringExpr (mkInfo $1) (fst $1) }
-            | '(' expr ')'                              { $2 }
-            | '\\' vars '->' expr                       { A.LamExpr (mkInfo $1) $2 $4 }
+            : '\\' vars '->' expr                       { A.LamExpr (mkInfo $1) $2 $4 }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
             | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
+            | expr '[' type ']'                         { A.TAppExpr (mkInfo $2) $1 $3 }
+            | expr aexpr                                { A.AppExpr $1 $2 }
+            | aexpr                                     { $1 }
 
-args        :: { [A.Expr] }
-            : '(' expr ')' args             { $2 : $4 }
-            | varid args                    { A.VarExpr (mkInfo $1) (id2varName $1) [] : $2 }
-            | conid args                    { A.ConExpr (mkInfo $1) (id2conName $1) [] : $2 }
-            | '\'' conid args               { A.ConExpr (mkInfo $1) (id2tyConName $2) [] : $3 }
-            | float args                    { A.FloatExpr (mkInfo $1) (fst $1) : $2 }
-            | string args                   { A.StringExpr (mkInfo $1) (fst $1) : $2 }
-            | {- empty -}                   { [] }
+aexpr       :: { A.Expr }
+            : '(' expr ')'                              { $2 }
+            | varid                                     { A.VarExpr (mkInfo $1) (id2varName $1) }
+            | conid                                     { A.VarExpr (mkInfo $1) (id2conName $1) }
+            | float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
+            | string                                    { A.StringExpr (mkInfo $1) (fst $1) }
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }
@@ -202,8 +200,10 @@ prettyToken (TokSymbol (s, p)) = "'" ++ case s of
     SymDot -> "."
     SymEqual -> "="
     SymLBrace -> "{"
+    SymLBrack -> "["
     SymLParen -> "("
     SymRBrace -> "{"
+    SymRBrack -> "]"
     SymRParen -> ")"
     SymSemicolon -> ";"
     SymVBar -> "|"

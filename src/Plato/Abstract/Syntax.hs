@@ -4,8 +4,9 @@ import Plato.Common.Info
 import Plato.Common.Name
 
 data Expr
-        = VarExpr Info Name [Expr]
-        | ConExpr Info Name [Expr]
+        = VarExpr Info Name
+        | AppExpr Expr Expr
+        | TAppExpr Info Expr Type
         | FloatExpr Info Float
         | StringExpr Info String
         | LamExpr Info [Name] Expr

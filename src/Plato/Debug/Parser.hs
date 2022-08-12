@@ -39,6 +39,4 @@ processFile fname = do
 process :: String -> IO ()
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
-        Right ast -> do
-                inner <- abstract2internal ast
-                print inner
+        Right ast -> print ast

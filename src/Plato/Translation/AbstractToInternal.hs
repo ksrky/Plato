@@ -14,12 +14,15 @@ import Control.Monad.Writer
 import Data.List (partition)
 
 transExpr :: MonadThrow m => A.Expr -> m I.Expr
-transExpr (A.VarExpr fi x es) = do
-        es' <- mapM transExpr es
-        return $ foldl (\l r -> I.AppExpr (I.getInfo l) l r) (I.VarExpr fi x) es'
-transExpr (A.ConExpr fi x es) = do
-        es' <- mapM transExpr es
-        return $ foldl (\l r -> I.AppExpr (I.getInfo l) l r) (I.ConExpr fi x) es'
+transExpr (A.VarExpr fi x) = return $ I.VarExpr fi x
+transExpr (A.AppExpr e1 e2) = do
+        e1' <- transExpr e1
+        e2' <- transExpr e2
+        return $ I.AppExpr (I.getInfo e2') e1' e2'
+transExpr (A.TAppExpr fi e1 t2) = do
+        e1' <- transExpr e1
+        t2' <- transType t2
+        return $ I.TAppExpr fi e1' t2'
 transExpr (A.FloatExpr fi f) = return $ I.FloatExpr fi f
 transExpr (A.StringExpr fi s) = return $ I.StringExpr fi s
 transExpr (A.LamExpr fi xs e) = do
@@ -41,7 +44,7 @@ transExpr (A.CaseExpr fi e alts) = do
                                                 ps' <- mapM transPat ps
                                                 tell [(I.ConPat fi1 l ps', ei')]
                                                 transAlts alts
-                                        A.VarPat fi1 x -> tell [(I.AnyPat fi (Just x), ei')]
+                                        A.VarPat fi1 x -> tell [(I.AnyPat fi1 (Just x), ei')]
                                         A.WildPat fi1 -> tell [(I.AnyPat fi1 Nothing, ei')]
                          in transAlts alts
         return $ I.CaseExpr fi e' alts'

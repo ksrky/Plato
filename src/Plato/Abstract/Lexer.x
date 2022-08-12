@@ -53,8 +53,10 @@ tokens :-
 <0> \.                          { symbol SymDot }
 <0> \=                          { symbol SymEqual }
 <0> \{                          { symbol SymLBrace }
+<0> \[                          { symbol SymLBrack }
 <0> \(                          { symbol SymLParen }
 <0> \}                          { symbol SymRBrace }
+<0> \]                          { symbol SymRBrack }
 <0> \)                          { symbol SymRParen }
 <0> \;                          { symbol SymSemicolon }
 <0> \_                          { symbol SymUScore }         
@@ -108,8 +110,10 @@ data Symbol
     | SymDot
     | SymEqual
     | SymLBrace
+    | SymLBrack
     | SymLParen
     | SymRBrace
+    | SymRBrack
     | SymRParen
     | SymSemicolon -- tmp
     | SymUScore
