@@ -33,18 +33,18 @@ transExpr (A.LetExpr fi ds e) = do
         return $ foldr (I.LetExpr fi) e' ds'
 transExpr (A.CaseExpr fi e alts) = do
         e' <- transExpr e
-        (def, alts') <-
-                runWriterT $
-                        let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m (I.Pat, I.Expr)
-                            transAlts [] = return (I.AnyPat dummyInfo Nothing, error "No match")
+        alts' <-
+                execWriterT $
+                        let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m ()
+                            transAlts [] = return ()
                             transAlts (alt@(pi, ei) : alts) =
                                 transExpr ei >>= \ei' -> case pi of
                                         A.ConPat fi1 l ps -> do
                                                 ps' <- mapM transPat ps
                                                 tell [(I.ConPat fi1 l ps', ei')]
                                                 transAlts alts
-                                        A.VarPat fi1 x -> return (I.AnyPat fi (Just x), ei')
-                                        A.WildPat fi1 -> return (I.AnyPat fi1 Nothing, ei')
+                                        A.VarPat fi1 x -> tell [(I.AnyPat fi (Just x), ei')]
+                                        A.WildPat fi1 -> tell [(I.AnyPat fi1 Nothing, ei')]
                          in transAlts alts
         return $ I.CaseExpr fi e' alts'
 
