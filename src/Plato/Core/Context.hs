@@ -41,11 +41,11 @@ bindingShift d bind = case bind of
         NameBind -> NameBind
         VarBind tyT -> VarBind (typeShift d tyT)
         TyVarBind knK -> TyVarBind knK
-        TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
+        TmAbbBind t tyT_opt -> if d < 0 then error $ show d else TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
 
 getbinding :: Context -> Int -> Binding
-getbinding ctx i = bindingShift (i + 1) (snd $ ctx ! i)
+getbinding ctx i = if i + 1 < 0 then error $ show i else bindingShift (i + 1) (snd $ ctx ! i)
 
 getTypeFromContext :: MonadThrow m => Info -> Context -> Int -> m Ty
 getTypeFromContext fi ctx i = case getbinding ctx i of

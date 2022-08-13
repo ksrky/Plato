@@ -39,6 +39,7 @@ library
       Plato.Common.Vect
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Core.Recon
       Plato.Core.Syntax
       Plato.Core.Utils
       Plato.Debug.CoreTrans
@@ -85,6 +86,7 @@ executable Plato-exe
       Plato.Common.Vect
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Core.Recon
       Plato.Core.Syntax
       Plato.Core.Utils
       Plato.Debug.CoreTrans

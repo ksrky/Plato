@@ -1,5 +1,7 @@
 module Plato.Debug.EvalIO where
 
+import Plato.Common.Info
+import Plato.Common.Name
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Eval
