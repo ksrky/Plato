@@ -48,6 +48,7 @@ library
       Plato.Debug.Parser
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
+      Plato.Internal.Rename
       Plato.Internal.Syntax
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore
@@ -95,6 +96,7 @@ executable Plato-exe
       Plato.Debug.Parser
       Plato.Debug.PrettyCore
       Plato.Debug.REPL
+      Plato.Internal.Rename
       Plato.Internal.Syntax
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore

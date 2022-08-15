@@ -6,48 +6,55 @@ import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
+import Plato.Common.Vect
+import Plato.Internal.Rename
 import qualified Plato.Internal.Syntax as I
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Writer
-import Data.List (partition)
+import Data.List (partition, union)
 
-transExpr :: MonadThrow m => A.Expr -> m I.Expr
-transExpr (A.VarExpr fi x) = return $ I.VarExpr fi x
-transExpr (A.AppExpr e1 e2) = do
-        e1' <- transExpr e1
-        e2' <- transExpr e2
-        return $ I.AppExpr (I.getInfo e2') e1' e2'
-transExpr (A.TAppExpr fi e1 t2) = do
-        e1' <- transExpr e1
-        t2' <- transType t2
-        return $ I.TAppExpr fi e1' t2'
-transExpr (A.FloatExpr fi f) = return $ I.FloatExpr fi f
-transExpr (A.StringExpr fi s) = return $ I.StringExpr fi s
-transExpr (A.LamExpr fi xs e) = do
-        e' <- transExpr e
-        return $ foldr (I.LamExpr fi) e' xs
-transExpr (A.LetExpr fi ds e) = do
-        e' <- transExpr e
-        ds' <- execWriterT $ transDecls (map A.Decl ds)
-        return $ foldr (I.LetExpr fi) e' ds'
-transExpr (A.CaseExpr fi e alts) = do
-        e' <- transExpr e
-        alts' <-
-                execWriterT $
-                        let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m ()
-                            transAlts [] = return ()
-                            transAlts (alt@(pi, ei) : alts) =
-                                transExpr ei >>= \ei' -> case pi of
-                                        A.ConPat fi1 l ps -> do
-                                                ps' <- mapM transPat ps
-                                                tell [(I.ConPat fi1 l ps', ei')]
-                                                transAlts alts
-                                        A.VarPat fi1 x -> tell [(I.AnyPat fi1 (Just x), ei')]
-                                        A.WildPat fi1 -> tell [(I.AnyPat fi1 Nothing, ei')]
-                         in transAlts alts
-        return $ I.CaseExpr fi e' alts'
+transExpr :: MonadThrow m => Memo -> A.Expr -> m I.Expr
+transExpr memo = traexpr
+    where
+        traexpr :: MonadThrow m => A.Expr -> m I.Expr
+        traexpr (A.VarExpr fi x) = return $ case look x (store memo) of
+                Just r -> I.ProjExpr fi (I.VarExpr fi r) x
+                Nothing -> I.VarExpr fi x
+        traexpr (A.AppExpr e1 e2) = do
+                e1' <- traexpr e1
+                e2' <- traexpr e2
+                return $ I.AppExpr (I.getInfo e2') e1' e2'
+        traexpr (A.TAppExpr fi e1 t2) = do
+                e1' <- traexpr e1
+                t2' <- transType t2
+                return $ I.TAppExpr fi e1' t2'
+        traexpr (A.FloatExpr fi f) = return $ I.FloatExpr fi f
+        traexpr (A.StringExpr fi s) = return $ I.StringExpr fi s
+        traexpr (A.LamExpr fi xs e) = do
+                e' <- traexpr e
+                return $ foldr (I.LamExpr fi) e' xs
+        traexpr (A.LetExpr fi ds e) = do
+                e' <- traexpr e
+                d <- transDecls memo (map A.Decl ds)
+                return $ I.LetExpr fi d e'
+        traexpr (A.CaseExpr fi e alts) = do
+                e' <- traexpr e
+                alts' <-
+                        execWriterT $
+                                let transAlts :: MonadThrow m => [(A.Pat, A.Expr)] -> WriterT [(I.Pat, I.Expr)] m ()
+                                    transAlts [] = return ()
+                                    transAlts (alt@(pi, ei) : alts) =
+                                        traexpr ei >>= \ei' -> case pi of
+                                                A.ConPat fi1 l ps -> do
+                                                        ps' <- mapM transPat ps
+                                                        tell [(I.ConPat fi1 l ps', ei')]
+                                                        transAlts alts
+                                                A.VarPat fi1 x -> tell [(I.AnyPat fi1 (Just x), ei')]
+                                                A.WildPat fi1 -> tell [(I.AnyPat fi1 Nothing, ei')]
+                                 in transAlts alts
+                return $ I.CaseExpr fi e' alts'
 
 transPat :: MonadThrow m => A.Pat -> m I.Pat
 transPat (A.ConPat fi c ps) = do
@@ -73,20 +80,39 @@ transType (A.AllType fi xs ty) = do
         ty' <- transType ty
         return $ foldr (I.AllType fi) ty' xs
 
-transDecls :: MonadThrow m => [A.TopDecl] -> WriterT [I.Decl] m ()
-transDecls tds = do
+entry :: Name
+entry = str2varName "main"
+
+transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m I.Decl
+transDecls memo tds = do
         decs <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) -> tell [(f, (fi, e))]
+                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [(f, (fi, e))]
                         _ -> return ()
-        forM_ tds $ \case
-                A.Decl (A.FuncTyDecl fi1 f ty) -> case lookup f decs of -- tmp: multiple FuncDecl
-                        Just (fi2, e) -> do
-                                e' <- transExpr e
+        tydecs <- execWriterT $
+                forM tds $ \case
+                        A.Decl (A.FuncTyDecl fi f ty) | f /= entry -> tell [(f, (fi, ty))]
+                        _ -> return ()
+        let fs = map fst decs `union` map fst tydecs
+            rcd = fresh memo
+            memo' = Memo{store = foldr cons (store memo) (zip fs (repeat rcd)), level = level memo + 1}
+        fields <- execWriterT $
+                forM fs $ \f -> case lookup f decs of
+                        Just (fi, e) -> do
+                                e' <- transExpr memo' e
+                                tell [(f, e')]
+                        Nothing -> do
+                                let Just (fi, _) = lookup f tydecs
+                                throwError fi $ name2str f ++ " lacks a binding"
+        fieldtys <- execWriterT $
+                forM fs $ \f -> case lookup f tydecs of
+                        Just (fi, ty) -> do
                                 ty' <- transType ty
-                                tell [I.FuncDecl fi1 f e' ty']
-                        Nothing -> throwError fi1 $ name2str f ++ " lacks a binding"
-                _ -> return ()
+                                tell [(f, ty')]
+                        Nothing -> do
+                                let Just (fi, _) = lookup f decs
+                                throwError fi $ name2str f ++ " lacks a type annotation"
+        return $ I.FuncDecl dummyInfo rcd (I.RecordExpr dummyInfo fields) (I.RecordType dummyInfo fieldtys)
 
 transTopDecl :: MonadThrow m => A.TopDecl -> WriterT [I.Decl] m ()
 transTopDecl (A.DataDecl fi1 name params fields) = do
@@ -107,13 +133,19 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-transProgram :: MonadThrow m => [A.TopDecl] -> WriterT [I.Decl] m ()
-transProgram tds = do
-        mapM_ transTopDecl tds
-        transDecls tds
-
 abstract2internal :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
 abstract2internal (ids, tds) = do
-        let mns = map (\(A.ImpDecl mn) -> mn) ids
-        ds <- execWriterT $ transProgram tds
-        return $ I.Decls{I.imports = mns, I.decls = ds}
+        let modns = map (\(A.ImpDecl mn) -> mn) ids
+        decls <- execWriterT $ mapM_ transTopDecl tds
+        bind <- transDecls emptyMemo tds
+        main <- execWriterT $
+                forM tds $ \case
+                        A.Decl (A.FuncDecl fi f e) | f == entry -> do
+                                e' <- transExpr emptyMemo e
+                                tell [(fi, e')]
+                        _ -> return ()
+        body <- case main of
+                [] -> return $ I.LetExpr dummyInfo bind (I.RecordExpr dummyInfo [])
+                [(fi, e)] -> return $ I.LetExpr fi bind e
+                _ -> throwString "main function must be one in each program"
+        return $ I.Decls{I.imports = modns, I.decls = decls, I.body = body}

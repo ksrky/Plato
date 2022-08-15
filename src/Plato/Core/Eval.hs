@@ -18,6 +18,7 @@ isval t = case t of
         TmString{} -> True
         TmFloat{} -> True
         TmAbs{} -> True
+        TmRecord _ fields -> all (\(l, ti) -> isval ti) fields
         TmTag _ _ ts1 _ -> all isval ts1
         TmTAbs{} -> True
         _ -> False
@@ -50,6 +51,28 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmLet fi x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet fi x t1' t2
+                TmFix fi v1 | isval v1 -> case v1 of
+                        TmAbs _ _ _ t12 -> Just $ termSubstTop t t12
+                        _ -> Nothing
+                TmFix fi t1 -> do
+                        t1' <- eval1 t1
+                        Just $ TmFix fi t1'
+                TmProj fi (TmRecord fi2 fields) l -> lookup l fields
+                TmProj fi t1 l -> do
+                        t1' <- eval1 t1
+                        Just $ TmProj fi t1' l
+                TmRecord fi fields -> do
+                        let evalafield :: [(Name, Term)] -> Maybe [(Name, Term)]
+                            evalafield l = case l of
+                                [] -> Nothing
+                                (l, vi) : rest | isval vi -> do
+                                        rest' <- evalafield rest
+                                        Just $ (l, vi) : rest'
+                                (l, ti) : rest -> do
+                                        ti' <- eval1 ti
+                                        Just $ (l, ti') : rest
+                        fields' <- evalafield fields
+                        Just $ TmRecord fi fields'
                 TmTag _ l vs tyT | all isval vs -> Nothing
                 TmTag fi l ts tyT -> do
                         ts' <- mapM eval1 ts
@@ -109,6 +132,11 @@ tyeqv fi ctx = tyeqv'
                         (TyApp _ tyS1 tyS2, TyApp _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
+                        (TyRecord _ fields1, TyRecord fi2 fields2) | length fields1 == length fields2 -> forM_ fields2 $
+                                \(li2, tyTi2) -> case lookup li2 fields1 of
+                                        Just tyTi1 -> tyeqv fi2 ctx tyTi1 tyTi2
+                                        Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
+                        (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "field length are not match"
                         (TyVariant fields1, TyVariant fields2) -> unreachable "TyVariant is unique"
                         _ -> throwError fi $ "type mismatch: " ++ pretty ctx tyS ++ ", " ++ pretty ctx tyT
 
@@ -140,12 +168,17 @@ kindof ctx tyT = case tyT of
                 knK2 <- kindof ctx tyT2
                 case knK1 of
                         KnArr knK11 knK12 | knK2 == knK11 -> return knK12
-                        KnArr knK11 knK12 -> throwError (getInfo tyT1) "parameter kind mismatch"
+                        KnArr{} -> throwError (getInfo tyT1) "parameter kind mismatch"
                         _ -> throwError fi "arrow kind expected"
         TyAll fi tyX knK1 tyT2 -> do
                 ctx' <- addbinding fi tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
                 unless (knK2 == KnStar) $ throwError (getInfo tyT2) "Kind * expected"
+                return KnStar
+        TyRecord fi fieldtys -> do
+                forM_ fieldtys $ \(l, tyS) -> do
+                        knS <- kindof ctx tyS
+                        unless (knS /= KnStar) $ throwError fi "Kind * expected"
                 return KnStar
         TyVariant fields -> undefined
 
@@ -182,17 +215,36 @@ typeof ctx t = case t of
                 ctx' <- addbinding fi x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ typeShift (-1) tyT2
-        TmTag fi li ts tyT -> case simplifyty ctx tyT of
+        TmFix fi t1 -> do
+                tyT1 <- typeof ctx t1
+                case simplifyty ctx tyT1 of
+                        TyArr fi1 tyT11 tyT12 -> do
+                                tyeqv fi1 ctx tyT12 tyT11
+                                return tyT12
+                        _ -> throwError fi "arrow type expected"
+        TmProj fi t1 l -> do
+                tyT1 <- typeof ctx t1
+                case simplifyty ctx tyT1 of
+                        TyRecord _ fieldtys -> case lookup l fieldtys of
+                                Just tyT -> return tyT
+                                Nothing -> throwError fi $ "label " ++ show l ++ " not found"
+                        _ -> throwError fi "Expected record type"
+        TmRecord fi fields -> do
+                fieldtys <- forM fields $ \(li, ti) -> do
+                        tyTi <- typeof ctx ti
+                        return (li, tyTi)
+                return $ TyRecord dummyInfo fieldtys
+        TmTag fi li ts1 tyT2 -> case simplifyty ctx tyT2 of
                 TyVariant fieldtys -> case lookup li fieldtys of
                         Just tyTiExpected -> do
-                                tyTi <- mapM (typeof ctx) ts
+                                tyTi <- mapM (typeof ctx) ts1
                                 mapM_ (uncurry $ tyeqv fi ctx) (zip tyTi tyTiExpected)
-                                return tyT
+                                return tyT2
                         Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
                 _ -> throwError fi "Expected variant type"
-        TmCase fi t alts -> do
-                t' <- typeof ctx t
-                case simplifyty ctx t' of
+        TmCase fi tyT alts -> do
+                tyT <- typeof ctx tyT
+                case simplifyty ctx tyT of
                         TyVariant fieldtys -> do
                                 when (null fieldtys) $ return ()
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
@@ -207,7 +259,7 @@ typeof ctx t = case t of
                                                 ctx' <- addbinding dummyInfo dummyVarName (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
-                                        Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
+                                        Nothing -> throwError fi $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
                         _ -> throwError fi "Expected variant type"

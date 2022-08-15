@@ -11,16 +11,19 @@ import Plato.Common.Name
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
-        = TyVar Info Int Int
+        = --TyId Info Name
+          TyVar Info Int Int
         | TyArr Info Ty Ty
         | TyAll Info Name Kind Ty
         | TyAbs Info Name Kind Ty
         | TyApp Info Ty Ty
+        | TyRecord Info [(Name, Ty)]
         | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
 
 data Term
-        = TmVar Info Int Int
+        = --TmId Info Name
+          TmVar Info Int Int
         | TmAbs Info Name Ty Term
         | TmApp Info Term Term
         | TmTAbs Info Name Kind Term
@@ -28,6 +31,9 @@ data Term
         | TmFloat Info Float
         | TmString Info String
         | TmLet Info Name Term Term
+        | TmFix Info Term
+        | TmProj Info Term Name
+        | TmRecord Info [(Name, Term)]
         | TmTag Info Name [Term] Ty
         | TmCase Info Term [(Name, (Int, Term))]
         deriving (Eq, Show)
@@ -58,7 +64,8 @@ tymap onvar c tyT = walk c tyT
                 TyAll fi tyX knK1 tyT2 -> TyAll fi tyX knK1 (walk (c + 1) tyT2)
                 TyAbs fi tyX knK1 tyT2 -> TyAbs fi tyX knK1 (walk (c + 1) tyT2)
                 TyApp fi tyT1 tyT2 -> TyApp fi (walk c tyT1) (walk c tyT2)
-                TyVariant fields -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fields)
+                TyRecord fi fieldtys -> TyRecord fi (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
+                TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =
@@ -96,8 +103,11 @@ tmmap onvar ontype c t = walk c t
                 TmApp fi t1 t2 -> TmApp fi (walk c t1) (walk c t2)
                 TmTAbs fi tyX knK1 t2 -> TmTAbs fi tyX knK1 (walk (c + 1) t2)
                 TmTApp fi t1 tyT2 -> TmTApp fi (walk c t1) (ontype c tyT2)
+                TmFix fi t1 -> TmFix fi (walk c t1)
+                TmProj fi t1 l -> TmProj fi (walk c t1) l
+                TmRecord fi fields -> TmRecord fi (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmLet fi x t1 t2 -> TmLet fi x (walk c t1) (walk (c + 1) t2)
-                TmTag fi l t1 tyT -> TmTag fi l (map (walk c) t1) (ontype c tyT)
+                TmTag fi l t1 tyT2 -> TmTag fi l (map (walk c) t1) (ontype c tyT2)
                 TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
                 _ -> t
 

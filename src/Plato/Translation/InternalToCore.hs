@@ -45,16 +45,26 @@ transExpr ctx restty = traexpr
                         return $ TmAbs fi x tyT1 t2
                 _ -> throwError fi $ "Expected arrow type, but got " ++ show restty
         traexpr (LetExpr fi d e1) = case d of
-                FuncDecl _ f e2 ty -> do
-                        ctx' <- addname fi f ctx
+                FuncDecl fi2 f e2 ty -> do
+                        tyT <- transType ctx ty
+                        ctx' <- addname fi2 f ctx
                         t1 <- transExpr ctx' ty e2
+                        let r = TmFix dummyInfo (TmAbs dummyInfo f tyT t1)
                         t2 <- transExpr ctx' restty e1
-                        return $ TmLet fi f t1 t2
+                        return $ TmLet fi dummyVarName r t2
                 _ -> unreachable "Type declaration in let binding"
         traexpr (TagExpr fi l as) = do
                 tyT <- transType ctx restty
                 as' <- mapM traexpr as
                 return $ TmTag fi l as' tyT
+        traexpr (ProjExpr fi e l) = do
+                t1 <- traexpr e
+                return $ TmProj fi t1 l
+        traexpr (RecordExpr fi fields) = do
+                fields' <- forM fields $ \(li, ei) -> do
+                        ti <- traexpr ei
+                        return (li, ti)
+                return $ TmRecord fi fields'
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
                 alts' <- forM alts $ \(pat, body) -> case pat of
@@ -101,8 +111,13 @@ transType ctx = tratype
                 ty1' <- tratype ty1
                 ty2' <- tratype ty2
                 return $ TyApp fi ty1' ty2'
-        tratype (SumType fields) = do
-                fields' <- forM fields $ \(_, l, field) -> do
+        tratype (RecordType fi fieldtys) = do
+                fields' <- forM fieldtys $ \(l, field) -> do
+                        field' <- tratype field
+                        return (l, field')
+                return $ TyRecord fi fields'
+        tratype (SumType fieldtys) = do
+                fields' <- forM fieldtys $ \(_, l, field) -> do
                         field' <- mapM tratype field
                         return (l, field')
                 return $ TyVariant fields'
@@ -135,8 +150,8 @@ registerDecl decl = StateT $ \ctx -> case decl of
                 return (Bind f NameBind, ctx')
 
 internal2core :: MonadThrow m => Context -> Decls -> m [Command]
-internal2core ctx (Decls mns decs) = (`evalStateT` ctx) $ do
+internal2core ctx (Decls mns decls body) = (`evalStateT` ctx) $ do
         let imps = map Import mns
-        cmds1 <- mapM registerDecl decs
-        cmds2 <- mapM transDecl decs
+        cmds1 <- mapM registerDecl decls
+        cmds2 <- mapM transDecl decls
         return $ imps ++ cmds1 ++ cmds2
