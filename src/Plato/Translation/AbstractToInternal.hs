@@ -30,14 +30,12 @@ transExpr memo = traexpr
                 e1' <- traexpr e1
                 t2' <- transType t2
                 return $ I.TAppExpr fi e1' t2'
-        traexpr (A.FloatExpr fi f) = return $ I.FloatExpr fi f
-        traexpr (A.StringExpr fi s) = return $ I.StringExpr fi s
         traexpr (A.LamExpr fi xs e) = do
                 e' <- traexpr e
                 return $ foldr (I.LamExpr fi) e' xs
         traexpr (A.LetExpr fi ds e) = do
                 e' <- traexpr e
-                d <- transDecls memo (map A.Decl ds)
+                (d, _) <- transDecls memo (map A.Decl ds)
                 return $ I.LetExpr fi d e'
         traexpr (A.CaseExpr fi e alts) = do
                 e' <- traexpr e
@@ -83,7 +81,7 @@ transType (A.AllType fi xs ty) = do
 entry :: Name
 entry = str2varName "main"
 
-transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m I.Decl
+transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m (I.Decl, Memo)
 transDecls memo tds = do
         decs <- execWriterT $
                 forM tds $ \case
@@ -111,8 +109,8 @@ transDecls memo tds = do
                                 tell [(f, ty')]
                         Nothing -> do
                                 let Just (fi, _) = lookup f decs
-                                throwError fi $ name2str f ++ " lacks a type annotation"
-        return $ I.FuncDecl dummyInfo rcd (I.RecordExpr dummyInfo fields) (I.RecordType dummyInfo fieldtys)
+                                throwError fi $ name2str f ++ " lacks a type signature"
+        return (I.FuncDecl dummyInfo rcd (I.RecordExpr dummyInfo fields) (I.RecordType dummyInfo fieldtys), memo')
 
 transTopDecl :: MonadThrow m => A.TopDecl -> WriterT [I.Decl] m ()
 transTopDecl (A.DataDecl fi1 name params fields) = do
@@ -137,15 +135,27 @@ abstract2internal :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
 abstract2internal (ids, tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
-        bind <- transDecls emptyMemo tds
-        main <- execWriterT $
-                forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) | f == entry -> do
-                                e' <- transExpr emptyMemo e
-                                tell [(fi, e')]
-                        _ -> return ()
-        body <- case main of
-                [] -> return $ I.LetExpr dummyInfo bind (I.RecordExpr dummyInfo [])
-                [(fi, e)] -> return $ I.LetExpr fi bind e
-                _ -> throwString "main function must be one in each program"
-        return $ I.Decls{I.imports = modns, I.decls = decls, I.body = body}
+        (bind, memo) <- transDecls emptyMemo tds
+        main <- transEntry memo bind
+        return $ I.Decls{I.imports = modns, I.decls = decls, I.main = main}
+    where
+        transEntry :: MonadThrow m => Memo -> I.Decl -> m (I.Expr, I.Type)
+        transEntry memo bind = do
+                body <- execWriterT $
+                        forM tds $ \case
+                                A.Decl (A.FuncDecl fi f e) | f == entry -> do
+                                        e' <- transExpr memo e
+                                        tell [e']
+                                _ -> return ()
+                bodyty <- execWriterT $
+                        forM tds $ \case
+                                A.Decl (A.FuncTyDecl fi f ty) | f == entry -> do
+                                        ty' <- transType ty
+                                        tell [ty']
+                                _ -> return ()
+                case (body, bodyty) of
+                        ([], []) -> return (I.LetExpr dummyInfo bind (I.RecordExpr dummyInfo []), I.RecordType dummyInfo [])
+                        ([e], [ty]) -> return (I.LetExpr dummyInfo bind e, ty)
+                        ([_], []) -> throwString "main function lacks a type signature"
+                        ([], [_]) -> throwString " main function lacks a binding"
+                        _ -> throwString "duplicate main function"

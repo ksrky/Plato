@@ -7,8 +7,6 @@ data Expr
         = VarExpr Info Name
         | AppExpr Expr Expr
         | TAppExpr Info Expr Type
-        | FloatExpr Info Float
-        | StringExpr Info String
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
         | CaseExpr Info Expr [(Pat, Expr)]

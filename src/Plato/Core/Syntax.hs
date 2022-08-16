@@ -28,8 +28,6 @@ data Term
         | TmApp Info Term Term
         | TmTAbs Info Name Kind Term
         | TmTApp Info Term Ty
-        | TmFloat Info Float
-        | TmString Info String
         | TmLet Info Name Term Term
         | TmFix Info Term
         | TmProj Info Term Name
@@ -109,7 +107,6 @@ tmmap onvar ontype c t = walk c t
                 TmLet fi x t1 t2 -> TmLet fi x (walk c t1) (walk (c + 1) t2)
                 TmTag fi l t1 tyT2 -> TmTag fi l (map (walk c) t1) (ontype c tyT2)
                 TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
-                _ -> t
 
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =

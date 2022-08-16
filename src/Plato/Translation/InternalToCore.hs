@@ -28,8 +28,6 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 tyT2 <- transType ctx t2
                 return $ TmTApp fi t1 tyT2
-        traexpr (FloatExpr fi f) = return $ TmFloat fi f
-        traexpr (StringExpr fi s) = return $ TmString fi s
         traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of
                 AllType _ tyX ty -> do
                         let knK1 = KnStar -- tmp
@@ -51,7 +49,7 @@ transExpr ctx restty = traexpr
                         t1 <- transExpr ctx' ty e2
                         let r = TmFix dummyInfo (TmAbs dummyInfo f tyT t1)
                         t2 <- transExpr ctx' restty e1
-                        return $ TmLet fi dummyVarName r t2
+                        return $ TmLet fi f r t2
                 _ -> unreachable "Type declaration in let binding"
         traexpr (TagExpr fi l as) = do
                 tyT <- transType ctx restty
@@ -150,8 +148,10 @@ registerDecl decl = StateT $ \ctx -> case decl of
                 return (Bind f NameBind, ctx')
 
 internal2core :: MonadThrow m => Context -> Decls -> m [Command]
-internal2core ctx (Decls mns decls body) = (`evalStateT` ctx) $ do
+internal2core ctx (Decls mns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         let imps = map Import mns
         cmds1 <- mapM registerDecl decls
         cmds2 <- mapM transDecl decls
-        return $ imps ++ cmds1 ++ cmds2
+        ctx' <- get
+        main <- transExpr ctx' bodyty body
+        return $ imps ++ cmds1 ++ cmds2 ++ [Eval main]

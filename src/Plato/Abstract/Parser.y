@@ -124,8 +124,8 @@ aexpr       :: { A.Expr }
             : '(' expr ')'                              { $2 }
             | varid                                     { A.VarExpr (mkInfo $1) (id2varName $1) }
             | conid                                     { A.VarExpr (mkInfo $1) (id2conName $1) }
-            | float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
-            | string                                    { A.StringExpr (mkInfo $1) (fst $1) }
+            {-| float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
+            | string                                    { A.StringExpr (mkInfo $1) (fst $1) -}
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }

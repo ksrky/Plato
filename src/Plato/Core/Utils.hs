@@ -25,8 +25,6 @@ instance PrettyCore Term where
                         let (tyX', ctx') = pickfreshname tyX ctx
                          in "(\\" ++ show tyX' ++ ": " ++ pretty ctx knK1 ++ ". " ++ pretty ctx' t2 ++ ")"
                 TmTApp _ t1 tyT2 -> "(" ++ pretty ctx t1 ++ " [" ++ pretty ctx tyT2 ++ "]" ++ ")"
-                TmFloat _ f -> show f
-                TmString _ s -> show s
                 TmLet _ x t1 t2 -> "(let {" ++ show x ++ "=" ++ pretty ctx t1 ++ "} in " ++ pretty ctx t2 ++ ")"
                 TmTag _ li ts1 tyT2 ->
                         let prettyArg t =
@@ -75,8 +73,6 @@ instance GetInfo Term where
         getInfo (TmApp fi _ _) = fi
         getInfo (TmTAbs fi _ _ _) = fi
         getInfo (TmTApp fi _ _) = fi
-        getInfo (TmFloat fi _) = fi
-        getInfo (TmString fi _) = fi
         getInfo (TmLet fi _ _ _) = fi
         getInfo (TmTag fi _ _ _) = fi
         getInfo (TmCase fi _ _) = fi

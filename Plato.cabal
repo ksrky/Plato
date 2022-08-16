@@ -29,10 +29,6 @@ library
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
-      Plato.Backend.GHC.Codegen
-      Plato.Backend.GHC.HsPretty
-      Plato.Backend.GHC.HsSyntax
-      Plato.Backend.Untyped
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name
@@ -77,10 +73,6 @@ executable Plato-exe
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
-      Plato.Backend.GHC.Codegen
-      Plato.Backend.GHC.HsPretty
-      Plato.Backend.GHC.HsSyntax
-      Plato.Backend.Untyped
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name

@@ -15,8 +15,6 @@ import Control.Monad.State
 ----------------------------------------------------------------
 isval :: Term -> Bool
 isval t = case t of
-        TmString{} -> True
-        TmFloat{} -> True
         TmAbs{} -> True
         TmRecord _ fields -> all (\(l, ti) -> isval ti) fields
         TmTag _ _ ts1 _ -> all isval ts1
@@ -208,8 +206,6 @@ typeof ctx t = case t of
                         TyAll _ _ knK11 tyT12 | knK11 == knKT2 -> return $ typeSubstTop tyT2 tyT12
                         TyAll fi1 _ knK11 tyT12 -> throwError fi1 "Type argument has wrong kind"
                         _ -> throwError (getInfo tyT1) "universal type expected"
-        TmString{} -> undefined
-        TmFloat{} -> undefined
         TmLet fi x t1 t2 -> do
                 tyT1 <- typeof ctx t1
                 ctx' <- addbinding fi x (VarBind tyT1) ctx

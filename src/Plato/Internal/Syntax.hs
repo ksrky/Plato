@@ -8,8 +8,6 @@ data Expr
         = VarExpr Info Name
         | AppExpr Info Expr Expr
         | TAppExpr Info Expr Type
-        | FloatExpr Info Float
-        | StringExpr Info String
         | LamExpr Info Name Expr
         | LetExpr Info Decl Expr
         | ProjExpr Info Expr Name
@@ -38,7 +36,7 @@ data Decl
         | FuncDecl Info Name Expr Type
         deriving (Eq, Show)
 
-data Decls = Decls {imports :: [ModuleName], decls :: [Decl], body :: Expr} deriving (Eq, Show)
+data Decls = Decls {imports :: [ModuleName], decls :: [Decl], main :: (Expr, Type)} deriving (Eq, Show)
 
 class GetInfo a where
         getInfo :: a -> Info
@@ -47,8 +45,6 @@ instance GetInfo Expr where
         getInfo (VarExpr fi _) = fi
         getInfo (AppExpr fi _ _) = fi
         getInfo (TAppExpr fi _ _) = fi
-        getInfo (FloatExpr fi _) = fi
-        getInfo (StringExpr fi _) = fi
         getInfo (LamExpr fi _ _) = fi
         getInfo (LetExpr fi _ _) = fi
         getInfo (ProjExpr fi _ _) = fi
