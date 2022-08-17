@@ -43,7 +43,6 @@ library
       Plato.Debug.EvalIO
       Plato.Debug.InternalTrans
       Plato.Debug.Parser
-      Plato.Debug.PrettyCore
       Plato.Debug.REPL
       Plato.Internal.Rename
       Plato.Internal.Syntax
@@ -89,7 +88,6 @@ executable Plato-exe
       Plato.Debug.EvalIO
       Plato.Debug.InternalTrans
       Plato.Debug.Parser
-      Plato.Debug.PrettyCore
       Plato.Debug.REPL
       Plato.Internal.Rename
       Plato.Internal.Syntax

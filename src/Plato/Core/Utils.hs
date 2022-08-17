@@ -25,7 +25,9 @@ instance PrettyCore Term where
                         let (tyX', ctx') = pickfreshname tyX ctx
                          in "(\\" ++ show tyX' ++ ": " ++ pretty ctx knK1 ++ ". " ++ pretty ctx' t2 ++ ")"
                 TmTApp _ t1 tyT2 -> "(" ++ pretty ctx t1 ++ " [" ++ pretty ctx tyT2 ++ "]" ++ ")"
-                TmLet _ x t1 t2 -> "(let {" ++ show x ++ "=" ++ pretty ctx t1 ++ "} in " ++ pretty ctx t2 ++ ")"
+                TmLet _ x t1 t2 ->
+                        let (x', ctx') = pickfreshname x ctx
+                         in "(let {" ++ show x' ++ "=" ++ pretty ctx t1 ++ "} in " ++ pretty ctx' t2 ++ ")"
                 TmFix _ t1 -> "(fix " ++ pretty ctx t1 ++ ")"
                 TmProj _ t1 l -> pretty ctx t1 ++ "." ++ show l
                 TmRecord _ fields ->

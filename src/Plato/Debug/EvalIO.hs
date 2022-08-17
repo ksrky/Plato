@@ -40,6 +40,28 @@ evalIO ctx t = case eval1 t of
                 TmLet fi x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet fi x t1' t2
+                TmFix fi v1 | isval v1 -> case v1 of
+                        TmAbs _ _ _ t12 -> Just $ termSubstTop t t12
+                        _ -> Nothing
+                TmFix fi t1 -> do
+                        t1' <- eval1 t1
+                        Just $ TmFix fi t1'
+                TmProj fi (TmRecord fi2 fields) l -> lookup l fields
+                TmProj fi t1 l -> do
+                        t1' <- eval1 t1
+                        Just $ TmProj fi t1' l
+                TmRecord fi fields -> do
+                        let evalafield :: [(Name, Term)] -> Maybe [(Name, Term)]
+                            evalafield l = case l of
+                                [] -> Nothing
+                                (l, vi) : rest | isval vi -> do
+                                        rest' <- evalafield rest
+                                        Just $ (l, vi) : rest'
+                                (l, ti) : rest -> do
+                                        ti' <- eval1 ti
+                                        Just $ (l, ti') : rest
+                        fields' <- evalafield fields
+                        Just $ TmRecord fi fields'
                 TmTag _ l vs tyT | all isval vs -> Nothing
                 TmTag fi l ts tyT -> do
                         ts' <- mapM eval1 ts

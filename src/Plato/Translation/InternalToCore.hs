@@ -59,9 +59,13 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e
                 return $ TmProj fi t1 l
         traexpr (RecordExpr fi fields) = do
-                fields' <- forM fields $ \(li, ei) -> do
-                        ti <- traexpr ei
-                        return (li, ti)
+                fields' <- forM fields $ \(li, ei) -> case restty of
+                        RecordType _ fieldtys -> case lookup li fieldtys of
+                                Just tyi -> do
+                                        ti <- transExpr ctx tyi ei
+                                        return (li, ti)
+                                _ -> throwError fi $ "label " ++ show li ++ " not found in the type signature"
+                        _ -> throwError fi $ "Expected record type, but got " ++ show restty
                 return $ TmRecord fi fields'
         traexpr (CaseExpr fi e alts) = do
                 t <- traexpr e
