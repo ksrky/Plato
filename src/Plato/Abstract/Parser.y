@@ -71,6 +71,7 @@ topdecls    :: { [A.TopDecl] }
 
 topdecl     :: { A.TopDecl }
             : 'data' conid tyvars '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
+            | 'data' conid tyvars                   { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 [] }
             | 'type' conid tyvars'=' type           { A.TypeDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | decl                                  { A.Decl $1 }
 

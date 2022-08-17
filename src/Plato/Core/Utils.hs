@@ -14,6 +14,10 @@ import Plato.Core.Syntax
 class PrettyCore a where
         pretty :: Context -> a -> String
 
+-- todo: outer paren
+-- pretty ctx b t = outer b $ case t of ...
+-- outer True str = "(" ++ str ++ ")"
+-- outer False str = str
 instance PrettyCore Term where
         pretty ctx t = case t of
                 TmVar _ x n -> if length ctx == n then show $ index2name ctx x else "[bad index]"
@@ -48,7 +52,7 @@ instance PrettyCore Term where
                                 let (xs, ctx') = (`runState` ctx) $
                                         forM [1 .. ki] $ \i -> state $ \ctx -> pickfreshname (str2varName $ show i) ctx
                                  in show li ++ " " ++ unwords (map show xs) ++ " -> " ++ pretty ctx' ti
-                         in "(case " ++ pretty ctx t1 ++ " of {" ++ intercalate " | " (map (prettyAlt ctx) alts) ++ "}"
+                         in "(case " ++ pretty ctx t1 ++ " of {" ++ intercalate " | " (map (prettyAlt ctx) alts) ++ "})"
 
 prettyAlt :: Context -> (Name, (Int, Term)) -> String
 prettyAlt ctx (li, (ki, ti)) =

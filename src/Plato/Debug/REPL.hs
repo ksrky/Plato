@@ -24,7 +24,7 @@ main = do
                 fname : _ -> processFile fname
 
 repl :: IO ()
-repl = runInputT defaultSettings (loop initContext)
+repl = runInputT defaultSettings (loop emptyContext)
     where
         loop ctx = do
                 minput <- getInputLine ">> "
@@ -41,7 +41,7 @@ processFile fname = do
         let src = "examples/" ++ fname
         contents <- readFile src
         putStrLn $ "----------" ++ src ++ "----------"
-        process initContext contents
+        process emptyContext contents
         putStrLn ""
 
 process :: Context -> String -> IO Context
@@ -49,8 +49,8 @@ process ctx input = case runAlex input parse of
         Left msg -> putStrLn msg >> return ctx
         Right ast -> do
                 inner <- abstract2internal ast
-                cmds <- internal2core initContext inner
-                let ctx' = foldr cons ctx (binds cmds)
+                cmds <- internal2core ctx inner
+                let ctx' = foldl (flip cons) ctx (binds cmds)
                 res <- liftIO $ evalIO ctx' (body cmds)
                 putStrLn $ pretty ctx' res
                 return ctx'

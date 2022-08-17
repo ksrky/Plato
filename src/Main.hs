@@ -23,11 +23,11 @@ main = do
                 [] -> repl
                 src : _ -> do
                         contents <- readFile src
-                        process initContext contents
+                        process emptyContext contents
                         return ()
 
 repl :: IO ()
-repl = runInputT defaultSettings (loop initContext)
+repl = runInputT defaultSettings (loop emptyContext)
     where
         loop ctx = do
                 minput <- getInputLine ">> "
@@ -38,16 +38,13 @@ repl = runInputT defaultSettings (loop initContext)
                                 liftIO $ process ctx input
                                 loop ctx
 
-processFile :: String -> IO ()
-processFile src = undefined
-
 process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
         Left msg -> putStrLn msg >> return ctx
         Right ast -> do
                 inner <- abstract2internal ast
-                cmds <- internal2core initContext inner
-                let ctx' = foldr cons ctx (binds cmds)
+                cmds <- internal2core ctx inner
+                let ctx' = foldl (flip cons) ctx (binds cmds)
                     res = eval ctx' (body cmds)
                 putStrLn $ pretty ctx' res
                 return ctx'

@@ -45,5 +45,5 @@ process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
                 inner <- abstract2internal ast
-                cmds <- internal2core initContext inner
+                cmds <- internal2core emptyContext inner
                 print cmds >> return cmds

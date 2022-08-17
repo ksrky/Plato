@@ -14,9 +14,6 @@ type Context = Vect (Name, Binding)
 emptyContext :: Context
 emptyContext = empty
 
-initContext :: Context --tmp
-initContext = cons (str2tyConName "String", TyVarBind KnStar) $ cons (str2tyConName "Float", TyVarBind KnStar) emptyContext
-
 addbinding :: MonadThrow m => Info -> Name -> Binding -> Context -> m Context
 addbinding fi x bind ctx = case look x ctx of
         Just _ -> throwError fi $ "Conflicting definition of " ++ show x

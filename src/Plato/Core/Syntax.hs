@@ -11,8 +11,7 @@ import Plato.Common.Name
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Ty
-        = --TyId Info Name
-          TyVar Info Int Int
+        = TyVar Info Int Int
         | TyArr Info Ty Ty
         | TyAll Info Name Kind Ty
         | TyAbs Info Name Kind Ty
@@ -22,8 +21,7 @@ data Ty
         deriving (Eq, Show)
 
 data Term
-        = --TmId Info Name
-          TmVar Info Int Int
+        = TmVar Info Int Int
         | TmAbs Info Name Ty Term
         | TmApp Info Term Term
         | TmTAbs Info Name Kind Term

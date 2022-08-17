@@ -108,7 +108,7 @@ transFuncTyDecls :: MonadThrow m => [A.TopDecl] -> m [I.Decl]
 transFuncTyDecls tds = do
         fs <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [f]
+                        A.Decl (A.FuncDecl fi f e) -> tell [f]
                         _ -> return ()
         execWriterT $
                 forM tds $ \case
