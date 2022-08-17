@@ -114,8 +114,8 @@ tyeqv fi ctx = tyeqv'
                 let tyS' = simplifyty ctx tyS
                     tyT' = simplifyty ctx tyT
                 case (tyS', tyT') of
-                        (TyVar _ i _, _) | istyabb ctx i -> tyeqv' (gettyabb ctx i) tyT
-                        (_, TyVar _ i _) | istyabb ctx i -> tyeqv' tyS (gettyabb ctx i)
+                        (TyVar _ i _, _) | istyabb ctx i -> tyeqv' (gettyabb ctx i) tyT'
+                        (_, TyVar _ i _) | istyabb ctx i -> tyeqv' tyS' (gettyabb ctx i)
                         (TyVar _ i _, TyVar _ j _) | i == j -> return ()
                         (TyArr _ tyS1 tyS2, TyArr _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
@@ -129,6 +129,13 @@ tyeqv fi ctx = tyeqv'
                         (TyApp _ tyS1 tyS2, TyApp _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
+                        (TyId _ b1, TyId _ b2) | b1 == b2 -> return ()
+                        (TyId _ b1, _) -> do
+                                i <- getVarIndex fi ctx b1
+                                tyeqv' (gettyabb ctx i) tyT'
+                        (_, TyId _ b2) -> do
+                                i <- getVarIndex fi ctx b2
+                                tyeqv' tyS' (gettyabb ctx i)
                         (TyRecord _ fields1, TyRecord fi2 fields2) | length fields1 == length fields2 -> forM_ fields2 $
                                 \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> tyeqv fi2 ctx tyTi1 tyTi2
@@ -172,6 +179,9 @@ kindof ctx tyT = case tyT of
                 knK2 <- kindof ctx' tyT2
                 unless (knK2 == KnStar) $ throwError (getInfo tyT2) "Kind * expected"
                 return KnStar
+        TyId fi b -> do
+                i <- getVarIndex fi ctx b
+                getkind fi ctx i
         TyRecord fi fieldtys -> do
                 forM_ fieldtys $ \(l, tyS) -> do
                         knS <- kindof ctx tyS

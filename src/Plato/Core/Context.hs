@@ -19,9 +19,6 @@ addbinding fi x bind ctx = case look x ctx of
         Just _ -> throwError fi $ "Conflicting definition of " ++ show x
         _ -> return $ cons (x, bind) ctx
 
-addbinding_ :: Info -> Name -> Binding -> Context -> Context
-addbinding_ fi x bind = cons (x, bind)
-
 addname :: MonadThrow m => Info -> Name -> Context -> m Context
 addname fi x = addbinding fi x NameBind
 
@@ -55,3 +52,8 @@ getVarIndex :: MonadThrow m => Info -> Context -> Name -> m Int
 getVarIndex fi ctx x = case elemIndex x (vmap fst ctx) of
         Just i -> return i
         Nothing -> throwError fi $ "Unbound variable name: '" ++ show x ++ "'"
+
+isVarExist :: Context -> Name -> Bool
+isVarExist ctx x = case elemIndex x (vmap fst ctx) of
+        Just _ -> True
+        Nothing -> False

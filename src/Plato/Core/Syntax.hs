@@ -16,6 +16,7 @@ data Ty
         | TyAll Info Name Kind Ty
         | TyAbs Info Name Kind Ty
         | TyApp Info Ty Ty
+        | TyId Info Name
         | TyRecord Info [(Name, Ty)]
         | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
@@ -58,6 +59,7 @@ tymap onvar c tyT = walk c tyT
                 TyAll fi tyX knK1 tyT2 -> TyAll fi tyX knK1 (walk (c + 1) tyT2)
                 TyAbs fi tyX knK1 tyT2 -> TyAbs fi tyX knK1 (walk (c + 1) tyT2)
                 TyApp fi tyT1 tyT2 -> TyApp fi (walk c tyT1) (walk c tyT2)
+                TyId fi b -> TyId fi b
                 TyRecord fi fieldtys -> TyRecord fi (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
                 TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
 

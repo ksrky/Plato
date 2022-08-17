@@ -9,5 +9,7 @@ fmap = \X Y f mx -> case mx of {
 id : forall a. a -> a;
 id = \X -> \x -> x;
 
-main : Maybe Float;
-main = (fmap [Float] [Float]) (id [Float]) (Just [Float] 3);
+data T = T1 | T2;
+
+main : Maybe T;
+main = (fmap [T] [T]) (id [T]) (Just [T] T1);

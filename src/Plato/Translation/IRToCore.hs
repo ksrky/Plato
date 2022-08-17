@@ -8,6 +8,7 @@ import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.IR.Syntax
+import Plato.IR.Utils
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -28,7 +29,7 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 tyT2 <- transType ctx t2
                 return $ TmTApp fi t1 tyT2
-        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of
+        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyConName = case restty of
                 AllType _ tyX ty -> do
                         let knK1 = KnStar -- tmp
                         ctx' <- addname fi tyX ctx
@@ -92,6 +93,7 @@ transType :: MonadThrow m => Context -> Type -> m Ty
 transType ctx = tratype
     where
         tratype :: MonadThrow m => Type -> m Ty
+        tratype (VarType fi x) | not (isVarExist ctx x) = return $ TyId fi x
         tratype (VarType fi x) = do
                 i <- getVarIndex fi ctx x
                 return $ TyVar fi i (length ctx)
@@ -128,16 +130,16 @@ transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
-                let ctx' = addbinding_ fi name (TyAbbBind tyT Nothing) ctx
+                ctx' <- addname fi name ctx
                 return ((name, TyAbbBind tyT Nothing), ctx')
         VarDecl fi f ty -> do
                 tyT <- transType ctx ty
-                let ctx' = addbinding_ fi f (VarBind tyT) ctx
+                ctx' <- addname fi f ctx
                 return ((f, VarBind tyT), ctx')
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
                 tyT <- transType ctx ty
-                let ctx' = addbinding_ fi f (VarBind tyT) ctx
+                ctx' <- addname fi f ctx
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 
 ir2core :: MonadThrow m => Context -> Decls -> m Commands
