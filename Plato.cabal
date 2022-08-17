@@ -47,6 +47,7 @@ library
       Plato.IR.Rename
       Plato.IR.Syntax
       Plato.IR.Utils
+      Plato.Main
       Plato.Translation.AbstractToIR
       Plato.Translation.IRToCore
   other-modules:
@@ -92,6 +93,7 @@ executable Plato-exe
       Plato.IR.Rename
       Plato.IR.Syntax
       Plato.IR.Utils
+      Plato.Main
       Plato.Translation.AbstractToIR
       Plato.Translation.IRToCore
       Paths_Plato
