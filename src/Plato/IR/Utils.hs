@@ -1,9 +1,9 @@
-module Plato.Internal.Utils where
+module Plato.IR.Utils where
 
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Pretty
-import Plato.Internal.Syntax
+import Plato.IR.Syntax
 
 instance Pretty Expr where
         pretty (VarExpr _ x) = pretty x

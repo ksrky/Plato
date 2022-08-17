@@ -2,7 +2,6 @@ module Plato.Debug.Parser where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
-import Plato.Translation.AbstractToInternal
 
 import Control.Monad.State
 import System.Console.Haskeline

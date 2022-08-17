@@ -34,17 +34,17 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp fi v1@(TmTAbs _ x1 _ t12) v2 | isval v2 -> do
                         -- tmp: should be removed later
                         tyT2 <- typeof ctx v2
-                        return $ TmApp fi (TmTApp fi v1 tyT2) v2
+                        Just $ TmApp fi (TmTApp fi v1 tyT2) v2
                 TmApp fi v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
-                        return $ TmApp fi v1 t2'
+                        Just $ TmApp fi v1 t2'
                 TmApp fi t1 t2 -> do
                         t1' <- eval1 t1
-                        return $ TmApp fi t1' t2
-                TmTApp _ (TmTAbs _ x _ t11) tyT2 -> return $ tytermSubstTop tyT2 t11
+                        Just $ TmApp fi t1' t2
+                TmTApp _ (TmTAbs _ x _ t11) tyT2 -> Just $ tytermSubstTop tyT2 t11
                 TmTApp fi t1 tyT2 -> do
                         t1' <- eval1 t1
-                        return $ TmTApp fi t1' tyT2
+                        Just $ TmTApp fi t1' tyT2
                 TmLet _ x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
                 TmLet fi x t1 t2 -> do
                         t1' <- eval1 t1
@@ -76,8 +76,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         ts' <- mapM eval1 ts
                         Just $ TmTag fi l ts' tyT
                 TmCase _ (TmTag _ li vs11 _) alts | all isval vs11 -> case lookup li alts of
-                        Just (_, body) -> do
-                                return $ foldr termSubstTop body vs11
+                        Just (_, body) -> Just $ foldr termSubstTop body vs11
                         Nothing -> Nothing
                 TmCase fi t1 alts -> do
                         t1' <- eval1 t1
@@ -238,8 +237,8 @@ typeof ctx t = case t of
                                 return tyT2
                         Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
                 _ -> throwError fi "Expected variant type"
-        TmCase fi tyT alts -> do
-                tyT <- typeof ctx tyT
+        TmCase fi t alts -> do
+                tyT <- typeof ctx t
                 case simplifyty ctx tyT of
                         TyVariant fieldtys -> do
                                 when (null fieldtys) $ return ()

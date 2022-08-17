@@ -1,13 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Plato.Translation.InternalToCore where
+module Plato.Translation.IRToCore where
 
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Internal.Syntax
+import Plato.IR.Syntax
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -140,8 +140,8 @@ transDecl decl = StateT $ \ctx -> case decl of
                 let ctx' = addbinding_ fi f (VarBind tyT) ctx
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 
-internal2core :: MonadThrow m => Context -> Decls -> m Commands
-internal2core ctx (Decls mns decls (body, bodyty)) = (`evalStateT` ctx) $ do
+ir2core :: MonadThrow m => Context -> Decls -> m Commands
+ir2core ctx (Decls mns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         let imps = map Import mns
         binds <- mapM transDecl decls
         ctx' <- get

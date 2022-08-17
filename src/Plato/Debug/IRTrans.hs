@@ -1,8 +1,8 @@
-module Plato.Debug.InternalTrans where
+module Plato.Debug.IRTrans where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
-import Plato.Translation.AbstractToInternal
+import Plato.Translation.AbstractToIR
 
 import System.Console.Haskeline
 import System.Environment
@@ -41,5 +41,5 @@ process :: String -> IO ()
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                inner <- abstract2internal ast
+                inner <- abstract2ir ast
                 print inner

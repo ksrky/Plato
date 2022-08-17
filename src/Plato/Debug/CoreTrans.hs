@@ -4,8 +4,8 @@ import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Translation.AbstractToInternal
-import Plato.Translation.InternalToCore
+import Plato.Translation.AbstractToIR
+import Plato.Translation.IRToCore
 
 import System.Console.Haskeline
 import System.Environment
@@ -44,6 +44,6 @@ process :: String -> IO Commands
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
-                inner <- abstract2internal ast
-                cmds <- internal2core emptyContext inner
+                inner <- abstract2ir ast
+                cmds <- ir2core emptyContext inner
                 print cmds >> return cmds

@@ -9,8 +9,8 @@ import Plato.Core.Eval
 import Plato.Core.Syntax
 import Plato.Core.Utils
 import Plato.Debug.EvalIO
-import Plato.Translation.AbstractToInternal
-import Plato.Translation.InternalToCore
+import Plato.Translation.AbstractToIR
+import Plato.Translation.IRToCore
 
 import Control.Monad.State
 import System.Console.Haskeline
@@ -48,8 +48,8 @@ process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
         Left msg -> putStrLn msg >> return ctx
         Right ast -> do
-                inner <- abstract2internal ast
-                cmds <- internal2core ctx inner
+                inner <- abstract2ir ast
+                cmds <- ir2core ctx inner
                 let ctx' = foldl (flip cons) ctx (binds cmds)
                 res <- liftIO $ evalIO ctx' (body cmds)
                 putStrLn $ pretty ctx' res

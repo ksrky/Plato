@@ -1,15 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Translation.AbstractToInternal where
+module Plato.Translation.AbstractToIR where
 
 import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Common.Vect
-import Plato.Internal.Rename
-import qualified Plato.Internal.Syntax as I
-import Plato.Internal.Utils as I
+import Plato.IR.Rename
+import qualified Plato.IR.Syntax as I
+import Plato.IR.Utils as I
 
 import Control.Exception.Safe
 import Control.Monad
@@ -136,8 +136,8 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-abstract2internal :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
-abstract2internal (ids, tds) = do
+abstract2ir :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
+abstract2ir (ids, tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
         vardecls <- transFuncTyDecls tds
