@@ -124,32 +124,26 @@ transType ctx = tratype
                         return (l, field')
                 return $ TyVariant fields'
 
-transDecl :: MonadThrow m => Decl -> StateT Context m Command
+transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
                 let ctx' = addbinding_ fi name (TyAbbBind tyT Nothing) ctx
-                return (Bind name (TyAbbBind tyT Nothing), ctx')
+                return ((name, TyAbbBind tyT Nothing), ctx')
+        VarDecl fi f ty -> do
+                tyT <- transType ctx ty
+                let ctx' = addbinding_ fi f (VarBind tyT) ctx
+                return ((f, VarBind tyT), ctx')
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
                 tyT <- transType ctx ty
                 let ctx' = addbinding_ fi f (VarBind tyT) ctx
-                return (Bind f (TmAbbBind t (Just tyT)), ctx')
+                return ((f, TmAbbBind t (Just tyT)), ctx')
 
-registerDecl :: MonadThrow m => Decl -> StateT Context m Command
-registerDecl decl = StateT $ \ctx -> case decl of
-        TypeDecl fi name ty -> do
-                ctx' <- addname fi name ctx
-                return (Bind name NameBind, ctx')
-        FuncDecl fi f e ty -> do
-                ctx' <- addname fi f ctx
-                return (Bind f NameBind, ctx')
-
-internal2core :: MonadThrow m => Context -> Decls -> m [Command]
+internal2core :: MonadThrow m => Context -> Decls -> m Commands
 internal2core ctx (Decls mns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         let imps = map Import mns
-        cmds1 <- mapM registerDecl decls
-        cmds2 <- mapM transDecl decls
+        binds <- mapM transDecl decls
         ctx' <- get
         main <- transExpr ctx' bodyty body
-        return $ imps ++ cmds1 ++ cmds2 ++ [Eval main]
+        return $ Commands{imports = imps, binds = binds, body = main}

@@ -40,7 +40,7 @@ processFile fname = do
         process contents
         putStrLn ""
 
-process :: String -> IO [Command]
+process :: String -> IO Commands
 process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do

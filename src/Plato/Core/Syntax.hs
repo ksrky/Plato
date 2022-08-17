@@ -44,11 +44,9 @@ data Binding
         | TmAbbBind Term (Maybe Ty)
         deriving (Eq, Show)
 
-data Command
-        = Import ModuleName
-        | Bind Name Binding
-        | Eval Term
-        deriving (Eq, Show)
+newtype Import = Import ModuleName deriving (Eq, Show)
+
+data Commands = Commands {imports :: [Import], binds :: [(Name, Binding)], body :: Term} deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Type

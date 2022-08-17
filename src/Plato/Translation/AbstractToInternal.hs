@@ -84,34 +84,38 @@ entry = str2varName "main"
 
 transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m (I.Decl, Memo)
 transDecls memo tds = do
-        decs <- execWriterT $
+        fs <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [(f, (fi, e))]
+                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [f]
                         _ -> return ()
-        tydecs <- execWriterT $
-                forM tds $ \case
-                        A.Decl (A.FuncTyDecl fi f ty) | f /= entry -> tell [(f, (fi, ty))]
-                        _ -> return ()
-        let fs = map fst decs `union` map fst tydecs
-            rcd = fresh memo
+        let rcd = fresh memo
             memo' = Memo{store = foldr cons (store memo) (zip fs (repeat rcd)), level = level memo + 1}
-        fields <- execWriterT $
-                forM fs $ \f -> case lookup f decs of
-                        Just (fi, e) -> do
-                                e' <- transExpr memo' e
-                                tell [(f, e')]
-                        Nothing -> do
-                                let Just (fi, _) = lookup f tydecs
-                                throwError fi $ name2str f ++ " lacks a binding"
         fieldtys <- execWriterT $
-                forM fs $ \f -> case lookup f tydecs of
-                        Just (fi, ty) -> do
+                forM tds $ \case
+                        A.Decl (A.FuncTyDecl fi1 f ty) | f `elem` fs -> do
                                 ty' <- transType ty
                                 tell [(f, ty')]
-                        Nothing -> do
-                                let Just (fi, _) = lookup f decs
-                                throwError fi $ name2str f ++ " lacks a type signature"
+                        _ -> return ()
+        fields <- execWriterT $
+                forM tds $ \case
+                        A.Decl (A.FuncDecl fi f e) | f /= entry -> do
+                                e' <- transExpr memo' e
+                                tell [(f, e')]
+                        _ -> return ()
         return (I.FuncDecl dummyInfo rcd (I.RecordExpr dummyInfo fields) (I.RecordType dummyInfo fieldtys), memo')
+
+transFuncTyDecls :: MonadThrow m => [A.TopDecl] -> m [I.Decl]
+transFuncTyDecls tds = do
+        fs <- execWriterT $
+                forM tds $ \case
+                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [f]
+                        _ -> return ()
+        execWriterT $
+                forM tds $ \case
+                        A.Decl (A.FuncTyDecl fi f ty) | f `notElem` fs -> do
+                                ty' <- transType ty
+                                tell [I.VarDecl dummyInfo f ty']
+                        _ -> return ()
 
 transTopDecl :: MonadThrow m => A.TopDecl -> WriterT [I.Decl] m ()
 transTopDecl (A.DataDecl fi1 name params fields) = do
@@ -136,9 +140,10 @@ abstract2internal :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
 abstract2internal (ids, tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
+        vardecls <- transFuncTyDecls tds
         (bind, memo) <- transDecls emptyMemo tds
         main <- transEntry memo bind
-        return $ I.Decls{I.imports = modns, I.decls = decls, I.main = main}
+        return $ I.Decls modns (decls ++ vardecls) main -- tmp: order of I.TypeDecl and I.FuncDecl
     where
         transEntry :: MonadThrow m => Memo -> I.Decl -> m (I.Expr, I.Type)
         transEntry memo bind = do
