@@ -9,6 +9,7 @@ import Plato.Common.Name
 import Plato.Common.Vect
 import Plato.Internal.Rename
 import qualified Plato.Internal.Syntax as I
+import Plato.Internal.Utils as I
 
 import Control.Exception.Safe
 import Control.Monad
@@ -25,7 +26,7 @@ transExpr memo = traexpr
         traexpr (A.AppExpr e1 e2) = do
                 e1' <- traexpr e1
                 e2' <- traexpr e2
-                return $ I.AppExpr (I.getInfo e2') e1' e2'
+                return $ I.AppExpr (getInfo e2') e1' e2'
         traexpr (A.TAppExpr fi e1 t2) = do
                 e1' <- traexpr e1
                 t2' <- transType t2
@@ -69,7 +70,7 @@ transType (A.VarType fi x) = return $ I.VarType fi x
 transType (A.AppType ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
-        return $ I.AppType (I.getInfo ty2') ty1' ty2'
+        return $ I.AppType (getInfo ty2') ty1' ty2'
 transType (A.ArrType fi ty1 ty2) = do
         ty1' <- transType ty1
         ty2' <- transType ty2

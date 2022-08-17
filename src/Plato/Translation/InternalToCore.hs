@@ -120,18 +120,12 @@ transType ctx = tratype
                         return (l, field')
                 return $ TyVariant fields'
 
-entryPoint :: Name
-entryPoint = str2varName "main"
-
 transDecl :: MonadThrow m => Decl -> StateT Context m Command
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
                 let ctx' = addbinding_ fi name (TyAbbBind tyT Nothing) ctx
                 return (Bind name (TyAbbBind tyT Nothing), ctx')
-        (FuncDecl fi f e ty) | f == entryPoint -> do
-                t <- transExpr ctx ty e
-                return (Eval t, ctx)
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
                 tyT <- transType ctx ty

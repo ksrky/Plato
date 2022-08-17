@@ -26,6 +26,16 @@ instance PrettyCore Term where
                          in "(\\" ++ show tyX' ++ ": " ++ pretty ctx knK1 ++ ". " ++ pretty ctx' t2 ++ ")"
                 TmTApp _ t1 tyT2 -> "(" ++ pretty ctx t1 ++ " [" ++ pretty ctx tyT2 ++ "]" ++ ")"
                 TmLet _ x t1 t2 -> "(let {" ++ show x ++ "=" ++ pretty ctx t1 ++ "} in " ++ pretty ctx t2 ++ ")"
+                TmFix _ t1 -> "(fix " ++ pretty ctx t1 ++ ")"
+                TmProj _ t1 l -> pretty ctx t1 ++ "." ++ show l
+                TmRecord _ fields ->
+                        let pf i (li, ti) =
+                                (if show li /= show i then show li ++ "=" else "") ++ pretty ctx ti
+                            pfs i l = case l of
+                                [] -> ""
+                                [f] -> pf i f
+                                f : rest -> pf i f ++ ", " ++ pfs (i + 1) rest
+                         in "{" ++ pfs 1 fields ++ "}"
                 TmTag _ li ts1 tyT2 ->
                         let prettyArg t =
                                 let pptm = pretty ctx t
@@ -55,6 +65,13 @@ instance PrettyCore Ty where
                 TyAll _ tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickfreshname tyX ctx
                          in "(∀" ++ show tyX' ++ ": " ++ pretty ctx knK1 ++ ". " ++ pretty ctx' tyT2 ++ ")"
+                TyRecord _ fields ->
+                        let pf i (li, tyTi) = (if show li /= show i then show li ++ ":" else "") ++ pretty ctx tyTi
+                            pfs i l = case l of
+                                [] -> ""
+                                [f] -> pf i f
+                                f : rest -> pf i f ++ ", " ++ pfs (i + 1) rest
+                         in "{" ++ pfs 1 fields ++ "}"
                 TyVariant fields -> undefined
 
 instance PrettyCore Kind where
@@ -64,9 +81,6 @@ instance PrettyCore Kind where
 ----------------------------------------------------------------
 -- Info
 ----------------------------------------------------------------
-class GetInfo a where
-        getInfo :: a -> Info
-
 instance GetInfo Term where
         getInfo (TmVar fi _ _) = fi
         getInfo (TmAbs fi _ _ _) = fi
@@ -74,6 +88,9 @@ instance GetInfo Term where
         getInfo (TmTAbs fi _ _ _) = fi
         getInfo (TmTApp fi _ _) = fi
         getInfo (TmLet fi _ _ _) = fi
+        getInfo (TmFix fi _) = fi
+        getInfo (TmProj fi _ _) = fi
+        getInfo (TmRecord fi _) = fi
         getInfo (TmTag fi _ _ _) = fi
         getInfo (TmCase fi _ _) = fi
 
@@ -83,4 +100,5 @@ instance GetInfo Ty where
         getInfo (TyAll fi _ _ _) = fi
         getInfo (TyAbs fi _ _ _) = fi
         getInfo (TyApp fi _ _) = fi
+        getInfo (TyRecord fi _) = fi
         getInfo (TyVariant _) = unreachable "TyVariant does not have Info"

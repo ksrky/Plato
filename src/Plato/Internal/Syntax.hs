@@ -37,26 +37,3 @@ data Decl
         deriving (Eq, Show)
 
 data Decls = Decls {imports :: [ModuleName], decls :: [Decl], main :: (Expr, Type)} deriving (Eq, Show)
-
-class GetInfo a where
-        getInfo :: a -> Info
-
-instance GetInfo Expr where
-        getInfo (VarExpr fi _) = fi
-        getInfo (AppExpr fi _ _) = fi
-        getInfo (TAppExpr fi _ _) = fi
-        getInfo (LamExpr fi _ _) = fi
-        getInfo (LetExpr fi _ _) = fi
-        getInfo (ProjExpr fi _ _) = fi
-        getInfo (RecordExpr fi _) = fi
-        getInfo (CaseExpr fi _ _) = fi
-        getInfo (TagExpr fi _ _) = fi
-
-instance GetInfo Type where
-        getInfo (VarType fi _) = fi
-        getInfo (ArrType fi _ _) = fi
-        getInfo (AllType fi _ _) = fi
-        getInfo (AbsType fi _ _) = fi
-        getInfo (AppType fi _ _) = fi
-        getInfo (RecordType fi _) = unreachable "RecordType does not have Info"
-        getInfo (SumType _) = unreachable "SumType does not have Info"

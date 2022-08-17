@@ -6,5 +6,8 @@ dummyInfo :: Info
 dummyInfo = Info{line = 0, col = 0}
 
 instance Show Info where
-    show (Info 0 0) = "dummyInfo"
-    show (Info l c) = show l ++ ":" ++ show c
+        show (Info 0 0) = "dummyInfo"
+        show (Info l c) = show l ++ ":" ++ show c
+
+class GetInfo a where
+        getInfo :: a -> Info

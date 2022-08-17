@@ -32,6 +32,7 @@ library
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name
+      Plato.Common.Pretty
       Plato.Common.Vect
       Plato.Core.Context
       Plato.Core.Eval
@@ -46,6 +47,7 @@ library
       Plato.Debug.REPL
       Plato.Internal.Rename
       Plato.Internal.Syntax
+      Plato.Internal.Utils
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore
   other-modules:
@@ -76,6 +78,7 @@ executable Plato-exe
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name
+      Plato.Common.Pretty
       Plato.Common.Vect
       Plato.Core.Context
       Plato.Core.Eval
@@ -90,6 +93,7 @@ executable Plato-exe
       Plato.Debug.REPL
       Plato.Internal.Rename
       Plato.Internal.Syntax
+      Plato.Internal.Utils
       Plato.Translation.AbstractToInternal
       Plato.Translation.InternalToCore
       Paths_Plato

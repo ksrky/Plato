@@ -2,6 +2,7 @@ module Plato.Common.Name where
 
 import Data.Char (isLower, isUpper)
 import Data.Text (Text, pack, snoc, unpack)
+import Plato.Common.Pretty (Pretty (..))
 
 ----------------------------------------------------------------
 -- Name
@@ -10,6 +11,9 @@ data Name = Name {nameSpace :: NameSpace, nameText :: Text} deriving (Eq)
 
 instance Show Name where
         show (Name _ t) = unpack t
+
+instance Pretty Name where
+        pretty (Name _ t) = unpack t
 
 data NameSpace
         = VarName
