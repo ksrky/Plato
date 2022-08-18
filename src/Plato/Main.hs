@@ -21,9 +21,7 @@ main = do
         args <- getArgs
         case args of
                 [] -> repl
-                src : _ -> do
-                        contents <- readFile src
-                        void $ process emptyContext contents
+                src : _ -> processFile src
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop emptyContext)
@@ -36,6 +34,11 @@ repl = runInputT defaultSettings (loop emptyContext)
                         Just input -> do
                                 liftIO $ process ctx input
                                 loop ctx
+
+processFile :: String -> IO ()
+processFile src = do
+        contents <- readFile src
+        void $ process emptyContext contents
 
 process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
