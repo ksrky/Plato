@@ -13,6 +13,7 @@ import Plato.IR.Utils
 import Control.Exception.Safe
 import Control.Monad.State
 import Data.Maybe (fromMaybe)
+import Plato.Common.Pretty
 
 transExpr :: MonadThrow m => Context -> Type -> Expr -> m Term
 transExpr ctx restty = traexpr
@@ -35,14 +36,14 @@ transExpr ctx restty = traexpr
                         ctx' <- addname fi tyX ctx
                         t2 <- transExpr ctx' ty e
                         return $ TmTAbs fi tyX knK1 t2
-                _ -> throwError fi $ "Expected all type, but got " ++ show restty
+                _ -> throwError fi $ "Expected all type, but got " ++ pretty restty
         traexpr (LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do
                         tyT1 <- transType ctx ty1
                         ctx' <- addname fi x ctx
                         t2 <- transExpr ctx' ty2 e
                         return $ TmAbs fi x tyT1 t2
-                _ -> throwError fi $ "Expected arrow type, but got " ++ show restty
+                _ -> throwError fi $ "Expected arrow type, but got " ++ pretty restty
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl fi2 f e2 ty -> do
                         tyT <- transType ctx ty

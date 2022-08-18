@@ -23,10 +23,6 @@ evalIO ctx t = case eval1 t of
                         _ -> Nothing
                 TmApp _ (TmAbs _ x _ t12) t2 -> do
                         return $ termSubstTop t2 t12
-                TmApp fi v1@(TmTAbs _ x1 _ t12) v2 | isval v2 -> do
-                        -- tmp: should be removed later
-                        tyT2 <- typeof ctx v2
-                        return $ TmApp fi (TmTApp fi v1 tyT2) v2
                 TmApp fi t1 t2 -> do
                         t1' <- eval1 t1
                         return $ TmApp fi t1' t2

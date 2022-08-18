@@ -30,12 +30,8 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmVar _ i n -> case getbinding ctx i of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
-                TmApp _ (TmAbs _ x _ t12) v2 | isval v2 -> do
-                        return $ termSubstTop v2 t12
-                TmApp fi v1@(TmTAbs _ x1 _ t12) v2 | isval v2 -> do
-                        -- tmp: should be removed later
-                        tyT2 <- typeof ctx v2
-                        Just $ TmApp fi (TmTApp fi v1 tyT2) v2
+                TmApp _ (TmAbs _ x _ t12) t2 -> do
+                        return $ termSubstTop t2 t12
                 TmApp fi v1 t2 | isval v1 -> do
                         t2' <- eval1 t2
                         Just $ TmApp fi v1 t2'

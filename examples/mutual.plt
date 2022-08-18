@@ -17,4 +17,4 @@ isodd = \n -> case n of {
 };
 
 main : Bool;
-main = iseven (Succ (Succ (Succ (Succ (Succ Zero)))));
+main = iseven (Succ (Succ (Succ (Succ Zero))));

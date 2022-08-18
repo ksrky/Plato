@@ -125,8 +125,9 @@ transTopDecl (A.DataDecl fi1 name params fields) = do
         let fieldty = I.SumType fields'
         tell [I.TypeDecl fi1 name (foldr (I.AbsType fi1) fieldty params)]
         forM_ fields' $ \(fi2, l, field) -> do
-                let ty = foldr (I.AllType fi2) (foldr (I.ArrType fi2) (I.VarType dummyInfo name) field) params
-                    tyargs = map (str2tyConName . show) [1 .. length params]
+                let bodyty = foldl (I.AppType fi2) (I.VarType dummyInfo name) (map (I.VarType dummyInfo) params)
+                    ty = foldr (I.AllType fi2) (foldr (I.ArrType fi2) bodyty field) params
+                    tyargs = map (str2tyVarName . show) [1 .. length params]
                     args = map (str2varName . show) [length params + 1 .. length params + length field]
                     tag = I.TagExpr fi2 l (map (I.VarExpr fi2) args)
                     exp = foldr (I.LamExpr fi2) tag (tyargs ++ args)
