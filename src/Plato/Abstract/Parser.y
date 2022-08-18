@@ -130,9 +130,7 @@ aexpr       :: { A.Expr }
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }
-            | conid vars                    { id2tyVarName $1 : $2 }
             | varid                         { [id2varName $1] }
-            | conid                         { [id2tyVarName $1] }
 
 alts        :: { [(A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }

@@ -5,6 +5,7 @@ module Plato.Translation.IRToCore where
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
+import Plato.Common.Pretty
 import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.IR.Syntax
@@ -13,7 +14,6 @@ import Plato.IR.Utils
 import Control.Exception.Safe
 import Control.Monad.State
 import Data.Maybe (fromMaybe)
-import Plato.Common.Pretty
 
 transExpr :: MonadThrow m => Context -> Type -> Expr -> m Term
 transExpr ctx restty = traexpr
@@ -30,12 +30,12 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 tyT2 <- transType ctx t2
                 return $ TmTApp fi t1 tyT2
-        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of
+        traexpr (LamExpr fi x e) | nameSpace x == TyVarName = case restty of
                 AllType _ tyX ty -> do
                         let knK1 = KnStar -- tmp
                         ctx' <- addname fi tyX ctx
                         t2 <- transExpr ctx' ty e
-                        return $ TmTAbs fi tyX knK1 t2
+                        return $ TmTAbs fi x knK1 t2
                 _ -> throwError fi $ "Expected all type, but got " ++ pretty restty
         traexpr (LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do

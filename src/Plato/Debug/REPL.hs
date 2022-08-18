@@ -39,7 +39,7 @@ repl = runInputT defaultSettings (loop emptyContext)
 processFile :: String -> IO ()
 processFile [] = return ()
 processFile fname = do
-        let src = "examples/" ++ fname
+        let src = "test/testcases/" ++ fname
         contents <- readFile src
         putStrLn $ "----------" ++ src ++ "----------"
         process emptyContext contents

@@ -1,5 +1,5 @@
 id : forall a. a -> a;
-id = \x -> x;
+id = \A x -> x;
 
 data P;
 p : P;
