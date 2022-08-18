@@ -1,3 +1,5 @@
+-- recursive type
+
 data Nat = Zero | Succ Nat;
 
 plus : Nat -> Nat -> Nat;

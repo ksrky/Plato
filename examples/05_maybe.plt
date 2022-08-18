@@ -1,3 +1,5 @@
+-- type operator
+
 data Maybe a = Nothing | Just a;
 
 fmap : forall a b. (a -> b) -> Maybe a -> Maybe b;

@@ -38,7 +38,7 @@ library:
   source-dirs: src
 
 executables:
-  Plato-exe:
+  plato:
     main: Main.hs
     source-dirs: src
     ghc-options:

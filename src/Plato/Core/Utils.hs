@@ -81,13 +81,38 @@ instance Pretty (Context, Ty) where
                                 [f] -> pf i f
                                 f : rest -> pf i f ++ ", " ++ pfs (i + 1) rest
                          in "{" ++ pfs 1 fields ++ "}"
-                TyVariant fields ->
-                        let pf (li, tys) = pretty li ++ if null tys then "" else unwords (map (\ty -> pretty (ctx, ty)) tys)
+                TyVariant _ fields ->
+                        let pf (li, tys) = pretty li ++ if null tys then "" else " " ++ unwords (map (\ty -> pretty (ctx, ty)) tys)
                          in intercalate " | " (map pf fields)
 
 instance Pretty (Context, Kind) where
         pretty (ctx, KnStar) = "*"
         pretty (ctx, KnArr knK1 knK2) = "(" ++ pretty (ctx, knK1) ++ " -> " ++ pretty (ctx, knK2) ++ ")"
+
+instance Pretty (Context, Binding) where
+        pretty (ctx, NameBind) = "<NameBind>"
+        pretty (ctx, VarBind tyT) = pretty (ctx, tyT)
+        pretty (ctx, TyVarBind knK) = pretty (ctx, knK)
+        pretty (ctx, TmAbbBind t (Just tyT)) = pretty (ctx, t) ++ " : " ++ pretty (ctx, tyT)
+        pretty (ctx, TmAbbBind tyT Nothing) = pretty (ctx, tyT)
+        pretty (ctx, TyAbbBind tyT (Just knK)) = pretty (ctx, tyT) ++ " : " ++ pretty (ctx, knK)
+        pretty (ctx, TyAbbBind tyT Nothing) = pretty (ctx, tyT)
+
+instance Pretty Import where
+        pretty (Import modn) = pretty modn
+
+instance Pretty (Context, Commands) where
+        pretty (ctx, Commands imps binds body) =
+                "import {\n\t"
+                        ++ intercalate "\n\t" (map pretty imps)
+                        ++ "\n}\nbinds {\n\t"
+                        ++ let pb ctx [] = ([], ctx)
+                               pb ctx ((x, b) : bs) =
+                                let (x', ctx') = pickfreshname x ctx
+                                    (l, ctx'') = pb ctx' bs
+                                 in ((pretty x' ++ " = " ++ pretty (ctx, b)) : l, ctx'')
+                               (ppbinds, ctx') = pb ctx binds
+                            in intercalate "\n\t" ppbinds ++ "\n}\nmain=" ++ pretty (ctx', body)
 
 ----------------------------------------------------------------
 -- Info
@@ -113,4 +138,4 @@ instance GetInfo Ty where
         getInfo (TyApp fi _ _) = fi
         getInfo (TyId fi _) = fi
         getInfo (TyRecord fi _) = fi
-        getInfo (TyVariant _) = unreachable "TyVariant does not have Info"
+        getInfo (TyVariant fi _) = fi

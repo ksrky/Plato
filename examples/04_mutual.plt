@@ -1,4 +1,4 @@
--- mutual recursion
+-- mutual recursive function
 
 data Nat = Zero | Succ Nat;
 

@@ -10,7 +10,7 @@ instance Pretty Expr where
         pretty (VarExpr _ x) = show x
         pretty (AppExpr _ e1 e2) = "(" ++ pretty e1 ++ " " ++ pretty e2 ++ ")"
         pretty (TAppExpr _ e1 ty2) = "(" ++ pretty e1 ++ " [" ++ pretty ty2 ++ "])"
-        pretty (LamExpr _ x e) = "(\\" ++ pretty x ++ " " ++ pretty e ++ ")"
+        pretty (LamExpr _ x e) = "(\\" ++ pretty x ++ "->" ++ pretty e ++ ")"
         pretty (LetExpr _ d e) = "(let {" ++ pretty d ++ "} in " ++ pretty e ++ ")"
         pretty (ProjExpr _ e l) = pretty e ++ "." ++ pretty l
         pretty (RecordExpr _ fields) =

@@ -23,8 +23,7 @@ main = do
                 [] -> repl
                 src : _ -> do
                         contents <- readFile src
-                        process emptyContext contents
-                        return ()
+                        void $ process emptyContext contents
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop emptyContext)
@@ -45,6 +44,7 @@ process ctx input = case runAlex input parse of
                 inner <- abstract2ir ast
                 cmds <- ir2core ctx inner
                 let ctx' = foldl (flip cons) ctx (binds cmds)
-                    res = eval ctx' (body cmds)
+                tyT <- typeof ctx' (body cmds)
+                let res = eval ctx' (body cmds)
                 putStrLn $ pretty (ctx', res)
                 return ctx'

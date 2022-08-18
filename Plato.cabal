@@ -69,7 +69,7 @@ library
     , vector
   default-language: Haskell2010
 
-executable Plato-exe
+executable plato
   main-is: Main.hs
   other-modules:
       Plato.Abstract.Lexer

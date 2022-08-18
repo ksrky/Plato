@@ -18,7 +18,7 @@ data Ty
         | TyApp Info Ty Ty
         | TyId Info Name
         | TyRecord Info [(Name, Ty)]
-        | TyVariant [(Name, [Ty])]
+        | TyVariant Info [(Name, [Ty])]
         deriving (Eq, Show)
 
 data Term
@@ -39,8 +39,8 @@ data Binding
         = NameBind
         | VarBind Ty
         | TyVarBind Kind
-        | TyAbbBind Ty (Maybe Kind)
         | TmAbbBind Term (Maybe Ty)
+        | TyAbbBind Ty (Maybe Kind)
         deriving (Eq, Show)
 
 newtype Import = Import ModuleName deriving (Eq, Show)
@@ -61,7 +61,7 @@ tymap onvar c tyT = walk c tyT
                 TyApp fi tyT1 tyT2 -> TyApp fi (walk c tyT1) (walk c tyT2)
                 TyId fi b -> TyId fi b
                 TyRecord fi fieldtys -> TyRecord fi (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
-                TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
+                TyVariant fi fieldtys -> TyVariant fi (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
 
 typeShiftAbove :: Int -> Int -> Ty -> Ty
 typeShiftAbove d =

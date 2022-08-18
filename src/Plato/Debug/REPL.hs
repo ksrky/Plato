@@ -52,6 +52,7 @@ process ctx input = case runAlex input parse of
                 inner <- abstract2ir ast
                 cmds <- ir2core ctx inner
                 let ctx' = foldl (flip cons) ctx (binds cmds)
+                tyT <- typeof ctx' (body cmds)
                 res <- liftIO $ evalIO ctx' (body cmds)
                 putStrLn $ pretty (ctx', res)
                 return ctx'

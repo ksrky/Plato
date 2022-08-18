@@ -95,13 +95,18 @@ gettyabb ctx i = case getbinding ctx i of
 
 computety :: Context -> Ty -> Maybe Ty
 computety ctx tyT = case tyT of
+        TyApp _ (TyAbs _ _ _ tyT12) tyT2 -> Just $ typeSubstTop tyT2 tyT12
         TyVar _ i _ | istyabb ctx i -> Just $ gettyabb ctx i
         _ -> Nothing
 
 simplifyty :: Context -> Ty -> Ty
-simplifyty ctx tyT = case computety ctx tyT of
-        Just tyT' -> simplifyty ctx tyT'
-        Nothing -> tyT
+simplifyty ctx tyT =
+        let tyT' = case tyT of
+                TyApp fi tyT1 tyT2 -> TyApp fi (simplifyty ctx tyT1) tyT2
+                _ -> tyT
+         in case computety ctx tyT' of
+                Just tyT'' -> simplifyty ctx tyT''
+                Nothing -> tyT
 
 tyeqv :: MonadThrow m => Info -> Context -> Ty -> Ty -> m ()
 tyeqv fi ctx = tyeqv'
@@ -133,12 +138,22 @@ tyeqv fi ctx = tyeqv'
                         (_, TyId _ b2) -> do
                                 i <- getVarIndex fi ctx b2
                                 tyeqv' tyS' (gettyabb ctx i)
-                        (TyRecord _ fields1, TyRecord fi2 fields2) | length fields1 == length fields2 -> forM_ fields2 $
-                                \(li2, tyTi2) -> case lookup li2 fields1 of
+                        (TyRecord fi1 fields1, TyRecord fi2 fields2) | length fields1 == length fields2 -> do
+                                forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
+                                        Just tyTi2 -> tyeqv fi1 ctx tyTi1 tyTi2
+                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found"
+                                forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> tyeqv fi2 ctx tyTi1 tyTi2
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
-                        (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "field length are not match"
-                        (TyVariant fields1, TyVariant fields2) -> unreachable "TyVariant is unique"
+                        (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "Record field length are not equal"
+                        (TyVariant fi1 fields1, TyVariant fi2 fields2) | length fields1 == length fields2 -> do
+                                forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
+                                        Just tyTi2 -> zipWithM (tyeqv fi1 ctx) tyTi1 tyTi2
+                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found"
+                                forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
+                                        Just tyTi1 -> zipWithM (tyeqv fi2 ctx) tyTi1 tyTi2
+                                        Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
+                        (TyVariant _ fields1, TyVariant fi2 fields2) -> throwError fi2 "Variant field length are not equal"
                         _ -> throwError fi $ "type mismatch: " ++ pretty (ctx, tyS) ++ ", " ++ pretty (ctx, tyT)
 
 ----------------------------------------------------------------
@@ -148,7 +163,7 @@ getkind :: MonadThrow m => Info -> Context -> Int -> m Kind
 getkind fi ctx i = case getbinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ (Just knK) -> return knK
-        TyAbbBind _ Nothing -> throwError fi $ "No kind recorded for variable " ++ pretty (index2name ctx i)
+        TyAbbBind tyT Nothing -> kindof ctx tyT
         _ -> throwError fi $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
 
 kindof :: MonadThrow m => Context -> Ty -> m Kind
@@ -184,7 +199,12 @@ kindof ctx tyT = case tyT of
                         knS <- kindof ctx tyS
                         unless (knS /= KnStar) $ throwError fi "Kind * expected"
                 return KnStar
-        TyVariant fields -> undefined
+        TyVariant fi fieldtys -> do
+                forM_ fieldtys $ \(l, tys) -> do
+                        forM_ tys $ \tyS -> do
+                                knS <- kindof ctx tyS
+                                unless (knS /= KnStar) $ throwError fi "Kind * expected" --tmp
+                return KnStar
 
 typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
@@ -237,17 +257,17 @@ typeof ctx t = case t of
                         return (li, tyTi)
                 return $ TyRecord dummyInfo fieldtys
         TmTag fi li ts1 tyT2 -> case simplifyty ctx tyT2 of
-                TyVariant fieldtys -> case lookup li fieldtys of
+                TyVariant _ fieldtys -> case lookup li fieldtys of
                         Just tyTiExpected -> do
                                 tyTi <- mapM (typeof ctx) ts1
                                 mapM_ (uncurry $ tyeqv fi ctx) (zip tyTi tyTiExpected)
                                 return tyT2
                         Nothing -> throwError fi $ "label " ++ pretty li ++ " not found"
-                _ -> throwError fi "Expected variant type"
+                tyT2' -> throwError fi $ "Expected variant type, but got " ++ pretty (ctx, tyT2')
         TmCase fi t alts -> do
                 tyT <- typeof ctx t
                 case simplifyty ctx tyT of
-                        TyVariant fieldtys -> do
+                        TyVariant fi1 fieldtys -> do
                                 when (null fieldtys) $ return ()
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
                                         Just tys -> do
@@ -258,10 +278,10 @@ typeof ctx t = case t of
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing | nullName li -> do
-                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind $ TyVariant fieldtys) ctx
+                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind $ TyVariant fi1 fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing -> throwError fi $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
-                        _ -> throwError fi "Expected variant type"
+                        tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT') ++ "\n" ++ show tyT ++ "\n" ++ show tyT'

@@ -111,7 +111,7 @@ transType ctx = tratype
                 let knK1 = KnStar -- tmp: \x.t = \x:*.t
                 ctx' <- addname fi x ctx
                 ty' <- transType ctx' ty
-                return $ TyAll fi x knK1 ty'
+                return $ TyAbs fi x knK1 ty'
         tratype (AppType fi ty1 ty2) = do
                 ty1' <- tratype ty1
                 ty2' <- tratype ty2
@@ -125,7 +125,7 @@ transType ctx = tratype
                 fields' <- forM fieldtys $ \(_, l, field) -> do
                         field' <- mapM tratype field
                         return (l, field')
-                return $ TyVariant fields'
+                return $ TyVariant dummyInfo fields' --tmp: dummyInfo
 
 transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of

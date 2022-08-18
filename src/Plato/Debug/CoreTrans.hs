@@ -2,8 +2,10 @@ module Plato.Debug.CoreTrans where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
+import Plato.Common.Pretty
 import Plato.Core.Context
 import Plato.Core.Syntax
+import Plato.Core.Utils
 import Plato.Translation.AbstractToIR
 import Plato.Translation.IRToCore
 
@@ -46,4 +48,4 @@ process input = case runAlex input parse of
         Right ast -> do
                 inner <- abstract2ir ast
                 cmds <- ir2core emptyContext inner
-                print cmds >> return cmds
+                putStrLn (pretty (emptyContext, cmds)) >> return cmds

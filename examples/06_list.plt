@@ -8,5 +8,7 @@ head = \X l -> case l of {
     Cons hd tl -> Just [X] hd;
 };
 
-main : Float;
-main = head (Cons [Float] 1 (Cons [Float] 2 (Nil [Float])));
+data T = T1 | T2;
+
+main : T;
+main = head [T] (Cons [T] T1 (Cons [T] T2 (Nil [T])));

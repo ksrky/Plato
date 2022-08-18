@@ -1,13 +1,13 @@
 module Plato.Core.Context where
 
 import Plato.Common.Error
+import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Common.Vect
 import Plato.Core.Syntax
 
 import Control.Exception.Safe
 import Control.Monad.State
-import Plato.Common.Info
 
 type Context = Vect (Name, Binding)
 

@@ -84,7 +84,7 @@ decl        :: { A.Decl }
             | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2varName $1) $3 }
 
 types       :: { [A.Type] }
-            : type types                    { $1 : $2 }
+            : atype types                   { $1 : $2 }
             | {- empty -}                   { [] }
 
 type        :: { A.Type }
