@@ -24,15 +24,15 @@ instance Pretty (Context, Term) where
         pretty (ctx, t) = case t of
                 TmVar _ x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TmAbs _ x tyT1 t2 ->
-                        let (x', ctx') = pickfreshname x ctx
+                        let (x', ctx') = pickFreshName x ctx
                          in "(\\" ++ pretty x' ++ ": " ++ pretty (ctx, tyT1) ++ ". " ++ pretty (ctx', t2) ++ ")"
                 TmApp _ t1 t2 -> "(" ++ pretty (ctx, t1) ++ " " ++ pretty (ctx, t2) ++ ")"
                 TmTAbs _ tyX knK1 t2 ->
-                        let (tyX', ctx') = pickfreshname tyX ctx
+                        let (tyX', ctx') = pickFreshName tyX ctx
                          in "(\\" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', t2) ++ ")"
                 TmTApp _ t1 tyT2 -> "(" ++ pretty (ctx, t1) ++ " [" ++ pretty (ctx, tyT2) ++ "]" ++ ")"
                 TmLet _ x t1 t2 ->
-                        let (x', ctx') = pickfreshname x ctx
+                        let (x', ctx') = pickFreshName x ctx
                          in "(let {" ++ pretty x' ++ "=" ++ pretty (ctx, t1) ++ "} in " ++ pretty (ctx', t2) ++ ")"
                 TmFix _ t1 -> "(fix " ++ pretty (ctx, t1) ++ ")"
                 TmProj _ t1 l -> pretty (ctx, t1) ++ "." ++ pretty l
@@ -52,14 +52,14 @@ instance Pretty (Context, Term) where
                 TmCase _ t1 alts ->
                         let prettyAlt ctx (li, (ki, ti)) =
                                 let (xs, ctx') = (`runState` ctx) $
-                                        forM [1 .. ki] $ \i -> state $ \ctx -> pickfreshname (str2varName $ show i) ctx
+                                        forM [1 .. ki] $ \i -> state $ \ctx -> pickFreshName (str2varName $ show i) ctx
                                  in pretty li ++ " " ++ unwords (map pretty xs) ++ " -> " ++ pretty (ctx', ti)
                          in "(case " ++ pretty (ctx, t1) ++ " of {" ++ intercalate " | " (map (prettyAlt ctx) alts) ++ "})"
 
 prettyAlt :: Context -> (Name, (Int, Term)) -> String
 prettyAlt ctx (li, (ki, ti)) =
         let (xs, ctx') = (`runState` ctx) $
-                forM [1 .. ki] $ \i -> state $ \ctx -> pickfreshname (str2varName $ show i) ctx
+                forM [1 .. ki] $ \i -> state $ \ctx -> pickFreshName (str2varName $ show i) ctx
          in pretty li ++ " " ++ unwords (map pretty xs) ++ " -> " ++ pretty (ctx', ti)
 
 instance Pretty (Context, Ty) where
@@ -67,11 +67,11 @@ instance Pretty (Context, Ty) where
                 TyVar _ x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TyArr _ tyT1 tyT2 -> "(" ++ pretty (ctx, tyT1) ++ " -> " ++ pretty (ctx, tyT2) ++ ")"
                 TyAbs _ tyX knK1 tyT2 ->
-                        let (tyX', ctx') = pickfreshname tyX ctx
+                        let (tyX', ctx') = pickFreshName tyX ctx
                          in "(λ" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', tyT2) ++ ")"
                 TyApp _ tyT1 tyT2 -> "(" ++ pretty (ctx, tyT1) ++ " " ++ pretty (ctx, tyT2) ++ ")"
                 TyAll _ tyX knK1 tyT2 ->
-                        let (tyX', ctx') = pickfreshname tyX ctx
+                        let (tyX', ctx') = pickFreshName tyX ctx
                          in "(∀" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', tyT2) ++ ")"
                 TyId _ b -> pretty b
                 TyRecord _ fields ->
@@ -108,7 +108,7 @@ instance Pretty (Context, Commands) where
                         ++ "\n}\nbinds {\n\t"
                         ++ let pb ctx [] = ([], ctx)
                                pb ctx ((x, b) : bs) =
-                                let (x', ctx') = pickfreshname x ctx
+                                let (x', ctx') = pickFreshName x ctx
                                     (l, ctx'') = pb ctx' bs
                                  in ((pretty x' ++ " = " ++ pretty (ctx, b)) : l, ctx'')
                                (ppbinds, ctx') = pb ctx binds

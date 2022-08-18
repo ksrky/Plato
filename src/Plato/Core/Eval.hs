@@ -14,12 +14,15 @@ import Control.Monad.State
 ----------------------------------------------------------------
 -- Evaluation
 ----------------------------------------------------------------
-isval :: Term -> Bool
-isval t = case t of
+isval :: Context -> Term -> Bool
+isval ctx t = case t of
         TmAbs{} -> True
-        TmRecord _ fields -> all (\(l, ti) -> isval ti) fields
-        TmTag _ _ ts1 _ -> all isval ts1
+        TmRecord _ fields -> all (\(l, ti) -> isval ctx ti) fields
+        TmTag _ _ ts1 _ -> all (isval ctx) ts1
         TmTAbs{} -> True
+        TmVar _ i _ -> case getBinding ctx i of
+                VarBind{} -> True
+                _ -> False
         _ -> False
 
 eval :: Context -> Term -> Term
@@ -27,12 +30,15 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
     where
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
-                TmVar _ i n -> case getbinding ctx i of
+                TmVar _ i n -> case getBinding ctx i of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
-                TmApp _ (TmAbs _ x _ t12) t2 -> do
-                        return $ termSubstTop t2 t12
-                TmApp fi v1 t2 | isval v1 -> do
+                TmApp _ (TmAbs _ x _ t12) v2 | isval ctx v2 -> do
+                        return $ termSubstTop v2 t12
+                TmApp fi v1 t2 | isval ctx v1 -> do
+                        t2' <- eval1 t2
+                        return $ TmApp fi v1 t2'
+                TmApp fi v1 t2 | isval ctx v1 -> do
                         t2' <- eval1 t2
                         Just $ TmApp fi v1 t2'
                 TmApp fi t1 t2 -> do
@@ -42,11 +48,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmTApp fi t1 tyT2 -> do
                         t1' <- eval1 t1
                         Just $ TmTApp fi t1' tyT2
-                TmLet _ x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
+                TmLet _ x v1 t2 | isval ctx v1 -> Just $ termSubstTop v1 t2
                 TmLet fi x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet fi x t1' t2
-                TmFix fi v1 | isval v1 -> case v1 of
+                TmFix fi v1 | isval ctx v1 -> case v1 of
                         TmAbs _ _ _ t12 -> Just $ termSubstTop t t12
                         _ -> Nothing
                 TmFix fi t1 -> do
@@ -60,7 +66,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         let evalafield :: [(Name, Term)] -> Maybe [(Name, Term)]
                             evalafield l = case l of
                                 [] -> Nothing
-                                (l, vi) : rest | isval vi -> do
+                                (l, vi) : rest | isval ctx vi -> do
                                         rest' <- evalafield rest
                                         Just $ (l, vi) : rest'
                                 (l, ti) : rest -> do
@@ -68,11 +74,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                                         Just $ (l, ti') : rest
                         fields' <- evalafield fields
                         Just $ TmRecord fi fields'
-                TmTag _ l vs tyT | all isval vs -> Nothing
+                TmTag _ l vs tyT | all (isval ctx) vs -> Nothing
                 TmTag fi l ts tyT -> do
                         ts' <- mapM eval1 ts
                         Just $ TmTag fi l ts' tyT
-                TmCase _ (TmTag _ li vs11 _) alts | all isval vs11 -> case lookup li alts of
+                TmCase _ (TmTag _ li vs11 _) alts | all (isval ctx) vs11 -> case lookup li alts of
                         Just (_, body) -> Just $ foldr termSubstTop body vs11
                         Nothing -> Nothing
                 TmCase fi t1 alts -> do
@@ -84,12 +90,12 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
 -- Type check
 ----------------------------------------------------------------
 istyabb :: Context -> Int -> Bool
-istyabb ctx i = case getbinding ctx i of
+istyabb ctx i = case getBinding ctx i of
         TyAbbBind tyT _ -> True
         _ -> False
 
 gettyabb :: Context -> Int -> Ty
-gettyabb ctx i = case getbinding ctx i of
+gettyabb ctx i = case getBinding ctx i of
         TyAbbBind tyT _ -> tyT
         _ -> error ""
 
@@ -123,10 +129,10 @@ tyeqv fi ctx = tyeqv'
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
                         (TyAll _ tyX1 _ tyS2, TyAll _ _ _ tyT2) -> do
-                                ctx' <- addname fi tyX1 ctx
+                                ctx' <- addName fi tyX1 ctx
                                 tyeqv fi ctx' tyS2 tyT2
                         (TyAbs _ tyX1 knKS1 tyS2, TyAbs _ _ knKT1 tyT2) | knKS1 == knKT1 -> do
-                                ctx' <- addname fi tyX1 ctx
+                                ctx' <- addName fi tyX1 ctx
                                 tyeqv fi ctx' tyS2 tyT2
                         (TyApp _ tyS1 tyS2, TyApp _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
@@ -160,7 +166,7 @@ tyeqv fi ctx = tyeqv'
 -- kindof, typeof
 ----------------------------------------------------------------
 getkind :: MonadThrow m => Info -> Context -> Int -> m Kind
-getkind fi ctx i = case getbinding ctx i of
+getkind fi ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ (Just knK) -> return knK
         TyAbbBind tyT Nothing -> kindof ctx tyT
@@ -176,7 +182,7 @@ kindof ctx tyT = case tyT of
                 return KnStar
         TyVar fi i _ -> getkind fi ctx i
         TyAbs fi tyX knK1 tyT2 -> do
-                ctx' <- addbinding fi tyX (TyVarBind knK1) ctx
+                ctx' <- addBinding fi tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
                 return $ KnArr knK1 knK2
         TyApp fi tyT1 tyT2 -> do
@@ -187,7 +193,7 @@ kindof ctx tyT = case tyT of
                         KnArr{} -> throwError (getInfo tyT1) "parameter kind mismatch"
                         _ -> throwError fi "arrow kind expected"
         TyAll fi tyX knK1 tyT2 -> do
-                ctx' <- addbinding fi tyX (TyVarBind knK1) ctx
+                ctx' <- addBinding fi tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
                 unless (knK2 == KnStar) $ throwError (getInfo tyT2) "Kind * expected"
                 return KnStar
@@ -210,7 +216,7 @@ typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
         TmVar fi i _ -> getTypeFromContext fi ctx i
         TmAbs fi x tyT1 t2 -> do
-                ctx' <- addbinding fi x (VarBind tyT1) ctx
+                ctx' <- addBinding fi x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyArr dummyInfo tyT1 (typeShift (-1) tyT2)
         TmApp fi t1 t2 -> do
@@ -222,7 +228,7 @@ typeof ctx t = case t of
                                 return tyT12
                         _ -> throwError (getInfo tyT1) "arrow type expected"
         TmTAbs fi tyX knK1 t2 -> do
-                ctx' <- addbinding fi tyX (TyVarBind knK1) ctx
+                ctx' <- addBinding fi tyX (TyVarBind knK1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyAll dummyInfo tyX knK1 tyT2
         TmTApp fi t1 tyT2 -> do
@@ -234,7 +240,7 @@ typeof ctx t = case t of
                         _ -> throwError (getInfo tyT1) "universal type expected"
         TmLet fi x t1 t2 -> do
                 tyT1 <- typeof ctx t1
-                ctx' <- addbinding fi x (VarBind tyT1) ctx
+                ctx' <- addBinding fi x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ typeShift (-1) tyT2
         TmFix fi t1 -> do
@@ -273,12 +279,12 @@ typeof ctx t = case t of
                                         Just tys -> do
                                                 ctx' <- (`execStateT` ctx) $
                                                         forM_ tys $ \tyT -> StateT $ \ctx -> do
-                                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind tyT) ctx
+                                                                let ctx' = addFreshName dummyVarName (VarBind tyT) ctx
                                                                 return ((), ctx')
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing | nullName li -> do
-                                                ctx' <- addbinding dummyInfo dummyVarName (VarBind $ TyVariant fi1 fieldtys) ctx
+                                                let ctx' = addFreshName dummyVarName (VarBind $ TyVariant fi1 fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing -> throwError fi $ "label " ++ show li ++ " not found"

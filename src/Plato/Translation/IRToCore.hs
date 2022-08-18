@@ -30,24 +30,29 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 tyT2 <- transType ctx t2
                 return $ TmTApp fi t1 tyT2
-        traexpr (LamExpr fi x e) | nameSpace x == TyVarName = case restty of
+        traexpr exp@(LamExpr fi x e) | nameSpace x == TyVarName = case restty of
                 AllType _ tyX ty -> do
-                        let knK1 = KnStar -- tmp
-                        ctx' <- addname fi tyX ctx
+                        let knK1 = KnStar
+                        ctx' <- addName fi tyX ctx
                         t2 <- transExpr ctx' ty e
                         return $ TmTAbs fi x knK1 t2
                 _ -> throwError fi $ "Expected all type, but got " ++ pretty restty
-        traexpr (LamExpr fi x e) = case restty of
+        traexpr exp@(LamExpr fi x e) = case restty of
                 ArrType _ ty1 ty2 -> do
                         tyT1 <- transType ctx ty1
-                        ctx' <- addname fi x ctx
+                        ctx' <- addName fi x ctx
                         t2 <- transExpr ctx' ty2 e
                         return $ TmAbs fi x tyT1 t2
-                _ -> throwError fi $ "Expected arrow type, but got " ++ pretty restty
+                AllType _ tyX ty -> do
+                        let knK1 = KnStar -- tmp
+                        ctx' <- addName fi tyX ctx
+                        t2 <- transExpr ctx' ty exp
+                        return $ TmTAbs fi tyX knK1 t2
+                _ -> throwError fi $ "Expected arrow type, but got " ++ pretty restty ++ "\n" ++ show exp
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl fi2 f e2 ty -> do
                         tyT <- transType ctx ty
-                        ctx' <- addname fi2 f ctx
+                        ctx' <- addName fi2 f ctx
                         t1 <- transExpr ctx' ty e2
                         let r = TmFix dummyInfo (TmAbs dummyInfo f tyT t1)
                         t2 <- transExpr ctx' restty e1
@@ -76,16 +81,16 @@ transExpr ctx restty = traexpr
                                 ctx' <- (`execStateT` ctx) $
                                         forM_ ps $ \(AnyPat fi2 mx) -> StateT $ \ctx -> do
                                                 let x = fromMaybe dummyVarName mx
-                                                ctx' <- addname fi1 x ctx
+                                                ctx' <- addName fi1 x ctx
                                                 return ((), ctx')
                                 ti <- transExpr ctx' restty body
                                 return (li, (length ps, ti))
                         AnyPat fi1 (Just x) -> do
-                                ctx' <- addname fi1 x ctx
+                                ctx' <- addName fi1 x ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
                         AnyPat fi1 Nothing -> do
-                                ctx' <- addname fi1 dummyVarName ctx
+                                ctx' <- addName fi1 dummyVarName ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
                 return $ TmCase fi t alts'
@@ -104,12 +109,12 @@ transType ctx = tratype
                 return $ TyArr fi ty1' ty2'
         tratype (AllType fi x ty) = do
                 let knK1 = KnStar -- tmp: forall x.t = forall x::*.t
-                ctx' <- addname fi x ctx
+                ctx' <- addName fi x ctx
                 ty' <- transType ctx' ty
                 return $ TyAll fi x knK1 ty'
         tratype (AbsType fi x ty) = do
                 let knK1 = KnStar -- tmp: \x.t = \x:*.t
-                ctx' <- addname fi x ctx
+                ctx' <- addName fi x ctx
                 ty' <- transType ctx' ty
                 return $ TyAbs fi x knK1 ty'
         tratype (AppType fi ty1 ty2) = do
@@ -131,16 +136,16 @@ transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
                 tyT <- transType ctx ty
-                ctx' <- addname fi name ctx
+                ctx' <- addName fi name ctx
                 return ((name, TyAbbBind tyT Nothing), ctx')
         VarDecl fi f ty -> do
                 tyT <- transType ctx ty
-                ctx' <- addname fi f ctx
+                ctx' <- addName fi f ctx
                 return ((f, VarBind tyT), ctx')
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
                 tyT <- transType ctx ty
-                ctx' <- addname fi f ctx
+                ctx' <- addName fi f ctx
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 
 ir2core :: MonadThrow m => Context -> Decls -> m Commands

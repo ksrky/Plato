@@ -14,17 +14,22 @@ type Context = Vect (Name, Binding)
 emptyContext :: Context
 emptyContext = empty
 
-addbinding :: MonadThrow m => Info -> Name -> Binding -> Context -> m Context
-addbinding fi x bind ctx = case look x ctx of
+addBinding :: MonadThrow m => Info -> Name -> Binding -> Context -> m Context
+addBinding fi x bind ctx = case look x ctx of
         Just _ -> throwError fi $ "Conflicting definition of " ++ show x
         _ -> return $ cons (x, bind) ctx
 
-addname :: MonadThrow m => Info -> Name -> Context -> m Context
-addname fi x = addbinding fi x NameBind
+addName :: MonadThrow m => Info -> Name -> Context -> m Context
+addName fi x = addBinding fi x NameBind
 
-pickfreshname :: Name -> Context -> (Name, Context)
-pickfreshname x ctx = case look x ctx of
-        Just _ -> pickfreshname (appendstr x "'") ctx
+addFreshName :: Name -> Binding -> Context -> Context
+addFreshName x bind ctx = case look x ctx of
+        Just _ -> addFreshName (appendstr x "'") bind ctx
+        Nothing -> cons (x, bind) ctx
+
+pickFreshName :: Name -> Context -> (Name, Context)
+pickFreshName x ctx = case look x ctx of
+        Just _ -> pickFreshName (appendstr x "'") ctx
         Nothing -> (x, cons (x, NameBind) ctx)
 
 index2name :: Context -> Int -> Name
@@ -38,11 +43,11 @@ bindingShift d bind = case bind of
         TmAbbBind t tyT_opt -> if d < 0 then error $ show d else TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
 
-getbinding :: Context -> Int -> Binding
-getbinding ctx i = if i + 1 < 0 then error $ show i else bindingShift (i + 1) (snd $ ctx ! i)
+getBinding :: Context -> Int -> Binding
+getBinding ctx i = if i + 1 < 0 then error $ show i else bindingShift (i + 1) (snd $ ctx ! i)
 
 getTypeFromContext :: MonadThrow m => Info -> Context -> Int -> m Ty
-getTypeFromContext fi ctx i = case getbinding ctx i of
+getTypeFromContext fi ctx i = case getBinding ctx i of
         VarBind tyT -> return tyT
         TmAbbBind _ (Just tyT) -> return tyT
         TmAbbBind _ Nothing -> throwError fi $ "No type recorded for variable " ++ show (index2name ctx i)

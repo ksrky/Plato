@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plato.EvaluateSpec where
+module Plato.EvalSpec where
 
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
@@ -26,7 +26,7 @@ spec = do
 testcases :: [(String, String -> Expectation)]
 testcases =
         [ ("01_bool.plt", (`shouldBe` "False"))
-        , ("02_natural.plt", (`shouldBe` "(Succ (Succ (Succ (Succ Zero)))"))
+        , ("02_natural.plt", (`shouldBe` "Succ (Succ (Succ Zero))"))
         , ("03_forall.plt", (`shouldBe` "p"))
         , ("04_mutual.plt", (`shouldBe` "True"))
         , ("05_maybe.plt", (`shouldBe` "Just T1"))
@@ -37,8 +37,8 @@ processFiles :: [(String, String -> Expectation)] -> SpecWith ()
 processFiles [] = return ()
 processFiles ((fname, iscorrect) : rest) = do
         let src = "test/testcases/" ++ fname
-        it fname $ do
-                contents <- readFile fname
+        it src $ do
+                contents <- readFile src
                 res <- process emptyContext contents
                 iscorrect res
         processFiles rest

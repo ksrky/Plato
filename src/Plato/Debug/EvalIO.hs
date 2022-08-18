@@ -18,11 +18,14 @@ evalIO ctx t = case eval1 t of
     where
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
-                TmVar _ i n -> case getbinding ctx i of
+                TmVar _ i n -> case getBinding ctx i of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
-                TmApp _ (TmAbs _ x _ t12) t2 -> do
-                        return $ termSubstTop t2 t12
+                TmApp _ (TmAbs _ x _ t12) v2 | isval ctx v2 -> do
+                        return $ termSubstTop v2 t12
+                TmApp fi v1 t2 | isval ctx v1 -> do
+                        t2' <- eval1 t2
+                        return $ TmApp fi v1 t2'
                 TmApp fi t1 t2 -> do
                         t1' <- eval1 t1
                         return $ TmApp fi t1' t2
@@ -30,11 +33,11 @@ evalIO ctx t = case eval1 t of
                 TmTApp fi t1 tyT2 -> do
                         t1' <- eval1 t1
                         return $ TmTApp fi t1' tyT2
-                TmLet _ x v1 t2 | isval v1 -> Just $ termSubstTop v1 t2
+                TmLet _ x v1 t2 | isval ctx v1 -> Just $ termSubstTop v1 t2
                 TmLet fi x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet fi x t1' t2
-                TmFix fi v1 | isval v1 -> case v1 of
+                TmFix fi v1 | isval ctx v1 -> case v1 of
                         TmAbs _ _ _ t12 -> Just $ termSubstTop t t12
                         _ -> Nothing
                 TmFix fi t1 -> do
@@ -48,7 +51,7 @@ evalIO ctx t = case eval1 t of
                         let evalafield :: [(Name, Term)] -> Maybe [(Name, Term)]
                             evalafield l = case l of
                                 [] -> Nothing
-                                (l, vi) : rest | isval vi -> do
+                                (l, vi) : rest | isval ctx vi -> do
                                         rest' <- evalafield rest
                                         Just $ (l, vi) : rest'
                                 (l, ti) : rest -> do
@@ -56,11 +59,11 @@ evalIO ctx t = case eval1 t of
                                         Just $ (l, ti') : rest
                         fields' <- evalafield fields
                         Just $ TmRecord fi fields'
-                TmTag _ l vs tyT | all isval vs -> Nothing
+                TmTag _ l vs tyT | all (isval ctx) vs -> Nothing
                 TmTag fi l ts tyT -> do
                         ts' <- mapM eval1 ts
                         Just $ TmTag fi l ts' tyT
-                TmCase _ (TmTag _ li vs11 _) alts | all isval vs11 -> case lookup li alts of
+                TmCase _ (TmTag _ li vs11 _) alts | all (isval ctx) vs11 -> case lookup li alts of
                         Just (_, body) -> do
                                 return $ foldr termSubstTop body vs11
                         Nothing -> Nothing
