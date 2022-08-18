@@ -1,6 +1,7 @@
 module Plato.Common.Name where
 
 import Data.Char (isLower, isUpper)
+import Data.List (intercalate)
 import Data.Text (Text, pack, snoc, unpack)
 import Plato.Common.Pretty (Pretty (..))
 
@@ -34,9 +35,6 @@ str2tyVarName s = Name TyVarName (pack s)
 str2tyConName :: String -> Name
 str2tyConName s = Name TyConName (pack s)
 
-name2str :: Name -> String
-name2str = unpack . nameText
-
 appendstr :: Name -> String -> Name
 appendstr n [] = n
 appendstr (Name ns tx) [c] = Name ns (snoc tx c)
@@ -46,15 +44,18 @@ dummyVarName :: Name
 dummyVarName = str2varName "_"
 
 isVar :: Name -> Bool
-isVar n = isLower $ head $ name2str n
+isVar n = isLower $ head $ show n
 
 isCon :: Name -> Bool
-isCon n = isUpper $ head $ name2str n
+isCon n = isUpper $ head $ show n
 
 nullName :: Name -> Bool
-nullName n = null $ name2str n
+nullName n = null $ show n
 
 ----------------------------------------------------------------
 -- Module
 ----------------------------------------------------------------
-type ModuleName = [Name]
+newtype ModuleName = ModuleName [Name] deriving (Eq, Show)
+
+instance Pretty ModuleName where
+        pretty (ModuleName modn) = intercalate "." (map pretty modn)

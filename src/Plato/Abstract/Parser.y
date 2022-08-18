@@ -59,7 +59,7 @@ impdecls    :: { [A.ImpDecl] }
             | {- empty -}                   { [] }
 
 impdecl     :: { A.ImpDecl }
-            : 'import' modid                { A.ImpDecl $2 }
+            : 'import' modid                { A.ImpDecl (N.ModuleName $2) }
 
 modid       :: { [N.Name] }
             : varid '.' modid               { id2conName $1 : $3 } -- todo: module name

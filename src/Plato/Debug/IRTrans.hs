@@ -8,6 +8,7 @@ import System.Console.Haskeline
 import System.Environment
 
 import Control.Monad.State
+import Plato.Common.Pretty
 
 main :: IO ()
 main = do
@@ -42,4 +43,4 @@ process input = case runAlex input parse of
         Left msg -> putStrLn msg >> error msg
         Right ast -> do
                 inner <- abstract2ir ast
-                print inner
+                putStrLn $ pretty inner

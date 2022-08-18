@@ -2,6 +2,7 @@ module Plato.Debug.EvalIO where
 
 import Plato.Common.Info
 import Plato.Common.Name
+import Plato.Common.Pretty
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Eval
@@ -11,7 +12,7 @@ import Plato.Core.Utils
 evalIO :: Context -> Term -> IO Term
 evalIO ctx t = case eval1 t of
         Just t' -> do
-                putStrLn $ pretty ctx t ++ "\n"
+                putStrLn $ pretty (ctx, t) ++ "\n"
                 evalIO ctx t'
         Nothing -> return t
     where

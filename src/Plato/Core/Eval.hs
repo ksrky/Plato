@@ -3,6 +3,7 @@ module Plato.Core.Eval where
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
+import Plato.Common.Pretty
 import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.Core.Utils
@@ -142,7 +143,7 @@ tyeqv fi ctx = tyeqv'
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
                         (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "field length are not match"
                         (TyVariant fields1, TyVariant fields2) -> unreachable "TyVariant is unique"
-                        _ -> throwError fi $ "type mismatch: " ++ pretty ctx tyS ++ ", " ++ pretty ctx tyT
+                        _ -> throwError fi $ "type mismatch: " ++ pretty (ctx, tyS) ++ ", " ++ pretty (ctx, tyT)
 
 ----------------------------------------------------------------
 -- kindof, typeof
@@ -151,8 +152,8 @@ getkind :: MonadThrow m => Info -> Context -> Int -> m Kind
 getkind fi ctx i = case getbinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ (Just knK) -> return knK
-        TyAbbBind _ Nothing -> throwError fi $ "No kind recorded for variable " ++ name2str (index2name ctx i)
-        _ -> throwError fi $ "getkind: Wrong kind of binding for variable " ++ name2str (index2name ctx i)
+        TyAbbBind _ Nothing -> throwError fi $ "No kind recorded for variable " ++ pretty (index2name ctx i)
+        _ -> throwError fi $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
 
 kindof :: MonadThrow m => Context -> Ty -> m Kind
 kindof ctx tyT = case tyT of
@@ -245,7 +246,7 @@ typeof ctx t = case t of
                                 tyTi <- mapM (typeof ctx) ts1
                                 mapM_ (uncurry $ tyeqv fi ctx) (zip tyTi tyTiExpected)
                                 return tyT2
-                        Nothing -> throwError fi $ "label " ++ name2str li ++ " not found"
+                        Nothing -> throwError fi $ "label " ++ pretty li ++ " not found"
                 _ -> throwError fi "Expected variant type"
         TmCase fi t alts -> do
                 tyT <- typeof ctx t

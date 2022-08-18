@@ -29,7 +29,7 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 tyT2 <- transType ctx t2
                 return $ TmTApp fi t1 tyT2
-        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyConName = case restty of
+        traexpr (LamExpr fi tyX e) | nameSpace tyX == TyVarName = case restty of
                 AllType _ tyX ty -> do
                         let knK1 = KnStar -- tmp
                         ctx' <- addname fi tyX ctx

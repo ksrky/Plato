@@ -12,6 +12,7 @@ import Plato.Translation.IRToCore
 
 import Control.Monad.State
 import Control.Monad.Writer.Lazy
+import Plato.Common.Pretty
 import System.Console.Haskeline
 import System.Environment
 
@@ -45,5 +46,5 @@ process ctx input = case runAlex input parse of
                 cmds <- ir2core ctx inner
                 let ctx' = foldl (flip cons) ctx (binds cmds)
                     res = eval ctx' (body cmds)
-                putStrLn $ pretty ctx' res
+                putStrLn $ pretty (ctx', res)
                 return ctx'

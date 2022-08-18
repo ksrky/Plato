@@ -3,6 +3,7 @@ module Plato.Debug.REPL where
 import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Common.Info
+import Plato.Common.Pretty
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Eval
@@ -52,5 +53,5 @@ process ctx input = case runAlex input parse of
                 cmds <- ir2core ctx inner
                 let ctx' = foldl (flip cons) ctx (binds cmds)
                 res <- liftIO $ evalIO ctx' (body cmds)
-                putStrLn $ pretty ctx' res
+                putStrLn $ pretty (ctx', res)
                 return ctx'
