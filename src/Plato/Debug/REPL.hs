@@ -65,6 +65,6 @@ process ctx input = case runAlex input parse of
                                 put $ cons (x, bind) ctx
                 when (null ctx) $ do
                         tyT <- typeof ctx'' (body cmds)
-                        let res = eval ctx'' (body cmds)
+                        res <- evalIO ctx'' (body cmds)
                         putStrLn $ pretty (ctx'', res)
                 return ctx''

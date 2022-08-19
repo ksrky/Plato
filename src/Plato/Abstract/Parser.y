@@ -81,7 +81,7 @@ decls       :: { [A.Decl] }
 
 decl        :: { A.Decl }
             : varid ':' type                { A.FuncTyDecl (mkInfo $1) (id2varName $1) $3 }
-            | varid '=' expr                { A.FuncDecl (mkInfo $1) (id2varName $1) $3 }
+            | varid vars '=' expr           { A.FuncDecl (mkInfo $1) (id2varName $1) $2 $4 }
 
 types       :: { [A.Type] }
             : atype types                   { $1 : $2 }
@@ -114,10 +114,10 @@ tyvars      :: { [N.Name] }
             | {- empty -}                   { [] }
 
 expr        :: { A.Expr }
-            : '\\' vars '->' expr                       { A.LamExpr (mkInfo $1) $2 $4 }
+            : '\\' varid vars '->' expr                 { A.LamExpr (mkInfo $1) (id2varName $2 : $3) $5 }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
             | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
-            | expr '[' type ']'                         { A.TAppExpr (mkInfo $2) $1 $3 }
+            | expr '[' types ']'                        { A.TAppExpr (mkInfo $2) $1 $3 }
             | expr aexpr                                { A.AppExpr $1 $2 }
             | aexpr                                     { $1 }
 
@@ -125,12 +125,10 @@ aexpr       :: { A.Expr }
             : '(' expr ')'                              { $2 }
             | varid                                     { A.VarExpr (mkInfo $1) (id2varName $1) }
             | conid                                     { A.VarExpr (mkInfo $1) (id2conName $1) }
-            {-| float                                     { A.FloatExpr (mkInfo $1) (fst $1) }
-            | string                                    { A.StringExpr (mkInfo $1) (fst $1) -}
 
 vars        :: { [N.Name] }
             : varid vars                    { id2varName $1 : $2 }
-            | varid                         { [id2varName $1] }
+            | {- empty -}                   { [] }
 
 alts        :: { [(A.Pat, A.Expr)] }
             : alt ';' alts                  { $1 : $3 }

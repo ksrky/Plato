@@ -6,7 +6,7 @@ import Plato.Common.Name
 data Expr
         = VarExpr Info Name
         | AppExpr Expr Expr
-        | TAppExpr Info Expr Type
+        | TAppExpr Info Expr [Type]
         | LamExpr Info [Name] Expr
         | LetExpr Info [Decl] Expr
         | CaseExpr Info Expr [(Pat, Expr)]
@@ -27,7 +27,7 @@ data Type
         deriving (Eq, Show)
 
 data Decl
-        = FuncDecl Info Name Expr
+        = FuncDecl Info Name [Name] Expr
         | FuncTyDecl Info Name Type
         deriving (Eq, Show)
 

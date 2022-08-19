@@ -27,10 +27,10 @@ transExpr memo = traexpr
                 e1' <- traexpr e1
                 e2' <- traexpr e2
                 return $ I.AppExpr (getInfo e2') e1' e2'
-        traexpr (A.TAppExpr fi e1 t2) = do
+        traexpr (A.TAppExpr fi e1 ts2) = do
                 e1' <- traexpr e1
-                t2' <- transType t2
-                return $ I.TAppExpr fi e1' t2'
+                ts2' <- mapM transType ts2
+                return $ foldl (\ty -> I.TAppExpr (getInfo ty) ty) e1' ts2'
         traexpr (A.LamExpr fi xs e) = do
                 e' <- traexpr e
                 return $ foldr (I.LamExpr fi) e' xs
@@ -83,7 +83,7 @@ transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m (I.Decl, Memo)
 transDecls memo tds = do
         fs <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) | f /= entry -> tell [f]
+                        A.Decl (A.FuncDecl _ f _ _) | f /= entry -> tell [f]
                         _ -> return ()
         let rcd = fresh memo
             memo' = Memo{store = foldr cons (store memo) (zip fs (repeat rcd)), level = level memo + 1}
@@ -95,8 +95,8 @@ transDecls memo tds = do
                         _ -> return ()
         fields <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) | f /= entry -> do
-                                e' <- transExpr memo' e
+                        A.Decl (A.FuncDecl fi f xs e) | f /= entry -> do
+                                e' <- transExpr memo' (A.LamExpr dummyInfo xs e)
                                 tell [(f, e')]
                         _ -> return ()
         return (I.FuncDecl dummyInfo rcd (I.RecordExpr dummyInfo fields) (I.RecordType dummyInfo fieldtys), memo')
@@ -105,7 +105,7 @@ transFuncTyDecls :: MonadThrow m => [A.TopDecl] -> m [I.Decl]
 transFuncTyDecls tds = do
         fs <- execWriterT $
                 forM tds $ \case
-                        A.Decl (A.FuncDecl fi f e) -> tell [f]
+                        A.Decl (A.FuncDecl _ f _ _) -> tell [f]
                         _ -> return ()
         execWriterT $
                 forM tds $ \case
@@ -147,8 +147,8 @@ abstract2ir (ids, tds) = do
         transEntry memo bind = do
                 body <- execWriterT $
                         forM tds $ \case
-                                A.Decl (A.FuncDecl fi f e) | f == entry -> do
-                                        e' <- transExpr memo e
+                                A.Decl (A.FuncDecl fi f xs e) | f == entry -> do
+                                        e' <- transExpr memo (A.LamExpr dummyInfo xs e)
                                         tell [e']
                                 _ -> return ()
                 bodyty <- execWriterT $
