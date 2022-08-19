@@ -1,5 +1,9 @@
 {
 module Plato.Abstract.Lexer where
+
+import Plato.Abstract.Token
+
+import qualified Data.Map.Strict as M
 }
 
 %wrapper "monadUserState"
@@ -42,7 +46,7 @@ tokens :-
 <0> in                          { keyword KwIn }
 <0> of                          { keyword KwOf }
 <0> let                         { keyword KwLet }
-<0> type                        { keyword KwType }
+<0> module                      { keyword KwModule }
 <0> where                       { keyword KwWhere }
 
 <0> \'                          { symbol SymApost }
@@ -89,37 +93,6 @@ data Token
     | TokEof
     deriving (Eq, Show)
 
-data Keyword
-    = KwCase
-    | KwData
-    | KwForall
-    | KwImport
-    | KwIn
-    | KwOf
-    | KwLet
-    | KwType
-    | KwWhere
-    deriving (Eq, Show)
-
-data Symbol
-    = SymApost
-    | SymArrow
-    | SymBackslash
-    | SymColon
-    | SymComma
-    | SymDot
-    | SymEqual
-    | SymLBrace
-    | SymLBrack
-    | SymLParen
-    | SymRBrace
-    | SymRBrack
-    | SymRParen
-    | SymSemicolon -- tmp
-    | SymUScore
-    | SymVBar
-    deriving (Eq, Show)
-
 keyword :: Keyword -> Action
 keyword key = \(pos,_,_,_) _ -> return $ TokKeyword (key, pos)
 
@@ -145,18 +118,18 @@ lex_string = \(pos,_,_,str) len -> do
 
 beginComment :: Action
 beginComment _ _ = do
-    depth <- getLexerCommentDepth 
-    setLexerCommentDepth (depth + 1)
+    depth <- getCommentDepth 
+    setCommentDepth (depth + 1)
     alexSetStartCode comment
     alexMonadScan
 
 endComment :: Action
 endComment _ _ = do
-    depth <- getLexerCommentDepth
+    depth <- getCommentDepth
     if depth == 0
         then alexError "lexical error: comment ended without starting."
         else do
-            setLexerCommentDepth (depth - 1)
+            setCommentDepth (depth - 1)
             if depth == 1
                 then alexSetStartCode 0
                 else alexSetStartCode comment
@@ -164,25 +137,27 @@ endComment _ _ = do
 
 alexEOF :: Alex Token
 alexEOF = do
-    depth <- getLexerCommentDepth
+    depth <- getCommentDepth
     if depth == 0
         then return TokEof
         else alexError "lexical error: unterminated block comment."
 
 data AlexUserState = AlexUserState {
-      lexerCommentDepth  :: Int
+      commentDepth :: Int
+    , precDict :: M.Map String Int
 }
 
 alexInitUserState :: AlexUserState
 alexInitUserState = AlexUserState {
-      lexerCommentDepth  = 0
+      commentDepth  = 0
+    , precDict = M.empty
 }
 
-getLexerCommentDepth :: Alex Int
-getLexerCommentDepth = lexerCommentDepth <$> alexGetUserState
+getCommentDepth :: Alex Int
+getCommentDepth = commentDepth <$> alexGetUserState
 
-setLexerCommentDepth :: Int -> Alex ()
-setLexerCommentDepth ss = do
+setCommentDepth :: Int -> Alex ()
+setCommentDepth ss = do
     ust <- alexGetUserState
-    alexSetUserState ust{ lexerCommentDepth = ss }
+    alexSetUserState ust{ commentDepth = ss }
 }

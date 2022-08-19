@@ -21,8 +21,8 @@ import qualified Plato.Abstract.Syntax as A
 'import'                        { TokKeyword (KwImport, _) }
 'in'                            { TokKeyword (KwIn, _) }
 'of'                            { TokKeyword (KwOf, _) }
+'module'                        { TokKeyword (KwModule, _) }
 'let'                           { TokKeyword (KwLet, $$) }
-'type'                          { TokKeyword (KwType, $$) }
 'where'                         { TokKeyword (KwWhere, _) }
 
 '\''                            { TokSymbol (SymApost, _) }
@@ -51,7 +51,10 @@ string                          { TokString $$ }
 
 %%
 
-program     : impdecls ';' topdecls         { ($1, $3) }
+program     : 'module' modid ';' body       { A.Program (Just $2) (fst $4) (snd $4) }
+            | body                          { A.Program Nothing (fst $1) (snd $1) }
+
+body        : impdecls ';' topdecls         { ($1, $3) }
             | topdecls                      { ([], $1) }
 
 impdecls    :: { [A.ImpDecl] }
@@ -59,11 +62,14 @@ impdecls    :: { [A.ImpDecl] }
             | {- empty -}                   { [] }
 
 impdecl     :: { A.ImpDecl }
-            : 'import' modid                { A.ImpDecl (N.ModuleName $2) }
+            : 'import' modid                { A.ImpDecl $2 }
 
-modid       :: { [N.Name] }
-            : varid '.' modid               { id2conName $1 : $3 } -- todo: module name
-            | varid                         { [id2conName $1] } --todo: module name
+modid       :: { N.ModuleName }
+            : modid_                        { N.ModuleName $1 }
+
+modid_      :: { [N.Name] }
+            : conid '.' modid_              { id2conName $1 : $3 }
+            | conid                         { [id2conName $1] }
 
 topdecls    :: { [A.TopDecl] }
             : topdecl ';' topdecls          { $1 : $3 }
@@ -72,7 +78,7 @@ topdecls    :: { [A.TopDecl] }
 topdecl     :: { A.TopDecl }
             : 'data' conid tyvars '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | 'data' conid tyvars                   { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 [] }
-            | 'type' conid tyvars'=' type           { A.TypeDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
+            | conid tyvars '=' type                 { A.TypeDecl (mkInfo $1) (id2tyConName $1) $2 $4 }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -153,7 +159,7 @@ apat        :: { A.Pat }
 
 {
 parseError :: Token -> Alex a
-parseError t = alexError $ "parse error: " ++ prettyToken t
+parseError t = alexError $ "parse error: " ++ pretty t
 
 id2varName :: (String, AlexPosn) -> Name
 id2varName = N.str2varName . fst
@@ -179,39 +185,16 @@ instance MkInfo (String, AlexPosn) where
 instance MkInfo (Float, AlexPosn) where
     mkInfo (_, p) = mkInfo p
 
-prettyToken :: Token -> String
-prettyToken (TokKeyword (k, p)) = "'" ++ case k of
-    KwCase -> "case"
-    KwData -> "data"
-    KwOf -> "of"
-    KwLet -> "let"
-    KwType -> "type"
-    KwWhere -> "where"
-    ++ "' at " ++ prettyPos p
-prettyToken (TokSymbol (s, p)) = "'" ++ case s of
-    SymApost -> "'"
-    SymArrow -> "->"
-    SymBackslash -> "\\"
-    SymColon -> ":"
-    SymComma -> ","
-    SymDot -> "."
-    SymEqual -> "="
-    SymLBrace -> "{"
-    SymLBrack -> "["
-    SymLParen -> "("
-    SymRBrace -> "{"
-    SymRBrack -> "]"
-    SymRParen -> ")"
-    SymSemicolon -> ";"
-    SymVBar -> "|"
-    ++ "' at " ++ prettyPos p
-prettyToken (TokVarId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-prettyToken (TokConId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-prettyToken (TokVarSym (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-prettyToken (TokFloat (i, p)) = show i ++ " at " ++ prettyPos p
-prettyToken (TokString (s, p)) = "\"" ++ s ++ "\" at " ++ prettyPos p
-prettyToken TokEof = ""
+instance Pretty Token where
+    pretty (TokKeyword (k, p)) = "'" ++ pretty k ++ "' at " ++ prettyPos p
+    pretty (TokSymbol (s, p)) = "'" ++ pretty s ++ "' at " ++ prettyPos p
+    pretty (TokVarId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
+    pretty (TokConId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
+    pretty (TokVarSym (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
+    pretty (TokFloat (i, p)) = show i ++ " at " ++ prettyPos p
+    pretty (TokString (s, p)) = "\"" ++ s ++ "\" at " ++ prettyPos p
+    pretty TokEof = "<eof>"
 
-prettyPos :: AlexPosn -> String
-prettyPos (AlexPn _ l c) = show l ++ ":" ++ show c
+instance Pretty AlexPosn where
+    pretty (AlexPn _ l c) = show l ++ ":" ++ show c
 }

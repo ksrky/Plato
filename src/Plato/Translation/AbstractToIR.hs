@@ -134,8 +134,8 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-abstract2ir :: MonadThrow m => ([A.ImpDecl], [A.TopDecl]) -> m I.Decls
-abstract2ir (ids, tds) = do
+abstract2ir :: MonadThrow m => A.Program -> m I.Decls
+abstract2ir (A.Program md ids tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
         vardecls <- transFuncTyDecls tds

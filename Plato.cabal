@@ -29,6 +29,7 @@ library
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
+      Plato.Abstract.Token
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name
@@ -78,6 +79,7 @@ executable plato
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
+      Plato.Abstract.Token
       Plato.Common.Error
       Plato.Common.Info
       Plato.Common.Name

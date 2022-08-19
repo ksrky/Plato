@@ -290,7 +290,7 @@ typeof ctx t = case t of
                                         Nothing -> throwError fi $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
-                        tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT') ++ "\n" ++ show tyT ++ "\n" ++ show tyT'
+                        tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT')
 
 ----------------------------------------------------------------
 -- Type check of binding

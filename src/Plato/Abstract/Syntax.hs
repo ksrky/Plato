@@ -38,3 +38,10 @@ data TopDecl
         deriving (Eq, Show)
 
 newtype ImpDecl = ImpDecl ModuleName deriving (Eq, Show)
+
+data Program = Program
+        { moduleDecl :: Maybe ModuleName
+        , importDecls :: [ImpDecl]
+        , topDecls :: [TopDecl]
+        }
+        deriving (Show)
