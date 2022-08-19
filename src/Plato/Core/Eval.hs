@@ -87,7 +87,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 _ -> Nothing
 
 ----------------------------------------------------------------
--- Type check
+-- Type equality check
 ----------------------------------------------------------------
 istyabb :: Context -> Int -> Bool
 istyabb ctx i = case getBinding ctx i of
@@ -112,7 +112,7 @@ simplifyty ctx tyT =
                 _ -> tyT
          in case computety ctx tyT' of
                 Just tyT'' -> simplifyty ctx tyT''
-                Nothing -> tyT
+                Nothing -> tyT'
 
 tyeqv :: MonadThrow m => Info -> Context -> Ty -> Ty -> m ()
 tyeqv fi ctx = tyeqv'
@@ -151,7 +151,7 @@ tyeqv fi ctx = tyeqv'
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> tyeqv fi2 ctx tyTi1 tyTi2
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
-                        (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "Record field length are not equal"
+                        (TyRecord _ _, TyRecord fi2 _) -> throwError fi2 "Record field lengths are not equal"
                         (TyVariant fi1 fields1, TyVariant fi2 fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
                                         Just tyTi2 -> zipWithM (tyeqv fi1 ctx) tyTi1 tyTi2
@@ -159,11 +159,11 @@ tyeqv fi ctx = tyeqv'
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> zipWithM (tyeqv fi2 ctx) tyTi1 tyTi2
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
-                        (TyVariant _ fields1, TyVariant fi2 fields2) -> throwError fi2 "Variant field length are not equal"
-                        _ -> throwError fi $ "type mismatch: " ++ pretty (ctx, tyS) ++ ", " ++ pretty (ctx, tyT)
+                        (TyVariant _ fields1, TyVariant fi2 fields2) -> throwError fi2 "Variant field lengths are not equal"
+                        _ -> throwError fi $ "type mismatch: " ++ pretty (ctx, tyS') ++ ", " ++ pretty (ctx, tyT')
 
 ----------------------------------------------------------------
--- kindof, typeof
+-- Type check
 ----------------------------------------------------------------
 getkind :: MonadThrow m => Info -> Context -> Int -> m Kind
 getkind fi ctx i = case getBinding ctx i of
@@ -291,3 +291,15 @@ typeof ctx t = case t of
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
                         tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT') ++ "\n" ++ show tyT ++ "\n" ++ show tyT'
+
+----------------------------------------------------------------
+-- Type check of binding
+----------------------------------------------------------------
+checkBinding :: (MonadThrow m, MonadFail m) => Info -> Context -> Binding -> m ()
+checkBinding fi ctx (TyAbbBind tyT (Just knK)) = do
+        knK' <- kindof ctx tyT
+        unless (knK == knK') $ throwError fi "Kind of binding does not match declared kind"
+checkBinding fi ctx (TmAbbBind t (Just tyT)) = do
+        tyT' <- typeof ctx t
+        tyeqv fi ctx tyT tyT'
+checkBinding _ _ _ = return ()

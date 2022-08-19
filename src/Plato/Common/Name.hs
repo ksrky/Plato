@@ -52,6 +52,9 @@ isCon n = isUpper $ head $ show n
 nullName :: Name -> Bool
 nullName n = null $ show n
 
+entry :: Name
+entry = str2varName "main"
+
 ----------------------------------------------------------------
 -- Module
 ----------------------------------------------------------------
@@ -59,3 +62,6 @@ newtype ModuleName = ModuleName [Name] deriving (Eq, Show)
 
 instance Pretty ModuleName where
         pretty (ModuleName modn) = intercalate "." (map pretty modn)
+
+toPath :: ModuleName -> String
+toPath (ModuleName modn) = intercalate "/" (map show modn) ++ ".plt"

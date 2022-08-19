@@ -40,7 +40,7 @@ bindingShift d bind = case bind of
         NameBind -> NameBind
         VarBind tyT -> VarBind (typeShift d tyT)
         TyVarBind knK -> TyVarBind knK
-        TmAbbBind t tyT_opt -> if d < 0 then error $ show d else TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
+        TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d <$> tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
 
 getBinding :: Context -> Int -> Binding
@@ -57,6 +57,11 @@ getVarIndex :: MonadThrow m => Info -> Context -> Name -> m Int
 getVarIndex fi ctx x = case elemIndex x (vmap fst ctx) of
         Just i -> return i
         Nothing -> throwError fi $ "Unbound variable name: '" ++ show x ++ "'"
+
+getVarIndex' :: Context -> Name -> Int
+getVarIndex' ctx x = case elemIndex x (vmap fst ctx) of
+        Just i -> i
+        Nothing -> unreachable $ "Unbound variable name: '" ++ show x ++ "'"
 
 isVarExist :: Context -> Name -> Bool
 isVarExist ctx x = case elemIndex x (vmap fst ctx) of

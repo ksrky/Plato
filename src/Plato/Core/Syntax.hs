@@ -43,10 +43,6 @@ data Binding
         | TyAbbBind Ty (Maybe Kind)
         deriving (Eq, Show)
 
-newtype Import = Import ModuleName deriving (Eq, Show)
-
-data Commands = Commands {imports :: [Import], binds :: [(Name, Binding)], body :: Term} deriving (Eq, Show)
-
 ----------------------------------------------------------------
 -- Type
 ----------------------------------------------------------------

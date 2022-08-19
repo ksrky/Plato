@@ -13,6 +13,7 @@ import System.Console.Haskeline
 import System.Environment
 
 import Control.Monad.State
+import Plato.Core.Command
 
 main :: IO ()
 main = do

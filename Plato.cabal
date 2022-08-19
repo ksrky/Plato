@@ -34,6 +34,7 @@ library
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.Vect
+      Plato.Core.Command
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Core.Recon
@@ -82,6 +83,7 @@ executable plato
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.Vect
+      Plato.Core.Command
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Core.Recon

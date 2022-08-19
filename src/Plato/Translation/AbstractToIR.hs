@@ -79,9 +79,6 @@ transType (A.AllType fi xs ty) = do
         ty' <- transType ty
         return $ foldr (I.AllType fi) ty' xs
 
-entry :: Name
-entry = str2varName "main"
-
 transDecls :: MonadThrow m => Memo -> [A.TopDecl] -> m (I.Decl, Memo)
 transDecls memo tds = do
         fs <- execWriterT $

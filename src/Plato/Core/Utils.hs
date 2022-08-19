@@ -12,6 +12,7 @@ import Plato.Core.Syntax
 
 import Control.Monad.State
 import Data.List
+import Plato.Core.Command
 
 ----------------------------------------------------------------
 -- Pretty
@@ -98,16 +99,13 @@ instance Pretty (Context, Binding) where
         pretty (ctx, TyAbbBind tyT (Just knK)) = pretty (ctx, tyT) ++ " : " ++ pretty (ctx, knK)
         pretty (ctx, TyAbbBind tyT Nothing) = pretty (ctx, tyT)
 
-instance Pretty Import where
-        pretty (Import modn) = pretty modn
-
 instance Pretty (Context, Commands) where
         pretty (ctx, Commands imps binds body) =
                 "import {\n\t"
                         ++ intercalate "\n\t" (map pretty imps)
                         ++ "\n}\nbinds {\n\t"
                         ++ let pb ctx [] = ([], ctx)
-                               pb ctx ((x, b) : bs) =
+                               pb ctx ((_, (x, b)) : bs) =
                                 let (x', ctx') = pickFreshName x ctx
                                     (l, ctx'') = pb ctx' bs
                                  in ((pretty x' ++ " = " ++ pretty (ctx, b)) : l, ctx'')

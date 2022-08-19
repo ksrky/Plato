@@ -6,6 +6,7 @@ import Plato.Abstract.Lexer
 import Plato.Abstract.Parser
 import Plato.Common.Pretty
 import Plato.Common.Vect
+import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Core.Syntax
@@ -49,7 +50,11 @@ process ctx input = case runAlex input parse of
         Right ast -> do
                 inner <- abstract2ir ast
                 cmds <- ir2core ctx inner
-                let ctx' = foldl (flip cons) ctx (binds cmds)
+                ctx' <- (`execStateT` ctx) $
+                        forM_ (binds cmds) $ \(fi, (x, bind)) -> do
+                                ctx <- get
+                                checkBinding fi ctx bind
+                                put $ cons (x, bind) ctx
                 tyT <- typeof ctx' (body cmds)
                 let res = eval ctx' (body cmds)
                 return $ pretty (ctx', res)

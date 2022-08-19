@@ -86,3 +86,8 @@ instance GetInfo Type where
         getInfo (AppType fi _ _) = fi
         getInfo (RecordType fi _) = unreachable "RecordType does not have Info"
         getInfo (SumType _) = unreachable "SumType does not have Info"
+
+instance GetInfo Decl where
+        getInfo (TypeDecl fi _ _) = fi
+        getInfo (VarDecl fi _ _) = fi
+        getInfo (FuncDecl fi _ _ _) = fi

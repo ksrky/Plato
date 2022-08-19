@@ -6,6 +6,7 @@ import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Common.Pretty
+import Plato.Core.Command as C
 import Plato.Core.Context
 import Plato.Core.Syntax
 import Plato.IR.Syntax
@@ -149,9 +150,8 @@ transDecl decl = StateT $ \ctx -> case decl of
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 
 ir2core :: MonadThrow m => Context -> Decls -> m Commands
-ir2core ctx (Decls mns decls (body, bodyty)) = (`evalStateT` ctx) $ do
-        let imps = map Import mns
+ir2core ctx (Decls modns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         binds <- mapM transDecl decls
         ctx' <- get
         main <- transExpr ctx' bodyty body
-        return $ Commands{imports = imps, binds = binds, body = main}
+        return $ Commands{C.imports = modns, C.binds = zip (map getInfo decls) binds, C.body = main}

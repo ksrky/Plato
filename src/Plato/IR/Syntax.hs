@@ -37,4 +37,4 @@ data Decl
         | FuncDecl Info Name Expr Type
         deriving (Eq, Show)
 
-data Decls = Decls [ModuleName] [Decl] (Expr, Type) deriving (Eq, Show)
+data Decls = Decls {imports :: [ModuleName], decls :: [Decl], body :: (Expr, Type)} deriving (Eq, Show)

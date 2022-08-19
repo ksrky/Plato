@@ -5,6 +5,7 @@ import Plato.Abstract.Parser
 import Plato.Common.Info
 import Plato.Common.Pretty
 import Plato.Common.Vect
+import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Core.Syntax
@@ -14,6 +15,7 @@ import Plato.Translation.AbstractToIR
 import Plato.Translation.IRToCore
 
 import Control.Monad.State
+import Plato.Common.Name
 import System.Console.Haskeline
 import System.Environment
 
@@ -22,7 +24,7 @@ main = do
         args <- getArgs
         case args of
                 [] -> repl
-                fname : _ -> processFile fname
+                fname : _ -> void $ processFile emptyContext fname
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop emptyContext)
@@ -36,14 +38,12 @@ repl = runInputT defaultSettings (loop emptyContext)
                                 liftIO $ process ctx input
                                 loop ctx
 
-processFile :: String -> IO ()
-processFile [] = return ()
-processFile fname = do
+processFile :: Context -> String -> IO Context
+processFile ctx fname = do
         let src = "test/testcases/" ++ fname
-        contents <- readFile src
+        input <- readFile src
         putStrLn $ "----------" ++ src ++ "----------"
-        process emptyContext contents
-        putStrLn ""
+        process ctx input
 
 process :: Context -> String -> IO Context
 process ctx input = case runAlex input parse of
@@ -51,8 +51,20 @@ process ctx input = case runAlex input parse of
         Right ast -> do
                 inner <- abstract2ir ast
                 cmds <- ir2core ctx inner
-                let ctx' = foldl (flip cons) ctx (binds cmds)
-                tyT <- typeof ctx' (body cmds)
-                res <- liftIO $ evalIO ctx' (body cmds)
-                putStrLn $ pretty (ctx', res)
-                return ctx'
+                -- processing imports
+                ctx' <- (`execStateT` ctx) $
+                        forM (imports cmds) $ \modn -> do
+                                ctx <- get
+                                ctx' <- lift $ processFile ctx (toPath modn)
+                                put ctx'
+                let cmds' = commandsShift (length ctx' - length ctx) cmds
+                ctx'' <- (`execStateT` ctx') $
+                        forM_ (binds cmds) $ \(fi, (x, bind)) -> do
+                                ctx <- get
+                                checkBinding fi ctx bind
+                                put $ cons (x, bind) ctx
+                when (null ctx) $ do
+                        tyT <- typeof ctx'' (body cmds)
+                        let res = eval ctx'' (body cmds)
+                        putStrLn $ pretty (ctx'', res)
+                return ctx''
