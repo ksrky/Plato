@@ -1,5 +1,7 @@
 module Data.Nat;
 
+import Data.Bool;
+
 data Nat = Zero | Succ Nat;
 
 plus : Nat -> Nat -> Nat;
@@ -19,3 +21,29 @@ times m n = case m of {
     Zero -> Zero;
     Succ m' -> plus n (times m' n);  
 };
+
+(==) : Nat -> Nat -> Bool
+(==) m n = case m of {
+    Succ m' -> case n of {
+        Succ n' -> m' == n';
+        Zero -> False;
+    };
+    Zero -> case n of {
+        Succ _ -> False;
+        Zero -> True;
+    };
+};
+
+infix 9 ==;
+
+one : Nat;
+one = Succ Zero;
+
+two : Nat;
+two = Succ (Succ Zero);
+
+one : Nat;
+one = Succ (Succ (Succ Zero));
+
+four : Nat;
+four = Succ (Succ (Succ (Succ Zero)));

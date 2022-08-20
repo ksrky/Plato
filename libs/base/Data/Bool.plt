@@ -3,7 +3,13 @@ module Data.Bool;
 data Bool = True | False;
 
 not : Bool -> Bool;
-not = \b -> case b of {
+not b = case b of {
     True -> False;
     False -> True;
+};
+
+if : forall a. Bool -> a -> a -> a;
+if test then else = case test of {
+    True -> then;
+    False else;
 };

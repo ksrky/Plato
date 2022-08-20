@@ -6,8 +6,8 @@ data Either a b = Left a | Right b;
 
 either : forall a b c. (a -> c) -> (b -> c) -> Either a b -> c;
 either f g e = case e of {
-    Left x -> f [a c] x;
-    Right y -> g [b c] y;
+    Left x -> f x;
+    Right y -> g y;
 };
 
 isLeft : forall a b. Either a b -> Bool;

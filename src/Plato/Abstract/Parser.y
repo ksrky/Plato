@@ -133,13 +133,15 @@ tyvars      :: { [N.Name] }
             : varid tyvars                  { id2tyVarName $1 : $2 }
             | {- empty -}                   { [] }
 
+{-infixexpr   :: { A.Expr }
+            : expr varsym expr                          { -}
+
 expr        :: { A.Expr }
             : '\\' varid vars '->' expr                 { A.LamExpr (mkInfo $1) (id2varName $2 : $3) $5 }
             | 'let' '{' decls '}' 'in' expr             { A.LetExpr (mkInfo $1) $3 $6 }
             | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
             | expr '[' types ']'                        { A.TAppExpr (mkInfo $2) $1 $3 }
             | expr aexpr                                { A.AppExpr $1 $2 }
-            {-| aexpr varsym expr                         { mkInfix (fst $2) $1 $3 -}
             | aexpr                                     { $1 }
 
 aexpr       :: { A.Expr }

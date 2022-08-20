@@ -5,16 +5,24 @@ import Data.Nat;
 
 data List a = Nil | Cons a (List a);
 
+(++) : forall a. List a -> List a -> List a;
+(++) l m = case l of {
+    Nil -> m;
+    Cons x xs -> Cons [a] x (xs ++ m);
+};
+
+infixl 5 ++;
+
 head : forall a. List a -> Maybe a;
-head = \l -> case l of {
+head l = case l of {
     Nil -> Nothing [a];
-    Cons hd tl -> Just [a] hd;
+    Cons hd _ -> Just [a] hd;
 };
 
 last : forall a. List a -> Maybe a;
-last = \l -> case l of {
+last l = case l of {
     Nil -> Nothing [a];
-    Cons hd tl -> case tl of {
+    Cons _ tl -> case tl of {
         Nil -> Just [a] hd;
         _ -> last tl;
     };
@@ -53,7 +61,7 @@ length l = case l of {
 map : forall a b. (a -> b) -> [a] -> [b];
 map f l = case l of {
     Nil -> Nil [b];
-    Cons x xs -> Cons (f x) (map [a, b] f xs);
+    Cons x xs -> Cons (f x) (map [a b] f xs);
 };
 
 reverse : forall a. List a -> List a;
@@ -61,6 +69,13 @@ reverse l = let {
         rev : forall a. List a -> List a -> List a;
         rev l' a = case l' of {
             Nil -> a;
-            Cons x xs -> rev xs (Cons x a);
-    };
+            Cons x xs -> rev xs (Cons [a] x a);
+        };
+    } in rev [a] l (Nil [a])
 };
+
+filter : forall a. (a -> Bool) -> List a -> List a;
+filter f l = case l of {
+    Nil -> Nil [a];
+    Cons x xs -> if (f x) (Cons [a] x (filter f xs)) (filter f xs);
+}
