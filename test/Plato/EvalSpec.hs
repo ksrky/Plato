@@ -2,16 +2,14 @@
 
 module Plato.EvalSpec where
 
-import Plato.Abstract.Lexer
-import Plato.Abstract.Parser
 import Plato.Common.Pretty
 import Plato.Common.Vect
 import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Core.Syntax
-import Plato.Translation.AbstractToIR
+import Plato.Translation.AbsToIR
 import Plato.Translation.IRToCore
+import Plato.Translation.SrcToAbs
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -45,16 +43,15 @@ processFiles ((fname, iscorrect) : rest) = do
         processFiles rest
 
 process :: (MonadThrow m, MonadFail m) => Context -> String -> m String
-process ctx input = case runAlex input parse of
-        Left msg -> throwString msg
-        Right ast -> do
-                inner <- abstract2ir ast
-                cmds <- ir2core ctx inner
-                ctx' <- (`execStateT` ctx) $
-                        forM_ (binds cmds) $ \(fi, (x, bind)) -> do
-                                ctx <- get
-                                checkBinding fi ctx bind
-                                put $ cons (x, bind) ctx
-                tyT <- typeof ctx' (body cmds)
-                let res = eval ctx' (body cmds)
-                return $ pretty (ctx', res)
+process ctx input = do
+        ast <- src2abs input
+        inner <- abs2ir ast
+        cmds <- ir2core ctx inner
+        ctx' <- (`execStateT` ctx) $
+                forM_ (binds cmds) $ \(fi, (x, bind)) -> do
+                        ctx <- get
+                        checkBinding fi ctx bind
+                        put $ cons (x, bind) ctx
+        tyT <- typeof ctx' (body cmds)
+        let res = eval ctx' (body cmds)
+        return $ pretty (ctx', res)

@@ -1,7 +1,6 @@
-module Plato.Debug.Parser where
+module Plato.Debug.AbsTrans where
 
-import Plato.Abstract.Lexer
-import Plato.Abstract.Parser
+import Plato.Translation.SrcToAbs
 
 import Control.Monad.State
 import System.Console.Haskeline
@@ -36,6 +35,6 @@ processFile fname = do
         putStrLn ""
 
 process :: String -> IO ()
-process input = case runAlex input parse of
-        Left msg -> putStrLn msg >> error msg
-        Right ast -> print ast
+process input = do
+        ast <- src2abs input
+        print ast

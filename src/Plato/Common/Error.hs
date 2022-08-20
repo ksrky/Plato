@@ -1,7 +1,7 @@
 module Plato.Common.Error where
 
 import Control.Exception.Safe (Exception, MonadThrow, throw)
-import Plato.Common.Info (Info)
+import Plato.Common.Info
 
 data Error = Error {message :: String, info :: Info}
 

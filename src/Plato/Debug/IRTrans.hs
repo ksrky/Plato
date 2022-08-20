@@ -1,14 +1,12 @@
 module Plato.Debug.IRTrans where
 
-import Plato.Abstract.Lexer
-import Plato.Abstract.Parser
-import Plato.Translation.AbstractToIR
-
-import System.Console.Haskeline
-import System.Environment
+import Plato.Common.Pretty
+import Plato.Translation.AbsToIR
+import Plato.Translation.SrcToAbs
 
 import Control.Monad.State
-import Plato.Common.Pretty
+import System.Console.Haskeline
+import System.Environment
 
 main :: IO ()
 main = do
@@ -39,8 +37,7 @@ processFile fname = do
         putStrLn ""
 
 process :: String -> IO ()
-process input = case runAlex input parse of
-        Left msg -> putStrLn msg >> error msg
-        Right ast -> do
-                inner <- abstract2ir ast
-                putStrLn $ pretty inner
+process input = do
+        ast <- src2abs input
+        inner <- abs2ir ast
+        putStrLn $ pretty inner

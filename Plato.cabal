@@ -42,17 +42,18 @@ library
       Plato.Core.Recon
       Plato.Core.Syntax
       Plato.Core.Utils
+      Plato.Debug.AbsTrans
       Plato.Debug.CoreTrans
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
-      Plato.Debug.Parser
       Plato.Debug.REPL
       Plato.IR.Rename
       Plato.IR.Syntax
       Plato.IR.Utils
       Plato.Main
-      Plato.Translation.AbstractToIR
+      Plato.Translation.AbsToIR
       Plato.Translation.IRToCore
+      Plato.Translation.SrcToAbs
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -93,17 +94,18 @@ executable plato
       Plato.Core.Recon
       Plato.Core.Syntax
       Plato.Core.Utils
+      Plato.Debug.AbsTrans
       Plato.Debug.CoreTrans
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
-      Plato.Debug.Parser
       Plato.Debug.REPL
       Plato.IR.Rename
       Plato.IR.Syntax
       Plato.IR.Utils
       Plato.Main
-      Plato.Translation.AbstractToIR
+      Plato.Translation.AbsToIR
       Plato.Translation.IRToCore
+      Plato.Translation.SrcToAbs
       Paths_Plato
   hs-source-dirs:
       src

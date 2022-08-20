@@ -1,19 +1,16 @@
 module Plato.Debug.CoreTrans where
 
-import Plato.Abstract.Lexer
-import Plato.Abstract.Parser
 import Plato.Common.Pretty
+import Plato.Core.Command
 import Plato.Core.Context
-import Plato.Core.Syntax
 import Plato.Core.Utils
-import Plato.Translation.AbstractToIR
+import Plato.Translation.AbsToIR
 import Plato.Translation.IRToCore
-
-import System.Console.Haskeline
-import System.Environment
+import Plato.Translation.SrcToAbs
 
 import Control.Monad.State
-import Plato.Core.Command
+import System.Console.Haskeline
+import System.Environment
 
 main :: IO ()
 main = do
@@ -44,9 +41,8 @@ processFile fname = do
         putStrLn ""
 
 process :: String -> IO Commands
-process input = case runAlex input parse of
-        Left msg -> putStrLn msg >> error msg
-        Right ast -> do
-                inner <- abstract2ir ast
-                cmds <- ir2core emptyContext inner
-                putStrLn (pretty (emptyContext, cmds)) >> return cmds
+process input = do
+        ast <- src2abs input
+        inner <- abs2ir ast
+        cmds <- ir2core emptyContext inner
+        putStrLn (pretty (emptyContext, cmds)) >> return cmds
