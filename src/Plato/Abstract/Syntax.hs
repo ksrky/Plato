@@ -35,6 +35,7 @@ data TopDecl
         = DataDecl Info Name [Name] [(Info, Name, [Type])]
         | TypeDecl Info Name [Name] Type
         | Decl Decl
+        | FixDecl
         deriving (Eq, Show)
 
 newtype ImpDecl = ImpDecl ModuleName deriving (Eq, Show)

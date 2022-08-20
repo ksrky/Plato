@@ -1,37 +1,46 @@
 {
 module Plato.Abstract.Lexer where
 
+import Plato.Abstract.Fixity
 import Plato.Abstract.Token
 
 import qualified Data.Map.Strict as M
+import Control.Monad
 }
 
 %wrapper "monadUserState"
 
-$digit = 0-9
-$alpha = [a-zA-Z]
 $tab = \t
 $nl = [\n\r\f]
-$white_no_nl = $white # \n
+$white_nonl = $white # \n
 
 $small = [a-z]
 $large = [A-Z]
-$special    = [\.\,\$\*\+\?\#\~\-\[\]\^\/]
+$alpha = [a-zA-Z]
+$digit = 0-9
+$symbol = [\.\@\<\=\>\&\|\!\$\*\+\?\#\~\-\[\]\^\/]
 
-@reservedid = case | data | else | if | import | in
-            | of | let | then | if | type | where
+@reservedid = case | data | forall | import | in
+            | of | let | module | where
 @varid = $small [$alpha $digit \_ \']*
 @conid = $large [$alpha $digit \_ \']*
 
 @reservedop = \-\> | \= | \| | \:
-@varsym = $special+
+@varsym = ($symbol # \:) $symbol*
+@consym = \: $symbol*
+
+@qual = (@conid \.)+
+@qvarid = @qual @varid
+@qconid = @qual @conid
+@qvarsym = @qual @varsym
+@qconsym = @qual @consym
 
 @string = ($printable # \")*
 @decimal = $digit+
 
 tokens :-
 
-<0> $white_no_nl+               ;
+<0> $white_nonl+               ;
 <0> $nl                         ;
 
 <0> "--".* $nl                  ;
@@ -68,8 +77,10 @@ tokens :-
 
 <0> @varid                      { varid }
 <0> @conid                      { conid }
+<0> @qconid                     { qconid }
 <0> @varsym                     { varsym }
-<0> @decimal                    { lex_float }
+<0> @consym                     { consym }
+<0> @decimal                    { lex_int }
 
 <0> \"                          { begin string }
 <string> @string \"             { lex_string }
@@ -80,41 +91,37 @@ lexer = (alexMonadScan >>=)
 
 type Action = AlexAction Token -- AlexInput -> Int -> Alex Token
 
-data Token
-    = TokKeyword (Keyword, AlexPosn)
-    | TokSymbol (Symbol, AlexPosn)
-    | TokVarId (String,  AlexPosn)
-    | TokConId (String,  AlexPosn)
-    | TokVarSym (String, AlexPosn)
-    | TokFloat (Float, AlexPosn)
-    | TokString (String, AlexPosn)
-    | TokVOBrace
-    | TokVCBrace
-    | TokEof
-    deriving (Eq, Show)
+toposn :: AlexPosn -> Posn
+toposn (AlexPn _ l c) = Pn l c
 
 keyword :: Keyword -> Action
-keyword key = \(pos,_,_,_) _ -> return $ TokKeyword (key, pos)
+keyword key = \(pos,_,_,_) _ -> return $ TokKeyword (key, toposn pos)
 
 symbol :: Symbol -> Action
-symbol sym = \(pos,_,_,_) _ -> return $ TokSymbol (sym, pos)
+symbol sym = \(pos,_,_,_) _ -> return $ TokSymbol (sym, toposn pos)
 
 varid :: Action
-varid = \(pos,_,_,str) len -> return $ TokVarId (take len str, pos)
+varid = \(pos,_,_,str) len -> return $ TokVarId (take len str, toposn pos)
 
 conid :: Action
-conid = \(pos,_,_,str) len -> return $ TokConId (take len str, pos)
+conid = \(pos,_,_,str) len -> return $ TokConId (take len str, toposn pos)
+
+qconid :: Action
+qconid = \(pos,_,_,str) len -> return $ TokQConId (take len str, toposn pos)
 
 varsym :: Action
-varsym = \(pos,_,_,str) len -> return $ TokVarSym (take len str, pos)
+varsym = \(pos,_,_,str) len -> return $ TokVarSym (take len str, toposn pos)
 
-lex_float :: Action
-lex_float = \(pos,_,_,str) len -> return $ TokFloat (read $ take len str, pos)
+consym :: Action
+consym = \(pos,_,_,str) len -> return $ TokConSym (take len str, toposn pos)
+
+lex_int :: Action
+lex_int = \(pos,_,_,str) len -> return $ TokInt (read $ take len str, toposn pos)
 
 lex_string :: Action
 lex_string = \(pos,_,_,str) len -> do
     alexSetStartCode 0
-    return $ TokString (init $ take len str, pos)
+    return $ TokString (init $ take len str, toposn pos)
 
 beginComment :: Action
 beginComment _ _ = do
@@ -144,13 +151,13 @@ alexEOF = do
 
 data AlexUserState = AlexUserState {
       commentDepth :: Int
-    , precDict :: M.Map String Int
+    , fixityDict :: M.Map String Fixity
 }
 
 alexInitUserState :: AlexUserState
 alexInitUserState = AlexUserState {
       commentDepth  = 0
-    , precDict = M.empty
+    , fixityDict = M.empty
 }
 
 getCommentDepth :: Alex Int
@@ -160,4 +167,18 @@ setCommentDepth :: Int -> Alex ()
 setCommentDepth ss = do
     ust <- alexGetUserState
     alexSetUserState ust{ commentDepth = ss }
+
+getFixity :: String -> Alex Fixity
+getFixity op = do
+    dict <- fixityDict <$> alexGetUserState
+    case M.lookup op dict of
+        Just fixity -> return fixity
+        Nothing -> alexError $ "operator " ++ op ++ " is not defined"
+
+setFixity :: String -> Fixity -> Alex ()
+setFixity op fixity = do
+    ust <- alexGetUserState
+    let prec = getPrec fixity
+    unless (0 <= prec && prec <= 9) $ alexError $ "invalid precedence " ++ show prec
+    alexSetUserState ust{ fixityDict = M.insert op fixity (fixityDict ust) }
 }

@@ -1,13 +1,16 @@
 {
 module Plato.Abstract.Parser where
 
-import Plato.Common.Name as N
-import Plato.Common.Info
+import Plato.Abstract.Fixity
 import Plato.Abstract.Lexer
 import qualified Plato.Abstract.Syntax as A
+import Plato.Abstract.Token
+import Plato.Common.Info
+import Plato.Common.Name as N
+import Plato.Common.Pretty
 }
 
-%name parse
+%name parse program
 %tokentype { Token }
 %monad { Alex }
 %lexer { lexer } { TokEof }
@@ -19,6 +22,9 @@ import qualified Plato.Abstract.Syntax as A
 'data'                          { TokKeyword (KwData, $$) }
 'forall'                        { TokKeyword (KwForall, $$) }
 'import'                        { TokKeyword (KwImport, _) }
+'infix'                         { TokKeyword (KwInfix, _) }
+'infixl'                        { TokKeyword (KwInfixL, _) }
+'infixr'                        { TokKeyword (KwInfixR, _) }
 'in'                            { TokKeyword (KwIn, _) }
 'of'                            { TokKeyword (KwOf, _) }
 'module'                        { TokKeyword (KwModule, _) }
@@ -44,9 +50,10 @@ import qualified Plato.Abstract.Syntax as A
 
 varid                           { TokVarId $$ }
 conid                           { TokConId $$ }
+qconid                          { TokQConId $$ }
 varsym                          { TokVarSym $$ }
 
-float                           { TokFloat $$ }
+int                             { TokInt ($$, _) }
 string                          { TokString $$ }
 
 %%
@@ -65,7 +72,8 @@ impdecl     :: { A.ImpDecl }
             : 'import' modid                { A.ImpDecl $2 }
 
 modid       :: { N.ModuleName }
-            : modid_                        { N.ModuleName $1 }
+            : qconid                        { N.ModuleName (splitModid (fst $1)) }
+            | conid                         { N.ModuleName [(id2conName $1)] }
 
 modid_      :: { [N.Name] }
             : conid '.' modid_              { id2conName $1 : $3 }
@@ -80,6 +88,7 @@ topdecl     :: { A.TopDecl }
             | 'data' conid tyvars                   { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 [] }
             | conid tyvars '=' type                 { A.TypeDecl (mkInfo $1) (id2tyConName $1) $2 $4 }
             | decl                                  { A.Decl $1 }
+            | fixdecl                               { A.FixDecl }
 
 decls       :: { [A.Decl] }
             : decl ';'                      { [$1] }
@@ -88,6 +97,11 @@ decls       :: { [A.Decl] }
 decl        :: { A.Decl }
             : varid ':' type                { A.FuncTyDecl (mkInfo $1) (id2varName $1) $3 }
             | varid vars '=' expr           { A.FuncDecl (mkInfo $1) (id2varName $1) $2 $4 }
+
+fixdecl     :: { Alex () }
+            : 'infix' int varsym            { setFixity (fst $3) (Infix $2) }
+            | 'infixl' int varsym           { setFixity (fst $3) (InfixL $2) }
+            | 'infixr' int varsym           { setFixity (fst $3) (InfixR $2) }
 
 types       :: { [A.Type] }
             : atype types                   { $1 : $2 }
@@ -125,6 +139,7 @@ expr        :: { A.Expr }
             | 'case' expr 'of' '{' alts '}'             { A.CaseExpr (mkInfo $1) $2 $5 }
             | expr '[' types ']'                        { A.TAppExpr (mkInfo $2) $1 $3 }
             | expr aexpr                                { A.AppExpr $1 $2 }
+            {-| aexpr varsym expr                         { mkInfix (fst $2) $1 $3 -}
             | aexpr                                     { $1 }
 
 aexpr       :: { A.Expr }
@@ -161,40 +176,36 @@ apat        :: { A.Pat }
 parseError :: Token -> Alex a
 parseError t = alexError $ "parse error: " ++ pretty t
 
-id2varName :: (String, AlexPosn) -> Name
+id2varName :: (String, Posn) -> Name
 id2varName = N.str2varName . fst
 
-id2conName :: (String, AlexPosn) -> Name
+id2conName :: (String, Posn) -> Name
 id2conName = N.str2conName . fst
 
-id2tyVarName :: (String, AlexPosn) -> Name
+id2tyVarName :: (String, Posn) -> Name
 id2tyVarName = N.str2tyVarName . fst
 
-id2tyConName :: (String, AlexPosn) -> Name
+id2tyConName :: (String, Posn) -> Name
 id2tyConName = N.str2tyConName . fst
+
+splitModid :: String -> [Name]
+splitModid = loop 0 . (++ ".")
+  where
+    loop cnt [] = []
+    loop cnt xs =
+        if (xs !! cnt) == '.'
+            then N.str2conName (take cnt xs) : loop 0 (drop (cnt + 1) xs)
+            else loop (cnt + 1) xs
 
 class MkInfo a where
     mkInfo :: a -> Info
 
-instance MkInfo AlexPosn where
-    mkInfo (AlexPn _ l c) = Info{ line = l, col = c }
+instance MkInfo Posn where
+    mkInfo (Pn l c) = Info{ line = l, col = c }
 
-instance MkInfo (String, AlexPosn) where
+instance MkInfo (String, Posn) where
     mkInfo (_, p) = mkInfo p
 
-instance MkInfo (Float, AlexPosn) where
+instance MkInfo (Float, Posn) where
     mkInfo (_, p) = mkInfo p
-
-instance Pretty Token where
-    pretty (TokKeyword (k, p)) = "'" ++ pretty k ++ "' at " ++ prettyPos p
-    pretty (TokSymbol (s, p)) = "'" ++ pretty s ++ "' at " ++ prettyPos p
-    pretty (TokVarId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-    pretty (TokConId (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-    pretty (TokVarSym (s, p)) = "'" ++ s ++ "' at " ++ prettyPos p
-    pretty (TokFloat (i, p)) = show i ++ " at " ++ prettyPos p
-    pretty (TokString (s, p)) = "\"" ++ s ++ "\" at " ++ prettyPos p
-    pretty TokEof = "<eof>"
-
-instance Pretty AlexPosn where
-    pretty (AlexPn _ l c) = show l ++ ":" ++ show c
 }

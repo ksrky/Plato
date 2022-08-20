@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Main
+      Plato.Abstract.Fixity
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
@@ -76,6 +77,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Plato.Abstract.Fixity
       Plato.Abstract.Lexer
       Plato.Abstract.Parser
       Plato.Abstract.Syntax
