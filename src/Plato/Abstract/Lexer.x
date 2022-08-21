@@ -3,6 +3,7 @@ module Plato.Abstract.Lexer where
 
 import Plato.Abstract.Fixity
 import Plato.Abstract.Token
+import Plato.Common.Name
 
 import qualified Data.Map.Strict as M
 import Control.Monad
@@ -151,7 +152,7 @@ alexEOF = do
 
 data AlexUserState = AlexUserState {
       commentDepth :: Int
-    , fixityDict :: M.Map String Fixity
+    , fixityDict :: M.Map Name Op
 }
 
 alexInitUserState :: AlexUserState
@@ -168,17 +169,16 @@ setCommentDepth ss = do
     ust <- alexGetUserState
     alexSetUserState ust{ commentDepth = ss }
 
-getFixity :: String -> Alex Fixity
+getFixity :: Name -> Alex Op
 getFixity op = do
     dict <- fixityDict <$> alexGetUserState
     case M.lookup op dict of
         Just fixity -> return fixity
-        Nothing -> alexError $ "operator " ++ op ++ " is not defined"
+        Nothing -> return $ Op op 9 Leftfix -- alexError $ "operator " ++ show op ++ " is not defined"
 
-setFixity :: String -> Fixity -> Alex ()
-setFixity op fixity = do
+setFixity :: Name -> Prec -> Fixity -> Alex ()
+setFixity op prec fix = do
     ust <- alexGetUserState
-    let prec = getPrec fixity
     unless (0 <= prec && prec <= 9) $ alexError $ "invalid precedence " ++ show prec
-    alexSetUserState ust{ fixityDict = M.insert op fixity (fixityDict ust) }
+    alexSetUserState ust{ fixityDict = M.insert op (Op op prec fix) (fixityDict ust) }
 }

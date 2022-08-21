@@ -13,6 +13,9 @@ data Name = Name {nameSpace :: NameSpace, nameText :: Text}
 instance Eq Name where
         n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
 
+instance Ord Name where
+        compare n1 n2 = compare (nameText n1) (nameText n2)
+
 instance Show Name where
         show (Name _ t) = unpack t
 
