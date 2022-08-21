@@ -15,6 +15,7 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Writer
 import Data.List (partition, union)
+import Data.Text (pack)
 
 transExpr :: MonadThrow m => Memo -> A.Expr -> m I.Expr
 transExpr memo = traexpr
@@ -31,6 +32,13 @@ transExpr memo = traexpr
                 e1' <- traexpr e1
                 ts2' <- mapM transType ts2
                 return $ foldl (\ty -> I.TAppExpr (getInfo ty) ty) e1' ts2'
+        traexpr (A.OpExpr fi e1 op e2) = do
+                e1' <- traexpr e1
+                e2' <- traexpr e2
+                let v = case look op (store memo) of
+                        Just r -> I.ProjExpr fi (I.VarExpr fi r) op
+                        Nothing -> I.VarExpr fi op
+                return $ I.AppExpr (getInfo e2') (I.AppExpr (getInfo e1') v e1') e2'
         traexpr (A.LamExpr fi xs e) = do
                 e' <- traexpr e
                 return $ foldr (I.LamExpr fi) e' xs

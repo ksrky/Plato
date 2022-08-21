@@ -133,6 +133,7 @@ test-suite Plato-test
   main-is: Spec.hs
   other-modules:
       Plato.EvalSpec
+      Plato.FixitySpec
       Paths_Plato
   hs-source-dirs:
       test

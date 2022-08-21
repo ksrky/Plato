@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Plato.Core.Syntax where
 
 import Plato.Common.Info

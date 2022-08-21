@@ -88,8 +88,8 @@ topdecl     :: { A.TopDecl }
             : 'data' conid tyvars '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | 'data' conid tyvars                   { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 [] }
             | conid tyvars '=' type                 { A.TypeDecl (mkInfo $1) (id2tyConName $1) $2 $4 }
-            | decl                                  { A.Decl $1 }
             | fixdecl                               { A.FixDecl }
+            | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
             : decl ';'                              { [$1] }
@@ -156,11 +156,11 @@ lexpr       :: { A.Expr }
             : '\\' varid vars '->' expr             { A.LamExpr (mkInfo $1) (id2varName $2 : $3) $5 }
             | 'let' '{' decls '}' 'in' expr         { A.LetExpr (mkInfo $1) $3 $6 }
             | 'case' expr 'of' '{' alts '}'         { A.CaseExpr (mkInfo $1) $2 $5 }
-            | expr '[' types ']'                    { A.TAppExpr (mkInfo $2) $1 $3 }
             | fexpr                                 { $1 }
 
 fexpr       :: { A.Expr }
             : fexpr aexpr                           { A.AppExpr $1 $2 }
+            | fexpr '[' types ']'                   { A.TAppExpr (mkInfo $2) $1 $3 }
             | aexpr                                 { $1 }
 
 aexpr       :: { A.Expr }

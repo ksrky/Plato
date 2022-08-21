@@ -13,13 +13,11 @@ import Plato.Translation.SrcToAbs
 
 import Control.Exception.Safe
 import Control.Monad.State
-import Control.Monad.Writer.Lazy
-import System.Environment
 import Test.Hspec
 
 spec :: Spec
 spec = do
-        describe "Plato.Parser" $ do
+        describe "Plato.Eval" $ do
                 processFiles testcases
 
 testcases :: [(String, String -> Expectation)]
@@ -30,6 +28,7 @@ testcases =
         , ("04_mutual.plt", (`shouldBe` "True"))
         , ("05_maybe.plt", (`shouldBe` "Just T1"))
         , ("06_list.plt", (`shouldBe` "Just T1"))
+        , ("07_infix.plt", (`shouldBe` "Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))"))
         ]
 
 processFiles :: [(String, String -> Expectation)] -> SpecWith ()
