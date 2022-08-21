@@ -14,8 +14,8 @@ infixl 7 *;
 (*) : Nat -> Nat -> Nat;
 (*) m n = case m of {
     Zero -> Zero;
-    Succ m' -> n + (m' * n);  
+    Succ m' -> n + m' * n;  
 };
 
 main : Nat;
-main = Succ Zero + (Succ (Succ (Succ Zero)) * Succ (Succ Zero));
+main = Succ Zero + Succ (Succ (Succ Zero)) * Succ (Succ Zero);

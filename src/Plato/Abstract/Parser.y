@@ -88,7 +88,7 @@ topdecl     :: { A.TopDecl }
             : 'data' conid tyvars '=' constrs       { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 $5 }
             | 'data' conid tyvars                   { A.DataDecl (mkInfo $1) (id2tyConName $2) $3 [] }
             | conid tyvars '=' type                 { A.TypeDecl (mkInfo $1) (id2tyConName $1) $2 $4 }
-            | fixdecl                               { A.FixDecl }
+            | fixdecl                               {% $1 >> return A.FixDecl }
             | decl                                  { A.Decl $1 }
 
 decls       :: { [A.Decl] }
@@ -131,6 +131,7 @@ constrs     :: { [(Info, N.Name, [A.Type])] }
 
 constr      :: { (Info, N.Name, [A.Type]) }
             : conid types                           { (mkInfo $1, id2conName $1, $2) }
+            | '(' consym ')' types                  { (mkInfo $1, id2conName $2, $4)}
 
 tyvars      :: { [N.Name] }
             : varid tyvars                          { id2tyVarName $1 : $2 }
@@ -182,6 +183,7 @@ alt         :: { (A.Pat, A.Expr) }
 
 pat         :: { A.Pat }
             : conid apats                           { A.ConPat (mkInfo $1) (id2conName $1) $2 }
+            | apat consym apats                     { A.ConPat (mkInfo $2) (id2conName $2) ($1 : $3) }
             | apat                                  { $1 }
 
 apats        :: { [A.Pat] }
