@@ -122,6 +122,10 @@ transType ctx = tratype
                 ty1' <- tratype ty1
                 ty2' <- tratype ty2
                 return $ TyApp fi ty1' ty2'
+        tratype (RecType fi x ty) = do
+                ctx' <- addName fi x ctx
+                ty' <- transType ctx' ty
+                return $ TyRec fi x KnStar ty' -- tmp: unused
         tratype (RecordType fi fieldtys) = do
                 fields' <- forM fieldtys $ \(l, field) -> do
                         field' <- tratype field
@@ -131,7 +135,7 @@ transType ctx = tratype
                 fields' <- forM fieldtys $ \(_, l, field) -> do
                         field' <- mapM tratype field
                         return (l, field')
-                return $ TyVariant dummyInfo fields' --tmp: dummyInfo
+                return $ TyVariant dummyInfo fields' -- tmp: dummyInfo
 
 transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of

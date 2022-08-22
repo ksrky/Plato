@@ -36,6 +36,8 @@ instance Pretty (Context, Term) where
                         let (x', ctx') = pickFreshName x ctx
                          in "(let {" ++ pretty x' ++ "=" ++ pretty (ctx, t1) ++ "} in " ++ pretty (ctx', t2) ++ ")"
                 TmFix _ t1 -> "(fix " ++ pretty (ctx, t1) ++ ")"
+                TmFold _ tyT -> "(fold [" ++ pretty (ctx, tyT) ++ "])"
+                TmUnfold _ tyT -> "(unfold [" ++ pretty (ctx, tyT) ++ "])"
                 TmProj _ t1 l -> pretty (ctx, t1) ++ "." ++ pretty l
                 TmRecord _ fields ->
                         let pf i (li, ti) =
@@ -74,6 +76,9 @@ instance Pretty (Context, Ty) where
                 TyAll _ tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
                          in "(∀" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', tyT2) ++ ")"
+                TyRec _ x knK1 tyT2 ->
+                        let (x', ctx') = pickFreshName x ctx
+                         in "(μ" ++ pretty x' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', tyT2) ++ ")"
                 TyId _ b -> pretty b
                 TyRecord _ fields ->
                         let pf i (li, tyTi) = (if show li /= show i then pretty li ++ ":" else "") ++ pretty (ctx, tyTi)
@@ -123,6 +128,8 @@ instance GetInfo Term where
         getInfo (TmTApp fi _ _) = fi
         getInfo (TmLet fi _ _ _) = fi
         getInfo (TmFix fi _) = fi
+        getInfo (TmFold fi _) = fi
+        getInfo (TmUnfold fi _) = fi
         getInfo (TmProj fi _ _) = fi
         getInfo (TmRecord fi _) = fi
         getInfo (TmTag fi _ _ _) = fi
@@ -134,6 +141,7 @@ instance GetInfo Ty where
         getInfo (TyAll fi _ _ _) = fi
         getInfo (TyAbs fi _ _ _) = fi
         getInfo (TyApp fi _ _) = fi
+        getInfo (TyRec fi _ _ _) = fi
         getInfo (TyId fi _) = fi
         getInfo (TyRecord fi _) = fi
         getInfo (TyVariant fi _) = fi

@@ -1,22 +1,8 @@
 module Plato.Abstract.Fixity where
 
-import Control.Monad
 import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Info
 import Plato.Common.Name
-
-{-}
-data Fixity
-        = Infix Int
-        | InfixL Int
-        | InfixR Int
-        deriving (Eq, Show)
-
-getPrec :: Fixity -> Int
-getPrec (Infix p) = p
-getPrec (InfixL p) = p
-getPrec (InfixR p) = p
--}
 
 type Prec = Int
 

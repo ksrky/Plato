@@ -14,6 +14,7 @@ data Ty
         | TyAll Info Name Kind Ty
         | TyAbs Info Name Kind Ty
         | TyApp Info Ty Ty
+        | TyRec Info Name Kind Ty
         | TyId Info Name
         | TyRecord Info [(Name, Ty)]
         | TyVariant Info [(Name, [Ty])]
@@ -27,6 +28,8 @@ data Term
         | TmTApp Info Term Ty
         | TmLet Info Name Term Term
         | TmFix Info Term
+        | TmFold Info Ty
+        | TmUnfold Info Ty
         | TmProj Info Term Name
         | TmRecord Info [(Name, Term)]
         | TmTag Info Name [Term] Ty
@@ -53,6 +56,7 @@ tymap onvar c tyT = walk c tyT
                 TyAll fi tyX knK1 tyT2 -> TyAll fi tyX knK1 (walk (c + 1) tyT2)
                 TyAbs fi tyX knK1 tyT2 -> TyAbs fi tyX knK1 (walk (c + 1) tyT2)
                 TyApp fi tyT1 tyT2 -> TyApp fi (walk c tyT1) (walk c tyT2)
+                TyRec fi tyX knK1 tyT2 -> TyRec fi tyX knK1 (walk (c + 1) tyT)
                 TyId fi b -> TyId fi b
                 TyRecord fi fieldtys -> TyRecord fi (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
                 TyVariant fi fieldtys -> TyVariant fi (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
@@ -94,6 +98,8 @@ tmmap onvar ontype c t = walk c t
                 TmTAbs fi tyX knK1 t2 -> TmTAbs fi tyX knK1 (walk (c + 1) t2)
                 TmTApp fi t1 tyT2 -> TmTApp fi (walk c t1) (ontype c tyT2)
                 TmFix fi t1 -> TmFix fi (walk c t1)
+                TmFold fi tyT -> TmFold fi (ontype c tyT)
+                TmUnfold fi tyT -> TmUnfold fi (ontype c tyT)
                 TmProj fi t1 l -> TmProj fi (walk c t1) l
                 TmRecord fi fields -> TmRecord fi (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmLet fi x t1 t2 -> TmLet fi x (walk c t1) (walk (c + 1) t2)

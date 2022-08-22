@@ -27,6 +27,7 @@ data Type
         | AllType Info Name Type
         | AbsType Info Name Type
         | AppType Info Type Type
+        | RecType Info Name Type
         | RecordType Info [(Name, Type)]
         | SumType [(Info, Name, [Type])]
         deriving (Eq, Show)

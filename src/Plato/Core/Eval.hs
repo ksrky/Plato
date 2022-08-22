@@ -19,6 +19,7 @@ isval ctx t = case t of
         TmAbs{} -> True
         TmRecord _ fields -> all (\(l, ti) -> isval ctx ti) fields
         TmTag _ _ ts1 _ -> all (isval ctx) ts1
+        TmApp _ (TmFold _ _) v -> isval ctx v
         TmTAbs{} -> True
         TmVar _ i _ -> case getBinding ctx i of
                 VarBind{} -> True
@@ -33,6 +34,13 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmVar _ i n -> case getBinding ctx i of
                         TmAbbBind t _ -> Just t
                         _ -> Nothing
+                TmApp _ (TmUnfold _ tyS) (TmApp _ (TmFold _ tyT) v) | isval ctx v -> Just v
+                TmApp fi1 (TmFold fi2 tyS) t2 -> do
+                        t2' <- eval1 t2
+                        Just $ TmApp fi1 (TmFold fi2 tyS) t2'
+                TmApp fi1 (TmUnfold fi2 tyS) t2 -> do
+                        t2' <- eval1 t2
+                        Just $ TmApp fi1 (TmUnfold fi2 tyS) t2'
                 TmApp _ (TmAbs _ x _ t12) v2 | isval ctx v2 -> do
                         return $ termSubstTop v2 t12
                 TmApp fi v1 t2 | isval ctx v1 -> do
@@ -128,21 +136,30 @@ tyeqv fi ctx = tyeqv'
                         (TyArr _ tyS1 tyS2, TyArr _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
-                        (TyAll _ tyX1 _ tyS2, TyAll _ _ _ tyT2) -> do
-                                ctx' <- addName fi tyX1 ctx
-                                tyeqv fi ctx' tyS2 tyT2
-                        (TyAbs _ tyX1 knKS1 tyS2, TyAbs _ _ knKT1 tyT2) | knKS1 == knKT1 -> do
-                                ctx' <- addName fi tyX1 ctx
-                                tyeqv fi ctx' tyS2 tyT2
+                        (TyAll fi1 tyX1 _ tyS2, TyAll _ _ _ tyT2) -> do
+                                ctx' <- addName fi1 tyX1 ctx
+                                tyeqv fi1 ctx' tyS2 tyT2
+                        (TyAbs fi1 tyX1 knKS1 tyS2, TyAbs _ _ knKT1 tyT2) | knKS1 == knKT1 -> do
+                                ctx' <- addName fi1 tyX1 ctx
+                                tyeqv fi1 ctx' tyS2 tyT2
+                        {-(TyApp fi1 (TyId _ b1) tyS2, _) -> do
+                                i <- getVarIndex fi ctx b1
+                                tyeqv' (TyApp fi1 (gettyabb ctx i) tyS2) tyT'
+                        (_, TyApp fi2 (TyId _ b2) tyT2) -> do
+                                i <- getVarIndex fi ctx b2
+                                tyeqv' tyS' (TyApp fi2 (gettyabb ctx i) tyT2)-}
                         (TyApp _ tyS1 tyS2, TyApp _ tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
+                        (TyRec fi1 x1 _ tyS2, TyRec _ _ _ tyT2) -> do
+                                ctx' <- addName fi1 x1 ctx
+                                tyeqv fi1 ctx tyS2 tyT2
                         (TyId _ b1, TyId _ b2) | b1 == b2 -> return ()
-                        (TyId _ b1, _) -> do
-                                i <- getVarIndex fi ctx b1
+                        (TyId fi1 b1, _) -> do
+                                i <- getVarIndex fi1 ctx b1
                                 tyeqv' (gettyabb ctx i) tyT'
-                        (_, TyId _ b2) -> do
-                                i <- getVarIndex fi ctx b2
+                        (_, TyId fi2 b2) -> do
+                                i <- getVarIndex fi2 ctx b2
                                 tyeqv' tyS' (gettyabb ctx i)
                         (TyRecord fi1 fields1, TyRecord fi2 fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
@@ -175,10 +192,8 @@ getkind fi ctx i = case getBinding ctx i of
 kindof :: MonadThrow m => Context -> Ty -> m Kind
 kindof ctx tyT = case tyT of
         TyArr _ tyT1 tyT2 -> do
-                knK1 <- kindof ctx tyT1
-                unless (knK1 == KnStar) $ throwError (getInfo tyT1) "star kind expected"
-                knK2 <- kindof ctx tyT2
-                unless (knK2 == KnStar) $ throwError (getInfo tyT2) "star kind expected"
+                checkKindStar (getInfo tyT1) ctx tyT1
+                checkKindStar (getInfo tyT2) ctx tyT2
                 return KnStar
         TyVar fi i _ -> getkind fi ctx i
         TyAbs fi tyX knK1 tyT2 -> do
@@ -194,28 +209,37 @@ kindof ctx tyT = case tyT of
                         _ -> throwError fi "arrow kind expected"
         TyAll fi tyX knK1 tyT2 -> do
                 ctx' <- addBinding fi tyX (TyVarBind knK1) ctx
+                checkKindStar (getInfo tyT2) ctx' tyT2
+                return KnStar
+        TyRec fi tyX knK1 tyT2 -> do
+                ctx' <- addBinding fi tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
-                unless (knK2 == KnStar) $ throwError (getInfo tyT2) "Kind * expected"
+                unless (knK1 == knK2) $ throwError (getInfo tyT2) $ "Kind " ++ show knK1 ++ " expected"
                 return KnStar
         TyId fi b -> do
-                i <- getVarIndex fi ctx b
-                getkind fi ctx i
+                -- i <- getVarIndex fi ctx b
+                -- getkind fi ctx i -- todo: kind of recursive type stuck
+                return KnStar
         TyRecord fi fieldtys -> do
-                forM_ fieldtys $ \(l, tyS) -> do
-                        knS <- kindof ctx tyS
-                        unless (knS /= KnStar) $ throwError fi "Kind * expected"
+                forM_ fieldtys $ \(l, tyS) -> checkKindStar fi ctx tyS
                 return KnStar
         TyVariant fi fieldtys -> do
                 forM_ fieldtys $ \(l, tys) -> do
-                        forM_ tys $ \tyS -> do
-                                knS <- kindof ctx tyS
-                                unless (knS /= KnStar) $ throwError fi "Kind * expected" --tmp
+                        forM_ tys $ \tyS -> checkKindStar fi ctx tyS
                 return KnStar
+
+checkKindStar :: MonadThrow m => Info -> Context -> Ty -> m ()
+checkKindStar fi ctx tyT = do
+        k <- kindof ctx tyT
+        if k == KnStar
+                then return ()
+                else throwError fi $ "Kind * expected: " ++ pretty (ctx, tyT)
 
 typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
         TmVar fi i _ -> getTypeFromContext fi ctx i
         TmAbs fi x tyT1 t2 -> do
+                --checkKindStar fi ctx tyT1
                 ctx' <- addBinding fi x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyArr dummyInfo tyT1 (typeShift (-1) tyT2)
@@ -250,6 +274,12 @@ typeof ctx t = case t of
                                 tyeqv fi1 ctx tyT12 tyT11
                                 return tyT12
                         _ -> throwError fi "arrow type expected"
+        TmFold fi tyS -> case simplifyty ctx tyS of
+                TyRec fi1 _ _ tyT -> return $ TyArr fi1 (typeSubstTop tyS tyT) tyS
+                _ -> throwError fi "recursive type expected"
+        TmUnfold fi tyS -> case simplifyty ctx tyS of
+                TyRec fi1 _ _ tyT -> return $ TyArr fi1 tyS (typeSubstTop tyS tyT)
+                _ -> throwError fi "recursive type expected"
         TmProj fi t1 l -> do
                 tyT1 <- typeof ctx t1
                 case simplifyty ctx tyT1 of

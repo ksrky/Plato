@@ -40,6 +40,7 @@ instance Pretty Type where
         pretty (AllType _ x ty) = "(∀" ++ pretty x ++ ". " ++ pretty ty ++ ")"
         pretty (AbsType _ x ty) = "(λ" ++ pretty x ++ ". " ++ pretty ty ++ ")"
         pretty (AppType _ ty1 ty2) = "(" ++ pretty ty1 ++ " " ++ pretty ty2 ++ ")"
+        pretty (RecType _ x ty) = "(μ" ++ pretty x ++ ". " ++ pretty ty ++ ")"
         pretty (RecordType _ fields) =
                 let pf i (li, ei) = (if show li /= show i then pretty li ++ "=" else "") ++ pretty ei
                     pfs i l = case l of
@@ -84,6 +85,7 @@ instance GetInfo Type where
         getInfo (AllType fi _ _) = fi
         getInfo (AbsType fi _ _) = fi
         getInfo (AppType fi _ _) = fi
+        getInfo (RecType fi _ _) = fi
         getInfo (RecordType fi _) = unreachable "RecordType does not have Info"
         getInfo (SumType _) = unreachable "SumType does not have Info"
 
