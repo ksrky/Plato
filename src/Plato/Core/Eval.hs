@@ -185,7 +185,10 @@ tyeqv fi ctx = tyeqv'
 getkind :: MonadThrow m => Info -> Context -> Int -> m Kind
 getkind fi ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
-        TyAbbBind _ (Just knK) -> return knK
+        TyAbbBind tyT (Just knK) -> do
+                knK' <- kindof ctx tyT
+                unless (knK /= knK') $ throwError fi "Kind attachment failed"
+                return knK
         TyAbbBind tyT Nothing -> kindof ctx tyT
         _ -> throwError fi $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
 

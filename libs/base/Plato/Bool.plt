@@ -1,4 +1,4 @@
-module Data.Bool;
+module Plato.Bool;
 
 data Bool = True | False;
 

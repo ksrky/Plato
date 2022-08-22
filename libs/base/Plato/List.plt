@@ -1,7 +1,7 @@
-module Data.List;
+module Plato.List;
 
-import Data.Maybe;
-import Data.Nat;
+import Plato.Maybe;
+import Plato.Nat;
 
 data List a = Nil | Cons a (List a);
 

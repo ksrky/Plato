@@ -1,6 +1,6 @@
-module Data.Either;
+module Plato.Either;
 
-import Data.Bool;
+import Plato.Bool;
 
 data Either a b = Left a | Right b;
 

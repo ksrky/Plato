@@ -1,3 +1,3 @@
-module Data.Maybe;
+module Plato.Maybe;
 
 data Maybe a = Nothing | Just a;

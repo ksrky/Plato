@@ -1,15 +1,19 @@
 module Plato.Translation.KindInfer where
 
 import Plato.Common.Name
+import Plato.Core.Context
+import qualified Plato.Core.Syntax as C
 import Plato.IR.Syntax as I
 
 import Control.Monad.State
 import qualified Data.Map.Strict as M
+import Plato.Common.Vect
 
-data Kind = KStar | KArr Kind Kind | KVar String deriving (Eq, Show)
+data Kn = KStar | KArr Kn Kn | KVar String deriving (Eq, Show)
 
-data Store = Store {memo :: [(Name, String)], constr :: M.Map String Kind, number :: Int}
+data Store = Store {memo :: [(Name, String)], constr :: M.Map String Kn, number :: Int}
 
+emptyStore :: Store
 emptyStore = Store{memo = [], constr = M.empty, number = 0}
 
 fresh :: State Store String
@@ -25,22 +29,22 @@ addabsname x str = do
         store <- get
         put $ store{memo = (x, str) : memo store}
 
-update :: String -> Kind -> State Store ()
-update x k = do
+updateKind :: String -> Kn -> State Store ()
+updateKind x k = do
         store <- get
         put $ store{constr = M.insert x k (constr store)}
 
-app :: Kind -> Kind -> State Store Kind
-app k1 k2 = case k1 of
+appKind :: Kn -> Kn -> State Store Kn
+appKind k1 k2 = case k1 of
         KArr k11 k12 | k11 == k2 -> return k12
-        KArr (KVar x) k12 -> update x k2 >> return k12
+        KArr (KVar x) k12 -> updateKind x k2 >> return k12
         KVar x -> do
                 n <- fresh
-                update x (KArr k2 (KVar n))
+                updateKind x (KArr k2 (KVar n))
                 return $ KVar n
-        _ -> error "app"
+        _ -> return KStar -- error
 
-getKind :: Name -> State Store Kind
+getKind :: Name -> State Store Kn
 getKind x = do
         m <- gets memo
         a <- case lookup x m of
@@ -52,7 +56,7 @@ getKind x = do
                 Just k -> walk k
                 Nothing -> error "getKind"
     where
-        walk :: Kind -> State Store Kind
+        walk :: Kn -> State Store Kn
         walk (KArr k1 k2) = KArr <$> walk k1 <*> walk k2
         walk KStar = return KStar
         walk (KVar x) = do
@@ -61,7 +65,7 @@ getKind x = do
                         Just k -> walk k
                         Nothing -> error "walk"
 
-infer :: Type -> State Store Kind
+infer :: Type -> State Store Kn
 infer ty = case ty of
         VarType fi x -> getKind x
         ArrType _ ty1 ty2 -> do
@@ -81,7 +85,7 @@ infer ty = case ty of
         AppType _ ty1 ty2 -> do
                 k2 <- infer ty2
                 k1 <- infer ty1
-                app k1 k2
+                appKind k1 k2
         RecType _ x ty -> do
                 n <- fresh
                 addabsname x n
@@ -93,16 +97,29 @@ infer ty = case ty of
                 forM_ fields $ \(_, _, tys) -> mapM infer tys
                 return KStar
 
-replaceStar :: Kind -> State Store Kind
+replaceStar :: Kn -> State Store C.Kind
 replaceStar k = case k of
-        KStar -> return KStar
-        KArr k1 k2 -> KArr <$> replaceStar k1 <*> replaceStar k2
+        KStar -> return C.KnStar
+        KArr k1 k2 -> C.KnArr <$> replaceStar k1 <*> replaceStar k2
         KVar x -> do
-                update x KStar
-                return KStar
+                updateKind x KStar
+                return C.KnStar
 
-kindInfer :: Type -> Kind
-kindInfer ty =
-        let (k, store) = infer ty `runState` emptyStore
-            (k', store') = replaceStar k `runState` store
-         in k'
+convertKind :: C.Kind -> Kn
+convertKind C.KnStar = KStar
+convertKind (C.KnArr knK1 knK2) = KArr (convertKind knK1) (convertKind knK2)
+
+initStore :: Context -> State Store ()
+initStore ctx = forM_ ctx $ \(x, bind) -> case bind of
+        C.TyVarBind knK -> do
+                n <- fresh
+                addabsname x n
+                updateKind n (convertKind knK)
+        _ -> return ()
+
+kindInfer :: Context -> Type -> C.Kind
+kindInfer ctx ty =
+        let store = initStore ctx `execState` emptyStore
+            (k, store') = infer ty `runState` store
+            (knK, store'') = replaceStar k `runState` store'
+         in knK

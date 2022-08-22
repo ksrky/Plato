@@ -1,6 +1,6 @@
-module Data.Nat;
+module Plato.Nat;
 
-import Data.Bool;
+import Plato.Bool;
 
 data Nat = Zero | Succ Nat;
 
