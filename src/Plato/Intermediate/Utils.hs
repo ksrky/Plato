@@ -1,10 +1,10 @@
-module Plato.IR.Utils where
+module Plato.Intermediate.Utils where
 
 import Data.List
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Pretty
-import Plato.IR.Syntax
+import Plato.Intermediate.Syntax
 
 instance Pretty Expr where
         pretty (VarExpr _ x) = show x

@@ -46,12 +46,12 @@ library
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
       Plato.Debug.REPL
-      Plato.IR.Rename
-      Plato.IR.Syntax
-      Plato.IR.Utils
+      Plato.Intermediate.Rename
+      Plato.Intermediate.Syntax
+      Plato.Intermediate.Utils
       Plato.Main
-      Plato.Translation.AbsToIR
-      Plato.Translation.IRToCore
+      Plato.Translation.AbsToInt
+      Plato.Translation.IntToCore
       Plato.Translation.KindInfer
       Plato.Translation.SrcToAbs
   other-modules:
@@ -98,12 +98,12 @@ executable plato
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
       Plato.Debug.REPL
-      Plato.IR.Rename
-      Plato.IR.Syntax
-      Plato.IR.Utils
+      Plato.Intermediate.Rename
+      Plato.Intermediate.Syntax
+      Plato.Intermediate.Utils
       Plato.Main
-      Plato.Translation.AbsToIR
-      Plato.Translation.IRToCore
+      Plato.Translation.AbsToInt
+      Plato.Translation.IntToCore
       Plato.Translation.KindInfer
       Plato.Translation.SrcToAbs
       Paths_Plato

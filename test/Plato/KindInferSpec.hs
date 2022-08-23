@@ -5,7 +5,7 @@ import Plato.Common.Name
 import Plato.Common.Vect
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.IR.Syntax
+import Plato.Intermediate.Syntax
 import Plato.Translation.KindInfer
 
 import Test.Hspec

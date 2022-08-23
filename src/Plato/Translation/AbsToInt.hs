@@ -1,15 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Translation.AbsToIR where
+module Plato.Translation.AbsToInt where
 
 import qualified Plato.Abstract.Syntax as A
 import Plato.Common.Error
 import Plato.Common.Info
 import Plato.Common.Name
 import Plato.Common.Vect
-import Plato.IR.Rename
-import qualified Plato.IR.Syntax as I
-import Plato.IR.Utils as I
+import Plato.Intermediate.Rename
+import qualified Plato.Intermediate.Syntax as I
+import Plato.Intermediate.Utils as I
 
 import Control.Exception.Safe
 import Control.Monad
@@ -142,8 +142,8 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-abs2ir :: MonadThrow m => A.Program -> m I.Decls
-abs2ir (A.Program _ ids tds) = do
+abs2int :: MonadThrow m => A.Program -> m I.Decls
+abs2int (A.Program _ ids tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
         vardecls <- transFuncTyDecls tds
