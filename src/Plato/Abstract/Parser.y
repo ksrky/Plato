@@ -38,7 +38,7 @@ import Plato.Common.Pretty
 ':'                             { TokSymbol (SymColon, _) }
 '.'                             { TokSymbol (SymDot, $$) }
 '='                             { TokSymbol (SymEqual, _) }
-'{'                             { TokSymbol (SymLBrace, _) }
+'{'                             { TokSymbol (SymLBrace, $$) }
 '['                             { TokSymbol (SymLBrack, $$) }
 '('                             { TokSymbol (SymLParen, $$) }
 '}'                             { TokSymbol (SymRBrace, _) }
@@ -111,7 +111,8 @@ types       :: { [A.Type] }
             | {- empty -}                           { [] }
 
 type        :: { A.Type }
-            : 'forall' tyvars '.' type              { A.AllType (mkInfo $1) $2 $4 }
+            : 'forall' varid tyvars '.' type        { A.AllType (mkInfo $1) (id2tyVarName $2 : $3) $5 }
+            | '{' varid tyvars '}' '->' type        { A.AllType (mkInfo $1) (id2tyVarName $2 : $3) $6 }
             | btype '->' type                       { A.ArrType (mkInfo $2) $1 $3 }
             | '(' type ')'                          { $2 }
             | btype                                 { $1 }

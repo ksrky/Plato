@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Plato.Translation.IntToCore where
+module Plato.Translation.TypToCore where
 
 import Plato.Common.Error
 import Plato.Common.Info
@@ -9,8 +9,8 @@ import Plato.Common.Pretty
 import Plato.Core.Command as C
 import Plato.Core.Context
 import Plato.Core.Syntax
-import Plato.Intermediate.Syntax
-import Plato.Intermediate.Utils
+import Plato.Typing.Syntax
+import Plato.Typing.Utils
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -153,8 +153,8 @@ transDecl decl = StateT $ \ctx -> case decl of
                 ctx' <- addName fi f ctx
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 
-int2core :: MonadThrow m => Context -> Decls -> m Commands
-int2core ctx (Decls modns decls (body, bodyty)) = (`evalStateT` ctx) $ do
+typ2core :: MonadThrow m => Context -> Decls -> m Commands
+typ2core ctx (Decls modns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         binds <- mapM transDecl decls
         ctx' <- get
         main <- transExpr ctx' bodyty body

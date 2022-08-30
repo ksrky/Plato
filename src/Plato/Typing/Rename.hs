@@ -1,4 +1,4 @@
-module Plato.Intermediate.Rename where
+module Plato.Typing.Rename where
 
 import Plato.Common.Name
 import Plato.Common.Vect

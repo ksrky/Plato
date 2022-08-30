@@ -3,7 +3,7 @@ module Plato.Translation.KindInfer where
 import Plato.Common.Name
 import Plato.Core.Context
 import qualified Plato.Core.Syntax as C
-import Plato.Intermediate.Syntax as I
+import Plato.Typing.Syntax as I
 
 import Control.Monad.State
 import qualified Data.Map.Strict as M

@@ -1,4 +1,4 @@
-module Plato.Intermediate.Syntax where
+module Plato.Typing.Syntax where
 
 import Plato.Common.Error (unreachable)
 import Plato.Common.Info (Info)

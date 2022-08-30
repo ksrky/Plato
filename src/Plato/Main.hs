@@ -6,9 +6,9 @@ import Plato.Common.Vect
 import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Translation.AbsToInt
-import Plato.Translation.IntToCore
+import Plato.Translation.AbsToTyp
 import Plato.Translation.SrcToAbs
+import Plato.Translation.TypToCore
 
 import Control.Monad.State
 import System.Console.Haskeline
@@ -36,8 +36,8 @@ processFile ctx src = do
 process :: Context -> String -> IO Context
 process ctx input = do
         ast <- src2abs input
-        ir <- abs2int ast
-        cmds <- int2core ctx ir
+        typ <- abs2typ ast
+        cmds <- typ2core ctx typ
         -- processing imports
         ctx' <- (`execStateT` ctx) $
                 forM (imports cmds) $ \modn -> do

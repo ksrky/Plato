@@ -4,9 +4,9 @@ import Plato.Common.Pretty
 import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Utils
-import Plato.Translation.AbsToInt
-import Plato.Translation.IntToCore
+import Plato.Translation.AbsToTyp
 import Plato.Translation.SrcToAbs
+import Plato.Translation.TypToCore
 
 import Control.Monad.State
 import System.Console.Haskeline
@@ -43,6 +43,6 @@ processFile fname = do
 process :: String -> IO Commands
 process input = do
         ast <- src2abs input
-        ir <- abs2int ast
-        cmds <- int2core emptyContext ir
+        typ <- abs2typ ast
+        cmds <- typ2core emptyContext typ
         putStrLn (pretty (emptyContext, cmds)) >> return cmds

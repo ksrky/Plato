@@ -1,7 +1,7 @@
 module Plato.Debug.IRTrans where
 
 import Plato.Common.Pretty
-import Plato.Translation.AbsToInt
+import Plato.Translation.AbsToTyp
 import Plato.Translation.SrcToAbs
 
 import Control.Monad.State
@@ -39,5 +39,5 @@ processFile fname = do
 process :: String -> IO ()
 process input = do
         ast <- src2abs input
-        ir <- abs2int ast
-        putStrLn $ pretty ir
+        typ <- abs2typ ast
+        putStrLn $ pretty typ

@@ -46,14 +46,14 @@ library
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
       Plato.Debug.REPL
-      Plato.Intermediate.Rename
-      Plato.Intermediate.Syntax
-      Plato.Intermediate.Utils
       Plato.Main
-      Plato.Translation.AbsToInt
-      Plato.Translation.IntToCore
+      Plato.Translation.AbsToTyp
       Plato.Translation.KindInfer
       Plato.Translation.SrcToAbs
+      Plato.Translation.TypToCore
+      Plato.Typing.Rename
+      Plato.Typing.Syntax
+      Plato.Typing.Utils
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -98,14 +98,14 @@ executable plato
       Plato.Debug.EvalIO
       Plato.Debug.IRTrans
       Plato.Debug.REPL
-      Plato.Intermediate.Rename
-      Plato.Intermediate.Syntax
-      Plato.Intermediate.Utils
       Plato.Main
-      Plato.Translation.AbsToInt
-      Plato.Translation.IntToCore
+      Plato.Translation.AbsToTyp
       Plato.Translation.KindInfer
       Plato.Translation.SrcToAbs
+      Plato.Translation.TypToCore
+      Plato.Typing.Rename
+      Plato.Typing.Syntax
+      Plato.Typing.Utils
       Paths_Plato
   hs-source-dirs:
       src
