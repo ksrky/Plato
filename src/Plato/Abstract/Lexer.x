@@ -64,6 +64,7 @@ tokens :-
 
 <0> \'                          { symbol SymApost }
 <0> \-\>                        { symbol SymArrow }
+<0> \@                          { symbol SymAt }
 <0> \\                          { symbol SymBackslash }
 <0> \:                          { symbol SymColon }
 <0> \,                          { symbol SymComma }

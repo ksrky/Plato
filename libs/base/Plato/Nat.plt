@@ -22,6 +22,8 @@ times m n = case m of {
     Succ m' -> plus n (times m' n);  
 };
 
+infix 9 ==;
+
 (==) : Nat -> Nat -> Bool
 (==) m n = case m of {
     Succ m' -> case n of {
@@ -33,8 +35,6 @@ times m n = case m of {
         Zero -> True;
     };
 };
-
-infix 9 ==;
 
 one : Nat;
 one = Succ Zero;

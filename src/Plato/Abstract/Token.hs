@@ -35,6 +35,7 @@ data Keyword
 data Symbol
         = SymApost
         | SymArrow
+        | SymAt
         | SymBackslash
         | SymColon
         | SymComma
@@ -82,6 +83,7 @@ instance Pretty Keyword where
 instance Pretty Symbol where
         pretty SymApost = "'"
         pretty SymArrow = "->"
+        pretty SymAt = "@"
         pretty SymBackslash = "\\"
         pretty SymColon = ":"
         pretty SymComma = ","

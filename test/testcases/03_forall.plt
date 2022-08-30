@@ -5,4 +5,4 @@ data P;
 p : P;
 
 main : P;
-main = id [P] p;
+main = id@P p;

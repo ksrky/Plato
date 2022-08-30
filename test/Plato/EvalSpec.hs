@@ -7,9 +7,9 @@ import Plato.Common.Vect
 import Plato.Core.Command
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Translation.AbsToInt
-import Plato.Translation.IntToCore
+import Plato.Translation.AbsToTyp
 import Plato.Translation.SrcToAbs
+import Plato.Translation.TypToCore
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -44,8 +44,8 @@ processFiles ((fname, iscorrect) : rest) = do
 process :: (MonadThrow m, MonadFail m) => Context -> String -> m String
 process ctx input = do
         ast <- src2abs input
-        ir <- abs2int ast
-        cmds <- int2core ctx ir
+        typ <- abs2typ ast
+        cmds <- typ2core ctx typ
         ctx' <- (`execStateT` ctx) $
                 forM_ (binds cmds) $ \(fi, (x, bind)) -> do
                         ctx <- get
