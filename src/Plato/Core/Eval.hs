@@ -115,12 +115,18 @@ computety ctx tyT = case tyT of
 
 simplifyty :: Context -> Ty -> Ty
 simplifyty ctx tyT =
-        let tyT' = case tyT of
+        let tyT' = case simplifytyid ctx tyT of
                 TyApp fi tyT1 tyT2 -> TyApp fi (simplifyty ctx tyT1) tyT2
                 _ -> tyT
          in case computety ctx tyT' of
                 Just tyT'' -> simplifyty ctx tyT''
                 Nothing -> tyT'
+
+simplifytyid :: Context -> Ty -> Ty
+simplifytyid ctx tyT = case tyT of
+        TyApp fi tyT1 tyT2 -> TyApp fi (simplifytyid ctx tyT1) tyT2
+        TyId _ b -> let i = getVarIndex' ctx b in gettyabb ctx i
+        _ -> tyT
 
 tyeqv :: MonadThrow m => Info -> Context -> Ty -> Ty -> m ()
 tyeqv fi ctx = tyeqv'
@@ -288,7 +294,7 @@ typeof ctx t = case t of
                 case simplifyty ctx tyT1 of
                         TyRecord _ fieldtys -> case lookup l fieldtys of
                                 Just tyT -> return tyT
-                                Nothing -> throwError fi $ "label " ++ show l ++ " not found"
+                                Nothing -> throwError fi $ "label " ++ show l ++ " not found in " ++ pretty (ctx, tyT1)
                         _ -> throwError fi "Expected record type"
         TmRecord fi fields -> do
                 fieldtys <- forM fields $ \(li, ti) -> do
@@ -305,7 +311,7 @@ typeof ctx t = case t of
                 tyT2' -> throwError fi $ "Expected variant type, but got " ++ pretty (ctx, tyT2')
         TmCase fi t alts -> do
                 tyT <- typeof ctx t
-                case simplifyty ctx tyT of
+                case simplifytyid ctx $ simplifyty ctx tyT of
                         TyVariant fi1 fieldtys -> do
                                 when (null fieldtys) $ return ()
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
@@ -323,7 +329,7 @@ typeof ctx t = case t of
                                         Nothing -> throwError fi $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
-                        tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT')
+                        tyT' -> throwError fi $ "Expected variant type, but got " ++ pretty (ctx, tyT') ++ show (simplifytyid ctx tyT')
 
 ----------------------------------------------------------------
 -- Type check of binding

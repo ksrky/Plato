@@ -26,11 +26,11 @@ instance Pretty (Context, Term) where
                 TmVar _ x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TmAbs _ x tyT1 t2 ->
                         let (x', ctx') = pickFreshName x ctx
-                         in "(\\" ++ pretty x' ++ ": " ++ pretty (ctx, tyT1) ++ ". " ++ pretty (ctx', t2) ++ ")"
+                         in "(λ" ++ pretty x' ++ ": " ++ pretty (ctx, tyT1) ++ ". " ++ pretty (ctx', t2) ++ ")"
                 TmApp _ t1 t2 -> "(" ++ pretty (ctx, t1) ++ " " ++ pretty (ctx, t2) ++ ")"
                 TmTAbs _ tyX knK1 t2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
-                         in "(\\" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', t2) ++ ")"
+                         in "(λ" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', t2) ++ ")"
                 TmTApp _ t1 tyT2 -> "(" ++ pretty (ctx, t1) ++ "@" ++ pretty (ctx, tyT2) ++ ")"
                 TmLet _ x t1 t2 ->
                         let (x', ctx') = pickFreshName x ctx
@@ -105,7 +105,7 @@ instance Pretty (Context, Binding) where
         pretty (ctx, TyAbbBind tyT Nothing) = pretty (ctx, tyT)
 
 instance Pretty (Context, Commands) where
-        pretty (ctx, Commands imps binds body) =
+        pretty (ctx, Commands imps binds (body, bodyty)) =
                 "import {\n\t"
                         ++ intercalate "\n\t" (map pretty imps)
                         ++ "\n}\nbinds {\n\t"

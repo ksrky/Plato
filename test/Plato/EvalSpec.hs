@@ -13,6 +13,7 @@ import Plato.Translation.TypToCore
 
 import Control.Exception.Safe
 import Control.Monad.State
+import Plato.Typing.Rename
 import Test.Hspec
 
 spec :: Spec
@@ -44,13 +45,13 @@ processFiles ((fname, iscorrect) : rest) = do
 process :: (MonadThrow m, MonadFail m) => Context -> String -> m String
 process ctx input = do
         ast <- src2abs input
-        ir <- abs2typ ast
-        cmds <- typ2core ctx ir
+        typ <- abs2typ emptyMemo ast
+        cmds <- typ2core ctx typ
         ctx' <- (`execStateT` ctx) $
                 forM_ (binds cmds) $ \(fi, (x, bind)) -> do
                         ctx <- get
                         -- checkBinding fi ctx bind
                         put $ cons (x, bind) ctx
-        tyT <- typeof ctx' (body cmds)
-        let res = eval ctx' (body cmds)
+        tyT <- typeof ctx' (fst $ body cmds)
+        let res = eval ctx' (fst $ body cmds)
         return $ pretty (ctx', res)

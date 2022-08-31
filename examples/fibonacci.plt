@@ -1,10 +1,11 @@
-import Data.Nat;
-
 fib : Nat -> Nat;
 fib n = case n of {
-    Zero -> Zero
+    Zero -> Zero;
     Succ n' -> case n' of {
         Zero -> Succ Zero;
-        Succ n'' -> fib (n'' - 2) * fib (n'' - 1);
+        Succ n'' -> fib n'' + fib n';
     };
 };
+
+main : Nat;
+main = fib (Succ (Succ (Succ (Succ Zero))));

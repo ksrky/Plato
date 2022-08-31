@@ -36,18 +36,8 @@ map f l = case l of {
     x :: xs -> f x :: map@a@b f xs;
 };
 
-reverse : forall a. List a -> List a;
-reverse l = let {
-        rev : forall a. List a -> List a -> List a;
-        rev l' a = case l' of {
-            Nil -> a;
-            Cons x xs -> rev xs (x ::@a a);
-        };
-    } in rev@a l (Nil@a)
-};
-
 filter : forall a. (a -> Bool) -> List a -> List a;
 filter f l = case l of {
-    Nil -> Nil [a];
-    Cons x xs -> if (f x) (x :: filter f xs) (filter f xs);
-}
+    Nil -> Nil@a;
+    x :: xs -> if@a (f x) (x ::@a filter@a f xs) (filter@a f xs);
+};

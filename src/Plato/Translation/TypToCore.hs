@@ -158,4 +158,5 @@ typ2core ctx (Decls modns decls (body, bodyty)) = (`evalStateT` ctx) $ do
         binds <- mapM transDecl decls
         ctx' <- get
         main <- transExpr ctx' bodyty body
-        return $ Commands{C.imports = modns, C.binds = zip (map getInfo decls) binds, C.body = main}
+        mainty <- transType ctx' bodyty
+        return $ Commands{C.imports = modns, C.binds = zip (map getInfo decls) binds, C.body = (main, mainty)}

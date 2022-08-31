@@ -13,12 +13,18 @@ import Plato.Core.Syntax
 data Commands = Commands
         { imports :: [ModuleName]
         , binds :: [(Info, (Name, Binding))]
-        , body :: Term
+        , body :: (Term, Ty)
         }
         deriving (Eq, Show)
 
 commandsShift :: Int -> Commands -> Commands
 commandsShift d cmds = cmds{binds = map (\(fi, (x, b)) -> (fi, (x, bindingShift d b))) (binds cmds)}
+
+getBodyBind :: Commands -> ([Name], Binding)
+getBodyBind cmds =
+        let (TmLet _ _ fix _, _) = body cmds
+            TmFix _ (TmAbs _ _ tyT (TmRecord _ fields)) = fix
+         in (map fst fields, TmAbbBind fix (Just tyT))
 
 ----------------------------------------------------------------
 -- Module
