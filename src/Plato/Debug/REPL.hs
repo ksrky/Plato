@@ -54,7 +54,7 @@ process ctx input = do
                         put ctx'
         let cmds' = commandsShift (length ctx' - length ctx) cmds
         ctx'' <- (`execStateT` ctx') $
-                forM_ (binds cmds) $ \(fi, (x, bind)) -> do
+                forM_ (binds cmds') $ \(fi, (x, bind)) -> do
                         ctx <- get
                         checkBinding fi ctx bind
                         put $ cons (x, bind) ctx

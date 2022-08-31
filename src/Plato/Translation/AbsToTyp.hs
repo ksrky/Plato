@@ -168,6 +168,6 @@ abs2typ (A.Program _ ids tds) = do
                 case (body, bodyty) of
                         ([], []) -> return (I.LetExpr dummyInfo bind (I.RecordExpr dummyInfo []), I.RecordType dummyInfo [])
                         ([e], [ty]) -> return (I.LetExpr dummyInfo bind e, ty)
-                        ([_], []) -> throwString "main function lacks a type signature"
-                        ([], [_]) -> throwString " main function lacks a binding"
-                        _ -> throwString "duplicate main function"
+                        ([_], []) -> throwMsg "main function lacks a type signature"
+                        ([], [_]) -> throwMsg " main function lacks a binding"
+                        _ -> throwMsg "duplicate main function"
