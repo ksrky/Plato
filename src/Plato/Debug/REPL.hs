@@ -56,7 +56,7 @@ process ctx input = do
         ctx'' <- (`execStateT` ctx') $
                 forM_ (binds cmds') $ \(fi, (x, bind)) -> do
                         ctx <- get
-                        checkBinding fi ctx bind
+                        -- checkBinding fi ctx bind
                         put $ cons (x, bind) ctx
         when (null ctx) $ do
                 tyT <- typeof ctx'' (body cmds)

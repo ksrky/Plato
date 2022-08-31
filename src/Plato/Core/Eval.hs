@@ -172,7 +172,7 @@ tyeqv fi ctx = tyeqv'
                         (TyVariant fi1 fields1, TyVariant fi2 fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
                                         Just tyTi2 -> zipWithM (tyeqv fi1 ctx) tyTi1 tyTi2
-                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found"
+                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found." ++ show fields1 ++ show fields2
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> zipWithM (tyeqv fi2 ctx) tyTi1 tyTi2
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"

@@ -28,17 +28,19 @@ transExpr memo = traexpr
                 e1' <- traexpr e1
                 e2' <- traexpr e2
                 return $ I.AppExpr (getInfo e2') e1' e2'
-        traexpr (A.TAppExpr fi e1 ts2) = do
+        traexpr (A.TAppExpr fi e1 ty2) = do
                 e1' <- traexpr e1
-                ts2' <- mapM transType ts2
-                return $ foldl (\ty -> I.TAppExpr (getInfo ty) ty) e1' ts2'
-        traexpr (A.OpExpr fi e1 op e2) = do
+                ty2' <- transType ty2
+                return $ I.TAppExpr fi e1' ty2'
+        traexpr (A.OpExpr fi e1 op tys e2) = do
                 e1' <- traexpr e1
                 e2' <- traexpr e2
                 let v = case look op (store memo) of
                         Just r -> I.ProjExpr fi (I.VarExpr fi r) op
                         Nothing -> I.VarExpr fi op
-                return $ I.AppExpr (getInfo e2') (I.AppExpr (getInfo e1') v e1') e2'
+                tys' <- mapM transType tys
+                let v' = foldl (\ty -> I.TAppExpr (getInfo ty) ty) v tys'
+                return $ I.AppExpr (getInfo e2') (I.AppExpr (getInfo e1') v' e1') e2'
         traexpr (A.LamExpr fi xs e) = do
                 e' <- traexpr e
                 return $ foldr (I.LamExpr fi) e' xs

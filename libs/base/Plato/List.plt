@@ -1,67 +1,39 @@
 module Plato.List;
 
-import Plato.Maybe;
-import Plato.Nat;
+infixr 5 ::;
 
-data List a = Nil | a :: List a;
+data List a = Nil | (::) a (List a);
 
 infixl 5 ++;
 
 (++) : forall a. List a -> List a -> List a;
 (++) l m = case l of {
     Nil -> m;
-    x :: xs -> x :: (xs ++ m);
+    x :: xs -> x ::@a (xs ++ m);
 };
 
 head : forall a. List a -> Maybe a;
 head l = case l of {
-    Nil -> Nothing [a];
-    hd :: _ -> Just [a] hd;
-};
-
-last : forall a. List a -> Maybe a;
-last l = case l of {
-    Nil -> Nothing [a];
-    _ :: tl -> case tl of {
-        Nil -> Just [a] hd;
-        _ -> last tl;
-    };
+    Nil -> Nothing@a;
+    hd :: _ -> Just@a hd;
 };
 
 tail : forall a. List a -> List a;
 tail l = case l of {
-    Nil -> Nil [a];
+    Nil -> Nil@a;
     hd :: tl -> tl;
 };
-
-init : forall a. List a -> List a;
-init l = case l of {
-    Nil -> Nil [a];
-    x :: xs -> let {
-        init' : forall a. List a -> List a;
-        init' y l' = case l' of {
-            Nil -> Nil [a];
-            z :: zs -> y :: init' z zs;
-        } in init' x xs 
-    };
-};
-
-null : forall a. List a -> Bool;
-null l = case l of {
-    Nil -> True;
-    _ -> False; 
-}
 
 length : forall a. List a -> Nat;
 length l = case l of {
     Nil -> Zero;
-    x :: xs -> Succ (length [a] xs);
+    x :: xs -> Succ (length@a xs);
 };
 
 map : forall a b. (a -> b) -> List a -> List b;
 map f l = case l of {
-    Nil -> Nil [b];
-    x :: xs -> f x :: map [a b] f xs;
+    Nil -> Nil@b;
+    x :: xs -> f x :: map@a@b f xs;
 };
 
 reverse : forall a. List a -> List a;
@@ -69,9 +41,9 @@ reverse l = let {
         rev : forall a. List a -> List a -> List a;
         rev l' a = case l' of {
             Nil -> a;
-            Cons x xs -> rev xs (x :: a);
+            Cons x xs -> rev xs (x ::@a a);
         };
-    } in rev [a] l (Nil [a])
+    } in rev@a l (Nil@a)
 };
 
 filter : forall a. (a -> Bool) -> List a -> List a;

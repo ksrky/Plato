@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Plato.Core.Command where
 
 import Plato.Common.Info
@@ -30,3 +32,18 @@ data Module = Module
 
 data ModuleGraph = ModNode Module [ModuleGraph]
         deriving (Eq, Show)
+
+-- baseModule :: [String]
+-- baseModule = ["Plato.Base", "Plato.Bool", "Plato.Maybe", "Plato.Either", "Plato.Nat", "Plato.List"]
+
+baseModules :: [ModuleName]
+baseModules = map (ModuleName . map str2conName) xs
+    where
+        xs =
+                [ ["Plato", "Base"]
+                , ["Plato", "Bool"]
+                , ["Plato", "Maybe"]
+                , ["Plato", "Either"]
+                , ["Plato", "Nat"]
+                , ["Plato", "List"]
+                ]

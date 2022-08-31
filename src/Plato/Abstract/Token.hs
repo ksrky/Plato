@@ -35,6 +35,7 @@ data Keyword
 data Symbol
         = SymApost
         | SymArrow
+        | SymAt
         | SymBackslash
         | SymColon
         | SymComma
@@ -50,6 +51,24 @@ data Symbol
         | SymUScore
         | SymVBar
         deriving (Eq, Show)
+
+reservedop :: [(String, Symbol)]
+reservedop =
+        [ ("'", SymApost)
+        , ("->", SymArrow)
+        , ("@", SymAt)
+        , ("\\", SymBackslash)
+        , (":", SymColon)
+        , (",", SymComma)
+        , ("=", SymEqual)
+        , ("{", SymLBrace)
+        , ("}", SymRBrace)
+        , ("(", SymLParen)
+        , (")", SymRParen)
+        , (";", SymSemicolon)
+        , ("_", SymUScore)
+        , ("|", SymVBar)
+        ]
 
 instance Pretty Posn where
         pretty (Pn l c) = show l ++ ":" ++ show c
@@ -82,6 +101,7 @@ instance Pretty Keyword where
 instance Pretty Symbol where
         pretty SymApost = "'"
         pretty SymArrow = "->"
+        pretty SymAt = "@"
         pretty SymBackslash = "\\"
         pretty SymColon = ":"
         pretty SymComma = ","

@@ -33,6 +33,7 @@ import Plato.Common.Pretty
 
 '\''                            { TokSymbol (SymApost, _) }
 '->'                            { TokSymbol (SymArrow, $$) }
+'@'                             { TokSymbol (SymAt, $$) }
 '\\'                            { TokSymbol (SymBackslash, $$)}
 ','                             { TokSymbol (SymComma, _) }
 ':'                             { TokSymbol (SymColon, _) }
@@ -148,11 +149,16 @@ expr        :: { A.Expr }
 infixexpr   :: { A.Expr }
             : infixexpr_                            {% mkInfix $1 }
 
+
 infixexpr_  :: { [F.Tok] }
-            : lexpr op infixexpr_                   {% do
+            : lexpr op attyargs infixexpr_          {% do
                                                         oper <- getFixity $ (snd $2)
-                                                        return $ F.TExp (F.Exp $1) : F.TOp (fst $2) oper : $3 }
+                                                        return $ F.TExp (F.Exp $1) : F.TOp (fst $2) oper $3 : $4 }
             | lexpr                                 { [F.TExp (F.Exp $1)] }
+
+attyargs    :: { [A.Type] }
+            : '@' atype attyargs                    { $2 : $3 }
+            | {- empty -}                           { [] }
 
 lexpr       :: { A.Expr }
             : '\\' varid vars '->' expr             { A.LamExpr (mkInfo $1) (id2varName $2 : $3) $5 }
@@ -162,7 +168,7 @@ lexpr       :: { A.Expr }
 
 fexpr       :: { A.Expr }
             : fexpr aexpr                           { A.AppExpr $1 $2 }
-            | fexpr '[' types ']'                   { A.TAppExpr (mkInfo $2) $1 $3 }
+            | fexpr '@' atype                       { A.TAppExpr (mkInfo $2) $1 $3 }
             | aexpr                                 { $1 }
 
 aexpr       :: { A.Expr }

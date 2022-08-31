@@ -12,10 +12,10 @@ data Op = Op Name Prec Fixity
 data Fixity = Leftfix | Rightfix | Nonfix
         deriving (Eq, Show)
 
-data Exp = Exp A.Expr | OpApp Info Exp Op Exp
+data Exp = Exp A.Expr | OpApp Info Exp Op [A.Type] Exp
         deriving (Eq, Show)
 
-data Tok = TExp Exp | TOp Info Op
+data Tok = TExp Exp | TOp Info Op [A.Type]
         deriving (Eq, Show)
 
 resolve :: [Tok] -> Maybe Exp
@@ -27,14 +27,14 @@ resolve tokens = fst <$> parseNeg (Op dummyVarName (-1) Nonfix) tokens
 
         parse :: Op -> Exp -> [Tok] -> Maybe (Exp, [Tok])
         parse _ e1 [] = Just (e1, [])
-        parse op1@(Op _ prec1 fix1) e1 (TOp fi op2@(Op _ prec2 fix2) : rest)
+        parse op1@(Op _ prec1 fix1) e1 (TOp fi op2@(Op _ prec2 fix2) tyargs : rest)
                 | prec1 == prec2 && (fix1 /= fix2 || fix1 == Nonfix) = Nothing
-                | prec1 > prec2 || (prec1 == prec2 && fix1 == Leftfix) = Just (e1, TOp fi op2 : rest)
+                | prec1 > prec2 || (prec1 == prec2 && fix1 == Leftfix) = Just (e1, TOp fi op2 tyargs : rest)
                 | otherwise = do
                         (r, rest') <- parseNeg op2 rest
-                        parse op1 (OpApp fi e1 op2 r) rest'
+                        parse op1 (OpApp fi e1 op2 tyargs r) rest'
         parse _ _ _ = undefined
 
 exp2expr :: Exp -> A.Expr
 exp2expr (Exp expr) = expr
-exp2expr (OpApp fi e1 (Op op prec fix) e2) = A.OpExpr fi (exp2expr e1) op (exp2expr e2)
+exp2expr (OpApp fi e1 (Op op prec fix) tyargs e2) = A.OpExpr fi (exp2expr e1) op tyargs (exp2expr e2)

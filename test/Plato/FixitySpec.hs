@@ -34,10 +34,10 @@ gt = Op (str2varName ">") 4 Nonfix
 
 testcases :: [(String, [Tok], Maybe Exp -> Expectation)]
 testcases =
-        [ ("x + y", [TExp x, TOp dummyInfo plus, TExp y], (`shouldBe` Just (OpApp dummyInfo x plus y)))
-        , ("x + y * z", [TExp x, TOp dummyInfo plus, TExp y, TOp dummyInfo times, TExp z], (`shouldBe` Just (OpApp dummyInfo x plus (OpApp dummyInfo y times z))))
-        , ("x ++ y ++ z", [TExp x, TOp dummyInfo con, TExp y, TOp dummyInfo con, TExp z], (`shouldBe` Just (OpApp dummyInfo (OpApp dummyInfo x con y) con z)))
-        , ("x > y > z", [TExp x, TOp dummyInfo gt, TExp y, TOp dummyInfo gt, TExp z], (`shouldBe` Nothing))
+        [ ("x + y", [TExp x, TOp dummyInfo plus [], TExp y], (`shouldBe` Just (OpApp dummyInfo x plus [] y)))
+        , ("x + y * z", [TExp x, TOp dummyInfo plus [], TExp y, TOp dummyInfo times [], TExp z], (`shouldBe` Just (OpApp dummyInfo x plus [] (OpApp dummyInfo y times [] z))))
+        , ("x ++ y ++ z", [TExp x, TOp dummyInfo con [], TExp y, TOp dummyInfo con [], TExp z], (`shouldBe` Just (OpApp dummyInfo (OpApp dummyInfo x con [] y) con [] z)))
+        , ("x > y > z", [TExp x, TOp dummyInfo gt [], TExp y, TOp dummyInfo gt [], TExp z], (`shouldBe` Nothing))
         ]
 
 test :: (String, [Tok], Maybe Exp -> Expectation) -> SpecWith ()

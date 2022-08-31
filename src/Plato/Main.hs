@@ -1,5 +1,6 @@
 module Plato.Main where
 
+import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.Vect
@@ -12,10 +13,18 @@ import Plato.Translation.TypToCore
 
 import Control.Exception.Safe
 import Control.Monad.State
+import Control.Monad.Writer
 import System.Console.Haskeline
 
-runPlato :: String -> IO ()
-runPlato = void . processFile emptyContext
+data Status = Status {ismain :: Bool, debug :: Bool}
+
+defaultStatus :: Status
+defaultStatus = Status{ismain = True, debug = False}
+
+runPlato :: Status -> String -> IO ()
+runPlato sts src = do
+        ctx <- importBase emptyContext
+        void $ processFile sts emptyContext src
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop emptyContext)
@@ -26,57 +35,41 @@ repl = runInputT defaultSettings (loop emptyContext)
                         Nothing -> outputStrLn "Goodbye."
                         Just "" -> outputStrLn "Goodbye."
                         Just input -> do
-                                liftIO $ process ctx input
+                                liftIO $ process defaultStatus ctx input
                                 loop ctx
 
-processFile :: Context -> String -> IO Context
-processFile ctx src = do
+processFile :: Status -> Context -> String -> IO Context
+processFile sts ctx src = do
         input <- readFile src
-        process ctx input
+        process sts ctx input
 
-process :: Context -> String -> IO Context
-process ctx input = do
+process :: Status -> Context -> String -> IO Context
+process sts ctx input = do
         ast <- src2abs input
         typ <- abs2typ ast
         cmds <- typ2core ctx typ
         -- processing imports
-        ctx' <- (`execStateT` ctx) $
+        {-ctx' <- (`execStateT` ctx) $
                 forM (imports cmds) $ \modn -> do
                         ctx <- get
-                        ctx' <- lift $ processFile ctx (toPath modn)
-                        put ctx'
-        let cmds' = commandsShift (length ctx' - length ctx) cmds
-        ctx'' <- (`execStateT` ctx') $
+                        ctx' <- lift $ processFile sts{ismain = False} ctx (toPath modn)
+                        put ctx'-}
+        let cmds' = commandsShift (length ctx - length ctx) cmds
+        ctx' <- (`execStateT` ctx) $
                 forM_ (binds cmds') $ \(fi, (x, bind)) -> do
                         ctx <- get
                         checkBinding fi ctx bind
                         put $ cons (x, bind) ctx
         when (null ctx) $ do
-                tyT <- typeof ctx'' (body cmds)
-                let res = eval ctx'' (body cmds)
-                putStrLn $ pretty (ctx'', res)
-        return ctx''
+                -- tmp: when ismain
+                tyT <- typeof ctx' (body cmds)
+                let res = eval ctx' (body cmds)
+                putStrLn $ pretty (ctx', res)
+        return ctx'
 
-process' :: (MonadThrow m, MonadIO m, MonadFail m) => Context -> String -> m Context
-process' ctx input = do
-        ast <- src2abs input
-        typ <- abs2typ ast
-        cmds <- typ2core ctx typ
-        -- processing imports
-        ctx' <- (`execStateT` ctx) $
-                forM (imports cmds) $ \modn -> do
-                        ctx <- get
-                        ctx' <- liftIO $ processFile ctx (toPath modn)
-                        put ctx'
-        let cmds' = commandsShift (length ctx' - length ctx) cmds
-        ctx'' <- (`execStateT` ctx') $
-                forM_ (binds cmds') $ \(fi, (x, bind)) -> do
-                        ctx <- get
-                        checkBinding fi ctx bind
-                        put $ cons (x, bind) ctx
-        when (null ctx) $
-                liftIO $ do
-                        tyT <- typeof ctx'' (body cmds)
-                        let res = eval ctx'' (body cmds)
-                        putStrLn $ pretty (ctx'', res)
-        return ctx''
+importBase :: (MonadThrow m, MonadIO m) => Context -> m Context
+importBase ctx = (`execStateT` ctx) $
+        forM baseModules $ \modn -> StateT $ \ctx -> do
+                let src = toBasePath modn
+                ctx' <- liftIO $ processFile defaultStatus{ismain = False} ctx src
+                return ((), ctx')
