@@ -104,7 +104,7 @@ tmmap onvar ontype c t = walk c t
                 TmRecord fi fields -> TmRecord fi (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmLet fi x t1 t2 -> TmLet fi x (walk c t1) (walk (c + 1) t2)
                 TmTag fi l t1 tyT2 -> TmTag fi l (map (walk c) t1) (ontype c tyT2)
-                TmCase fi t alts -> TmCase fi (walk c t) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
+                TmCase fi t1 alts -> TmCase fi (walk c t1) (map (\(li, (ki, ti)) -> (li, (ki, walk (c + ki) ti))) alts)
 
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =

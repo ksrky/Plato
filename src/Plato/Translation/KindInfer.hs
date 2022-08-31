@@ -123,3 +123,17 @@ kindInfer ctx ty =
             (k, store') = infer ty `runState` store
             (knK, store'') = replaceStar k `runState` store'
          in knK
+
+type Subst = [(Name, C.Kind)]
+
+getSubst :: Context -> Type -> Subst
+getSubst ctx ty =
+        let store = initStore ctx `execState` emptyStore
+            (k, store') = infer ty `runState` store
+            subst = (`evalState` store') $
+                forM (memo store') $ \(n, x) -> case M.lookup x (constr store') of
+                        Just k -> do
+                                let (knK, store'') = replaceStar k `runState` store'
+                                return (n, knK)
+                        Nothing -> return (n, C.KnStar) -- error
+         in subst

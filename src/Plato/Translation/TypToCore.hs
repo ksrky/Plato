@@ -9,6 +9,7 @@ import Plato.Common.Pretty
 import Plato.Core.Command as C
 import Plato.Core.Context
 import Plato.Core.Syntax
+import Plato.Translation.KindInfer
 import Plato.Typing.Syntax
 import Plato.Typing.Utils
 
@@ -27,32 +28,35 @@ transExpr ctx restty = traexpr
                 t1 <- traexpr e1
                 t2 <- traexpr e2
                 return $ TmApp fi t1 t2
-        traexpr (TAppExpr fi e1 t2) = do
+        traexpr (TAppExpr fi e1 ty2) = do
                 t1 <- traexpr e1
-                tyT2 <- transType ctx t2
+                let s = getSubst ctx ty2
+                tyT2 <- transType ctx s ty2
                 return $ TmTApp fi t1 tyT2
         traexpr exp@(LamExpr fi x e) | nameSpace x == TyVarName = case restty of
-                AllType _ tyX ty -> do
-                        let knK1 = KnStar
+                ty'@(AllType _ tyX ty) -> do
+                        let knK1 = fromMaybe KnStar (lookup x $ getSubst ctx ty')
                         ctx' <- addName fi tyX ctx
                         t2 <- transExpr ctx' ty e
                         return $ TmTAbs fi x knK1 t2
                 _ -> throwError fi $ "Expected all type, but got " ++ pretty restty
-        traexpr exp@(LamExpr fi x e) = case restty of
+        traexpr e@(LamExpr fi x e1) = case restty of
                 ArrType _ ty1 ty2 -> do
-                        tyT1 <- transType ctx ty1
+                        let s = getSubst ctx ty2
+                        tyT1 <- transType ctx s ty1
                         ctx' <- addName fi x ctx
-                        t2 <- transExpr ctx' ty2 e
+                        t2 <- transExpr ctx' ty2 e1
                         return $ TmAbs fi x tyT1 t2
-                AllType _ tyX ty -> do
-                        let knK1 = KnStar -- tmp
-                        ctx' <- addName fi tyX ctx
-                        t2 <- transExpr ctx' ty exp
-                        return $ TmTAbs fi tyX knK1 t2
-                _ -> throwError fi $ "Expected arrow type, but got " ++ pretty restty ++ "\n" ++ show exp
+                ty'@(AllType _ x ty) -> do
+                        let knK1 = fromMaybe KnStar (lookup x $ getSubst ctx ty')
+                        ctx' <- addBinding fi x (TyVarBind knK1) ctx
+                        t2 <- transExpr ctx' ty e
+                        return $ TmTAbs fi x knK1 t2
+                _ -> throwError fi $ "Expected arrow type, but got " ++ pretty restty ++ "\n" ++ show e
         traexpr (LetExpr fi d e1) = case d of
                 FuncDecl fi2 f e2 ty -> do
-                        tyT <- transType ctx ty
+                        let s = getSubst ctx ty
+                        tyT <- transType ctx s ty
                         ctx' <- addName fi2 f ctx
                         t1 <- transExpr ctx' ty e2
                         let r = TmFix dummyInfo (TmAbs dummyInfo f tyT t1)
@@ -60,7 +64,8 @@ transExpr ctx restty = traexpr
                         return $ TmLet fi f r t2
                 _ -> unreachable "Type declaration in let binding"
         traexpr (TagExpr fi l as) = do
-                tyT <- transType ctx restty
+                let s = getSubst ctx restty
+                tyT <- transType ctx s restty
                 as' <- mapM traexpr as
                 return $ TmTag fi l as' tyT
         traexpr (ProjExpr fi e l) = do
@@ -76,7 +81,7 @@ transExpr ctx restty = traexpr
                         _ -> throwError fi $ "Expected record type, but got " ++ show restty
                 return $ TmRecord fi fields'
         traexpr (CaseExpr fi e alts) = do
-                t <- traexpr e
+                t1 <- traexpr e
                 alts' <- forM alts $ \(pat, body) -> case pat of
                         ConPat fi1 li ps -> do
                                 ctx' <- (`execStateT` ctx) $
@@ -94,10 +99,10 @@ transExpr ctx restty = traexpr
                                 ctx' <- addName fi1 dummyVarName ctx
                                 ti <- traexpr body
                                 return (str2varName "", (1, ti))
-                return $ TmCase fi t alts'
+                return $ TmCase fi t1 alts'
 
-transType :: MonadThrow m => Context -> Type -> m Ty
-transType ctx = tratype
+transType :: MonadThrow m => Context -> Subst -> Type -> m Ty
+transType ctx s = tratype
     where
         tratype :: MonadThrow m => Type -> m Ty
         tratype (VarType fi x) | not (isVarExist ctx x) = return $ TyId fi x
@@ -109,23 +114,24 @@ transType ctx = tratype
                 ty2' <- tratype ty2
                 return $ TyArr fi ty1' ty2'
         tratype (AllType fi x ty) = do
-                let knK1 = KnStar -- tmp: forall x.t = forall x::*.t
-                ctx' <- addName fi x ctx
-                ty' <- transType ctx' ty
-                return $ TyAll fi x knK1 ty'
+                let knK1 = fromMaybe KnStar (lookup x s) -- old: KnStar
+                ctx' <- addBinding fi x (TyVarBind knK1) ctx
+                tyT2 <- transType ctx' s ty
+                return $ TyAll fi x knK1 tyT2
         tratype (AbsType fi x ty) = do
-                let knK1 = KnStar -- tmp: \x.t = \x:*.t
-                ctx' <- addName fi x ctx
-                ty' <- transType ctx' ty
-                return $ TyAbs fi x knK1 ty'
+                let knK1 = fromMaybe KnStar (lookup x s) -- old: KnStar
+                ctx' <- addBinding fi x (TyVarBind knK1) ctx
+                tyT2 <- transType ctx' s ty
+                return $ TyAll fi x knK1 tyT2
         tratype (AppType fi ty1 ty2) = do
                 ty1' <- tratype ty1
                 ty2' <- tratype ty2
                 return $ TyApp fi ty1' ty2'
         tratype (RecType fi x ty) = do
-                ctx' <- addName fi x ctx
-                ty' <- transType ctx' ty
-                return $ TyRec fi x KnStar ty' -- tmp: unused
+                let knK1 = fromMaybe KnStar (lookup x s) -- old: KnStar
+                ctx' <- addBinding fi x (TyVarBind knK1) ctx
+                tyT2 <- transType ctx' s ty
+                return $ TyRec fi x knK1 tyT2
         tratype (RecordType fi fieldtys) = do
                 fields' <- forM fieldtys $ \(l, field) -> do
                         field' <- tratype field
@@ -140,16 +146,20 @@ transType ctx = tratype
 transDecl :: MonadThrow m => Decl -> StateT Context m (Name, Binding)
 transDecl decl = StateT $ \ctx -> case decl of
         TypeDecl fi name ty -> do
-                tyT <- transType ctx ty
-                ctx' <- addName fi name ctx
+                let s = getSubst ctx ty
+                    knK = kindInfer ctx ty
+                tyT <- transType ctx s ty
+                ctx' <- addBinding fi name (TyVarBind knK) ctx
                 return ((name, TyAbbBind tyT Nothing), ctx')
         VarDecl fi f ty -> do
-                tyT <- transType ctx ty
+                let s = getSubst ctx ty
+                tyT <- transType ctx s ty
                 ctx' <- addName fi f ctx
                 return ((f, VarBind tyT), ctx')
         FuncDecl fi f e ty -> do
                 t <- transExpr ctx ty e
-                tyT <- transType ctx ty
+                let s = getSubst ctx ty
+                tyT <- transType ctx s ty
                 ctx' <- addName fi f ctx
                 return ((f, TmAbbBind t (Just tyT)), ctx')
 

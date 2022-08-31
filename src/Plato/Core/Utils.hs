@@ -31,7 +31,7 @@ instance Pretty (Context, Term) where
                 TmTAbs _ tyX knK1 t2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
                          in "(\\" ++ pretty tyX' ++ ": " ++ pretty (ctx, knK1) ++ ". " ++ pretty (ctx', t2) ++ ")"
-                TmTApp _ t1 tyT2 -> "(" ++ pretty (ctx, t1) ++ " [" ++ pretty (ctx, tyT2) ++ "]" ++ ")"
+                TmTApp _ t1 tyT2 -> "(" ++ pretty (ctx, t1) ++ "@" ++ pretty (ctx, tyT2) ++ ")"
                 TmLet _ x t1 t2 ->
                         let (x', ctx') = pickFreshName x ctx
                          in "(let {" ++ pretty x' ++ "=" ++ pretty (ctx, t1) ++ "} in " ++ pretty (ctx', t2) ++ ")"

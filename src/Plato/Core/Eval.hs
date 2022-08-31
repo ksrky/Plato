@@ -187,7 +187,7 @@ getkind fi ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind tyT (Just knK) -> do
                 knK' <- kindof ctx tyT
-                unless (knK /= knK') $ throwError fi "Kind attachment failed"
+                unless (knK /= knK') $ throwError fi "Kind inference failed"
                 return knK
         TyAbbBind tyT Nothing -> kindof ctx tyT
         _ -> throwError fi $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
@@ -279,10 +279,10 @@ typeof ctx t = case t of
                         _ -> throwError fi "arrow type expected"
         TmFold fi tyS -> case simplifyty ctx tyS of
                 TyRec fi1 _ _ tyT -> return $ TyArr fi1 (typeSubstTop tyS tyT) tyS
-                _ -> throwError fi "recursive type expected"
+                _ -> throwError fi $ "recursive type expected, but got " ++ pretty (ctx, tyS)
         TmUnfold fi tyS -> case simplifyty ctx tyS of
                 TyRec fi1 _ _ tyT -> return $ TyArr fi1 tyS (typeSubstTop tyS tyT)
-                _ -> throwError fi "recursive type expected"
+                _ -> throwError fi $ "recursive type expected, but got " ++ pretty (ctx, tyS)
         TmProj fi t1 l -> do
                 tyT1 <- typeof ctx t1
                 case simplifyty ctx tyT1 of
