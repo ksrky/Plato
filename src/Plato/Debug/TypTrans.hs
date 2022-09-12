@@ -1,10 +1,11 @@
-module Plato.Debug.IRTrans where
+module Plato.Debug.TypTrans where
 
 import Plato.Common.Pretty
 import Plato.Translation.AbsToTyp
 import Plato.Translation.SrcToAbs
 
 import Control.Monad.State
+import Plato.Typing.Rename
 import System.Console.Haskeline
 import System.Environment
 
@@ -39,5 +40,5 @@ processFile fname = do
 process :: String -> IO ()
 process input = do
         ast <- src2abs input
-        typ <- abs2typ ast
+        typ <- abs2typ emptyMemo ast
         putStrLn $ pretty typ

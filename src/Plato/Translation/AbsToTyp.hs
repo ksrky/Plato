@@ -45,8 +45,8 @@ transExpr memo = traexpr
                 e' <- traexpr e
                 return $ foldr (I.LamExpr fi) e' xs
         traexpr (A.LetExpr fi ds e) = do
-                e' <- traexpr e
-                (d, _) <- transDecls memo (map A.Decl ds)
+                (d, memo') <- transDecls memo (map A.Decl ds)
+                e' <- transExpr memo' e
                 return $ I.LetExpr fi d e'
         traexpr (A.CaseExpr fi e alts) = do
                 e' <- traexpr e
@@ -144,12 +144,12 @@ transTopDecl (A.TypeDecl fi name params ty) = do
         tell [I.TypeDecl fi name (foldr (I.AbsType fi) ty' params)]
 transTopDecl _ = return ()
 
-abs2typ :: MonadThrow m => A.Program -> m I.Decls
-abs2typ (A.Program _ ids tds) = do
+abs2typ :: MonadThrow m => Memo -> A.Program -> m I.Decls
+abs2typ imemo (A.Program _ ids tds) = do
         let modns = map (\(A.ImpDecl mn) -> mn) ids
         decls <- execWriterT $ mapM_ transTopDecl tds
         vardecls <- transFuncTyDecls tds
-        (bind, memo) <- transDecls emptyMemo tds
+        (bind, memo) <- transDecls imemo tds
         main <- transEntry memo bind
         return $ I.Decls modns (decls ++ vardecls) main -- tmp: order of I.TypeDecl and I.FuncDecl
     where
@@ -170,6 +170,6 @@ abs2typ (A.Program _ ids tds) = do
                 case (body, bodyty) of
                         ([], []) -> return (I.LetExpr dummyInfo bind (I.RecordExpr dummyInfo []), I.RecordType dummyInfo [])
                         ([e], [ty]) -> return (I.LetExpr dummyInfo bind e, ty)
-                        ([_], []) -> throwString "main function lacks a type signature"
-                        ([], [_]) -> throwString " main function lacks a binding"
-                        _ -> throwString "duplicate main function"
+                        ([_], []) -> throwMsg "main function lacks a type signature"
+                        ([], [_]) -> throwMsg " main function lacks a binding"
+                        _ -> throwMsg "duplicate main function"

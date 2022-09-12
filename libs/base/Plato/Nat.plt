@@ -1,27 +1,31 @@
 module Plato.Nat;
 
-import Plato.Bool;
-
 data Nat = Zero | Succ Nat;
 
-plus : Nat -> Nat -> Nat;
-plus m n = case m of {
+infixl 6 +;
+infixl 6 -;
+infixl 7 *;
+
+
+(+) : Nat -> Nat -> Nat;
+(+) m n = case m of {
     Zero -> n;
-    Succ m' -> Succ (plus m' n);
+    Succ m' -> Succ (m' + n);
 };
 
-minus : Nat -> Nat -> Nat;
-minus m n = case m of {
+(-) : Nat -> Nat -> Nat;
+(-) m n = case m of {
     Zero -> n;
-    Succ m' -> Succ (plus m' n);
+    Succ m' -> Succ (m' + n);
 };
 
-times : Nat -> Nat -> Nat;
-times m n = case m of {
+(*) : Nat -> Nat -> Nat;
+(*) m n = case m of {
     Zero -> Zero;
-    Succ m' -> plus n (times m' n);  
+    Succ m' -> n + m' * n;  
 };
 
+<<<<<<< HEAD
 infix 9 ==;
 
 (==) : Nat -> Nat -> Bool
@@ -36,6 +40,8 @@ infix 9 ==;
     };
 };
 
+=======
+>>>>>>> master
 one : Nat;
 one = Succ Zero;
 

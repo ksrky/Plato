@@ -19,7 +19,7 @@ $small = [a-z]
 $large = [A-Z]
 $alpha = [a-zA-Z]
 $digit = 0-9
-$symbol = [\.\@\<\=\>\&\|\!\$\*\+\?\#\~\-\[\]\^\/]
+$symbol = [\:\.\<\=\>\&\|\!\$\*\+\?\#\~\-\[\]\^\/]
 
 @reservedid = case | data | forall | import | in
             | of | let | module | where
@@ -28,7 +28,7 @@ $symbol = [\.\@\<\=\>\&\|\!\$\*\+\?\#\~\-\[\]\^\/]
 
 @reservedop = \-\> | \= | \| | \:
 @varsym = ($symbol # \:) $symbol*
-@consym = \: $symbol*
+@consym = \: $symbol+
 
 @qual = (@conid \.)+
 @qvarid = @qual @varid
@@ -62,6 +62,8 @@ tokens :-
 <0> module                      { keyword KwModule }
 <0> where                       { keyword KwWhere }
 
+<0> @consym                     { consym }
+
 <0> \'                          { symbol SymApost }
 <0> \-\>                        { symbol SymArrow }
 <0> \@                          { symbol SymAt }
@@ -83,9 +85,8 @@ tokens :-
 <0> @varid                      { varid }
 <0> @conid                      { conid }
 <0> @qconid                     { qconid }
-<0> @varsym                     { varsym }
-<0> @consym                     { consym }
 <0> @decimal                    { lex_int }
+<0> @varsym                     { varsym }
 
 <0> \"                          { begin string }
 <string> @string \"             { lex_string }
@@ -116,6 +117,9 @@ qconid = \(pos,_,_,str) len -> return $ TokQConId (take len str, toposn pos)
 
 varsym :: Action
 varsym = \(pos,_,_,str) len -> return $ TokVarSym (take len str, toposn pos)
+{-return $ case lookup (take len str) reservedop of
+    Just sym -> TokSymbol (sym, toposn pos)
+    Nothing -> TokVarSym (take len str, toposn pos)-}
 
 consym :: Action
 consym = \(pos,_,_,str) len -> return $ TokConSym (take len str, toposn pos)

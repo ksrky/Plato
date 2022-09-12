@@ -52,6 +52,24 @@ data Symbol
         | SymVBar
         deriving (Eq, Show)
 
+reservedop :: [(String, Symbol)]
+reservedop =
+        [ ("'", SymApost)
+        , ("->", SymArrow)
+        , ("@", SymAt)
+        , ("\\", SymBackslash)
+        , (":", SymColon)
+        , (",", SymComma)
+        , ("=", SymEqual)
+        , ("{", SymLBrace)
+        , ("}", SymRBrace)
+        , ("(", SymLParen)
+        , (")", SymRParen)
+        , (";", SymSemicolon)
+        , ("_", SymUScore)
+        , ("|", SymVBar)
+        ]
+
 instance Pretty Posn where
         pretty (Pn l c) = show l ++ ":" ++ show c
 instance Pretty Token where

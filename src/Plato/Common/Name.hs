@@ -71,3 +71,6 @@ instance Pretty ModuleName where
 
 toPath :: ModuleName -> String
 toPath (ModuleName modn) = intercalate "/" (map show modn) ++ ".plt"
+
+toBasePath :: ModuleName -> String
+toBasePath modn = "libs/base/" ++ toPath modn

@@ -11,5 +11,5 @@ not b = case b of {
 if : forall a. Bool -> a -> a -> a;
 if test then else = case test of {
     True -> then;
-    False else;
+    False -> else;
 };

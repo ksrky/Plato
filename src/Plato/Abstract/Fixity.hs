@@ -37,4 +37,8 @@ resolve tokens = fst <$> parseNeg (Op dummyVarName (-1) Nonfix) tokens
 
 exp2expr :: Exp -> A.Expr
 exp2expr (Exp expr) = expr
+<<<<<<< HEAD
 exp2expr (OpApp fi e1 (Op op prec fix) tyargs e2) = A.OpExpr fi (exp2expr e1) op tyargs (exp2expr e2)
+=======
+exp2expr (OpApp fi e1 (Op op prec fix) tyargs e2) = A.OpExpr fi (exp2expr e1) op tyargs (exp2expr e2)
+>>>>>>> master

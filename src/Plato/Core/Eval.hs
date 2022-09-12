@@ -115,12 +115,18 @@ computety ctx tyT = case tyT of
 
 simplifyty :: Context -> Ty -> Ty
 simplifyty ctx tyT =
-        let tyT' = case tyT of
+        let tyT' = case simplifytyid ctx tyT of
                 TyApp fi tyT1 tyT2 -> TyApp fi (simplifyty ctx tyT1) tyT2
                 _ -> tyT
          in case computety ctx tyT' of
                 Just tyT'' -> simplifyty ctx tyT''
                 Nothing -> tyT'
+
+simplifytyid :: Context -> Ty -> Ty
+simplifytyid ctx tyT = case tyT of
+        TyApp fi tyT1 tyT2 -> TyApp fi (simplifytyid ctx tyT1) tyT2
+        TyId _ b -> let i = getVarIndex' ctx b in gettyabb ctx i
+        _ -> tyT
 
 tyeqv :: MonadThrow m => Info -> Context -> Ty -> Ty -> m ()
 tyeqv fi ctx = tyeqv'
@@ -172,7 +178,7 @@ tyeqv fi ctx = tyeqv'
                         (TyVariant fi1 fields1, TyVariant fi2 fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
                                         Just tyTi2 -> zipWithM (tyeqv fi1 ctx) tyTi1 tyTi2
-                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found"
+                                        Nothing -> throwError fi1 $ "label " ++ show li1 ++ " not found." ++ show fields1 ++ show fields2
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> zipWithM (tyeqv fi2 ctx) tyTi1 tyTi2
                                         Nothing -> throwError fi2 $ "label " ++ show li2 ++ " not found"
@@ -288,7 +294,7 @@ typeof ctx t = case t of
                 case simplifyty ctx tyT1 of
                         TyRecord _ fieldtys -> case lookup l fieldtys of
                                 Just tyT -> return tyT
-                                Nothing -> throwError fi $ "label " ++ show l ++ " not found"
+                                Nothing -> throwError fi $ "label " ++ show l ++ " not found in " ++ pretty (ctx, tyT1)
                         _ -> throwError fi "Expected record type"
         TmRecord fi fields -> do
                 fieldtys <- forM fields $ \(li, ti) -> do
@@ -305,7 +311,7 @@ typeof ctx t = case t of
                 tyT2' -> throwError fi $ "Expected variant type, but got " ++ pretty (ctx, tyT2')
         TmCase fi t alts -> do
                 tyT <- typeof ctx t
-                case simplifyty ctx tyT of
+                case simplifytyid ctx $ simplifyty ctx tyT of
                         TyVariant fi1 fieldtys -> do
                                 when (null fieldtys) $ return ()
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
@@ -323,7 +329,7 @@ typeof ctx t = case t of
                                         Nothing -> throwError fi $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv fi ctx tyTi tyT1
                                 return tyT1
-                        tyT' -> throwError fi $ "Expected, but got " ++ pretty (ctx, tyT')
+                        tyT' -> throwError fi $ "Expected variant type, but got " ++ pretty (ctx, tyT') ++ show (simplifytyid ctx tyT')
 
 ----------------------------------------------------------------
 -- Type check of binding

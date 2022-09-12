@@ -44,8 +44,8 @@ library
       Plato.Debug.AbsTrans
       Plato.Debug.CoreTrans
       Plato.Debug.EvalIO
-      Plato.Debug.IRTrans
       Plato.Debug.REPL
+      Plato.Debug.TypTrans
       Plato.Main
       Plato.Translation.AbsToTyp
       Plato.Translation.KindInfer
@@ -96,8 +96,8 @@ executable plato
       Plato.Debug.AbsTrans
       Plato.Debug.CoreTrans
       Plato.Debug.EvalIO
-      Plato.Debug.IRTrans
       Plato.Debug.REPL
+      Plato.Debug.TypTrans
       Plato.Main
       Plato.Translation.AbsToTyp
       Plato.Translation.KindInfer
