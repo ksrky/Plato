@@ -1,8 +1,8 @@
-id : forall a. a -> a;
+id : {a} -> a -> a
 id = \x -> x;
 
-data P;
-p : P;
+data P
+p : P
 
-main : P;
-main = id@P p;
+main : P
+main = id p
