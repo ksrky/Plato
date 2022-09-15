@@ -6,6 +6,7 @@ module Plato.Parsing.Parser where
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
+import Plato.Common.Table
 
 import Plato.Parsing.Error
 import Plato.Parsing.Fixity
@@ -137,7 +138,7 @@ btype       :: { Located Type }
 
 atype       :: { Located Type }
             : '(' type ')'                          { $2 }
-            | conid                                 { cL $1 (ConType (mkLtyconName $1)) }
+            | conid                                 { cL $1 (VarType (mkLtyconName $1)) }
             | varid                                 { cL $1 (VarType (mkLtyvarName $1)) }
 
 constrs     :: { [(Located Name, [Located Type])] }
@@ -233,7 +234,7 @@ setFixity :: MonadThrow m => Located Name -> Located Int -> Fixity -> ParserT m 
 setFixity lop@(L _ op) (L sp prec) fix = do
     opdict <- getOpDict
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwPsError sp $ "invalid precedence " ++ show prec
-    setOpDict $ M.insert op (Op lop prec fix) opdict
+    setOpDict $ enter op (Op lop prec fix) opdict
 
 splitModid :: Located T.Text -> [Name]
 splitModid = loop 0 . ((`T.snoc` '.') <$>)
@@ -245,24 +246,6 @@ splitModid = loop 0 . ((`T.snoc` '.') <$>)
          in if (xs !! cnt) == '.'
             then conName (T.take cnt t) : loop 0 (L sp (T.drop (cnt + 1) t))
             else loop (cnt + 1) (L sp t)
-
-----------------------------------------------------------------
--- combine Located
-----------------------------------------------------------------
-cL :: Located a -> b -> Located b
-cL loc = L (getSpan loc)
-
-cSL :: Span -> Located a -> b -> Located b
-cSL sp loc = L (combineSpans sp (getSpan loc))
-
-cLL :: Located a -> Located b -> c -> Located c
-cLL loc1 loc2 = L (combineSpans (getSpan loc1) (getSpan loc2))
-
-cSLn :: Span -> [Located a] -> b -> Located b
-cSLn sp locs = L (combineSpans sp (concatSpans $ map getSpan locs))
-
-cLLn :: Located a -> [Located b] -> c -> Located c
-cLLn loc locs = L (concatSpans (getSpan loc : map getSpan locs))
 
 ----------------------------------------------------------------
 -- mk Located

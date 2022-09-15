@@ -21,3 +21,6 @@ catchError =
                 -- other exceptions
                 ]
         )
+
+unreachable :: String -> a
+unreachable s = error $ "unreachable: " ++ s

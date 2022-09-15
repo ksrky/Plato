@@ -41,3 +41,27 @@ data Located a = L Span a
 
 getSpan :: Located a -> Span
 getSpan (L sp _) = sp
+
+unLoc :: Located a -> a
+unLoc (L _ x) = x
+
+noLoc :: a -> Located a
+noLoc = L NoSpan
+
+cL :: Located a -> b -> Located b
+cL loc = L (getSpan loc)
+
+cSL :: Span -> Located a -> b -> Located b
+cSL sp loc = L (combineSpans sp (getSpan loc))
+
+cLL :: Located a -> Located b -> c -> Located c
+cLL loc1 loc2 = L (combineSpans (getSpan loc1) (getSpan loc2))
+
+cSLn :: Span -> [Located a] -> b -> Located b
+cSLn sp locs = L (combineSpans sp (concatSpans $ map getSpan locs))
+
+cLnL :: [Located a] -> Located b -> c -> Located c
+cLnL locs loc = L (concatSpans (map getSpan locs ++ [getSpan loc]))
+
+cLLn :: Located a -> [Located b] -> c -> Located c
+cLLn loc locs = L (concatSpans (getSpan loc : map getSpan locs))

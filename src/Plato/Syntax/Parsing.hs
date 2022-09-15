@@ -26,8 +26,7 @@ data Pat
         deriving (Eq, Show)
 
 data Type
-        = ConType PsLName
-        | VarType PsLName
+        = VarType PsLName
         | AppType PsLType PsLType
         | ArrType PsLType PsLType
         | AllType [PsLName] PsLType

@@ -2,13 +2,13 @@
 
 module Plato.Parsing.Monad where
 
+import Plato.Common.Table
 import Plato.Parsing.Fixity
 
 import Control.Exception.Safe
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import qualified Data.ByteString.Internal as BS
-import Data.Map.Strict as M
 import qualified Data.Text as T
 import Data.Word
 
@@ -155,7 +155,7 @@ initUserState :: PsUserState
 initUserState =
         PsUserState
                 { commentDepth = 0
-                , opDict = M.empty
+                , opDict = empty
                 , indentLevels = []
                 }
 
