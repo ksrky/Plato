@@ -6,7 +6,6 @@ module Plato.Parsing.Parser where
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
-import Plato.Common.Table
 
 import Plato.Parsing.Error
 import Plato.Parsing.Fixity
@@ -127,9 +126,8 @@ types       :: { [Located Type] }
             | {- empty -}                           { [] }
 
 type        :: { Located Type }
-            : '{' tyvar tyvars '}' '->' type        { cSL $1 $6 (AllType ($2 : $3) $6) }
+            : '{' tyvar tyvars '}' type             { cSL $1 $6 (AllType ($2 : $3) $5) }
             | btype '->' type                       { cLL $1 $3 (ArrType $1 $3) }
-            | '(' type ')'                          { $2 }
             | btype                                 { $1 }
 
 btype       :: { Located Type }

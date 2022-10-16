@@ -16,7 +16,7 @@ data Expr
         | AppExpr TypLExpr TypLExpr
         | TAbsExpr TypLName (Maybe Kind) TypLExpr
         | TAppExpr TypLExpr TypLType
-        | LetExpr TypLDecl TypLExpr
+        | LetExpr TypLName TypLType TypLExpr TypLExpr
         | ProjExpr TypLExpr TypLName
         | RecordExpr [(TypLName, TypLExpr)]
         | CaseExpr TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]

@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-import Plato.Nat;
-
-=======
->>>>>>> master
 fib : Nat -> Nat;
 fib n = case n of {
     Zero -> Zero;

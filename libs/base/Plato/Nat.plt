@@ -25,31 +25,25 @@ infixl 7 *;
     Succ m' -> n + m' * n;  
 };
 
-<<<<<<< HEAD
-infix 9 ==;
-
 (==) : Nat -> Nat -> Bool
-(==) m n = case m of {
-    Succ m' -> case n of {
-        Succ n' -> m' == n';
-        Zero -> False;
-    };
-    Zero -> case n of {
-        Succ _ -> False;
-        Zero -> True;
-    };
-};
+(==) m n = case m of
+    Succ m' -> case n of
+        Succ n' -> m' == n'
+        Zero -> False
+    Zero -> case n of
+        Succ _ -> False
+        Zero -> True
 
-=======
->>>>>>> master
-one : Nat;
-one = Succ Zero;
+infix 9 ==
 
-two : Nat;
-two = Succ (Succ Zero);
+one : Nat
+one = Succ Zero
 
-one : Nat;
-one = Succ (Succ (Succ Zero));
+two : Nat
+two = Succ (Succ Zero)
 
-four : Nat;
-four = Succ (Succ (Succ (Succ Zero)));
+three : Nat
+three = Succ (Succ (Succ Zero))
+
+four : Nat
+four = Succ (Succ (Succ (Succ Zero)))

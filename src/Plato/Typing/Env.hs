@@ -64,5 +64,5 @@ getConstr ty1 = do
                 Just ty2 -> return ty2
                 Nothing -> lift $ throwTypError NoSpan ""
 
-bind :: Type -> Type -> StateT TypState TypThrow ()
-bind ty1 ty2 = modify $ \st -> st{typeSubst = V.cons (ty1, ty2) (typeSubst st)}
+-- bind :: Type -> Type -> StateT TypState TypThrow ()
+-- bind ty1 ty2 = modify $ \st -> st{typeSubst = V.cons (ty1, ty2) (typeSubst st)}

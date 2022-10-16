@@ -13,6 +13,7 @@ import Plato.Typing.Error
 import Plato.Typing.Rename
 
 import Control.Monad.Writer
+import Data.List ((\\))
 import qualified Data.Text as T
 
 transExpr :: RenameState -> Located P.Expr -> TypThrow (Located T.Expr)
@@ -33,9 +34,9 @@ transExpr st = traexpr
                 e1' <- traexpr e1
                 return $ foldr (\x e -> cLL x e $ T.AbsExpr x Nothing e) e1' xs
         traexpr (L sp (P.LetExpr ds e)) = do
-                (d, names') <- transDecls st ds
+                (T.FuncDecl x e1 t2, names') <- transDecls st ds
                 e' <- transExpr st{names = names'} e
-                return $ L sp (T.LetExpr (noLoc d) e')
+                return $ L sp (T.LetExpr x t2 e1 e')
         traexpr (L sp (P.CaseExpr e alts)) = undefined
         traexpr (L _ (P.Factor _)) = unreachable "fixity resolution failed"
 
@@ -65,7 +66,7 @@ transDecls st decs = do
                                 | level st > 0 -> lift $ throwTypError sp "Variables should be declared in the top level"
                         _ -> return ()
 
-        let (record, st') = undefined
+        let (record, st') = undefined -- tmp: undefined
             names' = names st ++ zip ns (repeat record)
         fields <- execWriterT $
                 forM decs $ \case
@@ -121,39 +122,33 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-getEntry :: [Located P.Decl] -> (Located P.Decl, Located P.Decl)
-getEntry decs = execWriter $
-        forM decs $ \d -> case d of
-                (unLoc -> P.FuncDecl f _ _) | unLoc f == entryPoint -> tell (d, mempty)
-                (unLoc -> P.FuncTyDecl f _) | unLoc f == entryPoint -> tell (mempty, d)
-                _ -> return ()
-
-transEntry :: RenameState -> [Located P.Decl] -> Located T.Decl -> TypThrow (Located T.Expr, Located T.Type)
-transEntry st decs bind = do
-        (body, bodyty) <- execWriterT $
-                forM decs $ \case
-                        (unLoc -> P.FuncDecl f xs e) | unLoc f == entryPoint -> do
-                                e' <- lift $ transExpr st (cLnL xs e $ P.LamExpr xs e)
-                                tell (e', mempty)
-                        (unLoc -> P.FuncTyDecl f ty) | unLoc f == entryPoint -> do
-                                ty' <- lift $ transType ty
-                                tell (mempty, ty')
+getEntry :: [Located P.Decl] -> TypThrow (Maybe (Located P.Decl, Located P.Decl), [Located P.Decl])
+getEntry decs = do
+        let (body, bodyty) = execWriter $
+                forM decs $ \d -> case d of
+                        (unLoc -> P.FuncDecl f _ _) | unLoc f == entryPoint -> tell ([d], [])
+                        (unLoc -> P.FuncTyDecl f _) | unLoc f == entryPoint -> tell ([], [d])
                         _ -> return ()
-        if body == mempty
-                then
-                        if bodyty == mempty
-                                then return (noLoc $ T.LetExpr bind (noLoc $ T.RecordExpr []), noLoc $ T.RecordType [])
-                                else throwTypError (getSpan bodyty) "lacks a binding"
-                else
-                        if bodyty == mempty
-                                then throwTypError (getSpan body) "lacks a type signature"
-                                else return (noLoc $ T.LetExpr bind body, bodyty)
+        case (body, bodyty) of
+                ([], []) -> return (Nothing, decs)
+                ([b], [bt]) -> return (Just (b, bt), decs \\ [b, bt])
+                _ -> throwTypError NoSpan ""
+
+transEntry :: RenameState -> Maybe (Located P.Decl, Located P.Decl) -> Located T.Decl -> TypThrow (Located T.Expr, Located T.Type)
+transEntry st entry bind = case entry of
+        Just (L _ (P.FuncDecl _ xs e), L _ (P.FuncTyDecl _ ty)) -> do
+                body <- transExpr st e
+                bodyty <- transType ty
+                return (noLoc $ T.LetExpr bind body, bodyty)
+        Just _ -> unreachable ""
+        Nothing -> return (noLoc $ T.LetExpr bind (noLoc $ T.RecordExpr []), noLoc $ T.RecordType [])
 
 abs2typ :: RenameState -> P.Program -> TypThrow T.Decls
 abs2typ st (P.Program _ ids tds) = do
         let modns = map (\(L _ (P.ImpDecl mn)) -> mn) ids
         (tydecls, condecls) <- execWriterT $ mapM_ transTopDecl tds
-        vardecls <- transFuncTyDecls (getDecls tds)
-        (bind, names') <- transDecls st (getDecls tds)
-        main <- transEntry st{names = names'} (getDecls tds) (noLoc bind)
+        (entry, ds) <- getEntry (getDecls tds)
+        vardecls <- transFuncTyDecls ds
+        (bind, names') <- transDecls st ds
+        main <- transEntry st{names = names'} entry (noLoc bind)
         return $ T.Decls modns (tydecls ++ condecls ++ vardecls) main
