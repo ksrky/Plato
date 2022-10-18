@@ -46,11 +46,12 @@ library
       Plato.Syntax.Typing
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
-      Plato.Typing.Env
       Plato.Typing.Error
       Plato.Typing.KindInfer
-      Plato.Typing.Recon
+      Plato.Typing.Monad
       Plato.Typing.Rename
+      Plato.Typing.TypeCheck
+      Plato.Typing.Types
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -96,11 +97,12 @@ executable plato
       Plato.Syntax.Typing
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
-      Plato.Typing.Env
       Plato.Typing.Error
       Plato.Typing.KindInfer
-      Plato.Typing.Recon
+      Plato.Typing.Monad
       Plato.Typing.Rename
+      Plato.Typing.TypeCheck
+      Plato.Typing.Types
       Paths_Plato
   hs-source-dirs:
       src

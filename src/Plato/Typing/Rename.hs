@@ -18,6 +18,3 @@ mkValue :: Names -> Located Name -> Located Expr
 mkValue names lx@(L sp x) = case lookup x names of
         Just r -> L sp (mkProj r lx)
         Nothing -> L sp (VarExpr lx)
-
-fresh :: Located Name
-fresh = undefined

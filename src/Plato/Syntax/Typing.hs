@@ -3,6 +3,7 @@ module Plato.Syntax.Typing where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
+import {-# SOURCE #-} Plato.Typing.Types
 
 type TypLName = Located Name
 type TypLExpr = Located Expr
@@ -16,11 +17,12 @@ data Expr
         | AppExpr TypLExpr TypLExpr
         | TAbsExpr TypLName (Maybe Kind) TypLExpr
         | TAppExpr TypLExpr TypLType
-        | LetExpr TypLName TypLType TypLExpr TypLExpr
+        | LetExpr FuncDecl TypLExpr
         | ProjExpr TypLExpr TypLName
         | RecordExpr [(TypLName, TypLExpr)]
         | CaseExpr TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
         | TagExpr TypLName [TypLExpr] (Maybe Type)
+        | AnnExpr TypLExpr TypLType
         deriving (Eq, Show)
 
 data Pat
@@ -29,14 +31,16 @@ data Pat
         deriving (Eq, Show)
 
 data Type
-        = VarType TypLName
+        = VarType (Located TyVar)
+        | ConType TypLName
         | ArrType TypLType TypLType
-        | AllType TypLName (Maybe Kind) TypLType
-        | AbsType TypLName (Maybe Kind) TypLType
+        | AllType [Located TyVar] (Located Type {- Rho -})
+        | AbsType TypLName TypLType
         | AppType TypLType TypLType
         | RecType TypLName TypLType
         | RecordType [(TypLName, TypLType)]
         | SumType [(TypLName, [TypLType])]
+        | MetaType MetaTv
         deriving (Eq, Show)
 
 data Kind
@@ -45,15 +49,17 @@ data Kind
         | ArrKind Kind Kind
         deriving (Eq, Show)
 
+data FuncDecl = FD TypLName TypLExpr TypLType deriving (Eq, Show)
+
 data Decl
         = TypeDecl TypLName TypLType
         | VarDecl TypLName TypLType
-        | FuncDecl TypLName TypLExpr TypLType
+        | FuncDecl FuncDecl
         deriving (Eq, Show)
 
 data Decls = Decls
         { imports :: [Located ModuleName]
         , decls :: [TypLDecl]
-        , body :: (TypLExpr, TypLType)
+        , body :: FuncDecl
         }
         deriving (Eq, Show)

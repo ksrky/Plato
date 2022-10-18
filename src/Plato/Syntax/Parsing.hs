@@ -27,6 +27,7 @@ data Pat
 
 data Type
         = VarType PsLName
+        | ConType PsLName
         | AppType PsLType PsLType
         | ArrType PsLType PsLType
         | AllType [PsLName] PsLType

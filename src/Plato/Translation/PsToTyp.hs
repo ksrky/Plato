@@ -8,9 +8,9 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Rename
+import Plato.Typing.Types
 
 import Control.Monad.Writer
 import Data.List ((\\))
@@ -34,14 +34,15 @@ transExpr st = traexpr
                 e1' <- traexpr e1
                 return $ foldr (\x e -> cLL x e $ T.AbsExpr x Nothing e) e1' xs
         traexpr (L sp (P.LetExpr ds e)) = do
-                (T.FuncDecl x e1 t2, names') <- transDecls st ds
+                (fd, names') <- transDecls st ds
                 e' <- transExpr st{names = names'} e
-                return $ L sp (T.LetExpr x t2 e1 e')
+                return $ L sp (T.LetExpr fd e')
         traexpr (L sp (P.CaseExpr e alts)) = undefined
         traexpr (L _ (P.Factor _)) = unreachable "fixity resolution failed"
 
 transType :: Located P.Type -> TypThrow (Located T.Type)
-transType (L sp (P.VarType x)) = return $ L sp (T.VarType x)
+transType (L sp (P.VarType x)) = return $ L sp (varType x)
+transType (L sp (P.ConType x)) = return $ L sp (T.ConType x)
 transType (L sp (P.AppType ty1 ty2)) = do
         ty1' <- transType ty1
         ty2' <- transType ty2
@@ -52,9 +53,9 @@ transType (L sp (P.ArrType ty1 ty2)) = do
         return $ L sp (T.ArrType ty1' ty2')
 transType (L sp (P.AllType xs ty1)) = do
         ty1' <- transType ty1
-        return $ foldr (\x ty -> cLL x ty $ T.AllType x Nothing ty) ty1' xs
+        return $ L sp $ T.AllType (map (BoundTv <$>) xs) ty1'
 
-transDecls :: RenameState -> [Located P.Decl] -> TypThrow (T.Decl, Names)
+transDecls :: RenameState -> [Located P.Decl] -> TypThrow (T.FuncDecl, Names)
 transDecls st decs = do
         ns <- getFuncNames decs
         fieldtys <- execWriterT $
@@ -76,7 +77,7 @@ transDecls st decs = do
                                 e' <- lift $ transExpr st'{names = names'} (L sp $ P.LamExpr xs e)
                                 tell [(x, e')]
                         _ -> return ()
-        return (T.FuncDecl record (noLoc $ T.RecordExpr fields) (noLoc $ T.RecordType fieldtys), names')
+        return (T.FD record (noLoc $ T.RecordExpr fields) (noLoc $ T.RecordType fieldtys), names')
 
 transFuncTyDecls :: [Located P.Decl] -> TypThrow [Located T.Decl]
 transFuncTyDecls decs = do
@@ -101,19 +102,19 @@ transTopDecl (L sp (P.DataDecl name params fields)) = do
                         tys' <- mapM transType tys
                         return (l, tys')
         let fieldty = cLLn (fst $ head fields) (snd $ last fields) $ T.SumType fields'
-        tell ([L sp (T.TypeDecl name (foldr (\x ty -> cLL x ty $ T.AbsType x Nothing ty) fieldty params))], [])
+        tell ([L sp (T.TypeDecl name (foldr (\x ty -> cLL x ty $ T.AbsType x ty) fieldty params))], [])
         forM_ fields' $ \(l, field) -> do
-                let sumty = foldl (\ty1 ty2 -> cLL ty1 ty2 $ T.AppType ty1 ty2) (cL name $ T.VarType name) (map (\x -> cL x $ T.VarType x) params)
+                let sumty = foldl (\ty1 ty2 -> cLL ty1 ty2 $ T.AppType ty1 ty2) (cL name $ T.ConType name) (map (\x -> cL x $ varType x) params)
                     bodyty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrType ty1 ty2) bodyty field
-                    ty = foldr (\x ty -> cLL x ty $ T.AllType x Nothing ty) bodyty params
+                    ty = cLnL params bodyty $ T.AllType (map (BoundTv <$>) params) bodyty
                     tyargs = map (noLoc . str2tyvarName . show) [1 .. length params]
                     args = map (noLoc . varName . T.pack . show) [length params + 1 .. length params + length field]
                     tag = cLLn l args $ T.TagExpr l (map (\x -> cL x $ T.VarExpr x) args) Nothing
                     exp = foldr (\x e -> cLL x e $ T.AbsExpr x Nothing e) tag (tyargs ++ args)
-                tell ([], [L sp $ T.FuncDecl l exp ty])
+                tell ([], [L sp $ T.FuncDecl $ T.FD l exp ty])
 transTopDecl (L sp (P.TypeDecl name params ty1)) = do
         ty1' <- lift $ transType ty1
-        tell ([L sp (T.TypeDecl name (foldr (\x ty -> cLL x ty $ T.AbsType x Nothing ty) ty1' params))], [])
+        tell ([L sp (T.TypeDecl name (foldr (\x ty -> cLL x ty $ T.AbsType x ty) ty1' params))], [])
 transTopDecl _ = return ()
 
 getDecls :: [Located P.TopDecl] -> [Located P.Decl]
@@ -122,33 +123,10 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-getEntry :: [Located P.Decl] -> TypThrow (Maybe (Located P.Decl, Located P.Decl), [Located P.Decl])
-getEntry decs = do
-        let (body, bodyty) = execWriter $
-                forM decs $ \d -> case d of
-                        (unLoc -> P.FuncDecl f _ _) | unLoc f == entryPoint -> tell ([d], [])
-                        (unLoc -> P.FuncTyDecl f _) | unLoc f == entryPoint -> tell ([], [d])
-                        _ -> return ()
-        case (body, bodyty) of
-                ([], []) -> return (Nothing, decs)
-                ([b], [bt]) -> return (Just (b, bt), decs \\ [b, bt])
-                _ -> throwTypError NoSpan ""
-
-transEntry :: RenameState -> Maybe (Located P.Decl, Located P.Decl) -> Located T.Decl -> TypThrow (Located T.Expr, Located T.Type)
-transEntry st entry bind = case entry of
-        Just (L _ (P.FuncDecl _ xs e), L _ (P.FuncTyDecl _ ty)) -> do
-                body <- transExpr st e
-                bodyty <- transType ty
-                return (noLoc $ T.LetExpr bind body, bodyty)
-        Just _ -> unreachable ""
-        Nothing -> return (noLoc $ T.LetExpr bind (noLoc $ T.RecordExpr []), noLoc $ T.RecordType [])
-
 abs2typ :: RenameState -> P.Program -> TypThrow T.Decls
 abs2typ st (P.Program _ ids tds) = do
         let modns = map (\(L _ (P.ImpDecl mn)) -> mn) ids
         (tydecls, condecls) <- execWriterT $ mapM_ transTopDecl tds
-        (entry, ds) <- getEntry (getDecls tds)
-        vardecls <- transFuncTyDecls ds
-        (bind, names') <- transDecls st ds
-        main <- transEntry st{names = names'} entry (noLoc bind)
-        return $ T.Decls modns (tydecls ++ condecls ++ vardecls) main
+        vardecls <- transFuncTyDecls (getDecls tds)
+        (bind, names') <- transDecls st (getDecls tds)
+        return $ T.Decls modns (tydecls ++ condecls ++ vardecls) bind

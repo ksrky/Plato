@@ -1,11 +1,5 @@
 module Plato.Typing.KindInfer where
 
-import Control.Monad.State
-import Plato.Common.SrcLoc
-import Plato.Syntax.Typing
-import Plato.Typing.Env
-import Plato.Typing.Error
-
 {-}
 appKind :: Kind -> Kind -> StateT TypState TypThrow Kind
 appKind k1 k2 = case k1 of

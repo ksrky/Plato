@@ -126,7 +126,7 @@ types       :: { [Located Type] }
             | {- empty -}                           { [] }
 
 type        :: { Located Type }
-            : '{' tyvar tyvars '}' type             { cSL $1 $6 (AllType ($2 : $3) $5) }
+            : '{' tyvar tyvars '}' type             { cSL $1 $5 (AllType ($2 : $3) $5) }
             | btype '->' type                       { cLL $1 $3 (ArrType $1 $3) }
             | btype                                 { $1 }
 
@@ -136,7 +136,7 @@ btype       :: { Located Type }
 
 atype       :: { Located Type }
             : '(' type ')'                          { $2 }
-            | conid                                 { cL $1 (VarType (mkLtyconName $1)) }
+            | conid                                 { cL $1 (ConType (mkLtyconName $1)) }
             | varid                                 { cL $1 (VarType (mkLtyvarName $1)) }
 
 constrs     :: { [(Located Name, [Located Type])] }
@@ -232,7 +232,7 @@ setFixity :: MonadThrow m => Located Name -> Located Int -> Fixity -> ParserT m 
 setFixity lop@(L _ op) (L sp prec) fix = do
     opdict <- getOpDict
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwPsError sp $ "invalid precedence " ++ show prec
-    setOpDict $ enter op (Op lop prec fix) opdict
+    setOpDict $ M.insert op (Op lop prec fix) opdict
 
 splitModid :: Located T.Text -> [Name]
 splitModid = loop 0 . ((`T.snoc` '.') <$>)

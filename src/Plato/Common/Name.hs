@@ -40,13 +40,13 @@ str2varName :: String -> Name
 str2varName = varName . T.pack
 
 str2conName :: String -> Name
-str2conName = varName . T.pack
+str2conName = conName . T.pack
 
 str2tyvarName :: String -> Name
-str2tyvarName = varName . T.pack
+str2tyvarName = tyvarName . T.pack
 
 str2tyconName :: String -> Name
-str2tyconName = varName . T.pack
+str2tyconName = tyconName . T.pack
 
 entryPoint :: Name
 entryPoint = varName $ T.pack "main"
