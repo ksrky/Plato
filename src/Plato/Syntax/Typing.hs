@@ -26,8 +26,9 @@ data Expr
         deriving (Eq, Show)
 
 data Pat
-        = ConPat TypLName [Pat]
-        | AnyPat (Maybe TypLName)
+        = VarP TypLName
+        | ConP TypLName [Pat]
+        | WildP
         deriving (Eq, Show)
 
 data Type

@@ -67,14 +67,15 @@ transDecls st decs = do
                                 | level st > 0 -> lift $ throwTypError sp "Variables should be declared in the top level"
                         _ -> return ()
 
-        let (record, st') = undefined -- tmp: undefined
+        let record = fresh st -- tmp
             names' = names st ++ zip ns (repeat record)
+            st' = st{names = names', level = level st + 1}
         fields <- execWriterT $
                 forM decs $ \case
                         L sp (P.FuncDecl x xs e) | unLoc x `notElem` ns -> do
                                 lift $ throwTypError sp "lacks type signature"
                         L sp (P.FuncDecl x xs e) -> do
-                                e' <- lift $ transExpr st'{names = names'} (L sp $ P.LamExpr xs e)
+                                e' <- lift $ transExpr st' (L sp $ P.LamExpr xs e)
                                 tell [(x, e')]
                         _ -> return ()
         return (T.FD record (noLoc $ T.RecordExpr fields) (noLoc $ T.RecordType fieldtys), names')

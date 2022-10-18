@@ -18,3 +18,6 @@ mkValue :: Names -> Located Name -> Located Expr
 mkValue names lx@(L sp x) = case lookup x names of
         Just r -> L sp (mkProj r lx)
         Nothing -> L sp (VarExpr lx)
+
+fresh :: RenameState -> Located Name --tmp
+fresh memo = noLoc $ str2varName ("_" ++ show (level memo))

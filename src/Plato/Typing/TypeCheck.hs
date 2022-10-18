@@ -4,9 +4,11 @@ import Plato.Syntax.Typing
 import Plato.Typing.Monad
 import Plato.Typing.Types
 
+import Control.Monad
 import Data.IORef
 import Data.List ((\\))
 import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 
 typecheck :: Expr -> Typ Sigma
@@ -15,6 +17,48 @@ typecheck e = do
         zonkType ty
 
 data Expected a = Infer (IORef a) | Check a
+
+------------------------------------------
+-- tcPat, and its variants
+------------------------------------------
+checkPat :: Pat -> Rho -> Typ [(Located Name, Sigma)]
+checkPat pat ty = tcPat pat (Check ty)
+
+inferPat :: Pat -> Typ ([(Located Name, Sigma)], Sigma)
+inferPat pat = do
+        ref <- newTypRef (error "inferRho: empty result")
+        binds <- tcPat pat (Infer ref)
+        tc <- readTypRef ref
+        return (binds, tc)
+
+tcPat :: Pat -> Expected Sigma -> Typ [(Located Name, Sigma)]
+tcPat WildP _ = return []
+tcPat (VarP v) (Infer ref) = do
+        ty <- newTyVar
+        writeTypRef ref ty
+        return [(v, ty)]
+tcPat (VarP v) (Check ty) = return [(v, ty)]
+tcPat (ConP con ps) exp_ty = do
+        (arg_tys, res_ty) <- instDataCon $ con
+        envs <- mapM check_arg (ps `zip` arg_tys)
+        instPatSigma res_ty exp_ty
+        return (concat envs)
+    where
+        check_arg (p, ty) = checkPat p ty
+
+instPatSigma :: Sigma -> Expected Sigma -> Typ ()
+instPatSigma pat_ty (Infer ref) = writeTypRef ref pat_ty
+instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
+
+instDataCon :: Located Name -> Typ ([Sigma], Tau) --tmp: data constructor be in TypEnv
+instDataCon con = do
+        con_ty <- lookupVar con
+        con_ty' <- instantiate con_ty
+        return $ go con_ty' []
+    where
+        go :: Type -> [Type] -> ([Type], Type)
+        go (ArrType arg res) acc = go (unLoc res) (unLoc arg : acc)
+        go ty acc = (reverse acc, ty)
 
 ------------------------------------------
 -- TypRho, and its variants
@@ -49,7 +93,17 @@ typRho (LetExpr (FD var bind ann_ty) body) exp_ty = do
         extendVarEnv (unLoc var) var_ty (typRho (unLoc body) exp_ty)
 typRho (ProjExpr exp lab) exp_ty = undefined
 typRho (RecordExpr fields) exp_ty = undefined
-typRho CaseExpr{} exp_ty = undefined
+typRho (CaseExpr match _ alts) (Check exp_ty) = do
+        match_ty <- inferRho $ unLoc match
+        forM_ alts $ \(pat, body) -> do
+                checkPat (unLoc pat) match_ty
+                checkRho (unLoc body) exp_ty
+typRho (CaseExpr match _ alts) (Infer ref) = do
+        match_ty <- inferRho $ unLoc match
+        body_tys <- forM alts $ \(pat, body) -> do
+                checkPat (unLoc pat) match_ty
+                inferRho (unLoc body)
+        mapM_ (uncurry subsCheck) [(x, y) | x <- body_tys, y <- body_tys, x /= y]
 typRho TagExpr{} exp_ty = undefined
 typRho (AnnExpr body ann_ty) exp_ty = do
         checkSigma (unLoc body) (unLoc ann_ty)
