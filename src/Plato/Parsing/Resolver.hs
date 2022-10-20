@@ -16,7 +16,7 @@ import qualified Data.Map.Strict as M
 data Tok = TExp (Located Expr) | TOp Op
 
 linear :: MonadThrow m => OpDict -> Located Expr -> m [Tok]
-linear opdict (L _ (OpExpr e1 lx@(L _ x) e2)) = do
+linear opdict (L _ (OpE e1 lx@(L _ x) e2)) = do
         e1' <- linear opdict e1
         e2' <- linear opdict e2
         let op = case look opdict x of
@@ -33,12 +33,12 @@ class Resolver a where
 instance Resolver Expr where
         resolve od (L sp exp) =
                 L sp <$> case exp of
-                        VarExpr{} -> return exp
-                        AppExpr e1 e2 -> do
+                        VarE{} -> return exp
+                        AppE e1 e2 -> do
                                 e1' <- resolve od e1
                                 e2' <- resolve od e2
-                                return $ AppExpr e1' e2'
-                        e@OpExpr{} -> do
+                                return $ AppE e1' e2'
+                        e@OpE{} -> do
                                 toks <- linear od (L sp e)
                                 res <- parseNeg (Op (L NoSpan (varName "")) (-1) Nonfix) toks
                                 case res of
@@ -57,28 +57,28 @@ instance Resolver Expr where
                                         | otherwise = do
                                                 (r, rest') <- parseNeg op2 rest
                                                 let sp' = combineSpans (getSpan e1) (getSpan r)
-                                                parse op1 (L sp' $ OpExpr e1 lx r) rest'
+                                                parse op1 (L sp' $ OpE e1 lx r) rest'
                                 parse _ _ _ = error "unrechable: sequence of expression"
-                        LamExpr xs e -> do
+                        LamE xs e -> do
                                 e' <- resolve od e
-                                return $ LamExpr xs e'
-                        LetExpr ds e -> do
+                                return $ LamE xs e'
+                        LetE ds e -> do
                                 e' <- resolve od e
-                                return $ LetExpr ds e'
-                        CaseExpr e alts -> do
+                                return $ LetE ds e'
+                        CaseE e alts -> do
                                 e' <- resolve od e
                                 alts' <- forM alts $ \(pi, ei) -> do
                                         ei' <- resolve od ei
                                         return (pi, ei')
-                                return $ CaseExpr e' alts'
-                        Factor e -> do
+                                return $ CaseE e' alts'
+                        FactorE e -> do
                                 L _ e' <- resolve od e
                                 return e'
 
 instance Resolver Decl where
         resolve od (L sp d) =
                 L sp <$> case d of
-                        FuncDecl f args expr -> FuncDecl f args <$> resolve od expr
+                        FuncD f args expr -> FuncD f args <$> resolve od expr
                         _ -> return d
 
 instance Resolver TopDecl where

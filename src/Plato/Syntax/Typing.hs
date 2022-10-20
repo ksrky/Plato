@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Plato.Syntax.Typing where
 
 import Plato.Common.Error
@@ -12,17 +14,17 @@ type TypLType = Located Type
 type TypLDecl = Located Decl
 
 data Expr
-        = VarExpr TypLName
-        | AbsExpr TypLName (Maybe Type) TypLExpr
-        | AppExpr TypLExpr TypLExpr
-        | TAbsExpr TypLName (Maybe Kind) TypLExpr
-        | TAppExpr TypLExpr TypLType
-        | LetExpr FuncDecl TypLExpr
-        | ProjExpr TypLExpr TypLName
-        | RecordExpr [(TypLName, TypLExpr)]
-        | CaseExpr TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
-        | TagExpr TypLName [TypLExpr] (Maybe Type)
-        | AnnExpr TypLExpr TypLType
+        = VarE TypLName
+        | AbsE TypLName (Maybe Type) TypLExpr
+        | AppE TypLExpr TypLExpr
+        | TAbsE [Name] TypLExpr
+        | TAppE TypLExpr [Type]
+        | LetE [FuncDecl] TypLExpr
+        | ProjE TypLExpr TypLName
+        | RecordE [(TypLName, TypLExpr)]
+        | CaseE TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
+        | TagE TypLName [TypLExpr] (Maybe Type)
+        | AnnE TypLExpr TypLType {-Sigma-}
         deriving (Eq, Show)
 
 data Pat
@@ -32,35 +34,35 @@ data Pat
         deriving (Eq, Show)
 
 data Type
-        = VarType (Located TyVar)
-        | ConType TypLName
-        | ArrType TypLType TypLType
-        | AllType [Located TyVar] (Located Type {- Rho -})
-        | AbsType TypLName TypLType
-        | AppType TypLType TypLType
-        | RecType TypLName TypLType
-        | RecordType [(TypLName, TypLType)]
-        | SumType [(TypLName, [TypLType])]
-        | MetaType MetaTv
+        = VarT (Located TyVar)
+        | ConT TypLName
+        | ArrT TypLType TypLType
+        | AllT [Located TyVar] TypLType {- Rho -}
+        | AbsT TypLName TypLType
+        | AppT TypLType TypLType
+        | RecT TypLName TypLType
+        | RecordT [(TypLName, TypLType)]
+        | SumT [(TypLName, [TypLType])]
+        | MetaT MetaTv
         deriving (Eq, Show)
 
 data Kind
-        = VarKind Name
-        | StarKind
-        | ArrKind Kind Kind
+        = VarK Name
+        | StarK
+        | ArrK Kind Kind
         deriving (Eq, Show)
 
 data FuncDecl = FD TypLName TypLExpr TypLType deriving (Eq, Show)
 
 data Decl
-        = TypeDecl TypLName TypLType
-        | VarDecl TypLName TypLType
-        | FuncDecl FuncDecl
+        = TypeD TypLName TypLType
+        | VarD TypLName TypLType
+        | FuncD FuncDecl
         deriving (Eq, Show)
 
 data Decls = Decls
         { imports :: [Located ModuleName]
         , decls :: [TypLDecl]
-        , body :: FuncDecl
+        , body :: [FuncDecl]
         }
         deriving (Eq, Show)

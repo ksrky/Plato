@@ -43,9 +43,9 @@ token :: (T.Text -> Token) -> Action
 token f ainp@(pos, _, _, inp) len = do
         let sp = mkSpan pos inp len
             t = T.take len inp
-        il <- getIndentLevels
+        lev <- getIndentLevels
         scd <- getStartCode
-        case il of
+        case lev of
                 _ | scd == code -> return $ L sp (f t)
                 m : ms
                         | m == 0 -> do

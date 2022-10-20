@@ -39,37 +39,37 @@ metaTvs :: [Type] -> [MetaTv]
 metaTvs = foldr go []
     where
         go :: Type -> [MetaTv] -> [MetaTv]
-        go (MetaType tv) acc
+        go (MetaT tv) acc
                 | tv `elem` acc = acc
                 | otherwise = tv : acc
-        go (VarType _) acc = acc
-        go (ConType _) acc = acc
-        go (ArrType arg res) acc = go (unLoc arg) (go (unLoc res) acc)
-        go (AllType _ ty) acc = go (unLoc ty) acc
-        go (AppType fun arg) acc = go (unLoc fun) (go (unLoc arg) acc)
+        go (VarT _) acc = acc
+        go (ConT _) acc = acc
+        go (ArrT arg res) acc = go (unLoc arg) (go (unLoc res) acc)
+        go (AllT _ ty) acc = go (unLoc ty) acc
+        go (AppT fun arg) acc = go (unLoc fun) (go (unLoc arg) acc)
         go _ _ = unreachable "AbsType, RecType, RecordType, SumType"
 
 freeTyVars :: [Type] -> [TyVar]
 freeTyVars = foldr (go []) []
     where
         go :: [TyVar] -> Type -> [TyVar] -> [TyVar]
-        go bound (VarType tv) acc
+        go bound (VarT tv) acc
                 | unLoc tv `elem` bound = acc
                 | unLoc tv `elem` acc = acc
                 | otherwise = unLoc tv : acc
-        go _ (ConType _) acc = acc
-        go _ (MetaType _) acc = acc
-        go bound (ArrType arg res) acc = go bound (unLoc arg) (go bound (unLoc res) acc)
-        go bound (AllType tvs ty) acc = go (map unLoc tvs ++ bound) (unLoc ty) acc
-        go bound (AppType fun arg) acc = go bound (unLoc fun) (go bound (unLoc arg) acc)
+        go _ (ConT _) acc = acc
+        go _ (MetaT _) acc = acc
+        go bound (ArrT arg res) acc = go bound (unLoc arg) (go bound (unLoc res) acc)
+        go bound (AllT tvs ty) acc = go (map unLoc tvs ++ bound) (unLoc ty) acc
+        go bound (AppT fun arg) acc = go bound (unLoc fun) (go bound (unLoc arg) acc)
         go _ _ _ = unreachable "AbsType, RecType, RecordType, SumType"
 
 tyVarBndrs :: Rho -> [TyVar]
 tyVarBndrs ty = nub (bndrs ty)
     where
         bndrs :: Type -> [TyVar]
-        bndrs (AllType tvs body) = map unLoc tvs ++ bndrs (unLoc body)
-        bndrs (ArrType arg res) = bndrs (unLoc arg) ++ bndrs (unLoc res)
+        bndrs (AllT tvs body) = map unLoc tvs ++ bndrs (unLoc body)
+        bndrs (ArrT arg res) = bndrs (unLoc arg) ++ bndrs (unLoc res)
         bndrs _ = []
 
 tyVarName :: TyVar -> Name
@@ -77,7 +77,7 @@ tyVarName (BoundTv x) = x
 tyVarName (SkolemTv x _) = x
 
 varType :: Located Name -> Type
-varType (L sp x) = VarType $ L sp (BoundTv x)
+varType (L sp x) = VarT $ L sp (BoundTv x)
 
 ----------------------------------------------------------------
 -- Substitution
@@ -88,12 +88,12 @@ substTy :: [TyVar] -> [Type] -> Type -> Type
 substTy tvs tys = subst_ty (tvs `zip` tys)
 
 subst_ty :: Env -> Type -> Type
-subst_ty env (ArrType arg res) = ArrType (subst_ty env <$> arg) (subst_ty env <$> res)
-subst_ty env (VarType x) = fromMaybe (VarType x) (lookup (unLoc x) env)
-subst_ty _ (ConType tc) = ConType tc
-subst_ty _ (MetaType tv) = MetaType tv
-subst_ty env (AllType ns rho) = AllType ns (subst_ty env' <$> rho)
+subst_ty env (ArrT arg res) = ArrT (subst_ty env <$> arg) (subst_ty env <$> res)
+subst_ty env (VarT x) = fromMaybe (VarT x) (lookup (unLoc x) env)
+subst_ty _ (ConT tc) = ConT tc
+subst_ty _ (MetaT tv) = MetaT tv
+subst_ty env (AllT ns rho) = AllT ns (subst_ty env' <$> rho)
     where
         env' = [(n, ty') | (n, ty') <- env, n `notElem` map unLoc ns]
-subst_ty env (AppType fun arg) = ArrType (subst_ty env <$> fun) (subst_ty env <$> arg)
+subst_ty env (AppT fun arg) = ArrT (subst_ty env <$> fun) (subst_ty env <$> arg)
 subst_ty _ _ = unreachable "AbsType, RecType, RecordType, SumType"

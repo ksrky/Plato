@@ -10,39 +10,39 @@ type PsLType = Located Type
 type PsLDecl = Located Decl
 
 data Expr
-        = VarExpr PsLName
-        | AppExpr PsLExpr PsLExpr
-        | OpExpr PsLExpr PsLName PsLExpr
-        | LamExpr [PsLName] PsLExpr
-        | LetExpr [PsLDecl] PsLExpr
-        | CaseExpr PsLExpr [(PsLPat, PsLExpr)]
-        | Factor PsLExpr -- removed after fixity resolution
+        = VarE PsLName
+        | AppE PsLExpr PsLExpr
+        | OpE PsLExpr PsLName PsLExpr
+        | LamE [PsLName] PsLExpr
+        | LetE [PsLDecl] PsLExpr
+        | CaseE PsLExpr [(PsLPat, PsLExpr)]
+        | FactorE PsLExpr -- removed after fixity resolution
         deriving (Eq, Show)
 
 data Pat
-        = ConPat PsLName [PsLPat]
-        | VarPat PsLName
-        | WildPat
+        = ConP PsLName [PsLPat]
+        | VarP PsLName
+        | WildP
         deriving (Eq, Show)
 
 data Type
-        = VarType PsLName
-        | ConType PsLName
-        | AppType PsLType PsLType
-        | ArrType PsLType PsLType
-        | AllType [PsLName] PsLType
+        = VarT PsLName
+        | ConT PsLName
+        | AppT PsLType PsLType
+        | ArrT PsLType PsLType
+        | AllT [PsLName] PsLType
         deriving (Eq, Show)
 
 data Decl
-        = FuncDecl PsLName [PsLName] PsLExpr
-        | FuncTyDecl PsLName PsLType
+        = FuncD PsLName [PsLName] PsLExpr
+        | FuncTyD PsLName PsLType
         deriving (Eq, Show)
 
 data TopDecl
-        = DataDecl PsLName [PsLName] [(PsLName, [PsLType])]
-        | TypeDecl PsLName [PsLName] PsLType
+        = DataD PsLName [PsLName] [(PsLName, [PsLType])]
+        | TypeD PsLName [PsLName] PsLType
         | Decl PsLDecl
-        | FixDecl
+        | FixD
         deriving (Eq, Show)
 
 newtype ImpDecl = ImpDecl (Located ModuleName) deriving (Eq, Show)

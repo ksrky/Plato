@@ -179,6 +179,6 @@ getIndentLevels :: Monad m => ParserT m [Int]
 getIndentLevels = indentLevels <$> getUserState
 
 setIndentLevels :: Monad m => [Int] -> ParserT m ()
-setIndentLevels il = do
+setIndentLevels lev = do
         ust <- getUserState
-        setUserState ust{indentLevels = il}
+        setUserState ust{indentLevels = lev}
