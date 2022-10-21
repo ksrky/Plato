@@ -1,10 +1,10 @@
-module Plato.Typing.Monad where
+module Plato.Typing.TcMonad where
 
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.Types
+import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

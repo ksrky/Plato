@@ -47,10 +47,10 @@ library
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
       Plato.Typing.KindInfer
-      Plato.Typing.Monad
       Plato.Typing.Rename
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
-      Plato.Typing.Types
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -97,10 +97,10 @@ executable plato
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
       Plato.Typing.KindInfer
-      Plato.Typing.Monad
       Plato.Typing.Rename
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
-      Plato.Typing.Types
       Paths_Plato
   hs-source-dirs:
       src

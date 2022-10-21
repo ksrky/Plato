@@ -7,8 +7,8 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.Monad
-import Plato.Typing.Types
+import Plato.Typing.TcMonad
+import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad
@@ -21,7 +21,7 @@ typeRecon :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncD
 typeRecon env (FD var body ty) = runTyp env $ do
         (ann_expr, ty') <- inferSigma (AnnE body ty)
         let body' = case ann_expr of
-                AnnE e t -> error $ show t ++ "\n" ++ show ty' --e
+                AnnE e t -> e
                 _ -> unreachable ""
         return (FD var body' (L (getSpan ty) ty'))
 

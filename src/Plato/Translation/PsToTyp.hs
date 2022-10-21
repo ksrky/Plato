@@ -8,10 +8,10 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.Monad
 import Plato.Typing.Rename
+import Plato.Typing.TcMonad
+import Plato.Typing.TcTypes
 import Plato.Typing.TypeCheck
-import Plato.Typing.Types
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

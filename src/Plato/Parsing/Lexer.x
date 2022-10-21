@@ -115,12 +115,22 @@ alexMonadScan :: Parser (Located Token)
 alexMonadScan = do
     ainp@(pos, _, _, inp) <- getInput
     scd <- getStartCode
+    lev <- getIndentLevels
     let sp = mkSpan pos inp 0
     case alexScan ainp scd of
         AlexEOF -> do
             cd <- getCommentDepth
             when (cd > 0) $ lift $ throwPsError sp "unterminated block comment"
-            return $ L sp TokEOF
+            case lev of
+                -- note: Layout rule
+                -- L [] []                 = []
+                -- L [] (m : ms)           = <closing brace>  :  L [] ms                     if m≠0
+                -- alex bug: closing brace inside a comment throws parse error
+                [] -> return $ L sp TokEOF
+                0 : _ -> lift $ throwPsError sp "closing brace missing"
+                _ : ms -> do
+                    setIndentLevels ms
+                    return $ L sp (TokSymbol SymVRBrace)
         AlexError _ -> lift $ throwPsError sp "lexical error"
         AlexSkip ainp' _len -> do
             setInput ainp'
