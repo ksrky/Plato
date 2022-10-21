@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-module Plato.Test.FixResol where
+module Plato.Test.Parsing.FixResol where
 
 import Plato.Common.Error
 import Plato.Common.Name

@@ -31,6 +31,8 @@ import qualified Data.Map.Strict as M
 %name parser program
 %name exprParser expr
 %name typeParser type
+%name declsParser decls
+%name topdeclParser topdecl
 
 %token
 
@@ -113,8 +115,9 @@ fixdecl     :: { Located TopDecl }
             | 'infixr' int op                       {% setFixity $3 $2 Rightfix >> return (L $1 FixD) }
 
 decls       :: { [Located Decl] }
-            : decl ';'                              { [$1] }
-            | decl ';' decls                        { $1 : $3 }
+            : decl ';' decls                        { $1 : $3 }
+            | decl                                  { [$1] }
+            | {- empty -}                           { [] }
 
 decl        :: { Located Decl }
             : var ':' type                        	{ cLL $1 $3 (FuncTyD $1 $3) }

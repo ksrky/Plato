@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Typing.TypeCheck where
@@ -6,20 +7,23 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.Error
 import Plato.Typing.Monad
 import Plato.Typing.Types
 
 import Control.Exception.Safe
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Writer
 import Data.IORef
 import Data.List
 
-typeRecon :: (MonadIO m, MonadThrow m) => TypEnv -> FuncDecl -> m FuncDecl
-typeRecon env (FD var body ty) = (`unTyp` env) $ do
-        (body', ty') <- inferSigma (AnnE body ty)
-        return (FD var (L (getSpan body) body') (L (getSpan ty) ty'))
+typeRecon :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncDecl
+typeRecon env (FD var body ty) = runTyp env $ do
+        (ann_expr, ty') <- inferSigma (AnnE body ty)
+        let body' = case ann_expr of
+                AnnE e t -> error $ show t ++ "\n" ++ show ty' --e
+                _ -> unreachable ""
+        return (FD var body' (L (getSpan ty) ty'))
 
 typecheck :: (MonadIO m, MonadThrow m) => Located Expr -> Located Type -> Typ m Sigma
 typecheck e ty = do
@@ -53,7 +57,7 @@ tcPat (VarP v) (Infer ref) = do
 tcPat (VarP v) (Check ty) = return [(v, ty)]
 tcPat (ConP con ps) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
-        envs <- mapM check_arg (ps `zip` arg_tys)
+        envs <- mapM check_arg (map unLoc ps `zip` arg_tys)
         instPatSigma res_ty exp_ty
         return (concat envs)
     where

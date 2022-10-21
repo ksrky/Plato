@@ -46,7 +46,6 @@ library
       Plato.Syntax.Typing
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
-      Plato.Typing.Error
       Plato.Typing.KindInfer
       Plato.Typing.Monad
       Plato.Typing.Rename
@@ -97,7 +96,6 @@ executable plato
       Plato.Syntax.Typing
       Plato.Translation.PsToTyp
       Plato.Translation.SrcToPs
-      Plato.Typing.Error
       Plato.Typing.KindInfer
       Plato.Typing.Monad
       Plato.Typing.Rename
@@ -130,10 +128,14 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.Test.FixResol
+      Plato.Test.Parsing.FixResol
       Plato.Test.ParsingSpec
+      Plato.Test.Typing.DeclTransl
+      Plato.Test.Typing.ExprTransl
+      Plato.Test.Typing.TopDeclTransl
+      Plato.Test.Typing.Transl
+      Plato.Test.Typing.Utils
       Plato.Test.TypingSpec
-      Plato.Test.TypTransl
       Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:

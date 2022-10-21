@@ -29,7 +29,7 @@ data Expr
 
 data Pat
         = VarP TypLName
-        | ConP TypLName [Pat]
+        | ConP TypLName [Located Pat]
         | WildP
         deriving (Eq, Show)
 

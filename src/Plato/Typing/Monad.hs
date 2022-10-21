@@ -4,7 +4,6 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.Error
 import Plato.Typing.Types
 
 import Control.Exception.Safe

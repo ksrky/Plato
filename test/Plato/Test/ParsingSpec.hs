@@ -1,6 +1,6 @@
 module Plato.Test.ParsingSpec where
 
-import qualified Plato.Test.FixResol as F
+import qualified Plato.Test.Parsing.FixResol as F
 
 import Test.Hspec
 
