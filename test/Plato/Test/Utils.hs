@@ -10,4 +10,4 @@ parseLine :: T.Text -> ParserT m a -> m (a, PsState)
 parseLine inp p = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})
 
 shouldSatisfyReturn :: (HasCallStack, Show a, Eq a) => IO a -> (a -> Bool) -> Expectation
-action `shouldSatisfyReturn` expected = action >>= (`shouldSatisfy` expected)
+action `shouldSatisfyReturn` check = action >>= (`shouldSatisfy` check)

@@ -7,6 +7,8 @@ import Plato.Syntax.Typing
 import Plato.Typing.Error
 import Plato.Typing.Types
 
+import Control.Exception.Safe
+import Control.Monad.IO.Class
 import Data.IORef
 import Data.List
 import qualified Data.Map.Strict as M
@@ -16,71 +18,67 @@ data TypEnv = TypEnv
         , var_env :: M.Map Name Sigma
         }
 
-newtype Typ a = Typ (TypEnv -> IO (TypThrow a))
+newtype Typ m a = Typ (TypEnv -> m a)
 
-unTyp :: Typ a -> (TypEnv -> IO (TypThrow a))
+unTyp :: Monad m => Typ m a -> (TypEnv -> m a)
 unTyp (Typ a) = a
 
-instance Functor Typ where
+instance Monad m => Functor (Typ m) where
         fmap f (Typ x) = Typ $ \env -> do
                 y <- x env
-                return $ f <$> y
+                return $ f y
 
-instance Applicative Typ where
-        pure x = Typ (\_ -> return $ Right x)
+instance Monad m => Applicative (Typ m) where
+        pure x = Typ (\_ -> return x)
         m <*> x = Typ $ \env -> do
-                r1 <- unTyp m env
-                case r1 of
-                        Left err -> return $ Left err
-                        Right f -> unTyp (fmap f x) env
+                m' <- unTyp m env
+                unTyp (fmap m' x) env
 
-instance Monad Typ where
+instance Monad m => Monad (Typ m) where
         m >>= k = Typ $ \env -> do
-                r1 <- unTyp m env
-                case r1 of
-                        Left err -> return (Left err)
-                        Right v -> unTyp (k v) env
+                v <- unTyp m env
+                unTyp (k v) env
 
-failTyp :: Span -> String -> Typ a
-failTyp sp msg = Typ $ \_ -> return $ throwTypError sp msg
+failTyp :: MonadThrow m => Span -> String -> Typ m a
+failTyp sp msg = Typ $ \_ -> throwLocatedErr sp msg
 
-check :: Bool -> Span -> String -> Typ ()
+check :: MonadThrow m => Bool -> Span -> String -> Typ m ()
 check True _ _ = return ()
 check False sp d = failTyp sp d
 
-runTyp :: [(Name, Sigma)] -> Typ a -> IO (TypThrow a)
+runTyp :: MonadIO m => [(Name, Sigma)] -> Typ m a -> m a
 runTyp binds (Typ typ) = do
-        ref <- newIORef 0
+        ref <- liftIO $ newIORef 0
         let env = TypEnv{uniqs = ref, var_env = M.fromList binds}
         typ env
 
-lift :: IO a -> Typ a
-lift st = Typ (\_env -> do Right <$> st)
+lift :: Monad m => m a -> Typ m a
+lift st = Typ (const st)
 
-newTypRef :: a -> Typ (IORef a)
-newTypRef v = lift (newIORef v)
+newTypRef :: MonadIO m => a -> Typ m (IORef a)
+newTypRef v = lift (liftIO $ newIORef v)
 
-readTypRef :: IORef a -> Typ a
-readTypRef r = lift (readIORef r)
+readTypRef :: MonadIO m => IORef a -> Typ m a
+readTypRef r = lift (liftIO $ readIORef r)
 
-writeTypRef :: IORef a -> a -> Typ ()
-writeTypRef r v = lift (writeIORef r v)
+writeTypRef :: MonadIO m => IORef a -> a -> Typ m ()
+writeTypRef r v = lift (liftIO $ writeIORef r v)
 
 ----------------------------------------------------------------
 -- Type Environment
 ----------------------------------------------------------------
-extendVarEnv :: Name -> Sigma -> Typ a -> Typ a
+extendVarEnv :: Name -> Sigma -> Typ m a -> Typ m a
 extendVarEnv var ty (Typ m) = Typ (m . extend)
     where
         extend env = env{var_env = M.insert var ty (var_env env)}
 
-extendVarEnvList :: [(Name, Sigma)] -> Typ a -> Typ a
+extendVarEnvList :: [(Name, Sigma)] -> Typ m a -> Typ m a
 extendVarEnvList binds typ = foldr (uncurry extendVarEnv) typ binds
 
-getEnv :: Typ (M.Map Name Sigma)
-getEnv = Typ (return . Right . var_env)
+getEnv :: Monad m => Typ m (M.Map Name Sigma)
+getEnv = Typ (return . var_env)
 
-lookupVar :: Located Name -> Typ Sigma
+lookupVar :: MonadThrow m => Located Name -> Typ m Sigma
 lookupVar (L sp x) = do
         env <- getEnv
         case M.lookup x env of
@@ -90,43 +88,43 @@ lookupVar (L sp x) = do
 --------------------------------------------------
 --      Creating, reading, writing MetaTvs      --
 --------------------------------------------------
-newTyVar :: Typ Tau
+newTyVar :: MonadIO m => Typ m Tau
 newTyVar = MetaT <$> newMetaTyVar
 
-newMetaTyVar :: Typ MetaTv
+newMetaTyVar :: MonadIO m => Typ m MetaTv
 newMetaTyVar = do
         uniq <- newUnique
         tref <- newTypRef Nothing
         return (Meta uniq tref)
 
-newSkolemTyVar :: TyVar -> Typ TyVar
+newSkolemTyVar :: MonadIO m => TyVar -> Typ m TyVar
 newSkolemTyVar tv = SkolemTv (tyVarName tv) <$> newUnique
 
-readTv :: MetaTv -> Typ (Maybe Tau)
+readTv :: MonadIO m => MetaTv -> Typ m (Maybe Tau)
 readTv (Meta _ ref) = readTypRef ref
 
-writeTv :: MetaTv -> Tau -> Typ ()
+writeTv :: MonadIO m => MetaTv -> Tau -> Typ m ()
 writeTv (Meta _ ref) ty = writeTypRef ref (Just ty)
 
-newUnique :: Typ Uniq
+newUnique :: MonadIO m => Typ m Uniq
 newUnique =
         Typ
-                ( \TypEnv{uniqs = ref} -> do
+                ( \TypEnv{uniqs = ref} -> liftIO $ do
                         uniq <- readIORef ref
                         writeIORef ref (uniq + 1)
-                        return (Right uniq)
+                        return uniq
                 )
 
 ----------------------------------------------------------------
 -- Instantiation
 ----------------------------------------------------------------
-instantiate :: Sigma -> Typ Rho
+instantiate :: MonadIO m => Sigma -> Typ m Rho
 instantiate (AllT tvs ty) = do
         tvs' <- mapM (const newMetaTyVar) tvs
         return (substTy (map unLoc tvs) (map MetaT tvs') (unLoc ty))
 instantiate ty = return ty
 
-skolemise :: Sigma -> Typ ([TyVar], Rho, Expr -> Expr)
+skolemise :: MonadIO m => Sigma -> Typ m ([TyVar], Rho, Expr -> Expr)
 skolemise (AllT tvs ty) = do
         sks1 <- mapM (newSkolemTyVar . unLoc) tvs
         (sks2, ty', coercion) <- skolemise (substTy (map unLoc tvs) (map (VarT . noLoc) sks1) (unLoc ty))
@@ -150,7 +148,7 @@ skolemise ty = return ([], ty, id)
 ----------------------------------------------------------------
 -- Quantification
 ----------------------------------------------------------------
-quantify :: [MetaTv] -> Rho -> Typ Sigma
+quantify :: MonadIO m => [MetaTv] -> Rho -> Typ m Sigma
 quantify tvs ty = do
         mapM_ bind (tvs `zip` new_bndrs)
         ty' <- zonkType ty
@@ -165,15 +163,15 @@ allBinders =
         [BoundTv $ str2tyvarName [x] | x <- ['a' .. 'z']]
         ++ [BoundTv (str2tyvarName (x : show i)) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
 
-getEnvTypes :: Typ [Type]
+getEnvTypes :: Monad m => Typ m [Type]
 getEnvTypes = M.elems <$> getEnv
 
-getMetaTyVars :: [Type] -> Typ [MetaTv]
+getMetaTyVars :: MonadIO m => [Type] -> Typ m [MetaTv]
 getMetaTyVars tys = do
         tys' <- mapM zonkType tys
         return (metaTvs tys')
 
-getFreeTyVars :: [Type] -> Typ [TyVar]
+getFreeTyVars :: MonadIO m => [Type] -> Typ m [TyVar]
 getFreeTyVars tys = do
         tys' <- mapM zonkType tys
         return (freeTyVars tys')
@@ -181,7 +179,7 @@ getFreeTyVars tys = do
 ----------------------------------------------------------------
 -- Zonking
 ----------------------------------------------------------------
-zonkType :: Type -> Typ Type
+zonkType :: MonadIO m => Type -> Typ m Type
 zonkType (VarT x) = return (VarT x)
 zonkType (ConT x) = return (ConT x)
 zonkType (AllT ns ty) = do
@@ -209,7 +207,7 @@ zonkType _ = unreachable "AbsType, RecordType, RecType, SumType"
 ----------------------------------------------------------------
 -- Unification
 ----------------------------------------------------------------
-unify :: Tau -> Tau -> Typ ()
+unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Typ m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = error ""
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
@@ -221,14 +219,14 @@ unify (ArrT arg1 res1) (ArrT arg2 res2) = do
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
 unify ty1 ty2 = error "Cannot unify types:"
 
-unifyVar :: MetaTv -> Tau -> Typ ()
+unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Typ m ()
 unifyVar tv1 ty2 = do
         mb_ty1 <- readTv tv1
         case mb_ty1 of
                 Just ty1 -> unify ty1 ty2
                 Nothing -> unifyUnboundVar tv1 ty2
 
-unifyUnboundVar :: MetaTv -> Tau -> Typ ()
+unifyUnboundVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Typ m ()
 unifyUnboundVar tv1 ty2@(MetaT tv2) = do
         mb_ty2 <- readTv tv2
         case mb_ty2 of
@@ -240,7 +238,7 @@ unifyUnboundVar tv1 ty2 = do
                 then occursCheckErr tv1 ty2
                 else writeTv tv1 ty2
 
-unifyFun :: Rho -> Typ (Sigma, Rho)
+unifyFun :: (MonadIO m, MonadThrow m) => Rho -> Typ m (Sigma, Rho)
 unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
 unifyFun tau = do
         arg_ty <- newTyVar
@@ -248,8 +246,8 @@ unifyFun tau = do
         unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         return (arg_ty, res_ty)
 
-occursCheckErr :: MetaTv -> Tau -> Typ ()
-occursCheckErr tv ty = unreachable "Occurs check fail"
+occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Typ m ()
+occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail"
 
 badType :: Tau -> Bool
 badType (VarT (L _ (BoundTv _))) = True

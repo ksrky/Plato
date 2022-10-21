@@ -6,17 +6,24 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
+import Plato.Typing.Error
 import Plato.Typing.Monad
 import Plato.Typing.Types
 
+import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Writer
 import Data.IORef
 import Data.List
 
-typecheck :: Located Expr -> Located Type -> Typ Sigma
+typeRecon :: (MonadIO m, MonadThrow m) => TypEnv -> FuncDecl -> m FuncDecl
+typeRecon env (FD var body ty) = (`unTyp` env) $ do
+        (body', ty') <- inferSigma (AnnE body ty)
+        return (FD var (L (getSpan body) body') (L (getSpan ty) ty'))
+
+typecheck :: (MonadIO m, MonadThrow m) => Located Expr -> Located Type -> Typ m Sigma
 typecheck e ty = do
-        (e', ty') <- inferSigma (AnnE e ty)
+        (_, ty') <- inferSigma (AnnE e ty)
         zonkType ty'
 
 data Expected a = Infer (IORef a) | Check a
@@ -27,17 +34,17 @@ data Expected a = Infer (IORef a) | Check a
 -- tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
-checkPat :: Pat -> Rho -> Typ [(Located Name, Sigma)]
+checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Typ m [(Located Name, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
-inferPat :: Pat -> Typ ([(Located Name, Sigma)], Sigma)
+inferPat :: (MonadIO m, MonadThrow m) => Pat -> Typ m ([(Located Name, Sigma)], Sigma)
 inferPat pat = do
         ref <- newTypRef (error "inferRho: empty result")
         binds <- tcPat pat (Infer ref)
         tc <- readTypRef ref
         return (binds, tc)
 
-tcPat :: Pat -> Expected Sigma -> Typ [(Located Name, Sigma)]
+tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Typ m [(Located Name, Sigma)]
 tcPat WildP _ = return []
 tcPat (VarP v) (Infer ref) = do
         ty <- newTyVar
@@ -52,11 +59,11 @@ tcPat (ConP con ps) exp_ty = do
     where
         check_arg (p, ty) = checkPat p ty
 
-instPatSigma :: Sigma -> Expected Sigma -> Typ (Expr -> Expr)
+instPatSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Typ m (Expr -> Expr)
 instPatSigma pat_ty (Infer ref) = writeTypRef ref pat_ty >> return id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: Located Name -> Typ ([Sigma], Tau) --tmp: data constructor be in TypEnv
+instDataCon :: (MonadIO m, MonadThrow m) => Located Name -> Typ m ([Sigma], Tau) --tmp: data constructor be in TypEnv
 instDataCon con = do
         con_ty <- lookupVar con
         con_ty' <- instantiate con_ty
@@ -69,16 +76,16 @@ instDataCon con = do
 ------------------------------------------
 -- TypRho, and its variants
 ------------------------------------------
-checkRho :: Expr -> Rho -> Typ Expr
+checkRho :: (MonadIO m, MonadThrow m) => Expr -> Rho -> Typ m Expr
 checkRho expr ty = typRho expr (Check ty)
 
-inferRho :: Expr -> Typ (Expr, Rho)
+inferRho :: (MonadIO m, MonadThrow m) => Expr -> Typ m (Expr, Rho)
 inferRho expr = do
         ref <- newTypRef (error "inferRho: empty result")
         expr <- typRho expr (Infer ref)
         (expr,) <$> readTypRef ref
 
-typRho :: Expr -> Expected Rho -> Typ Expr
+typRho :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Typ m Expr
 typRho (VarE v) exp_ty = do
         v_sigma <- lookupVar v
         coercion <- instSigma v_sigma exp_ty
@@ -135,7 +142,7 @@ typRho _ _ = unreachable "TAbsExpr, TAppExpr"
 ------------------------------------------
 -- inferSigma and checkSigma
 ------------------------------------------
-inferSigma :: Expr -> Typ (Expr, Sigma)
+inferSigma :: (MonadIO m, MonadThrow m) => Expr -> Typ m (Expr, Sigma)
 inferSigma e = do
         (expr, exp_ty) <- inferRho e
         env_tys <- getEnvTypes
@@ -146,7 +153,7 @@ inferSigma e = do
                 then return (expr, exp_ty)
                 else (expr,) <$> quantify forall_tvs exp_ty
 
-checkSigma :: Expr -> Sigma -> Typ ()
+checkSigma :: (MonadIO m, MonadThrow m) => Expr -> Sigma -> Typ m ()
 checkSigma expr sigma = do
         (skol_tvs, rho, coercion) <- skolemise sigma
         checkRho expr rho
@@ -159,7 +166,7 @@ checkSigma expr sigma = do
 --        Subsumption checking          --
 ------------------------------------------
 -- See Technical Appendix p53 for creating coercion terms
-subsCheck :: Sigma -> Sigma -> Typ (Expr -> Expr)
+subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Typ m (Expr -> Expr)
 subsCheck sigma1 sigma2 = do
         (skol_tvs, rho2, co1) <- skolemise sigma2
         co2 <- subsCheckRho sigma1 rho2
@@ -170,7 +177,7 @@ subsCheck sigma1 sigma2 = do
                 then return id
                 else return $ \x -> co1 (TAbsE (map tyVarName skol_tvs) (noLoc $ co2 x))
 
-subsCheckRho :: Sigma -> Rho -> Typ (Expr -> Expr)
+subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Typ m (Expr -> Expr)
 subsCheckRho sigma1@(AllT tvs _) rho2 = do
         rho1 <- instantiate sigma1
         coercion <- subsCheckRho rho1 rho2
@@ -187,13 +194,13 @@ subsCheckRho tau1 tau2 = do
         unify tau1 tau2
         return id
 
-subsCheckFun :: Sigma -> Rho -> Sigma -> Rho -> Typ (Expr -> Expr)
+subsCheckFun :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Sigma -> Rho -> Typ m (Expr -> Expr)
 subsCheckFun a1 r1 a2 r2 = do
         co_arg <- subsCheck a2 a1
         co_res <- subsCheckRho r1 r2
         return (\f -> AbsE (noLoc $ str2varName "x") (Just a2) (noLoc $ co_res $ AppE (noLoc f) (noLoc $ co_arg (VarE $ noLoc $ str2varName "x"))))
 
-instSigma :: Sigma -> Expected Rho -> Typ (Expr -> Expr)
+instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Typ m (Expr -> Expr)
 instSigma t1 (Check t2) = subsCheckRho t1 t2
 instSigma t1 (Infer r) = do
         t1' <- instantiate t1

@@ -8,18 +8,20 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.Error
 import Plato.Typing.Rename
 import Plato.Typing.Types
 
-import Control.Monad.Writer
+import Control.Exception.Safe
+import Control.Monad.Writer as Writer
 import Data.List ((\\))
 import qualified Data.Text as T
+import Plato.Typing.Monad
+import Plato.Typing.TypeCheck
 
-transExpr :: Located P.Expr -> TypThrow (Located T.Expr)
+transExpr :: MonadThrow m => Located P.Expr -> m (Located T.Expr)
 transExpr = traexpr
     where
-        traexpr :: Located P.Expr -> TypThrow (Located T.Expr)
+        traexpr :: MonadThrow m => Located P.Expr -> m (Located T.Expr)
         traexpr (L sp (P.VarE x)) = return $ L sp (T.VarE x)
         traexpr (L sp (P.AppE e1 e2)) = do
                 e1' <- traexpr e1
@@ -39,7 +41,7 @@ transExpr = traexpr
         traexpr (L sp (P.CaseE e alts)) = undefined
         traexpr (L _ (P.FactorE _)) = unreachable "fixity resolution failed"
 
-transType :: Located P.Type -> TypThrow (Located T.Type)
+transType :: MonadThrow m => Located P.Type -> m (Located T.Type)
 transType (L sp (P.VarT x)) = return $ L sp (varType x)
 transType (L sp (P.ConT x)) = return $ L sp (T.ConT x)
 transType (L sp (P.AppT ty1 ty2)) = do
@@ -54,47 +56,47 @@ transType (L sp (P.AllT xs ty1)) = do
         ty1' <- transType ty1
         return $ L sp $ T.AllT (map (BoundTv <$>) xs) ty1'
 
-transDecls :: [Located P.Decl] -> TypThrow [T.FuncDecl]
+transDecls :: MonadThrow m => [Located P.Decl] -> m [T.FuncDecl]
 transDecls decs = do
         ns <- getFuncNames decs
         fieldtys <- execWriterT $
                 forM decs $ \case
                         (L sp (P.FuncTyD x ty))
                                 | unLoc x `elem` ns -> do
-                                        ty' <- lift $ transType ty
+                                        ty' <- Writer.lift $ transType ty
                                         tell [(x, ty')]
-                        -- level st > 0 -> lift $ throwTypError sp "Variables should be declared in the top level"
+                        -- level st > 0 -> Writer.lift $ throwTypError sp "Variables should be declared in the top level"
                         _ -> return ()
         fields <- execWriterT $
                 forM decs $ \case
                         L sp (P.FuncD x xs e) | unLoc x `notElem` ns -> do
-                                lift $ throwTypError sp "lacks type signature"
+                                Writer.lift $ throwLocatedErr sp "lacks type signature"
                         L sp (P.FuncD x xs e) -> do
-                                e' <- lift $ transExpr (cLnL xs e $ P.LamE xs e)
+                                e' <- Writer.lift $ transExpr (cLnL xs e $ P.LamE xs e)
                                 tell [(x, e')]
                         _ -> return ()
-        when (length fields /= length fieldtys) $ unreachable "number of function bodies and signatures are not match"
+        when (length fields /= length fieldtys) $ throwUnexpectedErr "number of function bodies and signatures are not match"
         return [T.FD var1 exp ty | (var1, exp) <- fields, (var2, ty) <- fieldtys, var1 == var2]
 
-transFuncTyDecls :: [Located P.Decl] -> TypThrow [Located T.Decl]
+transFuncTyDecls :: MonadThrow m => [Located P.Decl] -> m [Located T.Decl]
 transFuncTyDecls decs = do
         xs <- getFuncNames decs
         execWriterT $
                 forM decs $ \case
                         (L sp (P.FuncTyD x ty)) | unLoc x `notElem` xs -> do
-                                ty' <- lift $ transType ty
+                                ty' <- Writer.lift $ transType ty
                                 tell [L sp $ T.VarD x ty']
                         _ -> return ()
 
-getFuncNames :: [Located P.Decl] -> TypThrow [Name]
+getFuncNames :: MonadThrow m => [Located P.Decl] -> m [Name]
 getFuncNames decs = execWriterT $
         forM decs $ \case
                 (unLoc -> P.FuncD x _ _) -> tell [unLoc x]
                 _ -> return ()
 
-transTopDecl :: Located P.TopDecl -> WriterT ([Located T.Decl], [Located T.Decl]) TypThrow ()
+transTopDecl :: MonadThrow m => Located P.TopDecl -> WriterT ([Located T.Decl], [Located T.Decl]) m ()
 transTopDecl (L sp (P.DataD name params fields)) = do
-        fields' <- lift $
+        fields' <- Writer.lift $
                 forM fields $ \(l, tys) -> do
                         tys' <- mapM transType tys
                         return (l, tys')
@@ -110,7 +112,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     exp = foldr (\x e -> cLL x e $ T.AbsE x Nothing e) tag (tyargs ++ args)
                 tell ([], [L sp $ T.FuncD $ T.FD l exp ty])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
-        ty1' <- lift $ transType ty1
+        ty1' <- Writer.lift $ transType ty1
         tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x ty) ty1' params))], [])
 transTopDecl _ = return ()
 
@@ -120,10 +122,12 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-abs2typ :: RenameState -> P.Program -> TypThrow T.Decls
-abs2typ st (P.Program _ ids tds) = do
+ps2typ :: MonadThrow m => P.Program -> m T.Decls
+ps2typ (P.Program _ ids tds) = do
         let modns = map (\(L _ (P.ImpDecl mn)) -> mn) ids
         (tydecls, condecls) <- execWriterT $ mapM_ transTopDecl tds
         vardecls <- transFuncTyDecls (getDecls tds)
         binds <- transDecls (getDecls tds)
         return $ T.Decls modns (tydecls ++ condecls ++ vardecls) binds
+
+tyrecon env fd = typeRecon env fd

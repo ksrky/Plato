@@ -130,7 +130,10 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Plato.Test.FixResol
       Plato.Test.ParsingSpec
+      Plato.Test.TypingSpec
+      Plato.Test.TypTransl
       Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:
