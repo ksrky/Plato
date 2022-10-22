@@ -5,7 +5,7 @@ module Plato.Syntax.Typing where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import {-# SOURCE #-} Plato.Typing.TcTypes
+import {-# SOURCE #-} Plato.Typing.TrTypes
 
 type TypLName = Located Name
 type TypLExpr = Located Expr

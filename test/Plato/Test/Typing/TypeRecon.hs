@@ -2,9 +2,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Plato.Test.Typing.DeclTransl where
+module Plato.Test.Typing.TypeRecon where
 
 import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
@@ -15,25 +16,27 @@ import Plato.Test.Utils
 import Plato.Transl.PsToTyp
 
 import Control.Exception.Safe
+import Control.Monad.IO.Class
 import qualified Data.Text as T
 import Test.Hspec
 
-testcases :: [(String, IO ([FuncDecl], [Located Decl]) -> Expectation)]
+testcases :: [(String, IO [FuncDecl] -> Expectation)]
 testcases =
         [
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                (fst -> [FD (VN "id") (NL (AbsE (VN "x") Nothing (VE "x"))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))]) -> True
+                                [FD (VN "id") (NL (TAbsE [Name TyvarName "a"] (NL (AbsE (VN "x") (Just (VarT (TV "a"))) (VE "x"))))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))] -> True
                                 _ -> False
                   )
                 )
         ]
 
-test :: MonadThrow m => (String, m ([FuncDecl], [Located Decl]) -> Expectation) -> SpecWith ()
+test :: (MonadThrow m, MonadIO m) => (String, m [FuncDecl] -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) declsParser)
                 let opdict = opDict (parser_ust st)
                 ps' <- mapM (resolve opdict) ps
-                transDecls ps'
+                (fundecs, _) <- transDecls ps'
+                processDecls [] fundecs

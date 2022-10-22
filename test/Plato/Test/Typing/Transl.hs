@@ -7,8 +7,8 @@ import Plato.Common.Error
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
-import Plato.Translation.PsToTyp
-import Plato.Translation.SrcToPs
+import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

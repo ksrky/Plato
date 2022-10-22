@@ -1,4 +1,4 @@
-module Plato.Typing.TcTypes where
+module Plato.Typing.TrTypes where
 
 data TyVar
 

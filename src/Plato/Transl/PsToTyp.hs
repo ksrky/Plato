@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Plato.Translation.PsToTyp where
+module Plato.Transl.PsToTyp where
 
 import Plato.Common.Error
 import Plato.Common.Name
@@ -9,9 +9,9 @@ import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
 import Plato.Typing.Rename
-import Plato.Typing.TcMonad
-import Plato.Typing.TcTypes
-import Plato.Typing.TypeCheck
+import Plato.Typing.TrMonad
+import Plato.Typing.TrTypes
+import Plato.Typing.TypeRecon
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

@@ -1,8 +1,8 @@
 module Plato.Main where
 
 import Plato.Common.Error
-import Plato.Translation.PsToTyp
-import Plato.Translation.SrcToPs
+import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
 
 import Control.Monad.IO.Class
 import qualified Data.Text as T

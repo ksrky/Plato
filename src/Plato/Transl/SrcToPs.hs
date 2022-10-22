@@ -1,4 +1,4 @@
-module Plato.Translation.SrcToPs where
+module Plato.Transl.SrcToPs where
 
 import Plato.Common.Error
 import Plato.Parsing.Monad

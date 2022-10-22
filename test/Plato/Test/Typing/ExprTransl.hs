@@ -11,7 +11,7 @@ import Plato.Parsing.Resolver
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
-import Plato.Translation.PsToTyp
+import Plato.Transl.PsToTyp
 
 import Control.Exception.Safe
 import qualified Data.Text as T
