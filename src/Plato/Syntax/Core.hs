@@ -1,6 +1,7 @@
 module Plato.Syntax.Core where
 
 import Plato.Common.Name
+import Plato.Common.SrcLoc
 
 ----------------------------------------------------------------
 -- Syntax
@@ -37,10 +38,10 @@ data Term
 
 data Binding
         = NameBind
-        | VarBind Ty
+        | VarBind (Located Ty)
         | TyVarBind Kind
-        | TmAbbBind Term (Maybe Ty)
-        | TyAbbBind Ty (Maybe Kind)
+        | TmAbbBind (Located Term) (Maybe (Located Ty))
+        | TyAbbBind (Located Ty) (Maybe Kind)
         deriving (Eq, Show)
 
 ----------------------------------------------------------------

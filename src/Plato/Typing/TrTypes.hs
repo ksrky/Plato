@@ -96,4 +96,4 @@ subst_ty env (AllT ns rho) = AllT ns (subst_ty env' <$> rho)
     where
         env' = [(n, ty') | (n, ty') <- env, n `notElem` map unLoc ns]
 subst_ty env (AppT fun arg) = ArrT (subst_ty env <$> fun) (subst_ty env <$> arg)
-subst_ty _ _ = unreachable "AbsType, RecType, RecordType, SumType"
+subst_ty _ ty = ty

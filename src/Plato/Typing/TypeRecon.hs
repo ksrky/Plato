@@ -90,7 +90,7 @@ inferRho expr = do
         (expr,) <$> readTrRef ref
 
 trRho :: (MonadIO m, MonadThrow m) => Located Expr -> Expected Rho -> Tr m (Located Expr)
-trRho (L sp exp) = trRho' exp
+trRho (L sp expr) = trRho' expr
     where
         trRho' :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Tr m (Located Expr)
         trRho' (VarE v) exp_ty = do
@@ -120,8 +120,6 @@ trRho (L sp exp) = trRho' exp
                                 tell ([d], [(unLoc var, var_ty)])
                 body' <- extendVarEnvList binds (trRho' (unLoc body) exp_ty)
                 return $ L sp $ LetE decs' body'
-        trRho' (ProjE exp lab) exp_ty = undefined
-        trRho' (RecordE fields) exp_ty = undefined
         trRho' (CaseE match _ alts) (Check exp_ty) = do
                 (match', match_ty) <- inferRho match
                 alts' <- forM alts $ \(pat, body) -> do
@@ -139,12 +137,11 @@ trRho (L sp exp) = trRho' exp
                         subsCheck ty1 ty2
                         subsCheck ty2 ty1
                 return $ L sp $ CaseE match' (Just match_ty) alts
-        trRho' TagE{} exp_ty = undefined
         trRho' (AnnE body ann_ty) exp_ty = do
                 body' <- checkSigma body (unLoc ann_ty)
                 coercion <- instSigma (unLoc ann_ty) exp_ty --tmp
                 return $ L sp $ AnnE body' ann_ty
-        trRho' _ _ = unreachable "TAbsExpr, TAppExpr"
+        trRho' e _ = return $ L sp e
 
 ------------------------------------------
 -- inferSigma and checkSigma

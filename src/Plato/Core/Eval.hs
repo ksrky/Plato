@@ -3,6 +3,7 @@ module Plato.Core.Eval where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.Pretty
+import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Syntax.Core
 
@@ -30,7 +31,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
                 TmVar i n -> case getBinding ctx i of
-                        TmAbbBind t _ -> Just t
+                        TmAbbBind t _ -> Just $ unLoc t
                         _ -> Nothing
                 TmApp (TmUnfold tyS) (TmApp (TmFold tyT) v) | isval ctx v -> Just v
                 TmApp (TmFold tyS) t2 -> do

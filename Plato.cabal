@@ -30,7 +30,7 @@ library
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
-      Plato.Common.Table
+      Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Main
@@ -48,6 +48,7 @@ library
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
       Plato.Typing.KindInfer
       Plato.Typing.Renamer
       Plato.Typing.TrMonad
@@ -82,7 +83,7 @@ executable plato
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
-      Plato.Common.Table
+      Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Main
@@ -100,6 +101,7 @@ executable plato
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
       Plato.Typing.KindInfer
       Plato.Typing.Renamer
       Plato.Typing.TrMonad

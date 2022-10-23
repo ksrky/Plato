@@ -60,3 +60,4 @@
 # $ hlint --default > .hlint.yaml
 
 - ignore: { name: Use second }
+- ignore: { name: Fuse foldr/map }
