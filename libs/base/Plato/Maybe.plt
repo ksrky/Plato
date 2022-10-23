@@ -1,3 +1,3 @@
-module Plato.Maybe;
+module Plato.Maybe
 
-data Maybe a = Nothing | Just a;
+data Maybe a = Nothing | Just a

@@ -7,7 +7,7 @@ not b = case b of
     True -> False
     False -> True
 
-if : {a} -> Bool -> a -> a -> a
+if : {a} Bool -> a -> a -> a
 if test then else = case test of
     True -> then
     False -> else

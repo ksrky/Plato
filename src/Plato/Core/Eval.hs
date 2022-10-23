@@ -1,14 +1,9 @@
 module Plato.Core.Eval where
 
-import Plato.Common.Error
 import Plato.Common.Name
-import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Syntax.Core
-
-import Control.Exception.Safe
-import Control.Monad.State
 
 ----------------------------------------------------------------
 -- Evaluation
