@@ -240,15 +240,15 @@ setFixity lop@(L _ op) (L sp prec) fix = do
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwPsError sp $ "invalid precedence " ++ show prec
     setOpDict $ M.insert op (Op lop prec fix) opdict
 
-splitModid :: Located T.Text -> [Name]
+splitModid :: Located T.Text -> [T.Text]
 splitModid = loop 0 . ((`T.snoc` '.') <$>)
   where
-    loop :: Int -> Located T.Text -> [Name]
+    loop :: Int -> Located T.Text -> [T.Text]
     loop _ (L _ t) | null (T.unpack t) = []
     loop cnt (L sp t) =
         let xs = T.unpack t
          in if (xs !! cnt) == '.'
-            then conName (T.take cnt t) : loop 0 (L sp (T.drop (cnt + 1) t))
+            then T.take cnt t : loop 0 (L sp (T.drop (cnt + 1) t))
             else loop (cnt + 1) (L sp t)
 
 ----------------------------------------------------------------

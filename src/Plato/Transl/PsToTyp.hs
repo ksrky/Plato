@@ -155,9 +155,9 @@ processDecls decs binds = do
         forM binds $ \fd -> typeRecon env fd
 
 ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> m T.Decls
-ps2typ (P.Program _ ids tds) = do
-        let modns = map (\(L _ (P.ImpDecl mn)) -> mn) ids
+ps2typ (P.Program modn ids tds) = do
+        let imps = map (\(L _ (P.ImpDecl mn)) -> mn) ids
         (tydecs, condecs) <- execWriterT $ mapM_ transTopDecl tds
         (fundecs, vardecs) <- transDecls (getDecls tds)
         fundecs' <- processDecls (map unLoc condecs) fundecs
-        return $ T.Decls modns (tydecs ++ map (T.FuncD <$>) condecs ++ vardecs) fundecs'
+        return $ T.Decls modn imps (tydecs ++ map (T.FuncD <$>) condecs ++ vardecs) fundecs'

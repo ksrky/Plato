@@ -25,6 +25,7 @@ data Expr
         | CaseE TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
         | TagE TypLName [TypLExpr] (Maybe Type)
         | AnnE TypLExpr TypLType {-Sigma-}
+        | LetrecE FuncDecl TypLExpr
         deriving (Eq, Show)
 
 data Pat
@@ -61,7 +62,8 @@ data Decl
         deriving (Eq, Show)
 
 data Decls = Decls
-        { imports :: [Located ModuleName]
+        { mmodule :: Maybe (Located ModuleName)
+        , imports :: [Located ModuleName]
         , decls :: [TypLDecl]
         , body :: [FuncDecl]
         }

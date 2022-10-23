@@ -51,7 +51,16 @@ str2tyconName = tyconName . T.pack
 ----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------
-newtype ModuleName = ModuleName [Name] deriving (Eq)
+newtype ModuleName = ModuleName [T.Text] deriving (Eq)
 
 instance Show ModuleName where
-        show (ModuleName modn) = intercalate "." (map show modn)
+        show (ModuleName modn) = intercalate "." (map T.unpack modn)
+
+mod2conName :: ModuleName -> Name
+mod2conName (ModuleName modn) = Name ConName (T.intercalate (T.pack ".") modn)
+
+mod2tyconName :: ModuleName -> Name
+mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)
+
+mod2path :: ModuleName -> String
+mod2path (ModuleName modn) = intercalate "/" (map T.unpack modn) ++ ".plt"

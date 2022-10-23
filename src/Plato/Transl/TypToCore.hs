@@ -3,6 +3,7 @@
 module Plato.Transl.TypToCore where
 
 import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Commands as C
 import Plato.Core.Context
@@ -13,7 +14,7 @@ import Plato.Typing.TrTypes
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State
-import Plato.Common.Name
+import Plato.Typing.Renamer
 
 transExpr = undefined
 
@@ -58,8 +59,8 @@ transType ctx = tratype
                 return $ C.TyVariant fields'
         tratype T.MetaT{} = throwUnexpectedErr "Zonking failed"
 
-transDecl :: MonadThrow m => Located T.Decl -> StateT Context m (Located Name, C.Binding)
-transDecl dec = StateT $ \ctx -> case unLoc dec of
+transDecl :: MonadThrow m => T.Decl -> StateT Context m (Located Name, C.Binding)
+transDecl dec = StateT $ \ctx -> case dec of
         T.TypeD name ty -> do
                 tyT <- transType ctx `traverse` ty
                 ctx' <- addName name ctx
@@ -75,7 +76,7 @@ transDecl dec = StateT $ \ctx -> case unLoc dec of
                 return ((f, C.TmAbbBind t (Just tyT)), ctx')
 
 typ2core :: MonadThrow m => Context -> T.Decls -> m Commands
-typ2core ctx (T.Decls modns binds fundecs) = (`evalStateT` ctx) $ do
-        binds' <- mapM transDecl binds
-        ctx' <- get
-        return $ Commands{C.imports = modns, C.binds = binds', C.body = undefined}
+typ2core ctx (T.Decls modn imps binds fundecs) = do
+        (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs
+        (binds', ctx') <- mapM transDecl (map unLoc binds ++ [T.FuncD fundec]) `runStateT` ctx
+        return $ Commands{C.imports = imps, C.binds = binds'}

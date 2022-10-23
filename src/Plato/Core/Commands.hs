@@ -11,7 +11,6 @@ import Plato.Syntax.Core
 data Commands = Commands
         { imports :: [Located ModuleName]
         , binds :: [(Located Name, Binding)]
-        , body :: (Term, Ty)
         }
         deriving (Eq, Show)
 
