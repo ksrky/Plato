@@ -20,9 +20,9 @@ import Data.List
 typeRecon :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncDecl
 typeRecon env (FD var body ty) = runTr env $ do
         (ann_expr, ty') <- inferSigma (cL body $ AnnE body ty)
-        let body' = case ann_expr of
-                L _ (AnnE e t) -> e
-                _ -> unreachable ""
+        body' <- case ann_expr of
+                L _ (AnnE e t) -> zonkExpr `traverse` e
+                _ -> unreachable $ show ann_expr
         return (FD var body' (L (getSpan ty) ty'))
 
 typecheck :: (MonadIO m, MonadThrow m) => Located Expr -> Located Type -> Tr m Sigma
@@ -141,9 +141,9 @@ trRho (L sp exp) = trRho' exp
                 return $ L sp $ CaseE match' (Just match_ty) alts
         trRho' TagE{} exp_ty = undefined
         trRho' (AnnE body ann_ty) exp_ty = do
-                checkSigma body (unLoc ann_ty)
-                coercion <- instSigma (unLoc ann_ty) exp_ty
-                return $ L sp $ AnnE (coercion body) ann_ty
+                body' <- checkSigma body (unLoc ann_ty)
+                coercion <- instSigma (unLoc ann_ty) exp_ty --tmp
+                return $ L sp $ AnnE body' ann_ty
         trRho' _ _ = unreachable "TAbsExpr, TAppExpr"
 
 ------------------------------------------
@@ -168,7 +168,7 @@ checkSigma expr sigma = do
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         check (null bad_tvs) NoSpan "Type not polymorphic enough" --tmp
-        return $ coercion expr'
+        return $ coercion $ cL expr' $ TAbsE (map tyVarName skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --
@@ -186,10 +186,10 @@ subsCheck sigma1 sigma2 = do
                 else return $ \e -> co1 (cL e $ TAbsE (map tyVarName skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tr m (Located Expr -> Located Expr)
-subsCheckRho sigma1@(AllT tvs _) rho2 = do
+subsCheckRho sigma1@AllT{} rho2 = do
         (co1, rho1) <- instantiate sigma1
         co2 <- subsCheckRho rho1 rho2
-        return $ \e -> (co2 . co1) $ cL e $ TAppE e (map VarT tvs)
+        return $ \e -> (co2 . co1) e
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)

@@ -47,7 +47,7 @@ testcases =
                 ( "case True of { True -> False; False -> True }"
                 , ( `shouldSatisfyReturn`
                         \case
-                                CaseE (VE "True") Nothing [(CP "True" [], CE "False"), (CP "False" [], CE "True")] -> True
+                                CaseE (CE "True") Nothing [(CP "True" [], CE "False"), (CP "False" [], CE "True")] -> True
                                 _ -> False
                   )
                 )

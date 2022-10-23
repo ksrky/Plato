@@ -26,7 +26,7 @@ testcases =
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [FD (VN "id") (NL (TAbsE [Name TyvarName "a"] (NL (AbsE (VN "x") (Just (VarT (TV "a"))) (VE "x"))))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))] -> True
+                                [FD (VN "id") (NL (TAbsE [Name TyvarName "a"] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))] -> True
                                 _ -> False
                   )
                 )

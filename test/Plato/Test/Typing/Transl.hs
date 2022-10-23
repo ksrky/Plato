@@ -13,6 +13,7 @@ import Plato.Transl.SrcToPs
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import qualified Data.Text.IO as T
+import Plato.Common.Name
 import Test.Hspec
 
 testcases :: [(String, IO Decls -> Expectation)]
@@ -40,7 +41,7 @@ testcases =
                                 Decls
                                         { imports = []
                                         , decls = []
-                                        , body = [FD (VN "id") (NL (AbsE (VN "x") Nothing (VE "x"))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))]
+                                        , body = [FD (VN "id") (NL (TAbsE [Name TyvarName "a"] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))]
                                         } -> True
                                 _ -> False
                   )

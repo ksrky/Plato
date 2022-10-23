@@ -33,6 +33,9 @@ pattern CE x <- NL (VarE (CN x))
 pattern TV :: T.Text -> Located TyVar
 pattern TV x <- NL (BoundTv (Name TyvarName x))
 
+pattern STV :: T.Text -> Located TyVar
+pattern STV x <- NL (SkolemTv (Name TyvarName x) _)
+
 pattern VT :: T.Text -> Located Type
 pattern VT x <- NL (VarT (TV x))
 

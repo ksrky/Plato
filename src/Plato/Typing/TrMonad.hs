@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Plato.Typing.TrMonad where
 
 import Plato.Common.Error
@@ -7,6 +9,7 @@ import Plato.Syntax.Typing
 import Plato.Typing.TrTypes
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.IO.Class
 import Data.IORef
 import Data.List
@@ -120,7 +123,7 @@ newUnique =
 instantiate :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, Rho)
 instantiate (AllT tvs ty) = do
         tvs' <- mapM (const newMetaTyVar) tvs
-        let coercion = \e -> cL e $ TAppE e (map VarT tvs)
+        let coercion = \e -> cL e $ TAppE e (map MetaT tvs')
         return (coercion, substTy (map unLoc tvs) (map MetaT tvs') (unLoc ty))
 instantiate ty = return (id, ty)
 
@@ -133,7 +136,7 @@ skolemise (AllT tvs ty) = do
                         TAbsE
                                 (map (tyVarName . unLoc) tvs)
                                 (coercion $ cL e $ TAppE e (map VarT tvs))
-        return (coercion', sks1 ++ sks2, ty')
+        return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
         (coercion, sks, res_ty') <- skolemise $ unLoc res_ty
         let coercion' = \e ->
@@ -208,6 +211,23 @@ zonkType (MetaT tv) = do
                         writeTv tv ty'
                         return ty'
 zonkType _ = unreachable "AbsType, RecordType, RecType, SumType"
+
+zonkExpr :: MonadIO m => Expr -> Tr m Expr
+zonkExpr (AbsE var mty expr) = AbsE var <$> (zonkType `traverse` mty) <*> zonkExpr `traverse` expr
+zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
+zonkExpr (TAbsE ns expr) = TAbsE ns <$> zonkExpr `traverse` expr
+zonkExpr (TAppE e tys) = TAppE e <$> mapM zonkType tys
+zonkExpr (LetE decs body) =
+        LetE
+                <$> forM decs (\(FD var e ty) -> FD var <$> zonkExpr `traverse` e <*> zonkType `traverse` ty)
+                        <*> zonkExpr `traverse` body
+zonkExpr (CaseE e mty alts) =
+        CaseE
+                <$> zonkExpr `traverse` e
+                <*> zonkType `traverse` mty
+                <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr `traverse` body)
+zonkExpr (AnnE e ty) = AnnE <$> zonkExpr `traverse` e <*> zonkType `traverse` ty
+zonkExpr expr = return expr
 
 ----------------------------------------------------------------
 -- Unification
