@@ -4,7 +4,6 @@ module Plato.Parsing.Resolver where
 
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import Plato.Common.Table
 import Plato.Parsing.Error
 import Plato.Parsing.Fixity
 import Plato.Syntax.Parsing
@@ -19,7 +18,7 @@ linear :: MonadThrow m => OpDict -> Located Expr -> m [Tok]
 linear opdict (L _ (OpE e1 lx@(L _ x) e2)) = do
         e1' <- linear opdict e1
         e2' <- linear opdict e2
-        let op = case look opdict x of
+        let op = case M.lookup x opdict of
                 Just op' -> op'
                 Nothing -> Op lx maxPrec Leftfix
         return $ e1' ++ [TOp op] ++ e2'

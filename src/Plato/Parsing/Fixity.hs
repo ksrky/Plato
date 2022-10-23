@@ -1,8 +1,8 @@
 module Plato.Parsing.Fixity where
 
+import Data.Map.Strict as M
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import Plato.Common.Table
 
 data Fixity = Leftfix | Rightfix | Nonfix
         deriving (Eq, Show)
@@ -10,7 +10,7 @@ data Fixity = Leftfix | Rightfix | Nonfix
 data Op = Op (Located Name) Int Fixity
         deriving (Eq, Show)
 
-type OpDict = Table Op
+type OpDict = M.Map Name Op
 
 maxPrec :: Int
 maxPrec = 9

@@ -8,7 +8,6 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.Rename
 import Plato.Typing.TrMonad
 import Plato.Typing.TrTypes
 import Plato.Typing.TypeRecon

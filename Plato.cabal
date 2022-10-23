@@ -31,7 +31,8 @@ library
       Plato.Common.Pretty
       Plato.Common.SrcLoc
       Plato.Common.Table
-      Plato.Common.Vect
+      Plato.Core.Context
+      Plato.Core.Eval
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -42,12 +43,13 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Resolver
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Typing.KindInfer
-      Plato.Typing.Rename
+      Plato.Typing.Renamer
       Plato.Typing.TrMonad
       Plato.Typing.TrTypes
       Plato.Typing.TypeRecon
@@ -81,7 +83,8 @@ executable plato
       Plato.Common.Pretty
       Plato.Common.SrcLoc
       Plato.Common.Table
-      Plato.Common.Vect
+      Plato.Core.Context
+      Plato.Core.Eval
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -92,12 +95,13 @@ executable plato
       Plato.Parsing.Parser
       Plato.Parsing.Resolver
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Typing.KindInfer
-      Plato.Typing.Rename
+      Plato.Typing.Renamer
       Plato.Typing.TrMonad
       Plato.Typing.TrTypes
       Plato.Typing.TypeRecon

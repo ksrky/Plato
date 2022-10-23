@@ -48,9 +48,6 @@ str2tyvarName = tyvarName . T.pack
 str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
 
-entryPoint :: Name
-entryPoint = varName $ T.pack "main"
-
 ----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------

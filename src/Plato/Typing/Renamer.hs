@@ -1,4 +1,4 @@
-module Plato.Typing.Rename where
+module Plato.Typing.Renamer where
 
 import Plato.Common.Name
 import Plato.Common.SrcLoc
