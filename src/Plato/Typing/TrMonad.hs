@@ -127,14 +127,14 @@ instantiate (AllT tvs ty) = do
         return (coercion, substTy (map unLoc tvs) (map MetaT tvs') (unLoc ty))
 instantiate ty = return (id, ty)
 
-skolemise :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, [TyVar], Rho)
+skolemise :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, [Located TyVar], Rho)
 skolemise (AllT tvs ty) = do
-        sks1 <- mapM (newSkolemTyVar . unLoc) tvs
-        (coercion, sks2, ty') <- skolemise (substTy (map unLoc tvs) (map (VarT . noLoc) sks1) (unLoc ty))
+        sks1 <- mapM newSkolemTyVar `traverse` tvs
+        (coercion, sks2, ty') <- skolemise (substTy (map unLoc tvs) (map VarT sks1) (unLoc ty))
         let coercion' = \e ->
                 cL e $
                         TAbsE
-                                (map (tyVarName . unLoc) tvs)
+                                (map (tyVarName <$>) tvs)
                                 (coercion $ cL e $ TAppE e (map VarT tvs))
         return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
@@ -147,8 +147,8 @@ skolemise (ArrT arg_ty res_ty) = do
                                 ( coercion $
                                         cL e $
                                                 TAbsE
-                                                        (map tyVarName sks)
-                                                        (noLoc $ AppE (noLoc $ TAppE e (map (VarT . noLoc) sks)) (noLoc $ VarE $ noLoc $ str2varName "x"))
+                                                        (map (tyVarName <$>) sks)
+                                                        (noLoc $ AppE (noLoc $ TAppE e (map VarT sks)) (noLoc $ VarE $ noLoc $ str2varName "x"))
                                 )
         return (if null sks then coercion else coercion', sks, ArrT arg_ty (L (getSpan res_ty) res_ty'))
 skolemise ty = return (id, [], ty)

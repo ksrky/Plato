@@ -17,7 +17,7 @@ data Expr
         = VarE TypLName
         | AbsE TypLName (Maybe Type) TypLExpr
         | AppE TypLExpr TypLExpr
-        | TAbsE [Name] TypLExpr
+        | TAbsE [Located Name] TypLExpr
         | TAppE TypLExpr [Type]
         | LetE [FuncDecl] TypLExpr
         | ProjE TypLExpr TypLName
@@ -25,7 +25,6 @@ data Expr
         | CaseE TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
         | TagE TypLName [TypLExpr] (Maybe Type)
         | AnnE TypLExpr TypLType {-Sigma-}
-        | LetrecE FuncDecl TypLExpr
         deriving (Eq, Show)
 
 data Pat

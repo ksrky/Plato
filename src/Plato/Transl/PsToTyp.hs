@@ -136,7 +136,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
                     tag = cLLn l args $ T.TagE l (map (\x -> cL x $ T.VarE x) args) (Just $ unLoc res_ty)
                     exp = foldr (\(x, ty) e -> cLL x e $ T.AbsE x (Just $ unLoc ty) e) tag (zip args field)
-                    exp' = cLnL tyargs exp $ T.TAbsE (map unLoc tyargs) exp
+                    exp' = cLnL tyargs exp $ T.TAbsE tyargs exp
                 tell ([], [L sp $ T.FD l exp sigma_ty])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
         ty1' <- Writer.lift $ transType ty1

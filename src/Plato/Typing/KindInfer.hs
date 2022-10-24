@@ -14,12 +14,13 @@ import Plato.Typing.TrTypes
 inferKind :: MonadThrow m => Type -> m (Subst, Kind)
 inferKind ty = evalStateT (infer initialEnv ty) initUnique
 
-checkKindStar :: MonadThrow m => Located Type -> m ()
+checkKindStar :: MonadThrow m => Located Type -> m Subst
 checkKindStar (L sp ty) = do
-        (_, kn) <- evalStateT (infer initialEnv ty) initUnique
+        (subst, kn) <- evalStateT (infer initialEnv ty) initUnique
         when (kn /= StarK) $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
+        return subst
 
--- Context
+-- | Context
 newtype KindEnv = KindEnv (M.Map Name Kind)
 
 extend :: KindEnv -> (Name, Kind) -> KindEnv
@@ -28,16 +29,16 @@ extend (KindEnv env) (x, s) = KindEnv $ M.insert x s env
 initialEnv :: KindEnv
 initialEnv = KindEnv M.empty
 
--- Unique number
+-- | Unique number
 newtype Unique = Unique {count :: Int}
 
 initUnique :: Unique
 initUnique = Unique{count = 0}
 
--- Inference Monad
+-- | Inference Monad
 type Infer m a = StateT Unique m a
 
--- Substitution
+-- | Substitution
 type Subst = M.Map Name Kind
 
 nullSubst :: Subst
@@ -66,9 +67,9 @@ instance Substitutable KindEnv where
         apply s (KindEnv env) = KindEnv $ M.map (apply s) env
         ftv (KindEnv env) = ftv $ M.elems env
 
--- fresh name generation
+-- | fresh name generation
 letters :: [String]
-letters = [1 ..] >>= flip replicateM ['k' .. 'z']
+letters = ['k' : show i | i <- [0 :: Integer ..]]
 
 fresh :: MonadThrow m => Infer m Kind
 fresh = do
@@ -76,7 +77,7 @@ fresh = do
         put s{count = count s + 1}
         return $ VarK $ str2tyvarName (letters !! count s)
 
--- Unification
+-- | Unification
 occursCheck :: Substitutable a => Name -> a -> Bool
 occursCheck a t = a `S.member` ftv t
 
@@ -96,7 +97,7 @@ bind a k
         | occursCheck a k = throwPlainErr $ "InfiniteKind " ++ show a ++ ", " ++ show k
         | otherwise = return $ M.singleton a k
 
--- Inference
+-- | Inference
 infer :: MonadThrow m => KindEnv -> Type -> Infer m (Subst, Kind)
 infer env t = case t of
         VarT tv -> lookupEnv env (tyVarName $ unLoc tv)

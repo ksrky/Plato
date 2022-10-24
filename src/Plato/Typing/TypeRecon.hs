@@ -163,9 +163,9 @@ checkSigma expr sigma = do
         expr' <- checkRho expr rho
         env_tys <- getEnvTypes
         esc_tvs <- getFreeTyVars (sigma : env_tys)
-        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+        let bad_tvs = filter ((`elem` esc_tvs) . unLoc) skol_tvs
         check (null bad_tvs) NoSpan "Type not polymorphic enough" --tmp
-        return $ coercion $ cL expr' $ TAbsE (map tyVarName skol_tvs) expr'
+        return $ coercion $ cL expr' $ TAbsE (map (tyVarName <$>) skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --
@@ -176,11 +176,11 @@ subsCheck sigma1 sigma2 = do
         (co1, skol_tvs, rho2) <- skolemise sigma2
         co2 <- subsCheckRho sigma1 rho2
         esc_tvs <- getFreeTyVars [sigma1, sigma2]
-        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+        let bad_tvs = filter ((`elem` esc_tvs) . unLoc) skol_tvs
         check (null bad_tvs) NoSpan "Subsumption check failed" --tmp
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (cL e $ TAbsE (map tyVarName skol_tvs) (co2 e))
+                else return $ \e -> co1 (cL e $ TAbsE (map (tyVarName <$>) skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tr m (Located Expr -> Located Expr)
 subsCheckRho sigma1@AllT{} rho2 = do

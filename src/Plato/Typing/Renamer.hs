@@ -52,13 +52,10 @@ instance Rename Expr where
         rename st (AppE e1 e2) = AppE <$> rename st `traverse` e1 <*> rename st `traverse` e2
         rename st (TAbsE xs e) = TAbsE xs <$> rename st `traverse` e
         rename st (TAppE e tys) = TAppE <$> rename st `traverse` e <*> pure tys
-        rename st (LetE [dec] body) = do
-                dec' <- rename st{level = level st + 1} dec
-                LetE [dec'] <$> rename st `traverse` body
         rename st (LetE decs body) = do
                 (dec, st') <- renameFuncDecls st decs
                 body' <- rename st `traverse` body
-                return $ LetrecE dec body'
+                return $ LetE [dec] body'
         rename st (CaseE e ty alts) = do
                 e' <- rename st `traverse` e
                 alts' <- forM alts $ \(pat, body) -> (pat,) <$> rename st `traverse` body
