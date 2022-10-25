@@ -25,13 +25,13 @@ inferKind knenv ty = runKi knenv $ do
         kn' <- zonkKind kn
         return (ty'', kn')
 
-checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Located Type -> m Type
+checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Located Type -> m (Located Type)
 checkKindStar knenv (L sp ty) = runKi knenv $ do
         (ty', kn) <- infer ty
         ty'' <- zonkType ty'
         kn' <- zonkKind kn
         when (kn /= StarK) $ lift $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
-        return ty''
+        return $ L sp ty''
 
 -- | kind Table
 type KnTable = M.Map Name Kind
@@ -182,7 +182,7 @@ zonkType (AllT tvs ty) = do
         AllT tvs' <$> zonkType `traverse` ty
 zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
 zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (RecT x mkn ty) = RecT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkType (RecT x ty) = RecT x <$> zonkType `traverse` ty
 zonkType (RecordT fields) = do
         fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
         return $ RecordT fields'
@@ -255,11 +255,11 @@ infer t = case t of
                 (ty2', kn2) <- infer (unLoc ty2)
                 unify kn1 (ArrK kn2 kv)
                 return (AppT (cL ty1 ty1') (cL ty2 ty2'), kv)
-        RecT x _ ty1 -> do
+        RecT x ty1 -> do
                 kv <- newKnVar
                 (ty1', kn1) <- extendEnv (unLoc x) kv (infer (unLoc ty1))
                 s2 <- unify kn1 StarK
-                return (RecT x (Just kv) (cL ty1 ty1'), StarK)
+                return (RecT x (cL ty1 ty1'), StarK)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do
                         (ty1', kn1) <- infer (unLoc ty1)
