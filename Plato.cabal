@@ -146,7 +146,7 @@ test-suite Plato-test
       Plato.Test.Typing.ExprTransl
       Plato.Test.Typing.TopDeclTransl
       Plato.Test.Typing.Transl
-      Plato.Test.Typing.TypeRecon
+      Plato.Test.Typing.TypeCheck
       Plato.Test.Typing.Utils
       Plato.Test.TypingSpec
       Plato.Test.Utils

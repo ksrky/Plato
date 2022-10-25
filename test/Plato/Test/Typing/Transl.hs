@@ -16,20 +16,18 @@ import qualified Data.Text.IO as T
 import Plato.Common.Name
 import Test.Hspec
 
-testcases :: [(String, IO Decls -> Expectation)]
+testcases :: [(String, IO Program -> Expectation)]
 testcases =
         [
                 ( "test01.plt"
                 , ( `shouldSatisfyReturn`
                         \case
-                                Decls
-                                        { imports = []
-                                        , decls =
+                                Program
+                                        { decls =
                                                 [ NL (TypeD (TCN "Bool") (NL (SumT [(CN "True", []), (CN "False", [])])))
                                                         , NL (FuncD (FD (CN "True") (NL (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))) (CT "Bool")))
                                                         , NL (FuncD (FD (CN "False") (NL (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))) (CT "Bool")))
                                                         ]
-                                        , body = []
                                         } -> True
                                 _ -> False
                   )
@@ -38,17 +36,15 @@ testcases =
                 ( "test02.plt"
                 , ( `shouldSatisfyReturn`
                         \case
-                                Decls
-                                        { imports = []
-                                        , decls = []
-                                        , body = [FD (VN "id") (NL (TAbsE [NL (Name TyvarName "a")] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))]
+                                Program
+                                        { binds = [FD (VN "id") (NL (TAbsE [NL (Name TyvarName "a")] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))]
                                         } -> True
                                 _ -> False
                   )
                 )
         ]
 
-test :: (MonadThrow m, MonadIO m) => (String, m Decls -> Expectation) -> SpecWith ()
+test :: (MonadThrow m, MonadIO m) => (String, m Program -> Expectation) -> SpecWith ()
 test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
