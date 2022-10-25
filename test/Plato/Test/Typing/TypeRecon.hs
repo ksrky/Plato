@@ -6,13 +6,14 @@ module Plato.Test.Typing.TypeRecon where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
+import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.Resolver
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -25,7 +26,7 @@ testcases =
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [FD (VN "id") (NL (TAbsE [Name TyvarName "a"] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))] -> True
+                                [FD (VN "id") (NL (TAbsE [NL (Name TyvarName "a")] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))] -> True
                                 _ -> False
                   )
                 )

@@ -2,9 +2,9 @@
 
 module Plato.Syntax.Typing where
 
-import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
+import {-# SOURCE #-} Plato.Typing.KindInfer
 import {-# SOURCE #-} Plato.Typing.TrTypes
 
 type TypLName = Located Name
@@ -37,17 +37,17 @@ data Type
         = VarT (Located TyVar)
         | ConT TypLName
         | ArrT TypLType TypLType
-        | AllT [Located TyVar] TypLType {- Rho -}
-        | AbsT TypLName TypLType
+        | AllT [(Located TyVar, Maybe Kind)] TypLType {- Rho -}
+        | AbsT TypLName (Maybe Kind) TypLType
         | AppT TypLType TypLType
-        | RecT TypLName TypLType
+        | RecT TypLName (Maybe Kind) TypLType
         | RecordT [(TypLName, TypLType)]
         | SumT [(TypLName, [TypLType])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
 data Kind
-        = VarK Name
+        = MetaK MetaKv
         | StarK
         | ArrK Kind Kind
         deriving (Eq, Show)

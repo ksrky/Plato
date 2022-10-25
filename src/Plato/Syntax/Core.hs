@@ -24,7 +24,7 @@ data Term
         = TmVar Int Int
         | TmAbs Name Ty Term
         | TmApp Term Term
-        | TmTAbs Name Kind Term
+        | TmTAbs Name Term
         | TmTApp Term Ty
         | TmLet Name Term Term
         | TmFix Term
@@ -95,7 +95,7 @@ tmmap onvar ontype c t = walk c t
                 TmVar x n -> onvar c x n
                 TmAbs x tyT1 t2 -> TmAbs x (ontype c tyT1) (walk (c + 1) t2)
                 TmApp t1 t2 -> TmApp (walk c t1) (walk c t2)
-                TmTAbs tyX knK1 t2 -> TmTAbs tyX knK1 (walk (c + 1) t2)
+                TmTAbs tyX t2 -> TmTAbs tyX (walk (c + 1) t2)
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
                 TmFix t1 -> TmFix (walk c t1)
                 TmFold tyT -> TmFold (ontype c tyT)

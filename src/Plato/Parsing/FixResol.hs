@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plato.Parsing.Resolver where
+module Plato.Parsing.FixResol where
 
 import Plato.Common.Name
 import Plato.Common.SrcLoc

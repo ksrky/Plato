@@ -37,11 +37,11 @@ library
       Plato.Parsing.Action
       Plato.Parsing.Error
       Plato.Parsing.Fixity
+      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
       Plato.Parsing.Parser
-      Plato.Parsing.Resolver
       Plato.Parsing.Token
       Plato.Syntax.Core
       Plato.Syntax.Parsing
@@ -90,11 +90,11 @@ executable plato
       Plato.Parsing.Action
       Plato.Parsing.Error
       Plato.Parsing.Fixity
+      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
       Plato.Parsing.Parser
-      Plato.Parsing.Resolver
       Plato.Parsing.Token
       Plato.Syntax.Core
       Plato.Syntax.Parsing
@@ -134,6 +134,9 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Plato.Test.Core.KindInfer
+      Plato.Test.Core.TermTransl
+      Plato.Test.Core.Utils
       Plato.Test.CoreSpec
       Plato.Test.Parsing.FixResol
       Plato.Test.ParsingSpec

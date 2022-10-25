@@ -124,18 +124,18 @@ instantiate :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, Rho)
 instantiate (AllT tvs ty) = do
         tvs' <- mapM (const newMetaTyVar) tvs
         let coercion = \e -> cL e $ TAppE e (map MetaT tvs')
-        return (coercion, substTy (map unLoc tvs) (map MetaT tvs') (unLoc ty))
+        return (coercion, substTy (map (unLoc . fst) tvs) (map MetaT tvs') (unLoc ty))
 instantiate ty = return (id, ty)
 
 skolemise :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, [Located TyVar], Rho)
 skolemise (AllT tvs ty) = do
-        sks1 <- mapM newSkolemTyVar `traverse` tvs
-        (coercion, sks2, ty') <- skolemise (substTy (map unLoc tvs) (map VarT sks1) (unLoc ty))
+        sks1 <- mapM (\(tv, _) -> newSkolemTyVar `traverse` tv) tvs
+        (coercion, sks2, ty') <- skolemise (substTy (map (unLoc . fst) tvs) (map VarT sks1) (unLoc ty))
         let coercion' = \e ->
                 cL e $
                         TAbsE
-                                (map (tyVarName <$>) tvs)
-                                (coercion $ cL e $ TAppE e (map VarT tvs))
+                                (map ((tyVarName <$>) . fst) tvs)
+                                (coercion $ cL e $ TAppE e (map (VarT . fst) tvs))
         return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
         (coercion, sks, res_ty') <- skolemise $ unLoc res_ty
@@ -160,7 +160,7 @@ quantify :: MonadIO m => [MetaTv] -> Rho -> Tr m Sigma
 quantify tvs ty = do
         mapM_ bind (tvs `zip` new_bndrs)
         ty' <- zonkType ty
-        return (AllT (map noLoc new_bndrs) (noLoc ty'))
+        return (AllT (map (\tv -> (noLoc tv, Nothing)) new_bndrs) (noLoc ty'))
     where
         used_bndrs = tyVarBndrs ty
         new_bndrs = take (length tvs) (allBinders \\ used_bndrs)
@@ -193,7 +193,7 @@ zonkType (ConT x) = return (ConT x)
 zonkType (AllT ns ty) = do
         ty' <- zonkType `traverse` ty
         return (AllT ns ty')
-zonkType (AbsT x ty) = AbsT x <$> (zonkType `traverse` ty)
+zonkType (AbsT x mkn ty) = AbsT x mkn <$> zonkType `traverse` ty
 zonkType (AppT fun arg) = do
         fun' <- zonkType `traverse` fun
         arg' <- zonkType `traverse` arg

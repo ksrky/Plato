@@ -78,7 +78,7 @@ transType (L sp (P.ArrT ty1 ty2)) = do
         return $ L sp (T.ArrT ty1' ty2')
 transType (L sp (P.AllT xs ty1)) = do
         ty1' <- transType ty1
-        return $ L sp $ T.AllT (map (BoundTv <$>) xs) ty1'
+        return $ L sp $ T.AllT (map (\x -> (BoundTv <$> x, Nothing)) xs) ty1'
 
 transDecls :: MonadThrow m => [Located P.Decl] -> m ([T.FuncDecl], [Located T.Decl])
 transDecls decs = do
@@ -124,14 +124,14 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                         tys' <- mapM transType tys
                         return (l, tys')
         let fieldty = cLLn (fst $ head fields) (snd $ last fields) $ T.SumT fields'
-        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x ty) fieldty params))], [])
+        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) fieldty params))], [])
         forM_ fields' $ \(l, field) -> do
                 let res_ty = foldl (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2) (cL name $ T.ConT name) (map (\x -> cL x $ varType x) params)
                     rho_ty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrT ty1 ty2) res_ty field
                     sigma_ty =
                         if null params
                                 then rho_ty
-                                else cLnL params rho_ty $ T.AllT (map (BoundTv <$>) params) rho_ty
+                                else cLnL params rho_ty $ T.AllT (map (\tv -> (BoundTv <$> tv, Nothing)) params) rho_ty
                     tyargs = params
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
                     tag = cLLn l args $ T.TagE l (map (\x -> cL x $ T.VarE x) args) (Just $ unLoc res_ty)
@@ -140,7 +140,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                 tell ([], [L sp $ T.FD l exp sigma_ty])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
         ty1' <- Writer.lift $ transType ty1
-        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x ty) ty1' params))], [])
+        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) ty1' params))], [])
 transTopDecl _ = return ()
 
 getDecls :: [Located P.TopDecl] -> [Located P.Decl]

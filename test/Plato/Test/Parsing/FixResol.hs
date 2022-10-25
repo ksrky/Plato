@@ -8,10 +8,10 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Parsing.Fixity
-import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.Resolver
+import Plato.Parsing.FixResol
 import Plato.Syntax.Parsing
+import Plato.Transl.SrcToPs
 
 import Plato.Test.Utils
 

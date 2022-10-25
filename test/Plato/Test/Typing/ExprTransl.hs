@@ -7,11 +7,12 @@ import Plato.Common.Error
 import Plato.Common.SrcLoc
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.Resolver
+import Plato.Parsing.FixResol
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import qualified Data.Text as T

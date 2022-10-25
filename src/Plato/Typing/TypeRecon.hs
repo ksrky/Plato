@@ -23,7 +23,8 @@ typeRecon env (FD var body ty) = runTr env $ do
         body' <- case ann_expr of
                 L _ (AnnE e t) -> zonkExpr `traverse` e
                 _ -> unreachable $ show ann_expr
-        return (FD var body' (L (getSpan ty) ty'))
+        ty'' <- zonkType ty'
+        return (FD var body' (L (getSpan ty) ty''))
 
 typecheck :: (MonadIO m, MonadThrow m) => Located Expr -> Located Type -> Tr m Sigma
 typecheck e ty = do

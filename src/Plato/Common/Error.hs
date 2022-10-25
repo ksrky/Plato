@@ -24,7 +24,7 @@ catchError =
         )
 
 unreachable :: String -> a
-unreachable s = error "unreachable"
+unreachable s = error $ "unreachable: " ++ s
 
 -- | Unexpected Error
 newtype UnexpectedErr = UnexpectedErr String deriving (Show)

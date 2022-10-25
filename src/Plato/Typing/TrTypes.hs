@@ -60,7 +60,7 @@ freeTyVars = foldr (go []) []
         go _ (ConT _) acc = acc
         go _ (MetaT _) acc = acc
         go bound (ArrT arg res) acc = go bound (unLoc arg) (go bound (unLoc res) acc)
-        go bound (AllT tvs ty) acc = go (map unLoc tvs ++ bound) (unLoc ty) acc
+        go bound (AllT tvs ty) acc = go (map (unLoc . fst) tvs ++ bound) (unLoc ty) acc
         go bound (AppT fun arg) acc = go bound (unLoc fun) (go bound (unLoc arg) acc)
         go _ _ _ = unreachable "AbsType, RecType, RecordType, SumType"
 
@@ -68,7 +68,7 @@ tyVarBndrs :: Rho -> [TyVar]
 tyVarBndrs ty = nub (bndrs ty)
     where
         bndrs :: Type -> [TyVar]
-        bndrs (AllT tvs body) = map unLoc tvs ++ bndrs (unLoc body)
+        bndrs (AllT tvs body) = map (unLoc . fst) tvs ++ bndrs (unLoc body)
         bndrs (ArrT arg res) = bndrs (unLoc arg) ++ bndrs (unLoc res)
         bndrs _ = []
 
@@ -92,8 +92,8 @@ subst_ty env (ArrT arg res) = ArrT (subst_ty env <$> arg) (subst_ty env <$> res)
 subst_ty env (VarT x) = fromMaybe (VarT x) (lookup (unLoc x) env)
 subst_ty _ (ConT tc) = ConT tc
 subst_ty _ (MetaT tv) = MetaT tv
-subst_ty env (AllT ns rho) = AllT ns (subst_ty env' <$> rho)
+subst_ty env (AllT tvs rho) = AllT tvs (subst_ty env' <$> rho)
     where
-        env' = [(n, ty') | (n, ty') <- env, n `notElem` map unLoc ns]
+        env' = [(n, ty') | (n, ty') <- env, n `notElem` map (unLoc . fst) tvs]
 subst_ty env (AppT fun arg) = ArrT (subst_ty env <$> fun) (subst_ty env <$> arg)
 subst_ty _ ty = ty

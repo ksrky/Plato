@@ -19,17 +19,17 @@ import Control.Monad.State
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 
-transExpr :: MonadThrow m => Subst -> Context -> T.Expr -> m C.Term
-transExpr subst ctx = traexpr
+transExpr :: MonadThrow m => Context -> T.Expr -> m C.Term
+transExpr ctx = traexpr
     where
         traexpr :: MonadThrow m => T.Expr -> m C.Term
         traexpr (T.VarE x) = do
                 i <- getVarIndex ctx x
                 return $ C.TmVar i (length ctx)
         traexpr (T.AbsE x (Just ty1) e2) = do
-                tyT1 <- transType subst ctx ty1
+                tyT1 <- transType ctx ty1
                 ctx' <- addName x ctx
-                t2 <- transExpr subst ctx' (unLoc e2)
+                t2 <- transExpr ctx' (unLoc e2)
                 return $ C.TmAbs (unLoc x) tyT1 t2
         traexpr (T.AppE e1 e2) = do
                 t1 <- traexpr $ unLoc e1
@@ -37,27 +37,22 @@ transExpr subst ctx = traexpr
                 return $ C.TmApp t1 t2
         traexpr (T.TAppE e1 tys) = do
                 t1 <- traexpr $ unLoc e1
-                tyTs' <- mapM (transType subst ctx) tys
+                tyTs' <- mapM (transType ctx) tys
                 return $ foldl C.TmTApp t1 tyTs'
         traexpr exp@(T.TAbsE xs e1) = do
-                xs' <- forM xs $ \(L sp x) -> do
-                        knK <- case M.lookup x subst of
-                                Just kn -> return $ transKind kn
-                                _ -> throwLocatedErr sp $ "Kind inference failed for " ++ show x
-                        return (x, knK)
                 ctx' <- foldM (flip addName) ctx xs
-                t2 <- transExpr subst ctx' $ unLoc e1
-                return $ foldr (uncurry C.TmTAbs) t2 xs'
+                t2 <- transExpr ctx' $ unLoc e1
+                return $ foldr C.TmTAbs t2 (map unLoc xs)
         traexpr (T.LetE [T.FD x e11 ty12] e2) = do
-                tyT1 <- transType subst ctx $ unLoc ty12
+                tyT1 <- transType ctx $ unLoc ty12
                 t1 <- traexpr $ unLoc e11
                 let t1' = C.TmFix (C.TmAbs (unLoc x) tyT1 t1)
                 ctx' <- addName x ctx
-                t2 <- transExpr subst ctx' $ unLoc e2
+                t2 <- transExpr ctx' $ unLoc e2
                 return $ C.TmLet (unLoc x) t1' t2
         traexpr (T.TagE l as (Just ty)) = do
                 as' <- mapM (traexpr . unLoc) as
-                tyT <- transType subst ctx ty
+                tyT <- transType ctx ty
                 return $ C.TmTag (unLoc l) as' tyT
         traexpr (T.ProjE e1 l) = do
                 t1 <- traexpr $ unLoc e1
@@ -69,7 +64,7 @@ transExpr subst ctx = traexpr
                 return $ C.TmRecord fields'
         traexpr (T.CaseE e1 (Just ty2) alts) = do
                 t1 <- traexpr $ unLoc e1
-                tyT2 <- transType nullSubst ctx ty2
+                tyT2 <- transType ctx ty2
                 alts' <- forM alts $ \(pat, body) -> case unLoc pat of
                         T.ConP li ps -> do
                                 as <- (concat <$>) <$> forM ps $ \(L sp p) -> case p of
@@ -77,7 +72,7 @@ transExpr subst ctx = traexpr
                                         T.WildP -> return []
                                         T.ConP{} -> throwLocatedErr sp "pattern argument" --tmp
                                 ctx' <- foldM (flip addName) ctx as
-                                ti <- transExpr subst ctx' $ unLoc body
+                                ti <- transExpr ctx' $ unLoc body
                                 return (unLoc li, (length as, ti))
                         T.VarP x -> do
                                 ctx' <- addName x ctx
@@ -87,10 +82,10 @@ transExpr subst ctx = traexpr
                                 ti <- traexpr $ unLoc body
                                 return (str2varName "", (0, ti))
                 return $ C.TmCase t1 alts'
-        traexpr _ = undefined
+        traexpr e = throwUnexpectedErr $ "illegal expression: " ++ show e
 
-transType :: MonadThrow m => Subst -> Context -> T.Type -> m C.Ty
-transType subst ctx = tratype
+transType :: MonadThrow m => Context -> T.Type -> m C.Ty
+transType ctx = tratype
     where
         tratype :: MonadThrow m => T.Type -> m C.Ty
         tratype (T.VarT tv) = do
@@ -104,31 +99,25 @@ transType subst ctx = tratype
                 tyT2 <- tratype (unLoc ty2)
                 return $ C.TyArr tyT1 tyT2
         tratype (T.AllT xs ty) = do
-                xs' <- forM xs $ \(L sp tv) -> do
-                        knK <- case M.lookup (tyVarName tv) subst of
-                                Just kn -> return $ transKind kn
-                                _ -> throwLocatedErr sp $ "Kind inference failed for " ++ show (tyVarName tv)
+                xs' <- forM xs $ \(L sp tv, Just kn) -> do
+                        knK <- transKind kn
                         return (tyVarName tv, knK)
-                ctx' <- addNames (map (tyVarName <$>) xs) ctx
-                tyT2 <- transType subst ctx' (unLoc ty)
+                ctx' <- addNames (map ((tyVarName <$>) . fst) xs) ctx
+                tyT2 <- transType ctx' (unLoc ty)
                 return $ foldr (uncurry C.TyAll) tyT2 xs'
-        tratype (T.AbsT x ty) = do
-                knK1 <- case M.lookup (unLoc x) subst of
-                        Just knK -> return $ transKind knK
-                        _ -> throwLocatedErr (getSpan x) $ "Kind inference failed for " ++ show x
+        tratype (T.AbsT x (Just kn) ty) = do
+                knK1 <- transKind kn
                 ctx' <- addName x ctx
-                tyT2 <- transType subst ctx' (unLoc ty)
+                tyT2 <- transType ctx' (unLoc ty)
                 return $ C.TyAbs (unLoc x) knK1 tyT2
         tratype (T.AppT ty1 ty2) = do
                 tyT1 <- tratype $ unLoc ty1
                 tyT2 <- tratype $ unLoc ty2
                 return $ C.TyApp tyT1 tyT2
-        tratype (T.RecT x ty) = do
-                knK1 <- case M.lookup (unLoc x) subst of
-                        Just knK -> return $ transKind knK
-                        _ -> throwLocatedErr (getSpan x) $ "Kind inference failed for " ++ show x
+        tratype (T.RecT x (Just kn) ty) = do
+                knK1 <- transKind kn
                 ctx' <- addName x ctx
-                tyT2 <- transType subst ctx' (unLoc ty)
+                tyT2 <- transType ctx' (unLoc ty)
                 return $ C.TyRec (unLoc x) knK1 tyT2 -- tmp: unused
         tratype (T.RecordT fieldtys) = do
                 fields' <- forM fieldtys $ \(l, field) -> (unLoc l,) <$> tratype (unLoc field)
@@ -137,34 +126,41 @@ transType subst ctx = tratype
                 fields' <- forM fieldtys $ \(l, field) -> (unLoc l,) <$> mapM (tratype . unLoc) field
                 return $ C.TyVariant fields'
         tratype T.MetaT{} = throwUnexpectedErr "Zonking failed"
+        tratype ty = throwUnexpectedErr $ "illegal type: " ++ show ty
 
-transKind :: T.Kind -> C.Kind
-transKind T.StarK = C.KnStar
-transKind T.VarK{} = C.KnStar
-transKind (T.ArrK k1 k2) = C.KnArr (transKind k1) (transKind k2)
+transKind :: MonadThrow m => T.Kind -> m C.Kind
+transKind T.StarK = return C.KnStar
+transKind T.MetaK{} = throwPlainErr "Kind inference failed" --tmp
+transKind (T.ArrK kn1 kn2) = C.KnArr <$> transKind kn1 <*> transKind kn2
 
-transDecl :: MonadThrow m => T.Decl -> StateT Context m (Located Name, C.Binding)
-transDecl dec = StateT $ \ctx -> case dec of
+transKind' :: C.Kind -> T.Kind
+transKind' C.KnStar = T.StarK
+transKind' (C.KnArr knK1 knK2) = T.ArrK (transKind' knK1) (transKind' knK2)
+
+transDecl :: (MonadThrow m, MonadIO m) => T.Decl -> (Context, KnTable) -> m ((Located Name, C.Binding), (Context, KnTable))
+transDecl dec (ctx, knenv) = case dec of
         T.TypeD name ty -> do
-                (subst, kn) <- inferKind (unLoc ty)
-                let knK = transKind kn
-                tyT <- transType subst ctx `traverse` ty
+                (ty', kn) <- inferKind knenv (unLoc ty)
+                let knenv' = M.insert (unLoc name) kn knenv
+                knK <- transKind kn
+                tyT <- transType ctx ty'
                 ctx' <- addName name ctx
-                return ((name, C.TyAbbBind tyT (Just knK)), ctx')
+                return ((name, C.TyAbbBind (cL ty tyT) (Just knK)), (ctx', knenv'))
         T.VarD f ty -> do
-                subst <- checkKindStar ty
-                tyT <- transType subst ctx `traverse` ty
+                ty' <- checkKindStar knenv ty
+                tyT <- transType ctx ty'
                 ctx' <- addName f ctx
-                return ((f, C.VarBind tyT), ctx')
+                return ((f, C.VarBind $ cL ty tyT), (ctx', knenv))
         T.FuncD (T.FD f e ty) -> do
-                subst <- checkKindStar ty
-                t <- transExpr subst ctx `traverse` e
-                tyT <- transType subst ctx `traverse` ty
+                ty' <- checkKindStar knenv ty
+                t <- transExpr ctx `traverse` e
+                tyT <- transType ctx ty'
                 ctx' <- addName f ctx
-                return ((f, C.TmAbbBind t (Just tyT)), ctx')
+                return ((f, C.TmAbbBind t (Just $ cL ty tyT)), (ctx', knenv))
 
-typ2core :: MonadThrow m => Context -> T.Decls -> m Commands
+typ2core :: (MonadThrow m, MonadIO m) => Context -> T.Decls -> m Commands
 typ2core ctx (T.Decls modn imps binds fundecs) = do
         (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs
-        (binds', ctx') <- mapM transDecl (map unLoc binds ++ [T.FuncD fundec]) `runStateT` ctx
+        let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ (Just knK)) <- V.toList ctx]
+        (binds', (ctx', knenv')) <- mapM (StateT . transDecl) (map unLoc binds ++ [T.FuncD fundec]) `runStateT` (ctx, knenv)
         return $ Commands{C.imports = imps, C.binds = binds'}

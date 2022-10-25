@@ -1,155 +1,277 @@
+{-# LANGUAGE TupleSections #-}
+
 module Plato.Typing.KindInfer where
 
-import Control.Exception.Safe
-import Control.Monad.State
-import qualified Data.Map.Strict as M
-import qualified Data.Set as S
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TrTypes
+import Plato.Typing.TrTypes (tyVarName)
 
-inferKind :: MonadThrow m => Type -> m (Subst, Kind)
-inferKind ty = evalStateT (infer initialEnv ty) initUnique
+import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Bifunctor (Bifunctor (first, second))
+import Data.IORef
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
+import Plato.Typing.TrMonad (newTyVar)
 
-checkKindStar :: MonadThrow m => Located Type -> m Subst
-checkKindStar (L sp ty) = do
-        (subst, kn) <- evalStateT (infer initialEnv ty) initUnique
-        when (kn /= StarK) $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
-        return subst
+inferKind :: (MonadThrow m, MonadIO m) => KnTable -> Type -> m (Type, Kind)
+inferKind knenv ty = runKi knenv $ do
+        (ty', kn) <- infer ty
+        ty'' <- zonkType ty'
+        kn' <- zonkKind kn
+        return (ty'', kn')
 
--- | Context
-newtype KindEnv = KindEnv (M.Map Name Kind)
+checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Located Type -> m Type
+checkKindStar knenv (L sp ty) = runKi knenv $ do
+        (ty', kn) <- infer ty
+        ty'' <- zonkType ty'
+        kn' <- zonkKind kn
+        when (kn /= StarK) $ lift $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
+        return ty''
 
-extend :: KindEnv -> (Name, Kind) -> KindEnv
-extend (KindEnv env) (x, s) = KindEnv $ M.insert x s env
+-- | kind Table
+type KnTable = M.Map Name Kind
 
-initialEnv :: KindEnv
-initialEnv = KindEnv M.empty
+emptyKnTable :: KnTable
+emptyKnTable = M.empty
 
--- | Unique number
-newtype Unique = Unique {count :: Int}
+-- | Kinds
+data MetaKv = MetaKv Uniq KnRef
 
-initUnique :: Unique
-initUnique = Unique{count = 0}
+type KnRef = IORef (Maybe Kind)
+
+type Uniq = Int
+
+instance Eq MetaKv where
+        (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
+
+instance Show MetaKv where
+        show (MetaKv u _) = "$" ++ show u
+
+metaKvs :: [Kind] -> [MetaKv]
+metaKvs = foldr go []
+    where
+        go :: Kind -> [MetaKv] -> [MetaKv]
+        go (MetaK kv) acc
+                | kv `elem` acc = acc
+                | otherwise = kv : acc
+        go StarK acc = acc
+        go (ArrK arg res) acc = go arg (go res acc)
+
+-- | Kind environment
+data KiEnv = KiEnv
+        { uniqs :: IORef Uniq
+        , var_env :: M.Map Name Kind
+        }
 
 -- | Inference Monad
-type Infer m a = StateT Unique m a
+newtype Ki m a = Ki (KiEnv -> m a)
 
--- | Substitution
-type Subst = M.Map Name Kind
+unKi :: Monad m => Ki m a -> (KiEnv -> m a)
+unKi (Ki a) = a
 
-nullSubst :: Subst
-nullSubst = M.empty
+instance Monad m => Functor (Ki m) where
+        fmap f (Ki x) = Ki $ \env -> do
+                y <- x env
+                return $ f y
 
-compose :: Subst -> Subst -> Subst
-s1 `compose` s2 = M.map (apply s1) s2 `M.union` s1
+instance Monad m => Applicative (Ki m) where
+        pure x = Ki (\_ -> return x)
+        m <*> x = Ki $ \env -> do
+                m' <- unKi m env
+                unKi (fmap m' x) env
 
-class Substitutable a where
-        apply :: Subst -> a -> a
-        ftv :: a -> S.Set Name
+instance Monad m => Monad (Ki m) where
+        m >>= k = Ki $ \env -> do
+                v <- unKi m env
+                unKi (k v) env
 
-instance Substitutable Kind where
-        apply _ StarK = StarK
-        apply s k@(VarK a) = M.findWithDefault k a s
-        apply s (ArrK t1 t2) = ArrK (apply s t1) (apply s t2)
-        ftv StarK{} = S.empty
-        ftv (VarK a) = S.singleton a
-        ftv (ArrK k1 k2) = ftv k1 `S.union` ftv k2
+runKi :: MonadIO m => KnTable -> Ki m a -> m a
+runKi knenv (Ki ki) = do
+        ref <- liftIO $ newIORef 0
+        let env = KiEnv{uniqs = ref, var_env = knenv}
+        ki env
 
-instance Substitutable a => Substitutable [a] where
-        apply = fmap . apply
-        ftv = foldr (S.union . ftv) S.empty
+lift :: Monad m => m a -> Ki m a
+lift st = Ki (const st)
 
-instance Substitutable KindEnv where
-        apply s (KindEnv env) = KindEnv $ M.map (apply s) env
-        ftv (KindEnv env) = ftv $ M.elems env
+newKiRef :: MonadIO m => a -> Ki m (IORef a)
+newKiRef v = lift (liftIO $ newIORef v)
 
--- | fresh name generation
-letters :: [String]
-letters = ['k' : show i | i <- [0 :: Integer ..]]
+readKiRef :: MonadIO m => IORef a -> Ki m a
+readKiRef r = lift (liftIO $ readIORef r)
 
-fresh :: MonadThrow m => Infer m Kind
-fresh = do
-        s <- get
-        put s{count = count s + 1}
-        return $ VarK $ str2tyvarName (letters !! count s)
+writeKiRef :: MonadIO m => IORef a -> a -> Ki m ()
+writeKiRef r v = lift (liftIO $ writeIORef r v)
+
+-- | Kind environment
+extendEnv :: Name -> Kind -> Ki m a -> Ki m a
+extendEnv x kn (Ki m) = Ki (m . extend)
+    where
+        extend env = env{var_env = M.insert x kn (var_env env)}
+
+extendEnvList :: [(Name, Kind)] -> Ki m a -> Ki m a
+extendEnvList binds tr = foldr (uncurry extendEnv) tr binds
+
+getEnv :: Monad m => Ki m (M.Map Name Kind)
+getEnv = Ki (return . var_env)
+
+lookupVar :: MonadThrow m => Located Name -> Ki m Kind
+lookupVar (L sp x) = do
+        env <- getEnv
+        case M.lookup x env of
+                Just ty -> return ty
+                Nothing -> lift $ throwLocatedErr sp $ "Not in scope: " ++ show x
+
+-- | KMeta
+newKnVar :: MonadIO m => Ki m Kind
+newKnVar = MetaK <$> newMetaKv
+
+newMetaKv :: MonadIO m => Ki m MetaKv
+newMetaKv = do
+        uniq <- newUnique
+        kref <- newKiRef Nothing
+        return (MetaKv uniq kref)
+
+readKv :: MonadIO m => MetaKv -> Ki m (Maybe Kind)
+readKv (MetaKv _ ref) = readKiRef ref
+
+writeKv :: MonadIO m => MetaKv -> Kind -> Ki m ()
+writeKv (MetaKv _ ref) ty = writeKiRef ref (Just ty)
+
+newUnique :: MonadIO m => Ki m Uniq
+newUnique =
+        Ki
+                ( \KiEnv{uniqs = ref} -> liftIO $ do
+                        uniq <- readIORef ref
+                        writeIORef ref (uniq + 1)
+                        return uniq
+                )
+
+getMetaKvs :: MonadIO m => [Kind] -> Ki m [MetaKv]
+getMetaKvs kns = do
+        tys' <- mapM zonkKind kns
+        return (metaKvs tys')
+
+-- | Zonking
+zonkKind :: MonadIO m => Kind -> Ki m Kind
+zonkKind StarK = return StarK
+zonkKind (ArrK arg res) = do
+        arg' <- zonkKind arg
+        res' <- zonkKind res
+        return (ArrK arg' res')
+zonkKind (MetaK kv) = do
+        mb_kn <- readKv kv
+        case mb_kn of
+                Nothing -> return (MetaK kv)
+                Just kn -> do
+                        kn' <- zonkKind kn
+                        writeKv kv kn'
+                        return kn'
+
+zonkType :: MonadIO m => Type -> Ki m Type
+zonkType (VarT tv) = return $ VarT tv
+zonkType (ConT x) = return $ ConT x
+zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
+zonkType (AllT tvs ty) = do
+        tvs' <- forM tvs $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
+        AllT tvs' <$> zonkType `traverse` ty
+zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
+zonkType (RecT x mkn ty) = RecT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkType (RecordT fields) = do
+        fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
+        return $ RecordT fields'
+zonkType (SumT fields) = do
+        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM (zonkType `traverse`) tys
+        return $ SumT fields'
+zonkType MetaT{} = unreachable ""
 
 -- | Unification
-occursCheck :: Substitutable a => Name -> a -> Bool
-occursCheck a t = a `S.member` ftv t
-
-unify :: MonadThrow m => Kind -> Kind -> Infer m Subst
+unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Ki m ()
+unify (MetaK kv) k = unifyVar kv k
+unify k (MetaK kv) = unifyVar kv k
+unify StarK StarK = return ()
 unify (ArrK l r) (ArrK l' r') = do
-        s1 <- unify l l'
-        s2 <- unify (apply s1 r) (apply s1 r')
-        return (s2 `compose` s1)
-unify (VarK a) k = bind a k
-unify k (VarK a) = bind a k
-unify StarK StarK = return nullSubst
-unify k1 k2 = throwPlainErr $ "UnificationFail " ++ show k1 ++ ", " ++ show k2
+        unify l l'
+        unify r r'
+unify k1 k2 = lift $ throwPlainErr $ "UnificationFail " ++ show k1 ++ ", " ++ show k2
 
-bind :: MonadThrow m => Name -> Kind -> Infer m Subst
-bind a k
-        | k == VarK a = return nullSubst
-        | occursCheck a k = throwPlainErr $ "InfiniteKind " ++ show a ++ ", " ++ show k
-        | otherwise = return $ M.singleton a k
+unifyVar :: (MonadIO m, MonadThrow m) => MetaKv -> Kind -> Ki m ()
+unifyVar kv1 kn2 = do
+        mb_kn1 <- readKv kv1
+        case mb_kn1 of
+                Just kn1 -> unify kn1 kn2
+                Nothing -> unifyUnboundVar kv1 kn2
+
+unifyUnboundVar :: (MonadIO m, MonadThrow m) => MetaKv -> Kind -> Ki m ()
+unifyUnboundVar kv1 kn2@(MetaK kv2) = do
+        mb_ty2 <- readKv kv2
+        case mb_ty2 of
+                Just kn2' -> unify (MetaK kv1) kn2'
+                Nothing -> writeKv kv1 kn2
+unifyUnboundVar kv1 kn2 = do
+        kvs2 <- getMetaKvs [kn2]
+        if kv1 `elem` kvs2
+                then occursCheckErr kv1 kn2
+                else writeKv kv1 kn2
+
+occursCheckErr :: MonadThrow m => MetaKv -> Kind -> Ki m ()
+occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail" --tmp
 
 -- | Inference
-infer :: MonadThrow m => KindEnv -> Type -> Infer m (Subst, Kind)
-infer env t = case t of
-        VarT tv -> lookupEnv env (tyVarName $ unLoc tv)
-        ConT x -> lookupEnv env (unLoc x)
-        ArrT t1 t2 -> do
-                (s1, k1) <- infer env (unLoc t1)
-                (s2, k2) <- infer (apply s1 env) (unLoc t2)
-                s3 <- unify (apply s2 k1) StarK
-                s4 <- unify (apply s3 k2) StarK
-                return (s4 `compose` s3 `compose` s2 `compose` s1, StarK)
-        AllT tvs ty -> do
+infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
+infer t = case t of
+        VarT tv -> do
+                kn <- lookupVar (tyVarName <$> tv)
+                return (VarT tv, kn)
+        ConT x -> do
+                kn <- lookupVar x
+                return (ConT x, kn)
+        ArrT ty1 ty2 -> do
+                (ty1', kn1) <- infer (unLoc ty1)
+                (ty2', kn2) <- infer (unLoc ty2)
+                s3 <- unify kn1 StarK
+                s4 <- unify kn2 StarK
+                return (ArrT (cL ty1 ty1') (cL ty2 ty2'), StarK)
+        AllT tvs ty1 -> do
                 binds <- forM tvs $ \tv -> do
-                        kv <- fresh
-                        return (tyVarName $ unLoc tv, kv)
-                let env' = foldl extend env binds
-                (s1, k1) <- infer env' (unLoc ty)
-                s2 <- unify (apply s1 k1) StarK
-                return (s2 `compose` s1, StarK)
-        AbsT x ty -> do
-                kv <- fresh
-                let env' = env `extend` (unLoc x, kv)
-                (s1, k1) <- infer env' (unLoc ty)
-                return (s1, ArrK (apply s1 kv) k1)
-        AppT t1 t2 -> do
-                kv <- fresh
-                (s1, k1) <- infer env (unLoc t1)
-                (s2, k2) <- infer (apply s1 env) (unLoc t2)
-                s3 <- unify (apply s2 k1) (ArrK k2 kv)
-                return (s3 `compose` s2 `compose` s1, apply s3 kv)
-        RecT x ty -> do
-                kv <- fresh
-                let env' = env `extend` (unLoc x, kv)
-                (s1, k1) <- infer env' (unLoc ty)
-                s2 <- unify (apply s1 k1) StarK
-                return (s2 `compose` s1, StarK)
+                        kv <- newKnVar
+                        return (fst tv, kv)
+                (ty1', kn1) <- extendEnvList (map (first (tyVarName . unLoc)) binds) (infer (unLoc ty1))
+                unify kn1 StarK
+                return (AllT (map (second Just) binds) (cL ty1 ty1'), StarK)
+        AbsT x _ ty1 -> do
+                kv <- newKnVar
+                (ty1', kn1) <- extendEnv (unLoc x) kv (infer (unLoc ty1))
+                return (AbsT x (Just kv) (cL ty1 ty1'), ArrK kv kn1)
+        AppT ty1 ty2 -> do
+                kv <- newKnVar
+                (ty1', kn1) <- infer (unLoc ty1)
+                (ty2', kn2) <- infer (unLoc ty2)
+                unify kn1 (ArrK kn2 kv)
+                return (AppT (cL ty1 ty1') (cL ty2 ty2'), kv)
+        RecT x _ ty1 -> do
+                kv <- newKnVar
+                (ty1', kn1) <- extendEnv (unLoc x) kv (infer (unLoc ty1))
+                s2 <- unify kn1 StarK
+                return (RecT x (Just kv) (cL ty1 ty1'), StarK)
         RecordT fields -> do
-                ss <- forM fields $ \(x, ty) -> do
-                        (s1, k1) <- infer env (unLoc ty)
-                        s2 <- unify (apply s1 k1) StarK
-                        return $ s2 `compose` s1
-                return (foldr compose M.empty ss, StarK)
+                fields' <- forM fields $ \(x, ty1) -> do
+                        (ty1', kn1) <- infer (unLoc ty1)
+                        unify kn1 StarK
+                        return (x, cL ty1 ty1')
+                return (RecordT fields', StarK)
         SumT fields -> do
-                ss' <- forM fields $ \(x, tys) -> do
-                        ss <- forM tys $ \ty -> do
-                                (s1, k1) <- (infer env . unLoc) ty
-                                s2 <- unify (apply s1 k1) StarK
-                                return $ s2 `compose` s1
-                        return $ foldr compose M.empty ss
-                return (foldr compose M.empty ss', StarK)
+                fields' <- forM fields $ \(x, tys) -> do
+                        tys' <- forM tys $ \ty1 -> do
+                                (ty1', kn1) <- infer (unLoc ty1)
+                                unify kn1 StarK
+                                return $ cL ty1 ty1'
+                        return (x, tys')
+                return (SumT fields', StarK)
         MetaT{} -> unreachable ""
-
-lookupEnv :: MonadThrow m => KindEnv -> Name -> Infer m (Subst, Kind)
-lookupEnv (KindEnv env) x = case M.lookup x env of
-        Nothing -> throwPlainErr $ "UnboundVariable " ++ show x
-        Just s -> return (nullSubst, s)

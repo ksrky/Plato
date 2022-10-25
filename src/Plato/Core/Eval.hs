@@ -46,7 +46,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmApp t1' t2
-                TmTApp (TmTAbs x _ t11) tyT2 -> Just $ tytermSubstTop tyT2 t11
+                TmTApp (TmTAbs x t11) tyT2 -> Just $ tytermSubstTop tyT2 t11
                 TmTApp t1 tyT2 -> do
                         t1' <- eval1 t1
                         Just $ TmTApp t1' tyT2

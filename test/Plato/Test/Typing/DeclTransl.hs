@@ -6,13 +6,14 @@ module Plato.Test.Typing.DeclTransl where
 
 import Plato.Common.Error
 import Plato.Common.SrcLoc
+import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.Resolver
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import qualified Data.Text as T
@@ -24,7 +25,7 @@ testcases =
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                (fst -> [FD (VN "id") (NL (AbsE (VN "x") Nothing (VE "x"))) (NL (AllT [TV "a"] (NL (ArrT (VT "a") (VT "a")))))]) -> True
+                                (fst -> [FD (VN "id") (NL (AbsE (VN "x") Nothing (VE "x"))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))]) -> True
                                 _ -> False
                   )
                 )
