@@ -1,12 +1,12 @@
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Typing.TrMonad where
+module Plato.Typing.TcMonad where
 
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TrTypes
+import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad
@@ -15,103 +15,103 @@ import Data.IORef
 import Data.List
 import qualified Data.Map.Strict as M
 
-data TrEnv = TrEnv
+data TcEnv = TcEnv
         { uniqs :: IORef Uniq
         , var_env :: M.Map Name Sigma
         }
 
-newtype Tr m a = Tr (TrEnv -> m a)
+newtype Tc m a = Tc (TcEnv -> m a)
 
-unTr :: Monad m => Tr m a -> (TrEnv -> m a)
-unTr (Tr a) = a
+unTc :: Monad m => Tc m a -> (TcEnv -> m a)
+unTc (Tc a) = a
 
-instance Monad m => Functor (Tr m) where
-        fmap f (Tr x) = Tr $ \env -> do
+instance Monad m => Functor (Tc m) where
+        fmap f (Tc x) = Tc $ \env -> do
                 y <- x env
                 return $ f y
 
-instance Monad m => Applicative (Tr m) where
-        pure x = Tr (\_ -> return x)
-        m <*> x = Tr $ \env -> do
-                m' <- unTr m env
-                unTr (fmap m' x) env
+instance Monad m => Applicative (Tc m) where
+        pure x = Tc (\_ -> return x)
+        m <*> x = Tc $ \env -> do
+                m' <- unTc m env
+                unTc (fmap m' x) env
 
-instance Monad m => Monad (Tr m) where
-        m >>= k = Tr $ \env -> do
-                v <- unTr m env
-                unTr (k v) env
+instance Monad m => Monad (Tc m) where
+        m >>= k = Tc $ \env -> do
+                v <- unTc m env
+                unTc (k v) env
 
-failTr :: MonadThrow m => Span -> String -> Tr m a
-failTr sp msg = Tr $ \_ -> throwLocatedErr sp msg
+failTc :: MonadThrow m => Span -> String -> Tc m a
+failTc sp msg = Tc $ \_ -> throwLocatedErr sp msg
 
-check :: MonadThrow m => Bool -> Span -> String -> Tr m ()
+check :: MonadThrow m => Bool -> Span -> String -> Tc m ()
 check True _ _ = return ()
-check False sp d = failTr sp d
+check False sp d = failTc sp d
 
-runTr :: MonadIO m => [(Name, Sigma)] -> Tr m a -> m a
-runTr binds (Tr tr) = do
+runTc :: MonadIO m => [(Name, Sigma)] -> Tc m a -> m a
+runTc binds (Tc tc) = do
         ref <- liftIO $ newIORef 0
-        let env = TrEnv{uniqs = ref, var_env = M.fromList binds}
-        tr env
+        let env = TcEnv{uniqs = ref, var_env = M.fromList binds}
+        tc env
 
-lift :: Monad m => m a -> Tr m a
-lift st = Tr (const st)
+lift :: Monad m => m a -> Tc m a
+lift st = Tc (const st)
 
-newTrRef :: MonadIO m => a -> Tr m (IORef a)
-newTrRef v = lift (liftIO $ newIORef v)
+newTcRef :: MonadIO m => a -> Tc m (IORef a)
+newTcRef v = lift (liftIO $ newIORef v)
 
-readTrRef :: MonadIO m => IORef a -> Tr m a
-readTrRef r = lift (liftIO $ readIORef r)
+readTcRef :: MonadIO m => IORef a -> Tc m a
+readTcRef r = lift (liftIO $ readIORef r)
 
-writeTrRef :: MonadIO m => IORef a -> a -> Tr m ()
-writeTrRef r v = lift (liftIO $ writeIORef r v)
+writeTcRef :: MonadIO m => IORef a -> a -> Tc m ()
+writeTcRef r v = lift (liftIO $ writeIORef r v)
 
 ----------------------------------------------------------------
 -- Type Environment
 ----------------------------------------------------------------
-extendVarEnv :: Name -> Sigma -> Tr m a -> Tr m a
-extendVarEnv var ty (Tr m) = Tr (m . extend)
+extendVarEnv :: Name -> Sigma -> Tc m a -> Tc m a
+extendVarEnv var ty (Tc m) = Tc (m . extend)
     where
         extend env = env{var_env = M.insert var ty (var_env env)}
 
-extendVarEnvList :: [(Name, Sigma)] -> Tr m a -> Tr m a
+extendVarEnvList :: [(Name, Sigma)] -> Tc m a -> Tc m a
 extendVarEnvList binds tr = foldr (uncurry extendVarEnv) tr binds
 
-getEnv :: Monad m => Tr m (M.Map Name Sigma)
-getEnv = Tr (return . var_env)
+getEnv :: Monad m => Tc m (M.Map Name Sigma)
+getEnv = Tc (return . var_env)
 
-lookupVar :: MonadThrow m => Located Name -> Tr m Sigma
+lookupVar :: MonadThrow m => Located Name -> Tc m Sigma
 lookupVar (L sp x) = do
         env <- getEnv
         case M.lookup x env of
                 Just ty -> return ty
-                Nothing -> failTr sp $ "Not in scope: " ++ show x
+                Nothing -> failTc sp $ "Not in scope: " ++ show x
 
 --------------------------------------------------
 --      Creating, reading, writing MetaTvs      --
 --------------------------------------------------
-newTyVar :: MonadIO m => Tr m Tau
+newTyVar :: MonadIO m => Tc m Tau
 newTyVar = MetaT <$> newMetaTyVar
 
-newMetaTyVar :: MonadIO m => Tr m MetaTv
+newMetaTyVar :: MonadIO m => Tc m MetaTv
 newMetaTyVar = do
         uniq <- newUnique
-        tref <- newTrRef Nothing
+        tref <- newTcRef Nothing
         return (Meta uniq tref)
 
-newSkolemTyVar :: MonadIO m => TyVar -> Tr m TyVar
+newSkolemTyVar :: MonadIO m => TyVar -> Tc m TyVar
 newSkolemTyVar tv = SkolemTv (tyVarName tv) <$> newUnique
 
-readTv :: MonadIO m => MetaTv -> Tr m (Maybe Tau)
-readTv (Meta _ ref) = readTrRef ref
+readTv :: MonadIO m => MetaTv -> Tc m (Maybe Tau)
+readTv (Meta _ ref) = readTcRef ref
 
-writeTv :: MonadIO m => MetaTv -> Tau -> Tr m ()
-writeTv (Meta _ ref) ty = writeTrRef ref (Just ty)
+writeTv :: MonadIO m => MetaTv -> Tau -> Tc m ()
+writeTv (Meta _ ref) ty = writeTcRef ref (Just ty)
 
-newUnique :: MonadIO m => Tr m Uniq
+newUnique :: MonadIO m => Tc m Uniq
 newUnique =
-        Tr
-                ( \TrEnv{uniqs = ref} -> liftIO $ do
+        Tc
+                ( \TcEnv{uniqs = ref} -> liftIO $ do
                         uniq <- readIORef ref
                         writeIORef ref (uniq + 1)
                         return uniq
@@ -120,14 +120,14 @@ newUnique =
 ----------------------------------------------------------------
 -- Instantiation
 ----------------------------------------------------------------
-instantiate :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, Rho)
+instantiate :: MonadIO m => Sigma -> Tc m (Located Expr -> Located Expr, Rho)
 instantiate (AllT tvs ty) = do
         tvs' <- mapM (const newMetaTyVar) tvs
         let coercion = \e -> cL e $ TAppE e (map MetaT tvs')
         return (coercion, substTy (map (unLoc . fst) tvs) (map MetaT tvs') (unLoc ty))
 instantiate ty = return (id, ty)
 
-skolemise :: MonadIO m => Sigma -> Tr m (Located Expr -> Located Expr, [Located TyVar], Rho)
+skolemise :: MonadIO m => Sigma -> Tc m (Located Expr -> Located Expr, [Located TyVar], Rho)
 skolemise (AllT tvs ty) = do
         sks1 <- mapM (\(tv, _) -> newSkolemTyVar `traverse` tv) tvs
         (coercion, sks2, ty') <- skolemise (substTy (map (unLoc . fst) tvs) (map VarT sks1) (unLoc ty))
@@ -156,7 +156,7 @@ skolemise ty = return (id, [], ty)
 ----------------------------------------------------------------
 -- Quantification
 ----------------------------------------------------------------
-quantify :: MonadIO m => [MetaTv] -> Rho -> Tr m Sigma
+quantify :: MonadIO m => [MetaTv] -> Rho -> Tc m Sigma
 quantify tvs ty = do
         mapM_ bind (tvs `zip` new_bndrs)
         ty' <- zonkType ty
@@ -171,15 +171,15 @@ allBinders =
         [BoundTv $ str2tyvarName [x] | x <- ['a' .. 'z']]
         ++ [BoundTv (str2tyvarName (x : show i)) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
 
-getEnvTypes :: Monad m => Tr m [Type]
+getEnvTypes :: Monad m => Tc m [Type]
 getEnvTypes = M.elems <$> getEnv
 
-getMetaTyVars :: MonadIO m => [Type] -> Tr m [MetaTv]
-getMetaTyVars tys = do
+getMetaTvs :: MonadIO m => [Type] -> Tc m [MetaTv]
+getMetaTvs tys = do
         tys' <- mapM zonkType tys
         return (metaTvs tys')
 
-getFreeTyVars :: MonadIO m => [Type] -> Tr m [TyVar]
+getFreeTyVars :: MonadIO m => [Type] -> Tc m [TyVar]
 getFreeTyVars tys = do
         tys' <- mapM zonkType tys
         return (freeTyVars tys')
@@ -187,7 +187,7 @@ getFreeTyVars tys = do
 ----------------------------------------------------------------
 -- Zonking
 ----------------------------------------------------------------
-zonkType :: MonadIO m => Type -> Tr m Type
+zonkType :: MonadIO m => Type -> Tc m Type
 zonkType (VarT x) = return (VarT x)
 zonkType (ConT x) = return (ConT x)
 zonkType (AllT ns ty) = do
@@ -212,7 +212,7 @@ zonkType (MetaT tv) = do
                         return ty'
 zonkType _ = unreachable "AbsType, RecordType, RecType, SumType"
 
-zonkExpr :: MonadIO m => Expr -> Tr m Expr
+zonkExpr :: MonadIO m => Expr -> Tc m Expr
 zonkExpr (AbsE var mty expr) = AbsE var <$> (zonkType `traverse` mty) <*> zonkExpr `traverse` expr
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
 zonkExpr (TAbsE ns expr) = TAbsE ns <$> zonkExpr `traverse` expr
@@ -232,7 +232,7 @@ zonkExpr expr = return expr
 ----------------------------------------------------------------
 -- Unification
 ----------------------------------------------------------------
-unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tr m ()
+unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = error ""
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
@@ -247,26 +247,26 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
 unify ty1 ty2 = lift $ throwPlainErr $ "Cannot unify types: " ++ show ty1 ++ ", " ++ show ty2 --tmp: location
 
-unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tr m ()
+unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do
         mb_ty1 <- readTv tv1
         case mb_ty1 of
                 Just ty1 -> unify ty1 ty2
                 Nothing -> unifyUnboundVar tv1 ty2
 
-unifyUnboundVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tr m ()
+unifyUnboundVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyUnboundVar tv1 ty2@(MetaT tv2) = do
         mb_ty2 <- readTv tv2
         case mb_ty2 of
                 Just ty2' -> unify (MetaT tv1) ty2'
                 Nothing -> writeTv tv1 ty2
 unifyUnboundVar tv1 ty2 = do
-        tvs2 <- getMetaTyVars [ty2]
+        tvs2 <- getMetaTvs [ty2]
         if tv1 `elem` tvs2
                 then occursCheckErr tv1 ty2
                 else writeTv tv1 ty2
 
-unifyFun :: (MonadIO m, MonadThrow m) => Rho -> Tr m (Sigma, Rho)
+unifyFun :: (MonadIO m, MonadThrow m) => Rho -> Tc m (Sigma, Rho)
 unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
 unifyFun tau = do
         arg_ty <- newTyVar
@@ -274,7 +274,7 @@ unifyFun tau = do
         unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         return (arg_ty, res_ty)
 
-occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Tr m ()
+occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Tc m ()
 occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail" --tmp
 
 badType :: Tau -> Bool

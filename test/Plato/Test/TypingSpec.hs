@@ -4,7 +4,7 @@ import Plato.Test.Typing.DeclTransl as DT
 import Plato.Test.Typing.ExprTransl as ET
 import Plato.Test.Typing.TopDeclTransl as TT
 import Plato.Test.Typing.Transl as T
-import Plato.Test.Typing.TypeRecon as TR
+import Plato.Test.Typing.TypeCheck as TR
 
 import Test.Hspec
 

@@ -11,7 +11,7 @@ import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
 import Plato.Typing.KindInfer
 import Plato.Typing.Renamer
-import Plato.Typing.TrTypes
+import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad

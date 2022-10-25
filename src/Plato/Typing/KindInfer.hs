@@ -7,7 +7,7 @@ import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TrTypes (tyVarName)
+import Plato.Typing.TcTypes (tyVarName)
 
 import Control.Exception.Safe
 import Control.Monad
@@ -16,7 +16,7 @@ import Data.Bifunctor (Bifunctor (first, second))
 import Data.IORef
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Plato.Typing.TrMonad (newTyVar)
+import Plato.Typing.TcMonad (newTyVar)
 
 inferKind :: (MonadThrow m, MonadIO m) => KnTable -> Type -> m (Type, Kind)
 inferKind knenv ty = runKi knenv $ do

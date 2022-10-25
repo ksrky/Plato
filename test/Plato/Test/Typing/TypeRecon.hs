@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plato.Test.Typing.TypeRecon where
+module Plato.Test.Typing.TypeCheck where
 
 import Plato.Common.Error
 import Plato.Common.Name

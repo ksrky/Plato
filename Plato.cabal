@@ -51,9 +51,9 @@ library
       Plato.Transl.TypToCore
       Plato.Typing.KindInfer
       Plato.Typing.Renamer
-      Plato.Typing.TrMonad
-      Plato.Typing.TrTypes
-      Plato.Typing.TypeRecon
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -104,9 +104,9 @@ executable plato
       Plato.Transl.TypToCore
       Plato.Typing.KindInfer
       Plato.Typing.Renamer
-      Plato.Typing.TrMonad
-      Plato.Typing.TrTypes
-      Plato.Typing.TypeRecon
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
       Paths_Plato
   hs-source-dirs:
       src

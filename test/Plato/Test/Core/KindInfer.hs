@@ -47,5 +47,4 @@ test (inp, iscorrect) = it inp $
                 (tydecs, fundecs) <- execWriterT $ T.transTopDecl ps'
                 forM tydecs $ \(L _ (T.TypeD name ty)) -> do
                         (ty', kn) <- inferKind emptyKnTable (unLoc ty)
-                        knK <- C.transKind kn
-                        return knK
+                        C.transKind kn

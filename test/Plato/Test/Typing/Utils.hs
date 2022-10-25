@@ -5,7 +5,7 @@ module Plato.Test.Typing.Utils where
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TrTypes
+import Plato.Typing.TcTypes
 
 import qualified Data.Text as T
 

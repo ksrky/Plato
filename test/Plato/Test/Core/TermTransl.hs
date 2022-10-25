@@ -31,7 +31,7 @@ testcases =
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [(TmTAbs (TVN "a") (TmAbs (VN "x") (TyVar 0 1) (TmVar 0 2)), _)] -> True
+                                [(TmTAbs (TVN "a") (TmAbs (VN "x") (TyVar 0 1) (TmVar 0 2)), TyAll (TVN "a") KnStar (TyArr (TyVar 0 1) (TyVar 0 1)))] -> True
                                 _ -> False
                   )
                 )
