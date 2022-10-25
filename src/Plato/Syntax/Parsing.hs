@@ -41,8 +41,9 @@ data Decl
 data TopDecl
         = DataD PsLName [PsLName] [(PsLName, [PsLType])]
         | TypeD PsLName [PsLName] PsLType
-        | Decl PsLDecl
         | FixD
+        | Decl PsLDecl
+        | Eval PsLExpr
         deriving (Eq, Show)
 
 newtype ImpDecl = ImpDecl (Located ModuleName) deriving (Eq, Show)

@@ -17,19 +17,25 @@ import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List
 
-typeRecon :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncDecl
-typeRecon env (FD var body ty) = runTc env $ do
+typeCheck :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncDecl
+typeCheck env (FD var body ty) = runTc env $ do
         (ann_expr, ty') <- inferSigma (cL body $ AnnE body ty)
         body' <- case ann_expr of
                 L _ (AnnE e t) -> zonkExpr `traverse` e
                 _ -> unreachable $ show ann_expr
         ty'' <- zonkType ty'
-        return (FD var body' (L (getSpan ty) ty''))
+        return (FD var body' (cL ty ty''))
 
-typecheck :: (MonadIO m, MonadThrow m) => Located Expr -> Located Type -> Tc m Sigma
-typecheck e ty = do
-        (_, ty') <- inferSigma (cL e $ AnnE e ty)
-        zonkType ty'
+typeInfer :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> Located Expr -> m (Located Expr, Sigma)
+typeInfer env e = runTc env $ do
+        (e', ty') <- inferSigma e
+        ty'' <- zonkType ty'
+        return (e', ty'')
+
+isBasicType :: Type -> Bool
+isBasicType ConT{} = True
+isBasicType (AppT fun res) = isBasicType (unLoc fun) && isBasicType (unLoc res)
+isBasicType _ = False
 
 data Expected a = Infer (IORef a) | Check a
 

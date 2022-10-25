@@ -117,14 +117,14 @@ transFuncTyDecls decs = do
                                 tell [L sp $ T.VarD x ty']
                         _ -> return ()
 
-transTopDecl :: MonadThrow m => Located P.TopDecl -> WriterT ([Located T.Decl], [Located T.FuncDecl]) m ()
+transTopDecl :: MonadThrow m => Located P.TopDecl -> WriterT ([Located T.Decl], [Located T.FuncDecl], [Located T.Expr]) m ()
 transTopDecl (L sp (P.DataD name params fields)) = do
         fields' <- Writer.lift $
                 forM fields $ \(l, tys) -> do
                         tys' <- mapM transType tys
                         return (l, tys')
         let fieldty = cLLn (fst $ head fields) (snd $ last fields) $ T.SumT fields'
-        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) fieldty params))], [])
+        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) fieldty params))], [], [])
         forM_ fields' $ \(l, field) -> do
                 let res_ty = foldl (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2) (cL name $ T.ConT name) (map (\x -> cL x $ varType x) params)
                     rho_ty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrT ty1 ty2) res_ty field
@@ -137,10 +137,13 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     tag = cLLn l args $ T.TagE l (map (\x -> cL x $ T.VarE x) args) (Just $ unLoc res_ty)
                     exp = foldr (\(x, ty) e -> cLL x e $ T.AbsE x (Just $ unLoc ty) e) tag (zip args field)
                     exp' = cLnL tyargs exp $ T.TAbsE tyargs exp
-                tell ([], [L sp $ T.FD l exp sigma_ty])
+                tell ([], [L sp $ T.FD l exp sigma_ty], [])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
         ty1' <- Writer.lift $ transType ty1
-        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) ty1' params))], [])
+        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) ty1' params))], [], [])
+transTopDecl (L sp (P.Eval exp)) = do
+        exp' <- transExpr exp
+        tell ([], [], [exp'])
 transTopDecl _ = return ()
 
 getDecls :: [Located P.TopDecl] -> [Located P.Decl]
@@ -152,12 +155,24 @@ getDecls tds = execWriter $
 processDecls :: (MonadIO m, MonadThrow m) => [T.FuncDecl] -> [T.FuncDecl] -> m [T.FuncDecl]
 processDecls decs binds = do
         let env = map (\(T.FD var body ty) -> (unLoc var, unLoc ty)) (decs ++ binds)
-        forM binds $ \fd -> typeRecon env fd
+        forM binds $ \fd -> typeCheck env fd
 
-ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> m T.Decls
+ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> m T.Program
 ps2typ (P.Program modn ids tds) = do
         let imps = map (\(L _ (P.ImpDecl mn)) -> mn) ids
-        (tydecs, condecs) <- execWriterT $ mapM_ transTopDecl tds
+        (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl tds
         (fundecs, vardecs) <- transDecls (getDecls tds)
-        fundecs' <- processDecls (map unLoc condecs) fundecs
-        return $ T.Decls modn imps (tydecs ++ map (T.FuncD <$>) condecs ++ vardecs) fundecs'
+        let env = map (\(T.FD var body ty) -> (unLoc var, unLoc ty)) (map unLoc condecs ++ fundecs)
+        fundecs' <- mapM (typeCheck env) fundecs
+        exps' <- forM exps $ \e -> do
+                (e', ty) <- typeInfer env e
+                unless (isBasicType ty) $ throwLocatedErr (getSpan e) "Invalid type for evaluation expression" --tmp
+                return e'
+        return $
+                T.Program
+                        { T.mmodule = modn
+                        , T.imports = imps
+                        , T.decls = tydecs ++ map (T.FuncD <$>) condecs ++ vardecs
+                        , T.binds = fundecs'
+                        , T.body = exps'
+                        }

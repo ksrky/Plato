@@ -60,10 +60,11 @@ data Decl
         | FuncD FuncDecl
         deriving (Eq, Show)
 
-data Decls = Decls
+data Program = Program
         { mmodule :: Maybe (Located ModuleName)
         , imports :: [Located ModuleName]
         , decls :: [TypLDecl]
-        , body :: [FuncDecl]
+        , binds :: [FuncDecl]
+        , body :: [TypLExpr]
         }
         deriving (Eq, Show)

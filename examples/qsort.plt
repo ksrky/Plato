@@ -9,5 +9,4 @@ qsort l = case l of
             larger = filter (x <) xs
          in smaller ++ x :: larger
 
-main : List Nat
-main = qsort (three :: four :: two :: one :: Nil)
+qsort (three :: four :: two :: one :: Nil)

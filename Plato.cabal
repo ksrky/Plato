@@ -30,6 +30,7 @@ library
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
+      Plato.Core.Check
       Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
@@ -71,6 +72,7 @@ library
     , haskeline
     , hspec
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector
@@ -83,6 +85,7 @@ executable plato
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
+      Plato.Core.Check
       Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
@@ -125,6 +128,7 @@ executable plato
     , haskeline
     , hspec
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector
@@ -167,6 +171,7 @@ test-suite Plato-test
     , hspec
     , hspec-discover
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector

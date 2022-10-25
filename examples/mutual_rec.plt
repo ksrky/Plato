@@ -11,5 +11,4 @@ isodd n = case n of
     Zero -> False
     Succ n' -> iseven n'
 
-main : Bool
-main = iseven (Succ (Succ (Succ (Succ Zero))))
+iseven (Succ (Succ (Succ (Succ Zero))))

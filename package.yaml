@@ -32,6 +32,7 @@ dependencies:
   - haskeline
   - hspec
   - mtl
+  - prettyprinter
   - safe-exceptions
   - text
   - vector

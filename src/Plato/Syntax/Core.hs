@@ -15,7 +15,6 @@ data Ty
         | TyAbs Name Kind Ty
         | TyApp Ty Ty
         | TyRec Name Kind Ty
-        | TyId Name
         | TyRecord [(Name, Ty)]
         | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
@@ -44,6 +43,12 @@ data Binding
         | TyAbbBind (Located Ty) (Maybe Kind)
         deriving (Eq, Show)
 
+data Command
+        = Import ModuleName
+        | Bind (Located Name) Binding
+        | Eval (Located Term)
+        deriving (Eq, Show)
+
 ----------------------------------------------------------------
 -- Type
 ----------------------------------------------------------------
@@ -57,7 +62,6 @@ tymap onvar c tyT = walk c tyT
                 TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyRec tyX knK1 tyT2 -> TyRec tyX knK1 (walk (c + 1) tyT)
-                TyId b -> TyId b
                 TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
                 TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
 

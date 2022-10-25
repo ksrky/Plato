@@ -76,3 +76,7 @@ isVarExist :: Context -> Name -> Bool
 isVarExist ctx x = case V.elemIndex x (V.map fst ctx) of
         Just _ -> True
         Nothing -> False
+
+commandShift :: Int -> Command -> Command
+commandShift d (Bind x b) = Bind x (bindingShift d b)
+commandShift d cmd = cmd

@@ -158,9 +158,10 @@ transDecl dec (ctx, knenv) = case dec of
                 ctx' <- addName f ctx
                 return ((f, C.TmAbbBind t (Just $ cL ty tyT)), (ctx', knenv))
 
-typ2core :: (MonadThrow m, MonadIO m) => Context -> T.Decls -> m Commands
-typ2core ctx (T.Decls modn imps binds fundecs) = do
+typ2core :: (MonadThrow m, MonadIO m) => Context -> T.Program -> m [C.Command]
+typ2core ctx (T.Program modn imps binds fundecs exps) = do
         (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ (Just knK)) <- V.toList ctx]
         (binds', (ctx', knenv')) <- mapM (StateT . transDecl) (map unLoc binds ++ [T.FuncD fundec]) `runStateT` (ctx, knenv)
-        return $ Commands{C.imports = imps, C.binds = binds'}
+        body <- mapM (transExpr ctx' `traverse`) exps
+        return $ map (C.Import . unLoc) imps ++ map (uncurry C.Bind) binds' ++ map C.Eval body

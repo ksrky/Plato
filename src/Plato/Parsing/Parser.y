@@ -108,6 +108,7 @@ topdecl     :: { Located TopDecl }
             | conid tyvars '=' type                 { cLL $1 $4 (TypeD (mkLtyconName $1) $2 $4) }
             | fixdecl                               { $1 }
             | decl                                  { cL $1 (Decl $1) }
+            | expr                                  { cL $1 (Eval $1)  }
 
 fixdecl     :: { Located TopDecl }
             : 'infix' int op                        {% setFixity $3 $2 Nonfix >> return (L $1 FixD) }
