@@ -5,7 +5,6 @@ module Plato.Transl.TypToCore where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import Plato.Core.Commands as C
 import Plato.Core.Context
 import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
@@ -160,8 +159,8 @@ transDecl dec (ctx, knenv) = case dec of
 
 typ2core :: (MonadThrow m, MonadIO m) => Context -> T.Program -> m [C.Command]
 typ2core ctx (T.Program modn imps binds fundecs exps) = do
-        (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs
+        (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs --tmp: rename state
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ (Just knK)) <- V.toList ctx]
         (binds', (ctx', knenv')) <- mapM (StateT . transDecl) (map unLoc binds ++ [T.FuncD fundec]) `runStateT` (ctx, knenv)
-        body <- mapM (transExpr ctx' `traverse`) exps
+        body <- mapM ((transExpr ctx' <=< rename st) `traverse`) exps
         return $ map (C.Import . unLoc) imps ++ map (uncurry C.Bind) binds' ++ map C.Eval body

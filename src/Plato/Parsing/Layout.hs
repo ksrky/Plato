@@ -76,8 +76,6 @@ layoutSpaces (pos@(PsPosn _ _ col), _, _, inp) len = do
                         setIndentLevels [n]
                         return $ L sp (TokSymbol SymVLBrace)
 
--- todo: ret sp [(TokSymbol SymVLBrace), (TokSymbol SymVRBrace)]
-
 rightBrace :: Action
 rightBrace (pos, _, _, inp) len = do
         setStartCode code

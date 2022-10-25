@@ -31,7 +31,6 @@ library
       Plato.Common.Pretty
       Plato.Common.SrcLoc
       Plato.Core.Check
-      Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Main
@@ -86,7 +85,6 @@ executable plato
       Plato.Common.Pretty
       Plato.Common.SrcLoc
       Plato.Core.Check
-      Plato.Core.Commands
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Main
