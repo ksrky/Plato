@@ -25,9 +25,9 @@ testcases =
                 ( "data Bool = True | False"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [ TypeD (TCN "Bool") (NL (SumT [(CN "True", []), (CN "False", [])]))
-                                        , FuncD (FD (CN "True") (NL (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))) (CT "Bool"))
-                                        , FuncD (FD (CN "False") (NL (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))) (CT "Bool"))
+                                [ TypeD (TCN "Bool") (NL (RecT (TCN "Bool") (NL (SumT [(CN "True", []), (CN "False", [])]))))
+                                        , FuncD (FD (CN "True") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool"))
+                                        , FuncD (FD (CN "False") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool"))
                                         ] -> True
                                 _ -> False
                   )
