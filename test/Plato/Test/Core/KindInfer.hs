@@ -44,7 +44,7 @@ test (inp, iscorrect) = it inp $
                 (ps, st) <- eitherToMonadThrow (P.parseLine (T.pack inp) topdeclParser)
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
-                (tydecs, fundecs) <- execWriterT $ T.transTopDecl ps'
+                (tydecs, fundecs, _) <- execWriterT $ T.transTopDecl ps'
                 forM tydecs $ \(L _ (T.TypeD name ty)) -> do
                         (ty', kn) <- inferKind emptyKnTable (unLoc ty)
                         C.transKind kn

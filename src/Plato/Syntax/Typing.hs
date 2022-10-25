@@ -24,6 +24,7 @@ data Expr
         | RecordE [(TypLName, TypLExpr)]
         | CaseE TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
         | TagE TypLName [TypLExpr] (Maybe Type)
+        | FoldE TypLType
         | AnnE TypLExpr TypLType {-Sigma-}
         deriving (Eq, Show)
 
@@ -40,7 +41,7 @@ data Type
         | AllT [(Located TyVar, Maybe Kind)] TypLType {- Rho -}
         | AbsT TypLName (Maybe Kind) TypLType
         | AppT TypLType TypLType
-        | RecT TypLName (Maybe Kind) TypLType
+        | RecT TypLName TypLType
         | RecordT [(TypLName, TypLType)]
         | SumT [(TypLName, [TypLType])]
         | MetaT MetaTv

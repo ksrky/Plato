@@ -5,9 +5,9 @@ module Plato.Test.Typing.TopDeclTransl where
 
 import Plato.Common.Error
 import Plato.Common.SrcLoc
+import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.FixResol
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
@@ -40,5 +40,5 @@ test (inp, iscorrect) = it inp $
                 (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) topdeclParser)
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
-                (tydecs, fundecs) <- execWriterT $ transTopDecl ps'
+                (tydecs, fundecs, _) <- execWriterT $ transTopDecl ps'
                 return $ map unLoc tydecs ++ map (FuncD . unLoc) fundecs

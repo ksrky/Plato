@@ -124,7 +124,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                         tys' <- mapM transType tys
                         return (l, tys')
         let fieldty = cLLn (fst $ head fields) (snd $ last fields) $ T.SumT fields'
-        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) fieldty params))], [], [])
+            bodyty = cL fieldty $ T.RecT name fieldty
+        tell ([L sp (T.TypeD name (foldr (\x ty -> cLL x ty $ T.AbsT x Nothing ty) bodyty params))], [], [])
         forM_ fields' $ \(l, field) -> do
                 let res_ty = foldl (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2) (cL name $ T.ConT name) (map (\x -> cL x $ varType x) params)
                     rho_ty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrT ty1 ty2) res_ty field
@@ -135,7 +136,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     tyargs = params
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
                     tag = cLLn l args $ T.TagE l (map (\x -> cL x $ T.VarE x) args) (Just $ unLoc res_ty)
-                    exp = foldr (\(x, ty) e -> cLL x e $ T.AbsE x (Just $ unLoc ty) e) tag (zip args field)
+                    foldtag = cL tag $ T.AppE (noLoc $ T.FoldE (cL name $ T.ConT name)) tag
+                    exp = foldr (\(x, ty) e -> cLL x e $ T.AbsE x (Just $ unLoc ty) e) foldtag (zip args field)
                     exp' = cLnL tyargs exp $ T.TAbsE tyargs exp
                 tell ([], [L sp $ T.FD l exp sigma_ty], [])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
@@ -158,10 +160,10 @@ processDecls decs binds = do
         forM binds $ \fd -> typeCheck env fd
 
 ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> m T.Program
-ps2typ (P.Program modn ids tds) = do
-        let imps = map (\(L _ (P.ImpDecl mn)) -> mn) ids
-        (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl tds
-        (fundecs, vardecs) <- transDecls (getDecls tds)
+ps2typ (P.Program modn impds topds) = do
+        let imps = map (\(L _ (P.ImpDecl mn)) -> mn) impds
+        (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl topds
+        (fundecs, vardecs) <- transDecls (getDecls topds)
         let env = map (\(T.FD var body ty) -> (unLoc var, unLoc ty)) (map unLoc condecs ++ fundecs)
         fundecs' <- mapM (typeCheck env) fundecs
         exps' <- forM exps $ \e -> do
