@@ -6,17 +6,15 @@ Plato は標準で、libs/base 配下の標準ライブラリを読み込む。
 ## フィボナッチ数列（examples/fibonacci.plt）
 
 ```haskell
-fib : Nat -> Nat;
-fib n = case n of {
-    Zero -> Zero;
-    Succ n' -> case n' of {
-        Zero -> Succ Zero;
-        Succ n'' -> fib n'' + fib n';
-    };
-};
+fib : Nat -> Nat
+fib n = case n of
+    Zero -> Zero
+    Succ n' -> case n' of
+        Zero -> Succ Zero
+        Succ n'' -> fib n'' + fib n'
 
-main : Nat;
-main = fib (Succ (Succ (Succ (Succ Zero))));
+main : Nat
+main = fib (Succ (Succ (Succ (Succ Zero))))
 ```
 
 1 行目で fib 関数の型を注釈し、2 行目以降、fib 関数の項を記述する。

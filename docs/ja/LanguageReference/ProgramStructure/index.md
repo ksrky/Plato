@@ -27,11 +27,10 @@ NatList = List Nat;
 関数宣言は項とともに型を明示する必要がある。
 
 ```haskell
-not : Bool -> Bool;
-not b = case b of {
-    True -> False;
-    False -> True;
-};
+not : Bool -> Bool
+not b = case b of
+    True -> False
+    False -> True
 ```
 
 ### 変数
@@ -44,6 +43,7 @@ p : A -> B
 
 関数の型署名を命題とみなせば、項の部分がその命題の証明となるため、
 変数宣言は、論理学的には公理あるいは仮定とみなせる。
+Haskell において同様のことを実現したい場合には、`p = undefined`を追加する。
 
 ### 演算子
 
@@ -51,29 +51,28 @@ p : A -> B
 デフォルトでは左結合で最大の結合力を持つ。
 
 ```haskell
-infixl 6 +;
+infixl 6 +
 
-(+) : Nat -> Nat -> Nat;
-(+) m n = case m of {
-    Zero -> n;
-    Succ m' -> Succ (m' + n);
-};
+(+) : Nat -> Nat -> Nat
+(+) m n = case m of
+    Zero -> n
+    Succ m` -> Succ (m` + n)
 ```
 
 ## 式
 
-|            |     |                               |
-| ---------- | --- | ----------------------------- |
-| let 式     |     | 'let' '{' decls '}' 'in' expr |
-| case 式    |     | 'case' expr 'of' '{' alts '}' |
-| 中置式     |     | expr op expr                  |
-| 関数、変数 |     | f x y ...                     |
-| 型適用     |     | f@a                           |
+|                      |     |                               |
+| -------------------- | --- | ----------------------------- |
+| let 式               |     | `let` `{` decls `}` `in` expr |
+| case 式              |     | `case` expr `of` `{` alts `}` |
+| 中置式               |     | expr op expr                  |
+| 関数、変数           |     | f x y ...                     |
+| データコンストラクタ |     | K a b ...                     |
 
 ## 型
 
-|          |     |                           |
-| -------- | --- | ------------------------- |
-| 全称型   |     | 'forall' a b ... '.' type |
-| 関数型   |     | type '->' type            |
-| 型演算子 |     | p a b ...                 |
+|                  |     |                      |
+| ---------------- | --- | -------------------- |
+| 全称型           |     | `{` a b ... `}` type |
+| 関数型           |     | type `->` type       |
+| 型コンストラクタ |     | T a b ...            |

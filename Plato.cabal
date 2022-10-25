@@ -26,34 +26,34 @@ source-repository head
 library
   exposed-modules:
       Main
-      Plato.Abstract.Fixity
-      Plato.Abstract.Lexer
-      Plato.Abstract.Parser
-      Plato.Abstract.Syntax
-      Plato.Abstract.Token
       Plato.Common.Error
-      Plato.Common.Info
       Plato.Common.Name
       Plato.Common.Pretty
-      Plato.Common.Vect
-      Plato.Core.Command
+      Plato.Common.SrcLoc
+      Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
-      Plato.Core.Syntax
-      Plato.Core.Utils
-      Plato.Debug.AbsTrans
-      Plato.Debug.CoreTrans
-      Plato.Debug.EvalIO
-      Plato.Debug.REPL
-      Plato.Debug.TypTrans
       Plato.Main
-      Plato.Translation.AbsToTyp
-      Plato.Translation.KindInfer
-      Plato.Translation.SrcToAbs
-      Plato.Translation.TypToCore
-      Plato.Typing.Rename
-      Plato.Typing.Syntax
-      Plato.Typing.Utils
+      Plato.Parsing.Action
+      Plato.Parsing.Error
+      Plato.Parsing.Fixity
+      Plato.Parsing.FixResol
+      Plato.Parsing.Layout
+      Plato.Parsing.Lexer
+      Plato.Parsing.Monad
+      Plato.Parsing.Parser
+      Plato.Parsing.Token
+      Plato.Syntax.Core
+      Plato.Syntax.Parsing
+      Plato.Syntax.Typing
+      Plato.Transl.PsToTyp
+      Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
+      Plato.Typing.KindInfer
+      Plato.Typing.Renamer
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -66,10 +66,12 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , bytestring
     , containers
     , haskeline
     , hspec
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector
@@ -78,34 +80,34 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Plato.Abstract.Fixity
-      Plato.Abstract.Lexer
-      Plato.Abstract.Parser
-      Plato.Abstract.Syntax
-      Plato.Abstract.Token
       Plato.Common.Error
-      Plato.Common.Info
       Plato.Common.Name
       Plato.Common.Pretty
-      Plato.Common.Vect
-      Plato.Core.Command
+      Plato.Common.SrcLoc
+      Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
-      Plato.Core.Syntax
-      Plato.Core.Utils
-      Plato.Debug.AbsTrans
-      Plato.Debug.CoreTrans
-      Plato.Debug.EvalIO
-      Plato.Debug.REPL
-      Plato.Debug.TypTrans
       Plato.Main
-      Plato.Translation.AbsToTyp
-      Plato.Translation.KindInfer
-      Plato.Translation.SrcToAbs
-      Plato.Translation.TypToCore
-      Plato.Typing.Rename
-      Plato.Typing.Syntax
-      Plato.Typing.Utils
+      Plato.Parsing.Action
+      Plato.Parsing.Error
+      Plato.Parsing.Fixity
+      Plato.Parsing.FixResol
+      Plato.Parsing.Layout
+      Plato.Parsing.Lexer
+      Plato.Parsing.Monad
+      Plato.Parsing.Parser
+      Plato.Parsing.Token
+      Plato.Syntax.Core
+      Plato.Syntax.Parsing
+      Plato.Syntax.Typing
+      Plato.Transl.PsToTyp
+      Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
+      Plato.Typing.KindInfer
+      Plato.Typing.Renamer
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
       Paths_Plato
   hs-source-dirs:
       src
@@ -119,10 +121,12 @@ executable plato
       Plato
     , array
     , base >=4.7 && <5
+    , bytestring
     , containers
     , haskeline
     , hspec
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector
@@ -132,9 +136,20 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.EvalSpec
-      Plato.FixitySpec
-      Plato.KindInferSpec
+      Plato.Test.Core.KindInfer
+      Plato.Test.Core.TermTransl
+      Plato.Test.Core.Utils
+      Plato.Test.CoreSpec
+      Plato.Test.Parsing.FixResol
+      Plato.Test.ParsingSpec
+      Plato.Test.Typing.DeclTransl
+      Plato.Test.Typing.ExprTransl
+      Plato.Test.Typing.TopDeclTransl
+      Plato.Test.Typing.Transl
+      Plato.Test.Typing.TypeRecon
+      Plato.Test.Typing.Utils
+      Plato.Test.TypingSpec
+      Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:
       test
@@ -148,11 +163,13 @@ test-suite Plato-test
       Plato
     , array
     , base >=4.7 && <5
+    , bytestring
     , containers
     , haskeline
     , hspec
     , hspec-discover
     , mtl
+    , prettyprinter
     , safe-exceptions
     , text
     , vector

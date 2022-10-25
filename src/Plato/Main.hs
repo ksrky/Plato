@@ -1,38 +1,24 @@
 module Plato.Main where
 
 import Plato.Common.Error
-import Plato.Common.Info
-import Plato.Common.Name
-import Plato.Common.Pretty
-import Plato.Common.Vect
-import Plato.Core.Command
+import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Debug.EvalIO
-import Plato.Translation.AbsToTyp
-import Plato.Translation.SrcToAbs
-import Plato.Translation.TypToCore
-import Plato.Typing.Rename
+import Plato.Syntax.Core
+import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
+import Plato.Transl.TypToCore
 
 import Control.Exception.Safe
-import Control.Monad.State
-import Control.Monad.Writer
+import Control.Monad
+import Control.Monad.IO.Class
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Data.Vector as V
 import System.Console.Haskeline
 
-data Status = Status {ismain :: Bool, debug :: Bool, source :: String}
-
-defaultStatus :: Status
-defaultStatus = Status{ismain = True, debug = False, source = ""}
-
-runPlato :: Status -> String -> IO ()
-runPlato sts src = do
-        (ctx, memo) <- importBase emptyContext emptyMemo
-        void $ processFile sts ctx memo src
-
-debugPlato :: Status -> String -> IO ()
-debugPlato sts src = do
-        (ctx, memo) <- importBase emptyContext emptyMemo
-        void $ processFile sts ctx memo src
+runPlato :: String -> IO ()
+runPlato = processFile emptyContext
 
 repl :: IO ()
 repl = runInputT defaultSettings (loop emptyContext)
@@ -40,52 +26,28 @@ repl = runInputT defaultSettings (loop emptyContext)
         loop ctx = do
                 minput <- getInputLine ">> "
                 case minput of
-                        Nothing -> outputStrLn "Goodbye."
-                        Just "" -> outputStrLn "Goodbye."
+                        Nothing -> return ()
+                        Just "" -> return ()
                         Just input -> do
-                                liftIO $ process defaultStatus ctx emptyMemo input
+                                liftIO $ process ctx (T.pack input)
                                 loop ctx
 
-processFile :: Status -> Context -> Memo -> String -> IO (Context, Memo)
-processFile sts ctx memo src = do
-        input <- readFile src
-        process sts ctx memo input
+processFile :: Context -> String -> IO ()
+processFile ctx src = do
+        input <- T.readFile src
+        _ <- process ctx input
+        return () --tmp
 
-process :: Status -> Context -> Memo -> String -> IO (Context, Memo)
-process sts ctx memo input = do
-        ast <- src2abs input
-        typ <- abs2typ memo ast
+processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> m Context
+processCommand ctx Import{} = return ctx
+processCommand ctx (Bind name bind) = return $ V.cons (unLoc name, bind) ctx
+processCommand ctx (Eval t) = do
+        liftIO $ print $ eval ctx (unLoc t)
+        return ctx
+
+process :: (MonadThrow m, MonadIO m) => Context -> T.Text -> m Context
+process ctx input = do
+        ps <- src2ps input
+        typ <- ps2typ ps
         cmds <- typ2core ctx typ
-        -- processing imports
-        {-ctx' <- (`execStateT` ctx) $
-                forM (imports cmds) $ \modn -> do
-                        ctx <- get
-                        ctx' <- lift $ processFile sts{ismain = False} ctx (toPath modn)
-                        put ctx'
-        let cmds' = commandsShift (length ctx - length ctx) cmds-}
-        ctx' <- (`execStateT` ctx) $
-                forM_ (binds cmds) $ \(fi, (x, bind)) -> do
-                        ctx <- get
-                        -- checkBinding fi ctx bind
-                        put $ cons (x, bind) ctx
-        when (ismain sts) $ do
-                tyT <- typeof ctx' (fst $ body cmds)
-                res <-
-                        if debug sts
-                                then evalIO ctx' (fst $ body cmds)
-                                else return $ eval ctx' (fst $ body cmds)
-                putStrLn $ pretty (ctx', res)
-        let (funcns, bind) = getBodyBind cmds
-            rcd = str2varName $ source sts
-            memo' = memo{store = foldr cons (store memo) (zip funcns (repeat rcd))}
-        ctx'' <- addBinding dummyInfo rcd bind ctx'
-        return (ctx'', memo')
-
-importBase :: (MonadThrow m, MonadIO m) => Context -> Memo -> m (Context, Memo)
-importBase ctx memo = (`execStateT` (ctx, memo)) $
-        forM baseModules $ \modn -> StateT $ \(ctx, memo) -> do
-                let src = toBasePath modn
-                -- liftIO $ putStrLn src
-                -- liftIO $ print ctx
-                (ctx', memo') <- liftIO $ processFile defaultStatus{ismain = False, source = src} ctx memo src
-                return ((), (ctx', memo'))
+        foldM processCommand ctx cmds

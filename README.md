@@ -10,7 +10,7 @@ Plato is a purely functional programming language without runtime.
 - Haskell-like syntax
 - N-rank parametric polymorphism
 - Evaluating all terms at compile time
-- No builtin literal or primitive data type
+- No literal or builtin constant
 - Using typed lambda calculus as a core language
 
 ## Getting the source

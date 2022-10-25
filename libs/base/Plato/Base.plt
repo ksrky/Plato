@@ -1,15 +1,15 @@
-module Plato.Base;
+module Plato.Base
 
-infixr 0 $;
+($) : {a b} (a -> b) -> a -> b
+f $ x = f x
 
-($) : forall a b. (a -> b) -> a -> b;
-($) f x = f x;
+infixr 0 $
 
-id : forall a. a -> a;
-id x = x;
+id : {a} a -> a
+id x = x
 
-const : forall a b. a -> b -> a;
-const x y = x;
+const : {a b} a -> b -> a
+const x y = x
 
-flip : forall a b c. (a -> b -> c) -> b -> a -> c;
-flip f x y = f y x;
+flip : {a b c}  (a -> b -> c) -> b -> a -> c
+flip f x y = f y x

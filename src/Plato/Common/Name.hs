@@ -1,14 +1,12 @@
 module Plato.Common.Name where
 
-import Data.Char (isLower, isUpper)
 import Data.List (intercalate)
-import Data.Text (Text, pack, snoc, unpack)
-import Plato.Common.Pretty (Pretty (..))
+import qualified Data.Text as T
 
 ----------------------------------------------------------------
 -- Name
 ----------------------------------------------------------------
-data Name = Name {nameSpace :: NameSpace, nameText :: Text}
+data Name = Name {nameSpace :: NameSpace, nameText :: T.Text}
 
 instance Eq Name where
         n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
@@ -17,60 +15,52 @@ instance Ord Name where
         compare n1 n2 = compare (nameText n1) (nameText n2)
 
 instance Show Name where
-        show (Name _ t) = unpack t
-
-instance Pretty Name where
-        pretty (Name _ t) = unpack t
+        show (Name _ t) = T.unpack t
 
 data NameSpace
         = VarName
         | ConName
-        | TyVarName
-        | TyConName
+        | TyvarName
+        | TyconName
         deriving (Eq, Show)
 
+varName :: T.Text -> Name
+varName = Name VarName
+
+conName :: T.Text -> Name
+conName = Name ConName
+
+tyvarName :: T.Text -> Name
+tyvarName = Name TyvarName
+
+tyconName :: T.Text -> Name
+tyconName = Name TyconName
+
 str2varName :: String -> Name
-str2varName s = Name VarName (pack s)
+str2varName = varName . T.pack
 
 str2conName :: String -> Name
-str2conName s = Name ConName (pack s)
+str2conName = conName . T.pack
 
-str2tyVarName :: String -> Name
-str2tyVarName s = Name TyVarName (pack s)
+str2tyvarName :: String -> Name
+str2tyvarName = tyvarName . T.pack
 
-str2tyConName :: String -> Name
-str2tyConName s = Name TyConName (pack s)
-
-appendstr :: Name -> String -> Name
-appendstr n [] = n
-appendstr (Name ns tx) [c] = Name ns (snoc tx c)
-appendstr (Name ns tx) (c : s) = appendstr (Name ns (snoc tx c)) s
-
-dummyVarName :: Name
-dummyVarName = str2varName "_"
-
-isVar :: Name -> Bool
-isVar n = isLower $ head $ show n
-
-isCon :: Name -> Bool
-isCon n = isUpper $ head $ show n
-
-nullName :: Name -> Bool
-nullName n = null $ show n
-
-entry :: Name
-entry = str2varName "main"
+str2tyconName :: String -> Name
+str2tyconName = tyconName . T.pack
 
 ----------------------------------------------------------------
--- Module
+-- Module Name
 ----------------------------------------------------------------
-newtype ModuleName = ModuleName [Name] deriving (Eq, Show)
+newtype ModuleName = ModuleName [T.Text] deriving (Eq)
 
-instance Pretty ModuleName where
-        pretty (ModuleName modn) = intercalate "." (map pretty modn)
+instance Show ModuleName where
+        show (ModuleName modn) = intercalate "." (map T.unpack modn)
 
-toPath :: ModuleName -> String
-toPath (ModuleName modn) = intercalate "/" (map show modn) ++ ".plt"
+mod2conName :: ModuleName -> Name
+mod2conName (ModuleName modn) = Name ConName (T.intercalate (T.pack ".") modn)
 
-toBasePath :: ModuleName -> String
-toBasePath modn = "libs/base/" ++ toPath modn
+mod2tyconName :: ModuleName -> Name
+mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)
+
+mod2path :: ModuleName -> String
+mod2path (ModuleName modn) = intercalate "/" (map T.unpack modn) ++ ".plt"
