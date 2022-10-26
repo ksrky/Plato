@@ -46,11 +46,9 @@ data TopDecl
         | Eval PsLExpr
         deriving (Eq, Show)
 
-newtype ImpDecl = ImpDecl (Located ModuleName) deriving (Eq, Show)
-
 data Program = Program
         { moduleDecl :: Maybe (Located ModuleName)
-        , importDecls :: [Located ImpDecl]
+        , importDecls :: [Located ModuleName]
         , topDecls :: [Located TopDecl]
         }
         deriving (Show)

@@ -1,10 +1,10 @@
 module Plato.Transl.SrcToPs where
 
 import Plato.Common.Error
+import Plato.Parsing.FixResol
 import Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Parsing.FixResol
 import Plato.Syntax.Parsing
 
 import Control.Exception.Safe (MonadThrow)

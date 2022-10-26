@@ -1,6 +1,8 @@
-module Plato.Either;
+module Plato.Either
 
-data Either a b = Left a | Right b;
+import Plato.Bool
+
+data Either a b = Left a | Right b
 
 either : {a b c} (a -> c) -> (b -> c) -> Either a b -> c
 either f g e = case e of

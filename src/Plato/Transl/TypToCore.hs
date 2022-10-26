@@ -146,22 +146,23 @@ transDecl dec (ctx, knenv) = case dec of
                 tyT <- transType ctx ty'
                 ctx' <- addName name ctx
                 return ((name, C.TyAbbBind (cL ty tyT) (Just knK)), (ctx', knenv'))
-        T.VarD f ty -> do
+        T.VarD x ty -> do
                 ty' <- checkKindStar knenv ty
                 tyT <- transType ctx `traverse` ty'
-                ctx' <- addName f ctx
-                return ((f, C.VarBind tyT), (ctx', knenv))
+                ctx' <- addName x ctx
+                return ((x, C.VarBind tyT), (ctx', knenv))
         T.FuncD (T.FD f e ty) -> do
                 ty' <- checkKindStar knenv ty
+                error $ show e ++ "\n" ++ show ctx
                 t <- transExpr knenv ctx `traverse` e
                 tyT <- transType ctx `traverse` ty'
                 ctx' <- addName f ctx
                 return ((f, C.TmAbbBind t (Just tyT)), (ctx', knenv))
 
 typ2core :: (MonadThrow m, MonadIO m) => Context -> T.Program -> m [C.Command]
-typ2core ctx (T.Program modn imps binds fundecs exps) = do
+typ2core ctx (T.Program modn binds fundecs exps) = do
         (fundec, st) <- renameFuncDecls (initRenameState modn) fundecs --tmp: rename state
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ (Just knK)) <- V.toList ctx]
         (binds', (ctx', knenv')) <- mapM (StateT . transDecl) (map unLoc binds ++ [T.FuncD fundec]) `runStateT` (ctx, knenv)
         body <- mapM ((transExpr knenv ctx' <=< rename st) `traverse`) exps
-        return $ map (C.Import . unLoc) imps ++ map (uncurry C.Bind) binds' ++ map C.Eval body
+        return $ map (uncurry C.Bind) binds' ++ map C.Eval body

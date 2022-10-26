@@ -17,12 +17,16 @@ instance Ord Name where
 instance Show Name where
         show (Name _ t) = T.unpack t
 
+-- | NameSpace
 data NameSpace
         = VarName
         | ConName
         | TyvarName
         | TyconName
         deriving (Eq, Show)
+
+-- | Provenance
+data Provenance = LocalDef | Imported ModuleName deriving (Eq, Show)
 
 varName :: T.Text -> Name
 varName = Name VarName
@@ -52,6 +56,9 @@ str2tyconName = tyconName . T.pack
 -- Module Name
 ----------------------------------------------------------------
 newtype ModuleName = ModuleName [T.Text] deriving (Eq)
+
+instance Ord ModuleName where
+        compare (ModuleName ts1) (ModuleName ts2) = compare ts1 ts2
 
 instance Show ModuleName where
         show (ModuleName modn) = intercalate "." (map T.unpack modn)

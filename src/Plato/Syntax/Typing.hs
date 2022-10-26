@@ -7,6 +7,8 @@ import Plato.Common.SrcLoc
 import {-# SOURCE #-} Plato.Typing.KindInfer
 import {-# SOURCE #-} Plato.Typing.TcTypes
 
+import qualified Data.Map.Strict as M
+
 type TypLName = Located Name
 type TypLExpr = Located Expr
 type TypLPat = Located Pat
@@ -63,9 +65,10 @@ data Decl
 
 data Program = Program
         { mmodule :: Maybe (Located ModuleName)
-        , imports :: [Located ModuleName]
         , decls :: [TypLDecl]
         , binds :: [FuncDecl]
         , body :: [TypLExpr]
         }
         deriving (Eq, Show)
+
+type TypEnv = M.Map Name Type {- Sigma -}

@@ -14,9 +14,11 @@ import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
+import Plato.Typing.TypeCheck
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.Hspec
 
@@ -39,4 +41,4 @@ test (inp, iscorrect) = it inp $
                 let opdict = opDict (parser_ust st)
                 ps' <- mapM (resolve opdict) ps
                 (fundecs, _) <- transDecls ps'
-                processDecls [] fundecs
+                mapM (typeCheck M.empty) fundecs

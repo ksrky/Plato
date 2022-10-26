@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Plato.Common.Error where
 
 import Plato.Common.Pretty
@@ -20,6 +22,9 @@ catchError =
                 [ Handler $ \e@PlainErr{} -> liftIO $ putStrLn $ pretty e
                 , Handler $ \e@LocatedErr{} -> liftIO $ putStrLn $ pretty e
                 , Handler $ \e@PsError{} -> liftIO $ putStrLn $ pretty e
+                , Handler $ \e@UnexpectedErr{} -> liftIO $ putStrLn $ pretty e
+                , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
+                -- Handler $ \(e :: SomeException) -> liftIO $ putStrLn "Unknown error"
                 ]
         )
 
@@ -30,6 +35,9 @@ unreachable s = error $ "unreachable: " ++ s
 newtype UnexpectedErr = UnexpectedErr String deriving (Show)
 
 instance Exception UnexpectedErr
+
+instance Pretty UnexpectedErr where
+        pretty (UnexpectedErr msg) = msg
 
 throwUnexpectedErr :: MonadThrow m => String -> m a
 throwUnexpectedErr msg = throw $ UnexpectedErr msg

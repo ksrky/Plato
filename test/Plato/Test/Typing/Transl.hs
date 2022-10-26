@@ -4,6 +4,7 @@
 module Plato.Test.Typing.Transl where
 
 import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
@@ -12,8 +13,8 @@ import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
+import qualified Data.Map.Strict as M
 import qualified Data.Text.IO as T
-import Plato.Common.Name
 import Test.Hspec
 
 testcases :: [(String, IO Program -> Expectation)]
@@ -42,6 +43,16 @@ testcases =
                                 _ -> False
                   )
                 )
+        ,
+                ( "test06.plt"
+                , ( `shouldSatisfyReturn`
+                        \case
+                                Program
+                                        { binds = []
+                                        } -> True
+                                _ -> False
+                  )
+                )
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m Program -> Expectation) -> SpecWith ()
@@ -50,4 +61,4 @@ test (fname, iscorrect) = it fname $
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
                 ps <- src2ps inp
-                ps2typ ps
+                fst <$> ps2typ M.empty ps

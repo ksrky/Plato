@@ -17,7 +17,7 @@ import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List
 
-typeCheck :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> FuncDecl -> m FuncDecl
+typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncDecl -> m FuncDecl
 typeCheck env (FD var body ty) = runTc env $ do
         (ann_expr, ty') <- inferSigma (cL body $ AnnE body ty)
         body' <- case ann_expr of
@@ -26,7 +26,7 @@ typeCheck env (FD var body ty) = runTc env $ do
         ty'' <- zonkType ty'
         return (FD var body' (cL ty ty''))
 
-typeInfer :: (MonadIO m, MonadThrow m) => [(Name, Sigma)] -> Located Expr -> m (Located Expr, Sigma)
+typeInfer :: (MonadIO m, MonadThrow m) => TypEnv -> Located Expr -> m (Located Expr, Sigma)
 typeInfer env e = runTc env $ do
         (e', ty') <- inferSigma e
         ty'' <- zonkType ty'

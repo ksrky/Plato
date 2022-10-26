@@ -33,6 +33,8 @@ library
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Interaction.Module
+      Plato.Interaction.Status
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -68,6 +70,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
     , haskeline
     , hspec
     , mtl
@@ -87,6 +90,8 @@ executable plato
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Interaction.Module
+      Plato.Interaction.Status
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -123,6 +128,7 @@ executable plato
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
     , haskeline
     , hspec
     , mtl
@@ -165,6 +171,7 @@ test-suite Plato-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , directory
     , haskeline
     , hspec
     , hspec-discover

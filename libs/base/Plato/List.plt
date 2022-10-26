@@ -1,5 +1,8 @@
 module Plato.List
 
+import Plato.Bool
+import Plato.Nat
+
 data List a = Nil | a :: List a
 
 infixr 5 ::

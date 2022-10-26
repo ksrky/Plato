@@ -5,49 +5,75 @@ import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Syntax.Core
+import qualified Plato.Syntax.Parsing as P
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
 
+import qualified Control.Exception as E
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.State
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
+import Plato.Common.Name
+import Plato.Interaction.Status
 import System.Console.Haskeline
 
 runPlato :: String -> IO ()
-runPlato = processFile emptyContext
+runPlato src = catchError $ evalStateT (processFile src) (initPlatoState src)
 
 repl :: IO ()
-repl = runInputT defaultSettings (loop emptyContext)
+repl = runInputT defaultSettings (catchError $ loop $ initPlatoState "")
     where
-        loop ctx = do
+        loop st = do
                 minput <- getInputLine ">> "
                 case minput of
                         Nothing -> return ()
                         Just "" -> return ()
                         Just input -> do
-                                liftIO $ process ctx (T.pack input)
-                                loop ctx
+                                st' <- liftIO $ process (T.pack input) `execStateT` st
+                                loop st'
 
-processFile :: Context -> String -> IO ()
-processFile ctx src = do
-        input <- T.readFile src
-        _ <- process ctx input
-        return () --tmp
+processFile :: (MonadThrow m, MonadIO m) => String -> Plato m ()
+processFile src = do
+        input <- liftIO $ T.readFile src
+        process input
 
-processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> m Context
+process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
+process input = do
+        -- processing Parsing
+        ps <- src2ps input
+        -- processing Imports
+        let imps = P.importDecls ps
+        mapM_ processModule imps
+        -- processing Typing
+        typenv <- gets typingEnv
+        (typ, typenv') <- ps2typ typenv ps
+        modify $ \s -> s{typingEnv = typenv `M.union` typenv'}
+        -- processing Core
+        ctx <- gets context
+        cmds <- typ2core ctx typ
+        ctx' <- foldM processCommand ctx cmds
+        modify $ \s -> s{context = ctx'}
+
+processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> Plato m Context
 processCommand ctx Import{} = return ctx
 processCommand ctx (Bind name bind) = return $ V.cons (unLoc name, bind) ctx
 processCommand ctx (Eval t) = do
         liftIO $ print $ eval ctx (unLoc t)
         return ctx
 
-process :: (MonadThrow m, MonadIO m) => Context -> T.Text -> m Context
-process ctx input = do
-        ps <- src2ps input
-        typ <- ps2typ ps
-        cmds <- typ2core ctx typ
-        foldM processCommand ctx cmds
+processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
+processModule (L sp mod) = do
+        imped_list <- gets importedList
+        impng_list <- gets importingList
+        when (mod `elem` imped_list) $ return ()
+        when (mod `elem` impng_list) $ throwLocatedErr sp "Cyclic dependencies"
+        modify $ \s -> s{importingList = mod : impng_list}
+        base_path <- gets basePath
+        processFile (base_path ++ "/" ++ mod2path mod)
+        modify $ \s -> s{importingList = impng_list, importedList = mod : imped_list}

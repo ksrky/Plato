@@ -86,12 +86,12 @@ program_    : 'module' modid ';' body               { Program (Just $2) (fst $4)
 body        : impdecls ';' topdecls                 { ($1, reverse $3) }
             | topdecls                              { ([], reverse $1) }
 
-impdecls    :: { [Located ImpDecl] }
+impdecls    :: { [Located ModuleName] }
             : impdecls ';' impdecl                  { $3 : $1 }
 			| impdecl								{ [$1] }
 
-impdecl     :: { Located ImpDecl }
-            : 'import' modid                        { cSL $1 $2 (ImpDecl $2) }
+impdecl     :: { Located ModuleName }
+            : 'import' modid                        { $2 }
 
 modid       :: { Located ModuleName }
             : qconid                                { cL $1 (ModuleName (splitModid $1)) }

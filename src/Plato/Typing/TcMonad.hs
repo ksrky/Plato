@@ -48,10 +48,10 @@ check :: MonadThrow m => Bool -> Span -> String -> Tc m ()
 check True _ _ = return ()
 check False sp d = failTc sp d
 
-runTc :: MonadIO m => [(Name, Sigma)] -> Tc m a -> m a
+runTc :: MonadIO m => TypEnv -> Tc m a -> m a
 runTc binds (Tc tc) = do
         ref <- liftIO $ newIORef 0
-        let env = TcEnv{uniqs = ref, var_env = M.fromList binds}
+        let env = TcEnv{uniqs = ref, var_env = binds}
         tc env
 
 lift :: Monad m => m a -> Tc m a

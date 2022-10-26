@@ -29,6 +29,7 @@ dependencies:
   - array
   - bytestring
   - containers
+  - directory
   - haskeline
   - hspec
   - mtl

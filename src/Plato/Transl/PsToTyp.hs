@@ -16,6 +16,7 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import Data.List ((\\))
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
 transExpr :: MonadThrow m => Located P.Expr -> m (Located T.Expr)
@@ -93,7 +94,6 @@ transDecls decs = do
                                 | otherwise -> do
                                         ty' <- Writer.lift $ transType ty
                                         tell (mempty, [L sp $ T.VarD x ty'])
-                        -- tmp: | level st > 0 -> Writer.lift $ throwTypError sp "Variables should be declared in the top level"
                         _ -> return ()
         fields <- execWriterT $
                 forM decs $ \case
@@ -154,27 +154,22 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-processDecls :: (MonadIO m, MonadThrow m) => [T.FuncDecl] -> [T.FuncDecl] -> m [T.FuncDecl]
-processDecls decs binds = do
-        let env = map (\(T.FD var body ty) -> (unLoc var, unLoc ty)) (decs ++ binds)
-        forM binds $ \fd -> typeCheck env fd
-
-ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> m T.Program
-ps2typ (P.Program modn impds topds) = do
-        let imps = map (\(L _ (P.ImpDecl mn)) -> mn) impds
+ps2typ :: (MonadIO m, MonadThrow m) => T.TypEnv -> P.Program -> m (T.Program, T.TypEnv)
+ps2typ env (P.Program modn _ topds) = do
         (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl topds
         (fundecs, vardecs) <- transDecls (getDecls topds)
-        let env = map (\(T.FD var body ty) -> (unLoc var, unLoc ty)) (map unLoc condecs ++ fundecs)
-        fundecs' <- mapM (typeCheck env) fundecs
+        let env' = M.fromList [(unLoc var, unLoc ty) | T.FD var body ty <- map unLoc condecs ++ fundecs] `M.union` env
+        fundecs' <- mapM (typeCheck env') fundecs
         exps' <- forM exps $ \e -> do
-                (e', ty) <- typeInfer env e
+                (e', ty) <- typeInfer env' e
                 unless (isBasicType ty) $ throwLocatedErr (getSpan e) "Invalid type for evaluation expression" --tmp
                 return e'
-        return $
-                T.Program
+        return
+                ( T.Program
                         { T.mmodule = modn
-                        , T.imports = imps
                         , T.decls = tydecs ++ map (T.FuncD <$>) condecs ++ vardecs
                         , T.binds = fundecs'
                         , T.body = exps'
                         }
+                , env'
+                )
