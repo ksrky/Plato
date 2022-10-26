@@ -33,8 +33,7 @@ library
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
-      Plato.Interaction.Module
-      Plato.Interaction.Status
+      Plato.Interaction.Monad
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -90,8 +89,7 @@ executable plato
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
-      Plato.Interaction.Module
-      Plato.Interaction.Status
+      Plato.Interaction.Monad
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error

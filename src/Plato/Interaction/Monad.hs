@@ -1,7 +1,6 @@
-module Plato.Interaction.Status where
+module Plato.Interaction.Monad where
 
 import Plato.Core.Context
-import Plato.Interaction.Module
 
 import Control.Monad.State
 import qualified Data.Map.Strict as M

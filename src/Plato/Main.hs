@@ -1,9 +1,11 @@
 module Plato.Main where
 
 import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
+import Plato.Interaction.Monad
 import Plato.Syntax.Core
 import qualified Plato.Syntax.Parsing as P
 import Plato.Transl.PsToTyp
@@ -19,8 +21,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
-import Plato.Common.Name
-import Plato.Interaction.Status
 import System.Console.Haskeline
 
 runPlato :: String -> IO ()

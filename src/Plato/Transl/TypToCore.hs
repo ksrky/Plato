@@ -118,7 +118,7 @@ transType ctx = tratype
         tratype (T.RecT x ty) = do
                 ctx' <- addName x ctx
                 tyT2 <- transType ctx' (unLoc ty)
-                return $ C.TyRec (unLoc x) tyT2 -- tmp: unused
+                return $ C.TyRec (unLoc x) tyT2
         tratype (T.RecordT fieldtys) = do
                 fields' <- forM fieldtys $ \(l, field) -> (unLoc l,) <$> tratype (unLoc field)
                 return $ C.TyRecord fields'
