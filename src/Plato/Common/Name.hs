@@ -25,9 +25,6 @@ data NameSpace
         | TyconName
         deriving (Eq, Show)
 
--- | Provenance
-data Provenance = LocalDef | Imported ModuleName deriving (Eq, Show)
-
 varName :: T.Text -> Name
 varName = Name VarName
 

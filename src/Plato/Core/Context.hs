@@ -1,6 +1,7 @@
 module Plato.Core.Context where
 
 import Plato.Common.Error
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Core
@@ -10,38 +11,38 @@ import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Vector as V
 
-type Context = V.Vector (Name, Binding)
+type Context = V.Vector (GenName, Binding)
 
 emptyContext :: Context
 emptyContext = V.empty
 
-lookupContext :: Name -> Context -> Maybe Binding
+lookupContext :: GenName -> Context -> Maybe Binding
 lookupContext k v = do
         ((x, y), tl) <- V.uncons v
         if k == x then Just y else lookupContext k tl
 
-addBinding :: MonadThrow m => Located Name -> Binding -> Context -> m Context
-addBinding (L sp x) bind ctx = case lookupContext x ctx of
-        Just _ -> throwLocatedErr sp $ "Conflicting definition of " ++ show x
+addBinding :: MonadThrow m => GenName -> Binding -> Context -> m Context
+addBinding x bind ctx = case lookupContext x ctx of
+        Just _ | g_sort x /= System -> throwLocatedErr (g_loc x) $ "Conflicting definition of " ++ show x
         _ -> return $ V.cons (x, bind) ctx
 
-addName :: MonadThrow m => Located Name -> Context -> m Context
+addName :: MonadThrow m => GenName -> Context -> m Context
 addName x = addBinding x NameBind
 
-addNames :: MonadThrow m => [Located Name] -> Context -> m Context
+addNames :: MonadThrow m => [GenName] -> Context -> m Context
 addNames = flip $ foldM (flip addName)
 
-addFreshName :: Name -> Binding -> Context -> Context
+addFreshName :: GenName -> Binding -> Context -> Context
 addFreshName x bind ctx = case lookupContext x ctx of
-        Just _ -> addFreshName (x{nameText = T.snoc (nameText x) '\''}) bind ctx
+        Just _ -> addFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) bind ctx
         Nothing -> V.cons (x, bind) ctx
 
-pickFreshName :: Name -> Context -> (Name, Context)
+pickFreshName :: GenName -> Context -> (GenName, Context)
 pickFreshName x ctx = case lookupContext x ctx of
-        Just _ -> pickFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
+        Just _ -> pickFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) ctx
         Nothing -> (x, V.cons (x, NameBind) ctx)
 
-index2name :: Context -> Int -> Name
+index2name :: Context -> Int -> GenName
 index2name ctx x = fst (ctx V.! x)
 
 bindingShift :: Int -> Binding -> Binding
@@ -62,17 +63,17 @@ getTypeFromContext sp ctx i = case getBinding ctx i of
         TmAbbBind _ Nothing -> throwLocatedErr sp $ "No type recorded for variable " ++ show (index2name ctx i)
         _ -> throwLocatedErr sp $ "Wrong kind of binding for variable " ++ show (index2name ctx i)
 
-getVarIndex :: MonadThrow m => Context -> Located Name -> m Int
-getVarIndex ctx (L sp x) = case V.elemIndex x (V.map fst ctx) of
+getVarIndex :: MonadThrow m => Context -> GenName -> m Int
+getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
-        Nothing -> throwLocatedErr sp $ "Unbound variable name: '" ++ show x ++ "'"
+        Nothing -> throwLocatedErr (g_loc x) $ "Unbound variable name: '" ++ show x ++ "'"
 
-getVarIndex' :: Context -> Name -> Int
+getVarIndex' :: Context -> GenName -> Int
 getVarIndex' ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> i
         Nothing -> unreachable $ "Unbound variable name: '" ++ show x ++ "'"
 
-isVarExist :: Context -> Name -> Bool
+isVarExist :: Context -> GenName -> Bool
 isVarExist ctx x = case V.elemIndex x (V.map fst ctx) of
         Just _ -> True
         Nothing -> False

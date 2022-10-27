@@ -2,6 +2,7 @@
 
 module Plato.Typing.Renamer where
 
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -10,7 +11,7 @@ import Control.Exception.Safe
 import Control.Monad.State
 import Data.List
 
-type Names = [(Name, Name)]
+type Names = [(GenName, GenName)]
 
 data RenameState = RenameState
         { moduleName :: Maybe ModuleName
@@ -18,29 +19,29 @@ data RenameState = RenameState
         , level :: Int
         }
 
-initRenameState :: Maybe (Located ModuleName) -> RenameState
+initRenameState :: Maybe ModuleName -> RenameState
 initRenameState modn =
         RenameState
-                { moduleName = unLoc <$> modn
+                { moduleName = modn
                 , names = []
                 , level = 0
                 }
 
 getWrapperName :: RenameState -> Name
 getWrapperName st = case moduleName st of
-        Just modn | level st == 0 -> mod2conName modn
+        Just modn | level st == 0 -> mod2conName modn --tmp: conflict
         _ -> str2conName (':' : show (level st))
 
-updateNames :: [FuncDecl] -> Name -> Names -> Names
-updateNames decs name st = zip (map (\(FD x _ _) -> unLoc x) decs) (repeat name)
+updateNames :: [FuncD] -> GenName -> Names -> Names
+updateNames decs name st = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
 
-mkProj :: Located Name -> Located Name -> Expr
-mkProj r = ProjE (noLoc $ VarE r)
+mkProj :: GenName -> GenName -> Expr
+mkProj r = ProjE (VarE r)
 
-mkValue :: Names -> Located Name -> Expr
-mkValue names lx@(L sp x) = case lookup x names of
-        Just r -> mkProj (noLoc r) lx
-        Nothing -> VarE lx
+mkValue :: Names -> GenName -> Expr
+mkValue names x = case lookup x names of
+        Just r -> mkProj r x
+        Nothing -> VarE x
 
 -- | Renaming
 class Rename a where
@@ -48,29 +49,29 @@ class Rename a where
 
 instance Rename Expr where
         rename st (VarE x) = return $ mkValue (names st) x
-        rename st (AbsE x ty e) = AbsE x ty <$> rename st `traverse` e
-        rename st (AppE e1 e2) = AppE <$> rename st `traverse` e1 <*> rename st `traverse` e2
-        rename st (TAbsE xs e) = TAbsE xs <$> rename st `traverse` e
-        rename st (TAppE e tys) = TAppE <$> rename st `traverse` e <*> pure tys
+        rename st (AbsE x ty e) = AbsE x ty <$> rename st e
+        rename st (AppE e1 e2) = AppE <$> rename st e1 <*> rename st e2
+        rename st (TAbsE xs e) = TAbsE xs <$> rename st e
+        rename st (TAppE e tys) = TAppE <$> rename st e <*> pure tys
         rename st (LetE decs body) = do
-                (dec, st') <- renameFuncDecls st decs
-                body' <- rename st `traverse` body
+                (dec, st') <- renameFuncDs st decs
+                body' <- rename st' body
                 return $ LetE [dec] body'
         rename st (CaseE e ty alts) = do
-                e' <- rename st `traverse` e
-                alts' <- forM alts $ \(pat, body) -> (pat,) <$> rename st `traverse` body
+                e' <- rename st e
+                alts' <- forM alts $ \(pat, body) -> (pat,) <$> rename st body
                 return $ CaseE e' ty alts'
         rename st e = return e
 
-instance Rename FuncDecl where
-        rename st (FD var body ty) = FD var <$> rename st `traverse` body <*> pure ty
+instance Rename FuncD where
+        rename st (FuncD var body ty) = FuncD var <$> rename st body <*> pure ty
 
-renameFuncDecls :: MonadThrow m => RenameState -> [FuncDecl] -> m (FuncDecl, RenameState)
-renameFuncDecls st decs = do
-        let r = getWrapperName st
+renameFuncDs :: MonadThrow m => RenameState -> [FuncD] -> m (FuncD, RenameState)
+renameFuncDs st decs = do
+        let r = newName $ getWrapperName st
             st' = st{names = updateNames decs r (names st)}
-        fields <- forM decs $ \(FD var body ty) -> do
-                body' <- rename st' `traverse` body
+        fields <- forM decs $ \(FuncD var body ty) -> do
+                body' <- rename st' body
                 return (var, body')
-        let fieldtys = [(var, ty) | FD var _ ty <- decs]
-        return (FD (noLoc r) (noLoc $ RecordE fields) (noLoc $ RecordT fieldtys), st')
+        let fieldtys = [(var, ty) | FuncD var _ ty <- decs]
+        return (FuncD r (RecordE fields) (RecordT fieldtys), st')

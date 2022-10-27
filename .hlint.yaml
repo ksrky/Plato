@@ -59,5 +59,6 @@
 # To generate a suitable file for HLint do:
 # $ hlint --default > .hlint.yaml
 
-- ignore: { name: Use second }
 - ignore: { name: Fuse foldr/map }
+- ignore: { name: Use second }
+- ignore: { name: Use lambda-case }

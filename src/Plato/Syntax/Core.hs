@@ -1,5 +1,6 @@
 module Plato.Syntax.Core where
 
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 
@@ -11,28 +12,28 @@ data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 data Ty
         = TyVar Int Int
         | TyArr Ty Ty
-        | TyAll Name Kind Ty
-        | TyAbs Name Kind Ty
+        | TyAll GenName Kind Ty
+        | TyAbs GenName Kind Ty
         | TyApp Ty Ty
-        | TyRec Name Ty
-        | TyRecord [(Name, Ty)]
-        | TyVariant [(Name, [Ty])]
+        | TyRec GenName Ty
+        | TyRecord [(GenName, Ty)]
+        | TyVariant [(GenName, [Ty])]
         deriving (Eq, Show)
 
 data Term
         = TmVar Int Int
-        | TmAbs Name Ty Term
+        | TmAbs GenName Ty Term
         | TmApp Term Term
-        | TmTAbs Name Term
+        | TmTAbs GenName Term
         | TmTApp Term Ty
-        | TmLet Name Term Term
+        | TmLet GenName Term Term
         | TmFix Term
         | TmFold Ty
         | TmUnfold Ty
-        | TmProj Term Name
-        | TmRecord [(Name, Term)]
-        | TmTag Name [Term] Ty
-        | TmCase Term [(Name, (Int, Term))]
+        | TmProj Term GenName
+        | TmRecord [(GenName, Term)]
+        | TmTag GenName [Term] Ty
+        | TmCase Term [(GenName, (Int, Term))]
         deriving (Eq, Show)
 
 data Binding
@@ -45,7 +46,7 @@ data Binding
 
 data Command
         = Import ModuleName
-        | Bind (Located Name) Binding
+        | Bind GenName Binding
         | Eval (Located Term)
         deriving (Eq, Show)
 

@@ -62,7 +62,7 @@ process input = do
 
 processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> Plato m Context
 processCommand ctx Import{} = return ctx
-processCommand ctx (Bind name bind) = return $ V.cons (unLoc name, bind) ctx
+processCommand ctx (Bind name bind) = return $ V.cons (name, bind) ctx
 processCommand ctx (Eval t) = do
         liftIO $ print $ eval ctx (unLoc t)
         return ctx

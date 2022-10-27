@@ -2,6 +2,7 @@
 
 module Plato.Syntax.Typing where
 
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import {-# SOURCE #-} Plato.Typing.KindInfer
@@ -9,43 +10,37 @@ import {-# SOURCE #-} Plato.Typing.TcTypes
 
 import qualified Data.Map.Strict as M
 
-type TypLName = Located Name
-type TypLExpr = Located Expr
-type TypLPat = Located Pat
-type TypLType = Located Type
-type TypLDecl = Located Decl
-
 data Expr
-        = VarE TypLName
-        | AbsE TypLName (Maybe Type) TypLExpr
-        | AppE TypLExpr TypLExpr
-        | TAbsE [Located Name] TypLExpr
-        | TAppE TypLExpr [Type]
-        | LetE [FuncDecl] TypLExpr
-        | ProjE TypLExpr TypLName
-        | RecordE [(TypLName, TypLExpr)]
-        | CaseE TypLExpr (Maybe Type) [(TypLPat, TypLExpr)]
-        | TagE TypLName [TypLExpr] (Maybe Type)
-        | FoldE TypLType
-        | AnnE TypLExpr TypLType {-Sigma-}
+        = VarE GenName
+        | AbsE GenName (Maybe Type) Expr
+        | AppE Expr Expr
+        | TAbsE [GenName] Expr
+        | TAppE Expr [Type]
+        | LetE [FuncD] Expr
+        | ProjE Expr GenName
+        | RecordE [(GenName, Expr)]
+        | CaseE Expr (Maybe Type) [(Pat, Expr)]
+        | TagE GenName [Expr] (Maybe Type)
+        | FoldE Type
+        | AnnE Expr Type {-Sigma-}
         deriving (Eq, Show)
 
 data Pat
-        = VarP TypLName
-        | ConP TypLName [Located Pat]
+        = VarP GenName
+        | ConP GenName [Pat]
         | WildP
         deriving (Eq, Show)
 
 data Type
-        = VarT (Located TyVar)
-        | ConT TypLName
-        | ArrT TypLType TypLType
-        | AllT [(Located TyVar, Maybe Kind)] TypLType {- Rho -}
-        | AbsT TypLName (Maybe Kind) TypLType
-        | AppT TypLType TypLType
-        | RecT TypLName TypLType
-        | RecordT [(TypLName, TypLType)]
-        | SumT [(TypLName, [TypLType])]
+        = VarT TyVar
+        | ConT GenName
+        | ArrT Type Type
+        | AllT [(TyVar, Maybe Kind)] Type {- Rho -}
+        | AbsT GenName (Maybe Kind) Type
+        | AppT Type Type
+        | RecT GenName Type
+        | RecordT [(GenName, Type)]
+        | SumT [(GenName, [Type])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -55,20 +50,20 @@ data Kind
         | ArrK Kind Kind
         deriving (Eq, Show)
 
-data FuncDecl = FD TypLName TypLExpr TypLType deriving (Eq, Show)
+data FuncD = FuncD GenName Expr Type deriving (Eq, Show)
 
 data Decl
-        = TypeD TypLName TypLType
-        | VarD TypLName TypLType
-        | FuncD FuncDecl
+        = TypeD GenName Type
+        | VarD GenName Type
+        | ConD FuncD
         deriving (Eq, Show)
 
 data Program = Program
-        { mmodule :: Maybe (Located ModuleName)
-        , decls :: [TypLDecl]
-        , binds :: [FuncDecl]
-        , body :: [TypLExpr]
+        { mmodule :: Maybe ModuleName
+        , decls :: [Located Decl]
+        , binds :: [FuncD]
+        , body :: [Located Expr]
         }
         deriving (Eq, Show)
 
-type TypEnv = M.Map Name Type {- Sigma -}
+type TypEnv = M.Map GenName Type {- Sigma -}

@@ -4,6 +4,7 @@
 module Plato.Typing.TypeCheck where
 
 import Plato.Common.Error
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -17,16 +18,13 @@ import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List
 
-typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncDecl -> m FuncDecl
-typeCheck env (FD var body ty) = runTc env $ do
-        (ann_expr, ty') <- inferSigma (cL body $ AnnE body ty)
-        body' <- case ann_expr of
-                L _ (AnnE e t) -> zonkExpr `traverse` e
-                _ -> unreachable $ show ann_expr
+typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncD -> m FuncD
+typeCheck env (FuncD var body ty) = runTc env $ do
+        (AnnE body' _, ty') <- inferSigma (AnnE body ty)
         ty'' <- zonkType ty'
-        return (FD var body' (cL ty ty''))
+        return (FuncD var body' ty'')
 
-typeInfer :: (MonadIO m, MonadThrow m) => TypEnv -> Located Expr -> m (Located Expr, Sigma)
+typeInfer :: (MonadIO m, MonadThrow m) => TypEnv -> Expr -> m (Expr, Sigma)
 typeInfer env e = runTc env $ do
         (e', ty') <- inferSigma e
         ty'' <- zonkType ty'
@@ -34,7 +32,7 @@ typeInfer env e = runTc env $ do
 
 isBasicType :: Type -> Bool
 isBasicType ConT{} = True
-isBasicType (AppT fun res) = isBasicType (unLoc fun) && isBasicType (unLoc res)
+isBasicType (AppT fun res) = isBasicType fun && isBasicType res
 isBasicType _ = False
 
 data Expected a = Infer (IORef a) | Check a
@@ -45,17 +43,17 @@ data Expected a = Infer (IORef a) | Check a
 -- tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
-checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(Located Name, Sigma)]
+checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(GenName, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
-inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(Located Name, Sigma)], Sigma)
+inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(GenName, Sigma)], Sigma)
 inferPat pat = do
         ref <- newTcRef (error "inferRho: empty result")
         binds <- tcPat pat (Infer ref)
         tc <- readTcRef ref
         return (binds, tc)
 
-tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(Located Name, Sigma)]
+tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(GenName, Sigma)]
 tcPat WildP _ = return []
 tcPat (VarP v) (Infer ref) = do
         ty <- newTyVar
@@ -64,96 +62,93 @@ tcPat (VarP v) (Infer ref) = do
 tcPat (VarP v) (Check ty) = return [(v, ty)]
 tcPat (ConP con ps) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
-        envs <- mapM check_arg (map unLoc ps `zip` arg_tys)
+        envs <- mapM check_arg (ps `zip` arg_tys)
         instPatSigma res_ty exp_ty
         return (concat envs)
     where
         check_arg (p, ty) = checkPat p ty
 
-instPatSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Tc m (Located Expr -> Located Expr)
+instPatSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Tc m (Expr -> Expr)
 instPatSigma pat_ty (Infer ref) = writeTcRef ref pat_ty >> return id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadIO m, MonadThrow m) => Located Name -> Tc m ([Sigma], Tau) --tmp: data constructor be in TcEnv
+instDataCon :: (MonadIO m, MonadThrow m) => GenName -> Tc m ([Sigma], Tau) --tmp: data constructor be in TcEnv
 instDataCon con = do
         con_ty <- lookupVar con
         (_, con_ty') <- instantiate con_ty
         return $ go con_ty' []
     where
         go :: Type -> [Type] -> ([Type], Type)
-        go (ArrT arg res) acc = go (unLoc res) (unLoc arg : acc)
+        go (ArrT arg res) acc = go res (arg : acc)
         go ty acc = (reverse acc, ty)
 
 ------------------------------------------
 -- tcRho, and its variants
 ------------------------------------------
-checkRho :: (MonadIO m, MonadThrow m) => Located Expr -> Rho -> Tc m (Located Expr)
+checkRho :: (MonadIO m, MonadThrow m) => Expr -> Rho -> Tc m Expr
 checkRho expr ty = tcRho expr (Check ty)
 
-inferRho :: (MonadIO m, MonadThrow m) => Located Expr -> Tc m (Located Expr, Rho)
+inferRho :: (MonadIO m, MonadThrow m) => Expr -> Tc m (Expr, Rho)
 inferRho expr = do
         ref <- newTcRef (error "inferRho: empty result")
         expr <- tcRho expr (Infer ref)
         (expr,) <$> readTcRef ref
 
-tcRho :: (MonadIO m, MonadThrow m) => Located Expr -> Expected Rho -> Tc m (Located Expr)
-tcRho (L sp expr) = tcRho' expr
-    where
-        tcRho' :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Tc m (Located Expr)
-        tcRho' (VarE v) exp_ty = do
-                v_sigma <- lookupVar v
-                coercion <- instSigma v_sigma exp_ty
-                return $ coercion (L sp $ VarE v)
-        tcRho' (AppE fun arg) exp_ty = do
-                (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- unifyFun fun_ty
-                arg' <- checkSigma arg arg_ty
-                coercion <- instSigma res_ty exp_ty
-                return $ coercion $ L sp $ AppE fun' arg'
-        tcRho' (AbsE var Nothing body) (Check exp_ty) = do
-                (var_ty, body_ty) <- unifyFun exp_ty
-                body' <- extendVarEnv (unLoc var) var_ty (checkRho body body_ty)
-                return $ L sp $ AbsE var (Just var_ty) body'
-        tcRho' (AbsE var Nothing body) (Infer ref) = do
-                var_ty <- newTyVar
-                (body', body_ty) <- extendVarEnv (unLoc var) var_ty (inferRho body)
-                writeTcRef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ L sp $ AbsE var (Just var_ty) body'
-        tcRho' (LetE decs body) exp_ty = do
-                (decs', binds) <- execWriterT $
-                        forM decs $ \(FD var var_e ann_ty) -> do
-                                (var_e', var_ty) <- Writer.lift $ inferSigma (cL var_e $ AnnE var_e ann_ty)
-                                let d = FD var var_e' (L (getSpan ann_ty) var_ty)
-                                tell ([d], [(unLoc var, var_ty)])
-                body' <- extendVarEnvList binds (tcRho' (unLoc body) exp_ty)
-                return $ L sp $ LetE decs' body'
-        tcRho' (CaseE match _ alts) (Check exp_ty) = do
-                (match', match_ty) <- inferRho match
-                alts' <- forM alts $ \(pat, body) -> do
-                        checkPat (unLoc pat) match_ty
-                        body' <- checkRho body exp_ty
-                        return (pat, body')
-                return $ L sp $ CaseE match' (Just match_ty) alts'
-        tcRho' (CaseE match _ alts) (Infer ref) = do
-                (match', match_ty) <- inferRho match
-                body_tys <- forM alts $ \(pat, body) -> do
-                        checkPat (unLoc pat) match_ty
-                        inferRho body
-                let pairs = filter ((2 ==) . length) $ subsequences body_tys
-                forM_ pairs $ \[(e1, ty1), (e2, ty2)] -> do
-                        subsCheck ty1 ty2
-                        subsCheck ty2 ty1
-                return $ L sp $ CaseE match' (Just match_ty) alts
-        tcRho' (AnnE body ann_ty) exp_ty = do
-                body' <- checkSigma body (unLoc ann_ty)
-                coercion <- instSigma (unLoc ann_ty) exp_ty --tmp
-                return $ L sp $ AnnE body' ann_ty
-        tcRho' e _ = return $ L sp e
+tcRho :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Tc m Expr
+tcRho (VarE v) exp_ty = do
+        v_sigma <- lookupVar v
+        coercion <- instSigma v_sigma exp_ty
+        return $ coercion (VarE v)
+tcRho (AppE fun arg) exp_ty = do
+        (fun', fun_ty) <- inferRho fun
+        (arg_ty, res_ty) <- unifyFun fun_ty
+        arg' <- checkSigma arg arg_ty
+        coercion <- instSigma res_ty exp_ty
+        return $ coercion $ AppE fun' arg'
+tcRho (AbsE var Nothing body) (Check exp_ty) = do
+        (var_ty, body_ty) <- unifyFun exp_ty
+        body' <- extendVarEnv var var_ty (checkRho body body_ty)
+        return $ AbsE var (Just var_ty) body'
+tcRho (AbsE var Nothing body) (Infer ref) = do
+        var_ty <- newTyVar
+        (body', body_ty) <- extendVarEnv var var_ty (inferRho body)
+        writeTcRef ref (ArrT var_ty body_ty)
+        return $ AbsE var (Just var_ty) body'
+tcRho (LetE decs body) exp_ty = do
+        (decs', binds) <- execWriterT $
+                forM decs $ \(FuncD var var_e ann_ty) -> do
+                        (AnnE var_e' _, var_ty) <- Writer.lift $ inferSigma (AnnE var_e ann_ty)
+                        let d = FuncD var var_e' var_ty
+                        tell ([d], [(var, var_ty)])
+        body' <- extendVarEnvList binds (tcRho body exp_ty)
+        return $ LetE decs' body'
+tcRho (CaseE match _ alts) (Check exp_ty) = do
+        (match', match_ty) <- inferRho match
+        alts' <- forM alts $ \(pat, body) -> do
+                checkPat pat match_ty
+                body' <- checkRho body exp_ty
+                return (pat, body')
+        return $ CaseE match' (Just match_ty) alts'
+tcRho (CaseE match _ alts) (Infer ref) = do
+        (match', match_ty) <- inferRho match
+        body_tys <- forM alts $ \(pat, body) -> do
+                checkPat pat match_ty
+                inferRho body
+        let pairs = filter ((2 ==) . length) $ subsequences body_tys
+        forM_ pairs $ \[(e1, ty1), (e2, ty2)] -> do
+                subsCheck ty1 ty2
+                subsCheck ty2 ty1
+        return $ CaseE match' (Just match_ty) alts
+tcRho (AnnE body ann_ty) exp_ty = do
+        body' <- checkSigma body ann_ty
+        coercion <- instSigma ann_ty exp_ty --tmp
+        return $ AnnE body' ann_ty
+tcRho e _ = return e
 
 ------------------------------------------
 -- inferSigma and checkSigma
 ------------------------------------------
-inferSigma :: (MonadIO m, MonadThrow m) => Located Expr -> Tc m (Located Expr, Sigma)
+inferSigma :: (MonadIO m, MonadThrow m) => Expr -> Tc m (Expr, Sigma)
 inferSigma e = do
         (expr, exp_ty) <- inferRho e
         env_tys <- getEnvTypes
@@ -164,60 +159,59 @@ inferSigma e = do
                 then return (expr, exp_ty)
                 else (expr,) <$> quantify forall_tvs exp_ty
 
-checkSigma :: (MonadIO m, MonadThrow m) => Located Expr -> Sigma -> Tc m (Located Expr)
+checkSigma :: (MonadIO m, MonadThrow m) => Expr -> Sigma -> Tc m Expr
 checkSigma expr sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         expr' <- checkRho expr rho
         env_tys <- getEnvTypes
         esc_tvs <- getFreeTyVars (sigma : env_tys)
-        let bad_tvs = filter ((`elem` esc_tvs) . unLoc) skol_tvs
+        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         check (null bad_tvs) NoSpan "Type not polymorphic enough" --tmp
-        return $ coercion $ cL expr' $ TAbsE (map (tyVarName <$>) skol_tvs) expr'
+        return $ coercion $ TAbsE (map tyVarName skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --
 ------------------------------------------
 -- See Technical Appendix p53 for creating coercion terms
-subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Tc m (Located Expr -> Located Expr)
+subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Tc m (Expr -> Expr)
 subsCheck sigma1 sigma2 = do
         (co1, skol_tvs, rho2) <- skolemise sigma2
         co2 <- subsCheckRho sigma1 rho2
         esc_tvs <- getFreeTyVars [sigma1, sigma2]
-        let bad_tvs = filter ((`elem` esc_tvs) . unLoc) skol_tvs
+        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         check (null bad_tvs) NoSpan "Subsumption check failed" --tmp
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (cL e $ TAbsE (map (tyVarName <$>) skol_tvs) (co2 e))
+                else return $ \e -> co1 (TAbsE (map tyVarName skol_tvs) (co2 e))
 
-subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Located Expr -> Located Expr)
+subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckRho sigma1@AllT{} rho2 = do
         (co1, rho1) <- instantiate sigma1
         co2 <- subsCheckRho rho1 rho2
         return $ \e -> (co2 . co1) e
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
-        subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
+        subsCheckFun a1 r1 a2 r2
 subsCheckRho (ArrT a1 r1) rho2 = do
         (a2, r2) <- unifyFun rho2
-        subsCheckFun (unLoc a1) (unLoc r1) a2 r2
+        subsCheckFun a1 r1 a2 r2
 subsCheckRho tau1 tau2 = do
         unify tau1 tau2
         return id
 
-subsCheckFun :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Sigma -> Rho -> Tc m (Located Expr -> Located Expr)
+subsCheckFun :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckFun a1 r1 a2 r2 = do
         co_arg <- subsCheck a2 a1
         co_res <- subsCheckRho r1 r2
         return
                 ( \f ->
-                        cL f $
-                                AbsE
-                                        (noLoc $ str2varName "x")
-                                        (Just a2)
-                                        (co_res $ cL f $ AppE f (co_arg (noLoc $ VarE $ noLoc $ str2varName "x")))
+                        AbsE
+                                (newName $ str2varName "x")
+                                (Just a2)
+                                (co_res $ AppE f (co_arg (VarE $ newName $ str2varName "x")))
                 )
 
-instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Tc m (Located Expr -> Located Expr)
+instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Tc m (Expr -> Expr)
 instSigma t1 (Check t2) = subsCheckRho t1 t2
 instSigma t1 (Infer r) = do
         (coercion, t1') <- instantiate t1

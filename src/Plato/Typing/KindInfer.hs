@@ -3,10 +3,12 @@
 module Plato.Typing.KindInfer where
 
 import Plato.Common.Error
+import Plato.Common.GenName
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
+import Plato.Typing.TcMonad (newTyVar)
 import Plato.Typing.TcTypes (tyVarName)
 
 import Control.Exception.Safe
@@ -16,7 +18,6 @@ import Data.Bifunctor (Bifunctor (first, second))
 import Data.IORef
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Plato.Typing.TcMonad (newTyVar)
 
 inferKind :: (MonadThrow m, MonadIO m) => KnTable -> Type -> m (Type, Kind)
 inferKind knenv ty = runKi knenv $ do
@@ -25,16 +26,16 @@ inferKind knenv ty = runKi knenv $ do
         kn' <- zonkKind kn
         return (ty'', kn')
 
-checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Located Type -> m (Located Type)
-checkKindStar knenv (L sp ty) = runKi knenv $ do
+checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Span -> Type -> m Type
+checkKindStar knenv sp ty = runKi knenv $ do
         (ty', kn) <- infer ty
         ty'' <- zonkType ty'
         kn' <- zonkKind kn
         when (kn /= StarK) $ lift $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
-        return $ L sp ty''
+        return ty''
 
 -- | kind Table
-type KnTable = M.Map Name Kind
+type KnTable = M.Map GenName Kind
 
 emptyKnTable :: KnTable
 emptyKnTable = M.empty
@@ -65,7 +66,7 @@ metaKvs = foldr go []
 -- | Kind environment
 data KiEnv = KiEnv
         { uniqs :: IORef Uniq
-        , var_env :: M.Map Name Kind
+        , var_env :: KnTable
         }
 
 -- | Inference Monad
@@ -109,23 +110,23 @@ writeKiRef :: MonadIO m => IORef a -> a -> Ki m ()
 writeKiRef r v = lift (liftIO $ writeIORef r v)
 
 -- | Kind environment
-extendEnv :: Name -> Kind -> Ki m a -> Ki m a
+extendEnv :: GenName -> Kind -> Ki m a -> Ki m a
 extendEnv x kn (Ki m) = Ki (m . extend)
     where
         extend env = env{var_env = M.insert x kn (var_env env)}
 
-extendEnvList :: [(Name, Kind)] -> Ki m a -> Ki m a
+extendEnvList :: [(GenName, Kind)] -> Ki m a -> Ki m a
 extendEnvList binds tr = foldr (uncurry extendEnv) tr binds
 
-getEnv :: Monad m => Ki m (M.Map Name Kind)
+getEnv :: Monad m => Ki m KnTable
 getEnv = Ki (return . var_env)
 
-lookupVar :: MonadThrow m => Located Name -> Ki m Kind
-lookupVar (L sp x) = do
+lookupVar :: MonadThrow m => GenName -> Ki m Kind
+lookupVar x = do
         env <- getEnv
         case M.lookup x env of
                 Just ty -> return ty
-                Nothing -> lift $ throwLocatedErr sp $ "Not in scope: " ++ show x
+                Nothing -> lift $ throwLocatedErr (g_loc x) $ "Not in scope: " ++ show x
 
 -- | KMeta
 newKnVar :: MonadIO m => Ki m Kind
@@ -176,18 +177,18 @@ zonkKind (MetaK kv) = do
 zonkType :: MonadIO m => Type -> Ki m Type
 zonkType (VarT tv) = return $ VarT tv
 zonkType (ConT x) = return $ ConT x
-zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
+zonkType (ArrT arg res) = ArrT <$> zonkType arg <*> zonkType res
 zonkType (AllT tvs ty) = do
         tvs' <- forM tvs $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
-        AllT tvs' <$> zonkType `traverse` ty
-zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
-zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (RecT x ty) = RecT x <$> zonkType `traverse` ty
+        AllT tvs' <$> zonkType ty
+zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType ty
+zonkType (AppT fun arg) = AppT <$> zonkType fun <*> zonkType arg
+zonkType (RecT x ty) = RecT x <$> zonkType ty
 zonkType (RecordT fields) = do
-        fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
+        fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType ty
         return $ RecordT fields'
 zonkType (SumT fields) = do
-        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM (zonkType `traverse`) tys
+        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM zonkType tys
         return $ SumT fields'
 zonkType MetaT{} = unreachable ""
 
@@ -227,51 +228,51 @@ occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail" --tmp
 infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
 infer t = case t of
         VarT tv -> do
-                kn <- lookupVar (tyVarName <$> tv)
+                kn <- lookupVar (tyVarName tv)
                 return (VarT tv, kn)
         ConT x -> do
                 kn <- lookupVar x
                 return (ConT x, kn)
         ArrT ty1 ty2 -> do
-                (ty1', kn1) <- infer (unLoc ty1)
-                (ty2', kn2) <- infer (unLoc ty2)
+                (ty1', kn1) <- infer ty1
+                (ty2', kn2) <- infer ty2
                 s3 <- unify kn1 StarK
                 s4 <- unify kn2 StarK
-                return (ArrT (cL ty1 ty1') (cL ty2 ty2'), StarK)
+                return (ArrT ty1' ty2', StarK)
         AllT tvs ty1 -> do
                 binds <- forM tvs $ \tv -> do
                         kv <- newKnVar
                         return (fst tv, kv)
-                (ty1', kn1) <- extendEnvList (map (first (tyVarName . unLoc)) binds) (infer (unLoc ty1))
+                (ty1', kn1) <- extendEnvList (map (first tyVarName) binds) (infer ty1)
                 unify kn1 StarK
-                return (AllT (map (second Just) binds) (cL ty1 ty1'), StarK)
+                return (AllT (map (second Just) binds) ty1', StarK)
         AbsT x _ ty1 -> do
                 kv <- newKnVar
-                (ty1', kn1) <- extendEnv (unLoc x) kv (infer (unLoc ty1))
-                return (AbsT x (Just kv) (cL ty1 ty1'), ArrK kv kn1)
+                (ty1', kn1) <- extendEnv x kv (infer ty1)
+                return (AbsT x (Just kv) ty1', ArrK kv kn1)
         AppT ty1 ty2 -> do
                 kv <- newKnVar
-                (ty1', kn1) <- infer (unLoc ty1)
-                (ty2', kn2) <- infer (unLoc ty2)
+                (ty1', kn1) <- infer ty1
+                (ty2', kn2) <- infer ty2
                 unify kn1 (ArrK kn2 kv)
-                return (AppT (cL ty1 ty1') (cL ty2 ty2'), kv)
+                return (AppT ty1' ty2', kv)
         RecT x ty1 -> do
                 kv <- newKnVar
-                (ty1', kn1) <- extendEnv (unLoc x) kv (infer (unLoc ty1))
+                (ty1', kn1) <- extendEnv x kv (infer ty1)
                 s2 <- unify kn1 StarK
-                return (RecT x (cL ty1 ty1'), StarK)
+                return (RecT x ty1', StarK)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do
-                        (ty1', kn1) <- infer (unLoc ty1)
+                        (ty1', kn1) <- infer ty1
                         unify kn1 StarK
-                        return (x, cL ty1 ty1')
+                        return (x, ty1')
                 return (RecordT fields', StarK)
         SumT fields -> do
                 fields' <- forM fields $ \(x, tys) -> do
                         tys' <- forM tys $ \ty1 -> do
-                                (ty1', kn1) <- infer (unLoc ty1)
+                                (ty1', kn1) <- infer ty1
                                 unify kn1 StarK
-                                return $ cL ty1 ty1'
+                                return ty1'
                         return (x, tys')
                 return (SumT fields', StarK)
         MetaT{} -> unreachable ""

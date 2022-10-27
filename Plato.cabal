@@ -27,6 +27,7 @@ library
   exposed-modules:
       Main
       Plato.Common.Error
+      Plato.Common.GenName
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
@@ -83,6 +84,7 @@ executable plato
   main-is: Main.hs
   other-modules:
       Plato.Common.Error
+      Plato.Common.GenName
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.SrcLoc
