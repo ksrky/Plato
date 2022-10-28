@@ -3,47 +3,47 @@ module Plato.Syntax.Parsing where
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 
-type PsLName = Located Name
-type PsLExpr = Located Expr
-type PsLPat = Located Pat
-type PsLType = Located Type
-type PsLDecl = Located Decl
+type LName = Located Name
+type LExpr = Located Expr
+type LPat = Located Pat
+type LType = Located Type
+type LDecl = Located Decl
 
 data Expr
-        = VarE PsLName
-        | AppE PsLExpr PsLExpr
-        | OpE PsLExpr PsLName PsLExpr
-        | LamE [PsLName] PsLExpr
-        | LetE [PsLDecl] PsLExpr
-        | CaseE PsLExpr [(PsLPat, PsLExpr)]
-        | FactorE PsLExpr -- removed after fixity resolution
+        = VarE LName
+        | AppE LExpr LExpr
+        | OpE LExpr LName LExpr
+        | LamE [LName] LExpr
+        | LetE [LDecl] LExpr
+        | CaseE LExpr [(LPat, LExpr)]
+        | FactorE LExpr -- removed after fixity resolution
         deriving (Eq, Show)
 
 data Pat
-        = ConP PsLName [PsLPat]
-        | VarP PsLName
+        = ConP LName [LPat]
+        | VarP LName
         | WildP
         deriving (Eq, Show)
 
 data Type
-        = VarT PsLName
-        | ConT PsLName
-        | AppT PsLType PsLType
-        | ArrT PsLType PsLType
-        | AllT [PsLName] PsLType
+        = VarT LName
+        | ConT LName
+        | AppT LType LType
+        | ArrT LType LType
+        | AllT [LName] LType
         deriving (Eq, Show)
 
 data Decl
-        = FuncD PsLName [PsLName] PsLExpr
-        | FuncTyD PsLName PsLType
+        = FuncD LName [LName] LExpr
+        | FuncTyD LName LType
         deriving (Eq, Show)
 
 data TopDecl
-        = DataD PsLName [PsLName] [(PsLName, [PsLType])]
-        | TypeD PsLName [PsLName] PsLType
+        = DataD LName [LName] [(LName, [LType])]
+        | TypeD LName [LName] LType
         | FixD
-        | Decl PsLDecl
-        | Eval PsLExpr
+        | Decl LDecl
+        | Eval LExpr
         deriving (Eq, Show)
 
 data Program = Program

@@ -72,7 +72,7 @@ transExpr knenv ctx = traexpr
                                 as <- (concat <$>) <$> forM ps $ \p -> case p of
                                         T.VarP x -> return [x]
                                         T.WildP -> return []
-                                        T.ConP{} -> throwPlainErr "pattern argument" --tmp
+                                        T.ConP{} -> throwString "pattern argument" --tmp
                                 ctx' <- foldM (flip addName) ctx as
                                 ti <- transExpr knenv ctx' body
                                 return (li, (length as, ti))
@@ -131,7 +131,7 @@ transType ctx = tratype
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
 transKind T.StarK = return C.KnStar
-transKind T.MetaK{} = throwPlainErr "Kind inference failed" --tmp
+transKind T.MetaK{} = throwString "Kind inference failed" --tmp
 transKind (T.ArrK kn1 kn2) = C.KnArr <$> transKind kn1 <*> transKind kn2
 
 transKind' :: C.Kind -> T.Kind

@@ -76,20 +76,20 @@ tyeqv ctx = tyeqv'
                         (TyRecord fields1, TyRecord fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
                                         Just tyTi2 -> tyeqv ctx tyTi1 tyTi2
-                                        Nothing -> throwPlainErr $ "label " ++ show li1 ++ " not found"
+                                        Nothing -> throwString $ "label " ++ show li1 ++ " not found"
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> tyeqv ctx tyTi1 tyTi2
-                                        Nothing -> throwPlainErr $ "label " ++ show li2 ++ " not found"
-                        (TyRecord _, TyRecord _) -> throwPlainErr "Record field lengths are not equal"
+                                        Nothing -> throwString $ "label " ++ show li2 ++ " not found"
+                        (TyRecord _, TyRecord _) -> throwString "Record field lengths are not equal"
                         (TyVariant fields1, TyVariant fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
                                         Just tyTi2 -> zipWithM (tyeqv ctx) tyTi1 tyTi2
-                                        Nothing -> throwPlainErr $ "label " ++ show li1 ++ " not found." ++ show fields1 ++ show fields2
+                                        Nothing -> throwString $ "label " ++ show li1 ++ " not found." ++ show fields1 ++ show fields2
                                 forM_ fields2 $ \(li2, tyTi2) -> case lookup li2 fields1 of
                                         Just tyTi1 -> zipWithM (tyeqv ctx) tyTi1 tyTi2
-                                        Nothing -> throwPlainErr $ "label " ++ show li2 ++ " not found"
-                        (TyVariant fields1, TyVariant fields2) -> throwPlainErr "Variant field lengths are not equal"
-                        _ -> throwPlainErr $ "type mismatch: " ++ pretty (ctx, tyS') ++ ", " ++ pretty (ctx, tyT')
+                                        Nothing -> throwString $ "label " ++ show li2 ++ " not found"
+                        (TyVariant fields1, TyVariant fields2) -> throwString "Variant field lengths are not equal"
+                        _ -> throwString $ "type mismatch: " ++ pretty (ctx, tyS') ++ ", " ++ pretty (ctx, tyT')
 
 ----------------------------------------------------------------
 -- Type check
@@ -99,10 +99,10 @@ getkind ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind tyT (Just knK) -> do
                 knK' <- kindof ctx tyT
-                unless (knK /= knK') $ throwPlainErr "Kind attachment failed"
+                unless (knK /= knK') $ throwString "Kind attachment failed"
                 return knK
         TyAbbBind tyT Nothing -> kindof ctx tyT
-        _ -> throwPlainErr $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
+        _ -> throwString $ "getkind: Wrong kind of binding for variable " ++ pretty (index2name ctx i)
 
 kindof :: MonadThrow m => Context -> Ty -> m Kind
 kindof ctx tyT = case tyT of
@@ -120,8 +120,8 @@ kindof ctx tyT = case tyT of
                 knK2 <- kindof ctx tyT2
                 case knK1 of
                         KnArr knK11 knK12 | knK2 == knK11 -> return knK12
-                        KnArr{} -> throwPlainErr (getInfo tyT1) "parameter kind mismatch"
-                        _ -> throwPlainErr "arrow kind expected"
+                        KnArr{} -> throwString (getInfo tyT1) "parameter kind mismatch"
+                        _ -> throwString "arrow kind expected"
         TyAll tyX knK1 tyT2 -> do
                 ctx' <- addBinding tyX (TyVarBind knK1) ctx
                 checkKindStar (getInfo tyT2) ctx' tyT2
@@ -129,7 +129,7 @@ kindof ctx tyT = case tyT of
         TyRec tyX knK1 tyT2 -> do
                 ctx' <- addBinding tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
-                unless (knK1 == knK2) $ throwPlainErr (getInfo tyT2) $ "Kind " ++ show knK1 ++ " expected"
+                unless (knK1 == knK2) $ throwString (getInfo tyT2) $ "Kind " ++ show knK1 ++ " expected"
                 return KnStar
         TyRecord fieldtys -> do
                 forM_ fieldtys $ \(l, tyS) -> checkKindStar fi ctx tyS
@@ -144,7 +144,7 @@ checkKindStar ctx tyT = do
         k <- kindof ctx tyT
         if k == KnStar
                 then return ()
-                else throwPlainErr $ "Kind * expected: " ++ pretty (ctx, tyT)
+                else throwString $ "Kind * expected: " ++ pretty (ctx, tyT)
 
 typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
@@ -161,7 +161,7 @@ typeof ctx t = case t of
                         TyArr tyT11 tyT12 -> do
                                 tyeqv ctx tyT2 tyT11
                                 return tyT12
-                        _ -> throwPlainErr (getInfo tyT1) "arrow type expected"
+                        _ -> throwString (getInfo tyT1) "arrow type expected"
         TmTAbs tyX t2 -> do
                 ctx' <- addBinding tyX (TyVarBind knK1) ctx
                 tyT2 <- typeof ctx' t2
@@ -171,8 +171,8 @@ typeof ctx t = case t of
                 tyT1 <- typeof ctx t1
                 case simplifyty ctx tyT1 of
                         TyAll _ knK11 tyT12 | knK11 == knKT2 -> return $ typeSubstTop tyT2 tyT12
-                        TyAll _ knK11 tyT12 -> throwPlainErr "Type argument has wrong kind"
-                        _ -> throwPlainErr (getInfo tyT1) "universal type expected"
+                        TyAll _ knK11 tyT12 -> throwString "Type argument has wrong kind"
+                        _ -> throwString (getInfo tyT1) "universal type expected"
         TmLet x t1 t2 -> do
                 tyT1 <- typeof ctx t1
                 ctx' <- addBinding x (VarBind tyT1) ctx
@@ -184,20 +184,20 @@ typeof ctx t = case t of
                         TyArr tyT11 tyT12 -> do
                                 tyeqv ctx tyT12 tyT11
                                 return tyT12
-                        _ -> throwPlainErr "arrow type expected"
+                        _ -> throwString "arrow type expected"
         TmFold tyS -> case simplifyty ctx tyS of
                 TyRec _ _ tyT -> return $ TyArr (typeSubstTop tyS tyT) tyS
-                _ -> throwPlainErr "recursive type expected"
+                _ -> throwString "recursive type expected"
         TmUnfold tyS -> case simplifyty ctx tyS of
                 TyRec _ _ tyT -> return $ TyArr tyS (typeSubstTop tyS tyT)
-                _ -> throwPlainErr "recursive type expected"
+                _ -> throwString "recursive type expected"
         TmProj t1 l -> do
                 tyT1 <- typeof ctx t1
                 case simplifyty ctx tyT1 of
                         TyRecord fieldtys -> case lookup l fieldtys of
                                 Just tyT -> return tyT
-                                Nothing -> throwPlainErr $ "label " ++ show l ++ " not found in " ++ pretty (ctx, tyT1)
-                        _ -> throwPlainErr "Expected record type"
+                                Nothing -> throwString $ "label " ++ show l ++ " not found in " ++ pretty (ctx, tyT1)
+                        _ -> throwString "Expected record type"
         TmRecord fields -> do
                 fieldtys <- forM fields $ \(li, ti) -> do
                         tyTi <- typeof ctx ti
@@ -209,8 +209,8 @@ typeof ctx t = case t of
                                 tyTi <- mapM (typeof ctx) ts1
                                 mapM_ (uncurry $ tyeqv ctx) (zip tyTi tyTiExpected)
                                 return tyT2
-                        Nothing -> throwPlainErr $ "label " ++ pretty li ++ " not found"
-                tyT2' -> throwPlainErr $ "Expected variant type, but got " ++ pretty (ctx, tyT2')
+                        Nothing -> throwString $ "label " ++ pretty li ++ " not found"
+                tyT2' -> throwString $ "Expected variant type, but got " ++ pretty (ctx, tyT2')
         TmCase t alts -> do
                 tyT <- typeof ctx t
                 case simplifytyid ctx $ simplifyty ctx tyT of
@@ -228,10 +228,10 @@ typeof ctx t = case t of
                                                 let ctx' = addFreshName dummyVarName (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
-                                        Nothing -> throwPlainErr $ "label " ++ show li ++ " not found"
+                                        Nothing -> throwString $ "label " ++ show li ++ " not found"
                                 forM_ restTy $ \tyTi -> tyeqv ctx tyTi tyT1
                                 return tyT1
-                        tyT' -> throwPlainErr $ "Expected variant type, but got " ++ pretty (ctx, tyT') ++ show (simplifytyid ctx tyT')
+                        tyT' -> throwString $ "Expected variant type, but got " ++ pretty (ctx, tyT') ++ show (simplifytyid ctx tyT')
 
 ----------------------------------------------------------------
 -- Type check of binding
@@ -239,7 +239,7 @@ typeof ctx t = case t of
 checkBinding :: (MonadThrow m, MonadFail m) => Context -> Binding -> m ()
 checkBinding ctx (TyAbbBind tyT (Just knK)) = do
         knK' <- kindof ctx tyT
-        unless (knK == knK') $ throwPlainErr "Kind of binding does not match declared kind"
+        unless (knK == knK') $ throwString "Kind of binding does not match declared kind"
 checkBinding ctx (TmAbbBind t (Just tyT)) = do
         tyT' <- typeof ctx t
         tyeqv ctx tyT tyT'

@@ -95,6 +95,9 @@ instance Monad m => MonadState PsState (ParserT m) where
 instance MonadTrans ParserT where
         lift c = ParserT $ \s -> c >>= (\x -> return (x, s))
 
+instance MonadThrow m => MonadFail (ParserT m) where
+        fail s = lift $ throwString s
+
 parse :: T.Text -> ParserT m a -> m (a, PsState)
 parse inp p =
         runParserT

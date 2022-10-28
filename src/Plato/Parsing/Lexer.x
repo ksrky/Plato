@@ -1,12 +1,13 @@
 {
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Plato.Parsing.Lexer where
 
+import Plato.Common.Error
 import Plato.Common.SrcLoc
 import Plato.Parsing.Action
-import Plato.Parsing.Error
 import Plato.Parsing.Layout
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
@@ -120,18 +121,18 @@ alexMonadScan = do
     case alexScan ainp scd of
         AlexEOF -> do
             cd <- getCommentDepth
-            when (cd > 0) $ lift $ throwPsError sp "unterminated block comment"
+            when (cd > 0) $ lift $ throwLocErr sp "unterminated block comment"
             case lev of
                 -- note: Layout rule
                 -- L [] []                 = []
                 -- L [] (m : ms)           = <closing brace>  :  L [] ms                     if m≠0
                 -- alex bug: closing brace inside a comment throws parse error
                 [] -> return $ L sp TokEOF
-                0 : _ -> lift $ throwPsError sp "closing brace missing"
+                0 : _ -> lift $ throwLocErr sp "closing brace missing"
                 _ : ms -> do
                     setIndentLevels ms
                     return $ L sp (TokSymbol SymVRBrace)
-        AlexError _ -> lift $ throwPsError sp "lexical error"
+        AlexError _ -> lift $ throwLocErr sp "lexical error"
         AlexSkip ainp' _len -> do
             setInput ainp'
             alexMonadScan

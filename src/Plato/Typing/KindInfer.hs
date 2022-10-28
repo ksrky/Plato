@@ -4,8 +4,6 @@ module Plato.Typing.KindInfer where
 
 import Plato.Common.Error
 import Plato.Common.GlbName
-import Plato.Common.Name
-import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 import Plato.Typing.TcMonad (newTyVar)
@@ -200,7 +198,7 @@ unify StarK StarK = return ()
 unify (ArrK l r) (ArrK l' r') = do
         unify l l'
         unify r r'
-unify k1 k2 = lift $ throwPlainErr $ "UnificationFail " ++ show k1 ++ ", " ++ show k2
+unify k1 k2 = lift $ throwString $ "UnificationFail " ++ show k1 ++ ", " ++ show k2
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaKv -> Kind -> Ki m ()
 unifyVar kv1 kn2 = do
@@ -222,7 +220,7 @@ unifyUnboundVar kv1 kn2 = do
                 else writeKv kv1 kn2
 
 occursCheckErr :: MonadThrow m => MetaKv -> Kind -> Ki m ()
-occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail" --tmp
+occursCheckErr tv ty = lift $ throwString "Occurs check fail" --tmp
 
 -- | Inference
 infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)

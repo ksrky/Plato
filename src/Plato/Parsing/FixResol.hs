@@ -2,9 +2,9 @@
 
 module Plato.Parsing.FixResol where
 
+import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import Plato.Parsing.Error
 import Plato.Parsing.Fixity
 import Plato.Syntax.Parsing
 
@@ -42,7 +42,7 @@ instance Resolver Expr where
                                 res <- parseNeg (Op (L NoSpan (varName "")) (-1) Nonfix) toks
                                 case res of
                                         (L _ rese, []) -> return rese
-                                        _ -> throwPsError sp "illegal infix expression"
+                                        _ -> throwLocErr sp "illegal infix expression"
                             where
                                 parseNeg :: MonadThrow m => Op -> [Tok] -> m (Located Expr, [Tok])
                                 parseNeg op1 (TExp e1 : rest) = parse op1 e1 rest
@@ -51,7 +51,7 @@ instance Resolver Expr where
                                 parse :: MonadThrow m => Op -> Located Expr -> [Tok] -> m (Located Expr, [Tok])
                                 parse _ e1 [] = return (e1, [])
                                 parse op1@(Op _ prec1 fix1) e1 ((TOp op2@(Op lx prec2 fix2)) : rest)
-                                        | prec1 == prec2 && (fix1 /= fix2 || fix1 == Nonfix) = throwPsError sp "illegal infix expression"
+                                        | prec1 == prec2 && (fix1 /= fix2 || fix1 == Nonfix) = throwLocErr sp "illegal infix expression"
                                         | prec1 > prec2 || (prec1 == prec2 && fix1 == Leftfix) = return (e1, TOp op2 : rest)
                                         | otherwise = do
                                                 (r, rest') <- parseNeg op2 rest

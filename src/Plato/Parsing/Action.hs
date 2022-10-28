@@ -1,9 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Plato.Parsing.Action where
 
+import Plato.Common.Error
 import Plato.Common.SrcLoc
-import Plato.Parsing.Error
 import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
@@ -120,7 +120,7 @@ endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth
         let sp = mkSpan pos inp len
-        when (depth <= 0) $ lift $ throwPsError sp "block comment terminated without starting"
+        when (depth <= 0) $ lift $ throwLocErr sp "block comment terminated without starting"
         setCommentDepth (depth - 1)
         when (depth == 1) $ setStartCode code
         alexMonadScan

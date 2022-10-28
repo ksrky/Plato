@@ -1,9 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Plato.Parsing.Layout where
 
-import Plato.Common.Pretty
+import Plato.Common.Error
 import Plato.Common.SrcLoc
 import Plato.Parsing.Action
-import Plato.Parsing.Error
 import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
@@ -90,7 +91,7 @@ rightBrace (pos, _, _, inp) len = do
                 _ -> do
                         -- note: Layout rule
                         -- L (} : ts) ms           = parse-error
-                        lift $ throwPsError sp "missing an opening brace before closing"
+                        lift $ throwLocErr sp "missing an opening brace before closing"
 
 leftBrace :: Action
 leftBrace (pos, _, _, inp) len = do
@@ -112,4 +113,4 @@ popLayoutLevel (L sp _) = do
                         -- L (t : ts) (m : ms)     = }  :  (L (t : ts) ms)             if m≠0 and parse-error(t)
                         setIndentLevels ms
                         return sp
-                _ -> lift $ throwPsError sp "parse error"
+                _ -> lift $ throwLocErr sp "parse error"

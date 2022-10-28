@@ -2,9 +2,8 @@
 
 module Plato.Parsing.Token where
 
-import Plato.Common.Pretty
-
 import qualified Data.Text as T
+import Prettyprinter
 
 data Token
         = TokKeyword Keyword
@@ -67,15 +66,15 @@ commonSymbols =
 instance Pretty Token where
         pretty (TokKeyword k) = pretty k
         pretty (TokSymbol t) = pretty t
-        pretty (TokVarId t) = T.unpack t
-        pretty (TokQVarId t) = T.unpack t
-        pretty (TokConId t) = T.unpack t
-        pretty (TokQConId t) = T.unpack t
-        pretty (TokVarSym t) = T.unpack t
-        pretty (TokQVarSym t) = T.unpack t
-        pretty (TokConSym t) = T.unpack t
-        pretty (TokQConSym t) = T.unpack t
-        pretty (TokInt n) = show n
+        pretty (TokVarId t) = pretty t
+        pretty (TokQVarId t) = pretty t
+        pretty (TokConId t) = pretty t
+        pretty (TokQConId t) = pretty t
+        pretty (TokVarSym t) = pretty t
+        pretty (TokQVarSym t) = pretty t
+        pretty (TokConSym t) = pretty t
+        pretty (TokQConSym t) = pretty t
+        pretty (TokInt n) = pretty n
         pretty TokEOF = "<eof>"
 
 instance Pretty Keyword where

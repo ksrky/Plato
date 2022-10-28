@@ -2,6 +2,7 @@ module Plato.Common.Name where
 
 import Data.List (intercalate)
 import qualified Data.Text as T
+import Prettyprinter
 
 ----------------------------------------------------------------
 -- Name
@@ -16,6 +17,9 @@ instance Ord Name where
 
 instance Show Name where
         show (Name _ t) = T.unpack t
+
+instance Pretty Name where
+        pretty n = viaShow (show n)
 
 -- | NameSpace
 data NameSpace
@@ -59,6 +63,9 @@ instance Ord ModuleName where
 
 instance Show ModuleName where
         show (ModuleName modn) = intercalate "." (map T.unpack modn)
+
+instance Pretty ModuleName where
+        pretty (ModuleName modn) = concatWith (surround dot) (map pretty modn)
 
 mod2conName :: ModuleName -> Name
 mod2conName (ModuleName modn) = Name ConName (T.intercalate (T.pack ".") modn)

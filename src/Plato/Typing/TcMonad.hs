@@ -43,7 +43,7 @@ instance Monad m => Monad (Tc m) where
                 unTc (k v) env
 
 instance MonadThrow m => MonadFail (Tc m) where
-        fail msg = lift $ throwPlainErr msg
+        fail msg = lift $ throwString msg
 
 failTc :: MonadThrow m => Span -> String -> Tc m a
 failTc sp msg = Tc $ \_ -> throwLocatedErr sp msg
@@ -246,7 +246,7 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
         unify fun1 fun2
         unify arg1 arg2
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwPlainErr $ "Cannot unify types: " ++ show ty1 ++ ", " ++ show ty2 --tmp: location
+unify ty1 ty2 = lift $ throwString $ "Cannot unify types: " ++ show ty1 ++ ", " ++ show ty2 --tmp: location
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do
@@ -276,7 +276,7 @@ unifyFun tau = do
         return (arg_ty, res_ty)
 
 occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Tc m ()
-occursCheckErr tv ty = lift $ throwPlainErr "Occurs check fail" --tmp
+occursCheckErr tv ty = lift $ throwString "Occurs check fail" --tmp
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True

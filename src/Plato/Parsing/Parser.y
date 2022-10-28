@@ -1,13 +1,13 @@
 {
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plato.Parsing.Parser where
 
+import Plato.Common.Error
 import Plato.Common.Name
-import Plato.Common.Pretty
 import Plato.Common.SrcLoc
 
-import Plato.Parsing.Error
 import Plato.Parsing.Fixity
 import Plato.Parsing.Layout
 import Plato.Parsing.Lexer
@@ -21,6 +21,7 @@ import Control.Monad (unless)
 import Control.Monad.State
 import Control.Exception.Safe (MonadThrow)
 import qualified Data.Map.Strict as M
+import Prettyprinter
 }
 
 %tokentype { Located Token }
@@ -233,12 +234,12 @@ close       :: { Span }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
-parseError (L sp tok) = lift $ throwPsError sp $ "parse error at '" ++ pretty tok
+parseError (L sp tok) = lift $ throwLocErr sp $ sep ["parse error at", pretty tok]
 
 setFixity :: MonadThrow m => Located Name -> Located Int -> Fixity -> ParserT m ()
 setFixity lop@(L _ op) (L sp prec) fix = do
     opdict <- getOpDict
-    unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwPsError sp $ "invalid precedence " ++ show prec
+    unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwLocErr sp $ sep ["invalid precedence", pretty prec]
     setOpDict $ M.insert op (Op lop prec fix) opdict
 
 splitModid :: Located T.Text -> [T.Text]

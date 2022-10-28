@@ -1,13 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Plato.Common.Error where
 
-import Plato.Common.Pretty
 import Plato.Common.SrcLoc
-import Plato.Parsing.Error
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
+import Prettyprinter
 
 ----------------------------------------------------------------
 -- Error Handling
@@ -19,10 +16,8 @@ eitherToMonadThrow (Right a) = return a
 catchError :: (MonadCatch m, MonadIO m) => m () -> m ()
 catchError =
         ( `catches`
-                [ Handler $ \e@PlainErr{} -> liftIO $ putStrLn $ pretty e
-                , Handler $ \e@LocatedErr{} -> liftIO $ putStrLn $ pretty e
-                , Handler $ \e@PsError{} -> liftIO $ putStrLn $ pretty e
-                , Handler $ \e@UnexpectedErr{} -> liftIO $ putStrLn $ pretty e
+                [ Handler $ \e@LocatedErr{} -> liftIO $ print e
+                , Handler $ \e@UnexpectedErr{} -> liftIO $ print e
                 -- , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
                 -- Handler $ \(e :: SomeException) -> liftIO $ putStrLn "Unknown error"
                 ]
@@ -36,31 +31,20 @@ newtype UnexpectedErr = UnexpectedErr String deriving (Show)
 
 instance Exception UnexpectedErr
 
-instance Pretty UnexpectedErr where
-        pretty (UnexpectedErr msg) = msg
-
 throwUnexpectedErr :: MonadThrow m => String -> m a
 throwUnexpectedErr msg = throw $ UnexpectedErr msg
 
--- | Plain Error
-newtype PlainErr = PlainErr String deriving (Show)
-
-instance Exception PlainErr
-
-instance Pretty PlainErr where
-        pretty (PlainErr msg) = msg
-
-throwPlainErr :: MonadThrow m => String -> m a
-throwPlainErr msg = throw $ PlainErr msg
+-- | Doc Error
+throwError :: MonadThrow m => Doc ann -> m a
+throwError doc = throwString $ show doc
 
 -- | Error with location
 data LocatedErr = LocatedErr Span String deriving (Show)
 
 instance Exception LocatedErr
 
-instance Pretty LocatedErr where
-        pretty (LocatedErr (Span s e) msg) = pretty s ++ "-" ++ pretty e ++ ": " ++ msg
-        pretty (LocatedErr NoSpan msg) = msg
-
 throwLocatedErr :: MonadThrow m => Span -> String -> m a
 throwLocatedErr sp msg = throw $ LocatedErr sp msg
+
+throwLocErr :: MonadThrow m => Span -> Doc ann -> m a
+throwLocErr sp doc = throw $ LocatedErr sp (show doc)

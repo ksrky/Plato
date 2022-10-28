@@ -4,6 +4,7 @@ import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
+import Plato.Core.Subst
 import Plato.Syntax.Core
 
 ----------------------------------------------------------------
