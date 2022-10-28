@@ -4,7 +4,7 @@
 module Plato.Typing.TypeCheck where
 
 import Plato.Common.Error
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -21,14 +21,16 @@ import Data.List
 typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
         (AnnE body' _, ty') <- inferSigma (AnnE body ty)
+        body'' <- zonkExpr body'
         ty'' <- zonkType ty'
-        return (FuncD var body' ty'')
+        return (FuncD var body'' ty'')
 
 typeInfer :: (MonadIO m, MonadThrow m) => TypEnv -> Expr -> m (Expr, Sigma)
 typeInfer env e = runTc env $ do
         (e', ty') <- inferSigma e
+        e'' <- zonkExpr e'
         ty'' <- zonkType ty'
-        return (e', ty'')
+        return (e'', ty'')
 
 isBasicType :: Type -> Bool
 isBasicType ConT{} = True
@@ -43,17 +45,17 @@ data Expected a = Infer (IORef a) | Check a
 -- tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
-checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(GenName, Sigma)]
+checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(GlbName, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
-inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(GenName, Sigma)], Sigma)
+inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(GlbName, Sigma)], Sigma)
 inferPat pat = do
         ref <- newTcRef (error "inferRho: empty result")
         binds <- tcPat pat (Infer ref)
         tc <- readTcRef ref
         return (binds, tc)
 
-tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(GenName, Sigma)]
+tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(GlbName, Sigma)]
 tcPat WildP _ = return []
 tcPat (VarP v) (Infer ref) = do
         ty <- newTyVar
@@ -72,7 +74,7 @@ instPatSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Tc m (Ex
 instPatSigma pat_ty (Infer ref) = writeTcRef ref pat_ty >> return id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadIO m, MonadThrow m) => GenName -> Tc m ([Sigma], Tau) --tmp: data constructor be in TcEnv
+instDataCon :: (MonadIO m, MonadThrow m) => GlbName -> Tc m ([Sigma], Tau) --tmp: data constructor be in TcEnv
 instDataCon con = do
         con_ty <- lookupVar con
         (_, con_ty') <- instantiate con_ty

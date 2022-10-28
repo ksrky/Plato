@@ -1,6 +1,6 @@
 module Plato.Core.Eval where
 
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
@@ -66,7 +66,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         t1' <- eval1 t1
                         Just $ TmProj t1' l
                 TmRecord fields -> do
-                        let evalafield :: [(GenName, Term)] -> Maybe [(GenName, Term)]
+                        let evalafield :: [(GlbName, Term)] -> Maybe [(GlbName, Term)]
                             evalafield l = case l of
                                 [] -> Nothing
                                 (l, vi) : rest | isval ctx vi -> do

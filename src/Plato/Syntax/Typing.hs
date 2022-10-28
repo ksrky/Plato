@@ -2,7 +2,7 @@
 
 module Plato.Syntax.Typing where
 
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import {-# SOURCE #-} Plato.Typing.KindInfer
@@ -11,36 +11,36 @@ import {-# SOURCE #-} Plato.Typing.TcTypes
 import qualified Data.Map.Strict as M
 
 data Expr
-        = VarE GenName
-        | AbsE GenName (Maybe Type) Expr
+        = VarE GlbName
+        | AbsE GlbName (Maybe Type) Expr
         | AppE Expr Expr
-        | TAbsE [GenName] Expr
+        | TAbsE [GlbName] Expr
         | TAppE Expr [Type]
         | LetE [FuncD] Expr
-        | ProjE Expr GenName
-        | RecordE [(GenName, Expr)]
+        | ProjE Expr GlbName
+        | RecordE [(GlbName, Expr)]
         | CaseE Expr (Maybe Type) [(Pat, Expr)]
-        | TagE GenName [Expr] (Maybe Type)
+        | TagE GlbName [Expr] (Maybe Type)
         | FoldE Type
         | AnnE Expr Type {-Sigma-}
         deriving (Eq, Show)
 
 data Pat
-        = VarP GenName
-        | ConP GenName [Pat]
+        = VarP GlbName
+        | ConP GlbName [Pat]
         | WildP
         deriving (Eq, Show)
 
 data Type
         = VarT TyVar
-        | ConT GenName
+        | ConT GlbName
         | ArrT Type Type
         | AllT [(TyVar, Maybe Kind)] Type {- Rho -}
-        | AbsT GenName (Maybe Kind) Type
+        | AbsT GlbName (Maybe Kind) Type
         | AppT Type Type
-        | RecT GenName Type
-        | RecordT [(GenName, Type)]
-        | SumT [(GenName, [Type])]
+        | RecT GlbName Type
+        | RecordT [(GlbName, Type)]
+        | SumT [(GlbName, [Type])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -50,11 +50,11 @@ data Kind
         | ArrK Kind Kind
         deriving (Eq, Show)
 
-data FuncD = FuncD GenName Expr Type deriving (Eq, Show)
+data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
 
 data Decl
-        = TypeD GenName Type
-        | VarD GenName Type
+        = TypeD GlbName Type
+        | VarD GlbName Type
         | ConD FuncD
         deriving (Eq, Show)
 
@@ -66,4 +66,4 @@ data Program = Program
         }
         deriving (Eq, Show)
 
-type TypEnv = M.Map GenName Type {- Sigma -}
+type TypEnv = M.Map GlbName Type {- Sigma -}

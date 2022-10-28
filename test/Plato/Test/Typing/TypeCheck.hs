@@ -22,19 +22,27 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.Hspec
 
-testcases :: [(String, IO [FuncDecl] -> Expectation)]
+testcases :: [(String, IO [FuncD] -> Expectation)]
 testcases =
         [
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [FD (VN "id") (NL (TAbsE [NL (Name TyvarName "a")] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))] -> True
+                                [FuncD (VN "id") ((TAbsE [TVN "a"] (AbsE (VN "x") (Just (SVT "a")) (VE "x")))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] -> True
                                 _ -> False
                   )
                 )
+                {-,
+                        ( "f : {a} a -> a; f = let { g : {b} b -> b; g y = y } in g"
+                        , ( `shouldSatisfyReturn`
+                                \case
+                                        [FuncD (VN "f") (TAbsE [TVN "a"] (LetE [FuncD (VN "g") (TAbsE [TVN "b"] (AbsE (VN "y") (Just (SVT "b")) (VE "y"))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] (AbsE (VN "x") (Just (SVT "a")) (VE "x")))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] -> True
+                                        _ -> False
+                          )
+                        )-}
         ]
 
-test :: (MonadThrow m, MonadIO m) => (String, m [FuncDecl] -> Expectation) -> SpecWith ()
+test :: (MonadThrow m, MonadIO m) => (String, m [FuncD] -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) declsParser)

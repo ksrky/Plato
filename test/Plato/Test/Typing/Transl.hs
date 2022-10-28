@@ -25,9 +25,9 @@ testcases =
                         \case
                                 Program
                                         { decls =
-                                                [ NL (TypeD (TCN "Bool") (NL (RecT (TCN "Bool") (NL (SumT [(CN "True", []), (CN "False", [])])))))
-                                                        , NL (FuncD (FD (CN "True") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool")))
-                                                        , NL (FuncD (FD (CN "False") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool")))
+                                                [ NL (TypeD (TCN "Bool") (RecT (TCN "Bool") (SumT [(CN "True", []), (CN "False", [])])))
+                                                        , NL (ConD (FuncD (CN "True") (AppE (FoldE (CT "Bool")) (TagE (CN "True") [] (Just (CT "Bool")))) (CT "Bool")))
+                                                        , NL (ConD (FuncD (CN "False") (AppE (FoldE (CT "Bool")) (TagE (CN "False") [] (Just (CT "Bool")))) (CT "Bool")))
                                                         ]
                                         } -> True
                                 _ -> False
@@ -38,7 +38,7 @@ testcases =
                 , ( `shouldSatisfyReturn`
                         \case
                                 Program
-                                        { binds = [FD (VN "id") (NL (TAbsE [NL (Name TyvarName "a")] (NL (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))]
+                                        { binds = [FuncD (VN "id") (TAbsE [TVN "a"] (AbsE (VN "x") (Just (VarT (STV "a"))) (VE "x"))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))]
                                         } -> True
                                 _ -> False
                   )
@@ -48,7 +48,20 @@ testcases =
                 , ( `shouldSatisfyReturn`
                         \case
                                 Program
-                                        { binds = []
+                                        { binds =
+                                                [ FuncD
+                                                                f
+                                                                ( TAbsE
+                                                                                [TVN "a"]
+                                                                                ( LetE
+                                                                                                [ FuncD (VN "g") (TAbsE [TVN "b"] (AbsE (VN "x") (Just (SVT "b")) (VE "x"))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
+                                                                                                        , FuncD (VN "h") (TAbsE [TVN "c"] (AbsE (VN "y") (Just (SVT "c")) (VarE y))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
+                                                                                                        ]
+                                                                                                (AbsE (VN "x") (Just (SVT "a")) (AppE (TAppE (VE "g") [VT "a"]) (VE "x")))
+                                                                                        )
+                                                                        )
+                                                                (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
+                                                        ]
                                         } -> True
                                 _ -> False
                   )

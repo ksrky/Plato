@@ -2,7 +2,7 @@
 
 module Plato.Typing.Renamer where
 
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -11,7 +11,7 @@ import Control.Exception.Safe
 import Control.Monad.State
 import qualified Data.Text as T
 
-type Names = [(GenName, GenName)]
+type Names = [(GlbName, GlbName)]
 
 data RenameState = RenameState
         { moduleName :: Maybe ModuleName
@@ -32,21 +32,21 @@ emptyRenameState =
                 , level = 0
                 }
 
-getWrapperName :: RenameState -> GenName
+getWrapperName :: RenameState -> GlbName
 getWrapperName st = case moduleName st of
         Just modn | level st == 0 -> newName $ mod2conName modn
         _ -> newName $ str2conName (':' : show (level st))
 
-updateNames :: [FuncD] -> GenName -> Names -> Names
+updateNames :: [FuncD] -> GlbName -> Names -> Names
 updateNames decs name st = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
 
-isExternal :: RenameState -> GenName -> Bool
+isExternal :: RenameState -> GlbName -> Bool
 isExternal st n =
         nameSpace (g_name n) == ConName
                 && T.head (nameText (g_name n)) /= ':'
                 && (mod2conName <$> moduleName st) /= Just (g_name n)
 
-mkValue :: RenameState -> GenName -> Expr
+mkValue :: RenameState -> GlbName -> Expr
 mkValue st x = case lookup x (internalNames st) of
         Just r -> ProjE (VarE r) x
         Nothing -> case lookup x (externalNames st) of

@@ -4,7 +4,7 @@
 module Plato.Transl.PsToTyp where
 
 import Plato.Common.Error
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
@@ -20,8 +20,8 @@ import Data.List ((\\))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
-transName :: Located Name -> GenName
-transName (L sp n) = GenName Internal n sp
+transName :: Located Name -> GlbName
+transName (L sp n) = GlbName Internal n sp
 
 transExpr :: MonadThrow m => Located P.Expr -> m T.Expr
 transExpr = traexpr

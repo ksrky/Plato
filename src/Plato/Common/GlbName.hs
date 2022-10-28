@@ -1,24 +1,24 @@
-module Plato.Common.GenName where
+module Plato.Common.GlbName where
 
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 
 ----------------------------------------------------------------
--- General Name
+-- Global Name
 ----------------------------------------------------------------
-data GenName = GenName
+data GlbName = GlbName
         { g_sort :: NameSort
         , g_name :: Name
         , g_loc :: Span
         }
 
-instance Eq GenName where
+instance Eq GlbName where
         n1 == n2 = g_sort n1 == g_sort n2 && g_name n1 == g_name n2
 
-instance Ord GenName where
+instance Ord GlbName where
         compare n1 n2 = compare (g_name n1) (g_name n2)
 
-instance Show GenName where
+instance Show GlbName where
         show n = show (g_name n)
 
 data NameSort
@@ -27,5 +27,5 @@ data NameSort
         | System
         deriving (Eq, Show)
 
-newName :: Name -> GenName
-newName n = GenName System n NoSpan
+newName :: Name -> GlbName
+newName n = GlbName System n NoSpan

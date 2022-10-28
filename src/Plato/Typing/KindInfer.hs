@@ -3,7 +3,7 @@
 module Plato.Typing.KindInfer where
 
 import Plato.Common.Error
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Common.SrcLoc
@@ -35,7 +35,7 @@ checkKindStar knenv sp ty = runKi knenv $ do
         return ty''
 
 -- | kind Table
-type KnTable = M.Map GenName Kind
+type KnTable = M.Map GlbName Kind
 
 emptyKnTable :: KnTable
 emptyKnTable = M.empty
@@ -110,18 +110,18 @@ writeKiRef :: MonadIO m => IORef a -> a -> Ki m ()
 writeKiRef r v = lift (liftIO $ writeIORef r v)
 
 -- | Kind environment
-extendEnv :: GenName -> Kind -> Ki m a -> Ki m a
+extendEnv :: GlbName -> Kind -> Ki m a -> Ki m a
 extendEnv x kn (Ki m) = Ki (m . extend)
     where
         extend env = env{var_env = M.insert x kn (var_env env)}
 
-extendEnvList :: [(GenName, Kind)] -> Ki m a -> Ki m a
+extendEnvList :: [(GlbName, Kind)] -> Ki m a -> Ki m a
 extendEnvList binds tr = foldr (uncurry extendEnv) tr binds
 
 getEnv :: Monad m => Ki m KnTable
 getEnv = Ki (return . var_env)
 
-lookupVar :: MonadThrow m => GenName -> Ki m Kind
+lookupVar :: MonadThrow m => GlbName -> Ki m Kind
 lookupVar x = do
         env <- getEnv
         case M.lookup x env of

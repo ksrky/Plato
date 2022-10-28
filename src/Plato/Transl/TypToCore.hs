@@ -17,7 +17,7 @@ import Control.Monad
 import Control.Monad.State
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
-import Plato.Common.GenName
+import Plato.Common.GlbName
 
 transExpr :: (MonadThrow m, MonadIO m) => KnTable -> Context -> T.Expr -> m C.Term
 transExpr knenv ctx = traexpr
@@ -138,7 +138,7 @@ transKind' :: C.Kind -> T.Kind
 transKind' C.KnStar = T.StarK
 transKind' (C.KnArr knK1 knK2) = T.ArrK (transKind' knK1) (transKind' knK2)
 
-transDecl :: (MonadThrow m, MonadIO m) => Located T.Decl -> (Context, KnTable) -> m ((GenName, C.Binding), (Context, KnTable))
+transDecl :: (MonadThrow m, MonadIO m) => Located T.Decl -> (Context, KnTable) -> m ((GlbName, C.Binding), (Context, KnTable))
 transDecl (L sp dec) (ctx, knenv) = case dec of
         T.TypeD name ty -> do
                 (ty', kn) <- inferKind knenv ty

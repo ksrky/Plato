@@ -19,19 +19,19 @@ import Control.Exception.Safe
 import qualified Data.Text as T
 import Test.Hspec
 
-testcases :: [(String, IO ([FuncDecl], [Located Decl]) -> Expectation)]
+testcases :: [(String, IO ([FuncD], [Located Decl]) -> Expectation)]
 testcases =
         [
                 ( "id : {a} a -> a; id = \\x -> x"
                 , ( `shouldSatisfyReturn`
                         \case
-                                (fst -> [FD (VN "id") (NL (AbsE (VN "x") Nothing (VE "x"))) (NL (AllT [(TV "a", _)] (NL (ArrT (VT "a") (VT "a")))))]) -> True
+                                (fst -> [FuncD (VN "id") (ABSE "x" (VE "x")) (ALLT "a" (ArrT (VT "a") (VT "a")))]) -> True
                                 _ -> False
                   )
                 )
         ]
 
-test :: MonadThrow m => (String, m ([FuncDecl], [Located Decl]) -> Expectation) -> SpecWith ()
+test :: MonadThrow m => (String, m ([FuncD], [Located Decl]) -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) declsParser)

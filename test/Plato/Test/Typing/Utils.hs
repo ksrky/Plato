@@ -8,39 +8,48 @@ import Plato.Syntax.Typing
 import Plato.Typing.TcTypes
 
 import qualified Data.Text as T
+import Plato.Common.GlbName
 
 pattern NL :: a -> Located a
 pattern NL x <- L _ x
 
-pattern VN :: T.Text -> Located Name
-pattern VN x <- NL (Name VarName x)
+pattern VN :: T.Text -> GlbName
+pattern VN x <- GlbName _ (Name VarName x) _
 
-pattern CN :: T.Text -> Located Name
-pattern CN x <- NL (Name ConName x)
+pattern CN :: T.Text -> GlbName
+pattern CN x <- GlbName _ (Name ConName x) _
 
-pattern TVN :: T.Text -> Located Name
-pattern TVN x <- NL (Name TyvarName x)
+pattern TVN :: T.Text -> GlbName
+pattern TVN x <- GlbName _ (Name TyvarName x) _
 
-pattern TCN :: T.Text -> Located Name
-pattern TCN x <- NL (Name TyconName x)
+pattern TCN :: T.Text -> GlbName
+pattern TCN x <- GlbName _ (Name TyconName x) _
 
-pattern VE :: T.Text -> Located Expr
-pattern VE x <- NL (VarE (VN x))
+pattern VE :: T.Text -> Expr
+pattern VE x <- VarE (VN x)
 
-pattern CE :: T.Text -> Located Expr
-pattern CE x <- NL (VarE (CN x))
+pattern CE :: T.Text -> Expr
+pattern CE x <- VarE (CN x)
 
-pattern TV :: T.Text -> Located TyVar
-pattern TV x <- NL (BoundTv (Name TyvarName x))
+pattern TV :: T.Text -> TyVar
+pattern TV x <- BoundTv (TVN x)
 
-pattern STV :: T.Text -> Located TyVar
-pattern STV x <- NL (SkolemTv (Name TyvarName x) _)
+pattern STV :: T.Text -> TyVar
+pattern STV x <- SkolemTv (TVN x) _
 
-pattern VT :: T.Text -> Located Type
-pattern VT x <- NL (VarT (TV x))
+pattern VT :: T.Text -> Type
+pattern VT x <- VarT (TV x)
 
-pattern CT :: T.Text -> Located Type
-pattern CT x <- NL (ConT (TCN x))
+pattern SVT :: T.Text -> Type
+pattern SVT x <- VarT (STV x)
 
-pattern CP :: T.Text -> [Located Pat] -> Located Pat
-pattern CP x ps <- NL (ConP (CN x) ps)
+pattern CT :: T.Text -> Type
+pattern CT x <- ConT (TCN x)
+
+pattern CP :: T.Text -> [Pat] -> Pat
+pattern CP x ps <- ConP (CN x) ps
+
+pattern ABSE :: T.Text -> Expr -> Expr
+pattern ABSE x e <- AbsE (VN x) Nothing e
+
+pattern ALLT x ty <- AllT [(TV x, _)] ty

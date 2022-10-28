@@ -3,7 +3,7 @@
 module Plato.Typing.TcMonad where
 
 import Plato.Common.Error
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -18,7 +18,7 @@ import qualified Data.Map.Strict as M
 
 data TcEnv = TcEnv
         { uniqs :: IORef Uniq
-        , var_env :: M.Map GenName Sigma
+        , var_env :: M.Map GlbName Sigma
         }
 
 newtype Tc m a = Tc (TcEnv -> m a)
@@ -73,18 +73,18 @@ writeTcRef r v = lift (liftIO $ writeIORef r v)
 ----------------------------------------------------------------
 -- Type Environment
 ----------------------------------------------------------------
-extendVarEnv :: GenName -> Sigma -> Tc m a -> Tc m a
+extendVarEnv :: GlbName -> Sigma -> Tc m a -> Tc m a
 extendVarEnv var ty (Tc m) = Tc (m . extend)
     where
         extend env = env{var_env = M.insert var ty (var_env env)}
 
-extendVarEnvList :: [(GenName, Sigma)] -> Tc m a -> Tc m a
+extendVarEnvList :: [(GlbName, Sigma)] -> Tc m a -> Tc m a
 extendVarEnvList binds tr = foldr (uncurry extendVarEnv) tr binds
 
-getEnv :: Monad m => Tc m (M.Map GenName Sigma)
+getEnv :: Monad m => Tc m (M.Map GlbName Sigma)
 getEnv = Tc (return . var_env)
 
-lookupVar :: MonadThrow m => GenName -> Tc m Sigma
+lookupVar :: MonadThrow m => GlbName -> Tc m Sigma
 lookupVar x = do
         env <- getEnv
         case M.lookup x env of

@@ -25,9 +25,9 @@ testcases =
                 ( "data Bool = True | False"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [ TypeD (TCN "Bool") (NL (RecT (TCN "Bool") (NL (SumT [(CN "True", []), (CN "False", [])]))))
-                                        , FuncD (FD (CN "True") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool"))
-                                        , FuncD (FD (CN "False") (NL (AppE (NL (FoldE (CT "Bool"))) (NL (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))))) (CT "Bool"))
+                                [ TypeD (TCN "Bool") (RecT (TCN "Bool") (SumT [(CN "True", []), (CN "False", [])]))
+                                        , ConD (FuncD (CN "True") (AppE (FoldE (CT "Bool")) (TagE (CN "True") [] (Just (ConT (TCN "Bool"))))) (CT "Bool"))
+                                        , ConD (FuncD (CN "False") (AppE ((FoldE (CT "Bool"))) (TagE (CN "False") [] (Just (ConT (TCN "Bool"))))) (CT "Bool"))
                                         ] -> True
                                 _ -> False
                   )
@@ -41,4 +41,4 @@ test (inp, iscorrect) = it inp $
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
                 (tydecs, fundecs, _) <- execWriterT $ transTopDecl ps'
-                return $ map unLoc tydecs ++ map (FuncD . unLoc) fundecs
+                return $ map unLoc tydecs ++ map (ConD . unLoc) fundecs

@@ -1,7 +1,7 @@
 module Plato.Typing.TcTypes where
 
 import Plato.Common.Error
-import Plato.Common.GenName
+import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
@@ -15,8 +15,8 @@ type Rho = Type
 type Tau = Type
 
 data TyVar
-        = BoundTv GenName
-        | SkolemTv GenName Uniq
+        = BoundTv GlbName
+        | SkolemTv GlbName Uniq
         deriving (Show)
 
 data MetaTv = Meta Uniq TyRef
@@ -73,7 +73,7 @@ tyVarBndrs ty = nub (bndrs ty)
         bndrs (ArrT arg res) = bndrs arg ++ bndrs res
         bndrs _ = []
 
-tyVarName :: TyVar -> GenName
+tyVarName :: TyVar -> GlbName
 tyVarName (BoundTv x) = x
 tyVarName (SkolemTv x _) = x
 

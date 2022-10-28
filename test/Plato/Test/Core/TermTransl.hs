@@ -40,7 +40,7 @@ testcases =
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m [(C.Term, C.Ty)] -> Expectation) -> SpecWith ()
-test (inp, iscorrect) = it inp $
+test (inp, iscorrect) = it inp pending {-$
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (P.parseLine (T.pack inp) declsParser)
                 let opdict = opDict (parser_ust st)
@@ -50,4 +50,4 @@ test (inp, iscorrect) = it inp $
                 (binds, _) <- mapM (StateT . C.transDecl . T.FuncD) fundecs' `runStateT` (emptyContext, emptyKnTable)
                 forM binds $ \(_, b) -> case b of
                         C.TmAbbBind t (Just tyT) -> return (unLoc t, unLoc tyT)
-                        _ -> unreachable ""
+                        _ -> unreachable ""-}
