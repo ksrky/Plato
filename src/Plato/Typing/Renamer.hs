@@ -4,7 +4,6 @@ module Plato.Typing.Renamer where
 
 import Plato.Common.GlbName
 import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 
 import Control.Exception.Safe
@@ -37,8 +36,8 @@ getWrapperName st = case moduleName st of
         Just modn | level st == 0 -> newName $ mod2conName modn
         _ -> newName $ str2conName (':' : show (level st))
 
-updateNames :: [FuncD] -> GlbName -> Names -> Names
-updateNames decs name st = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
+mkNames :: [FuncD] -> GlbName -> Names
+mkNames decs name = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
 
 isExternal :: RenameState -> GlbName -> Bool
 isExternal st n =
@@ -71,7 +70,7 @@ instance Rename Expr where
                 e' <- rename st e
                 alts' <- forM alts $ \(pat, body) -> (pat,) <$> rename st body
                 return $ CaseE e' ty alts'
-        rename st e = return e
+        rename _ e = return e
 
 instance Rename FuncD where
         rename st (FuncD var body ty) = FuncD var <$> rename st body <*> pure ty
@@ -79,8 +78,8 @@ instance Rename FuncD where
 renameFuncDs :: MonadThrow m => RenameState -> [FuncD] -> m (FuncD, RenameState)
 renameFuncDs st decs = do
         let r = getWrapperName st
-            st' = st{internalNames = updateNames decs r (internalNames st)}
-        fields <- forM decs $ \(FuncD var body ty) -> do
+            st' = st{internalNames = mkNames decs r ++ internalNames st}
+        fields <- forM decs $ \(FuncD var body _) -> do
                 body' <- rename st' body
                 return (var, body')
         let fieldtys = [(var, ty) | FuncD var _ ty <- decs]

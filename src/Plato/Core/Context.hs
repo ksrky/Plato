@@ -81,4 +81,4 @@ isVarExist ctx x = case V.elemIndex x (V.map fst ctx) of
 
 commandShift :: Int -> Command -> Command
 commandShift d (Bind x b) = Bind x (bindingShift d b)
-commandShift d cmd = cmd
+commandShift _ cmd = cmd

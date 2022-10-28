@@ -1,7 +1,6 @@
 module Plato.Core.Eval where
 
 import Plato.Common.GlbName
-import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Subst
@@ -13,7 +12,7 @@ import Plato.Syntax.Core
 isval :: Context -> Term -> Bool
 isval ctx t = case t of
         TmAbs{} -> True
-        TmRecord fields -> all (\(l, ti) -> isval ctx ti) fields
+        TmRecord fields -> all (\(_, ti) -> isval ctx ti) fields
         TmTag _ ts1 _ -> all (isval ctx) ts1
         TmApp (TmFold _) v -> isval ctx v
         TmTAbs{} -> True
@@ -27,17 +26,17 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
     where
         eval1 :: Term -> Maybe Term
         eval1 t = case t of
-                TmVar i n -> case getBinding ctx i of
+                TmVar i _ -> case getBinding ctx i of
                         TmAbbBind t _ -> Just $ unLoc t
                         _ -> Nothing
-                TmApp (TmUnfold tyS) (TmApp (TmFold tyT) v) | isval ctx v -> Just v
+                TmApp (TmUnfold _) (TmApp (TmFold _) v) | isval ctx v -> Just v
                 TmApp (TmFold tyS) t2 -> do
                         t2' <- eval1 t2
                         Just $ TmApp (TmFold tyS) t2'
                 TmApp (TmUnfold tyS) t2 -> do
                         t2' <- eval1 t2
                         Just $ TmApp (TmUnfold tyS) t2'
-                TmApp (TmAbs x _ t12) v2 | isval ctx v2 -> do
+                TmApp (TmAbs _ _ t12) v2 | isval ctx v2 -> do
                         return $ termSubstTop v2 t12
                 TmApp v1 t2 | isval ctx v1 -> do
                         t2' <- eval1 t2
@@ -48,11 +47,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmApp t1' t2
-                TmTApp (TmTAbs x t11) tyT2 -> Just $ tytermSubstTop tyT2 t11
+                TmTApp (TmTAbs _ t11) tyT2 -> Just $ tytermSubstTop tyT2 t11
                 TmTApp t1 tyT2 -> do
                         t1' <- eval1 t1
                         Just $ TmTApp t1' tyT2
-                TmLet x v1 t2 | isval ctx v1 -> Just $ termSubstTop v1 t2
+                TmLet _ v1 t2 | isval ctx v1 -> Just $ termSubstTop v1 t2
                 TmLet x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet x t1' t2
@@ -78,7 +77,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                                         Just $ (l, ti') : rest
                         fields' <- evalafield fields
                         Just $ TmRecord fields'
-                TmTag l vs tyT | all (isval ctx) vs -> Nothing
+                TmTag _ vs _ | all (isval ctx) vs -> Nothing
                 TmTag l ts tyT -> do
                         ts' <- mapM eval1 ts
                         Just $ TmTag l ts' tyT

@@ -12,8 +12,9 @@ import Plato.Typing.TcTypes
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 import Data.IORef
-import Data.List
+import Data.List ((\\))
 import qualified Data.Map.Strict as M
 
 data TcEnv = TcEnv
@@ -23,7 +24,7 @@ data TcEnv = TcEnv
 
 newtype Tc m a = Tc (TcEnv -> m a)
 
-unTc :: Monad m => Tc m a -> TcEnv -> m a
+unTc :: Tc m a -> TcEnv -> m a
 unTc (Tc a) = a
 
 instance Monad m => Functor (Tc m) where
@@ -45,6 +46,9 @@ instance Monad m => Monad (Tc m) where
 instance MonadThrow m => MonadFail (Tc m) where
         fail msg = lift $ throwString msg
 
+instance MonadTrans Tc where
+        lift m = Tc (const m)
+
 failTc :: MonadThrow m => Span -> String -> Tc m a
 failTc sp msg = Tc $ \_ -> throwLocatedErr sp msg
 
@@ -57,9 +61,6 @@ runTc binds (Tc tc) = do
         ref <- liftIO $ newIORef 0
         let env = TcEnv{uniqs = ref, var_env = binds}
         tc env
-
-lift :: Monad m => m a -> Tc m a
-lift st = Tc (const st)
 
 newTcRef :: MonadIO m => a -> Tc m (IORef a)
 newTcRef v = lift (liftIO $ newIORef v)

@@ -20,12 +20,12 @@ skip :: Action
 skip _ _ = alexMonadScan
 
 andBegin :: Action -> Int -> Action
-(act `andBegin` code) ainp len = do
-        setStartCode code
+(act `andBegin` scd) ainp len = do
+        setStartCode scd
         act ainp len
 
 begin :: Int -> Action
-begin code = skip `andBegin` code
+begin scd = skip `andBegin` scd
 
 ----------------------------------------------------------------
 -- SrcLoc

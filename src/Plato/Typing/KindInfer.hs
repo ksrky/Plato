@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Typing.KindInfer where
@@ -6,16 +7,16 @@ import Plato.Common.Error
 import Plato.Common.GlbName
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TcMonad (newTyVar)
 import Plato.Typing.TcTypes (tyVarName)
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 import Data.Bifunctor (Bifunctor (first, second))
 import Data.IORef
 import qualified Data.Map.Strict as M
-import qualified Data.Set as S
+import Prettyprinter
 
 inferKind :: (MonadThrow m, MonadIO m) => KnTable -> Type -> m (Type, Kind)
 inferKind knenv ty = runKi knenv $ do
@@ -29,7 +30,7 @@ checkKindStar knenv sp ty = runKi knenv $ do
         (ty', kn) <- infer ty
         ty'' <- zonkType ty'
         kn' <- zonkKind kn
-        when (kn /= StarK) $ lift $ throwLocatedErr sp $ show ty ++ " doesn't have Kind *"
+        when (kn' /= StarK) $ lift $ throwLocErr sp $ sep [pretty ty, " doesn't have Kind *"]
         return ty''
 
 -- | kind Table
@@ -70,7 +71,7 @@ data KiEnv = KiEnv
 -- | Inference Monad
 newtype Ki m a = Ki (KiEnv -> m a)
 
-unKi :: Monad m => Ki m a -> (KiEnv -> m a)
+unKi :: Ki m a -> (KiEnv -> m a)
 unKi (Ki a) = a
 
 instance Monad m => Functor (Ki m) where
@@ -89,14 +90,14 @@ instance Monad m => Monad (Ki m) where
                 v <- unKi m env
                 unKi (k v) env
 
+instance MonadTrans Ki where
+        lift m = Ki (const m)
+
 runKi :: MonadIO m => KnTable -> Ki m a -> m a
 runKi knenv (Ki ki) = do
         ref <- liftIO $ newIORef 0
         let env = KiEnv{uniqs = ref, var_env = knenv}
         ki env
-
-lift :: Monad m => m a -> Ki m a
-lift st = Ki (const st)
 
 newKiRef :: MonadIO m => a -> Ki m (IORef a)
 newKiRef v = lift (liftIO $ newIORef v)

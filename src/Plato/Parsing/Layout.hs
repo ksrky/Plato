@@ -106,7 +106,6 @@ leftBrace (pos, _, _, inp) len = do
 popLayoutLevel :: Located Token -> Parser Span
 popLayoutLevel (L sp _) = do
         lev <- getIndentLevels
-        scd <- getStartCode
         case lev of
                 m : ms | m /= 0 -> do
                         -- note: Layout rule

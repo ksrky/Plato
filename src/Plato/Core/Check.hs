@@ -1,5 +1,6 @@
 module Plato.Core.Check where
 
+{-
 import Control.Exception.Safe
 import Control.Monad
 import Plato.Common.Error
@@ -7,7 +8,6 @@ import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Syntax.Core
 
-{-
 ----------------------------------------------------------------
 -- Type equality check
 ----------------------------------------------------------------

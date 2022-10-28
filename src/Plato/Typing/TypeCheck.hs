@@ -3,7 +3,6 @@
 
 module Plato.Typing.TypeCheck where
 
-import Plato.Common.Error
 import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
@@ -16,7 +15,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import Data.IORef
-import Data.List
+import Data.List (subsequences, (\\))
 
 typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
@@ -65,7 +64,7 @@ tcPat (VarP v) (Check ty) = return [(v, ty)]
 tcPat (ConP con ps) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         envs <- mapM check_arg (ps `zip` arg_tys)
-        instPatSigma res_ty exp_ty
+        _ <- instPatSigma res_ty exp_ty
         return (concat envs)
     where
         check_arg (p, ty) = checkPat p ty
@@ -127,18 +126,18 @@ tcRho (LetE decs body) exp_ty = do
 tcRho (CaseE match _ alts) (Check exp_ty) = do
         (match', match_ty) <- inferRho match
         alts' <- forM alts $ \(pat, body) -> do
-                checkPat pat match_ty
+                _ <- checkPat pat match_ty
                 body' <- checkRho body exp_ty
                 return (pat, body')
         return $ CaseE match' (Just match_ty) alts'
 tcRho (CaseE match _ alts) (Infer ref) = do
         (match', match_ty) <- inferRho match
         body_tys <- forM alts $ \(pat, body) -> do
-                checkPat pat match_ty
+                _ <- checkPat pat match_ty
                 inferRho body
         let pairs = filter ((2 ==) . length) $ subsequences body_tys
-        forM_ pairs $ \[(e1, ty1), (e2, ty2)] -> do
-                subsCheck ty1 ty2
+        forM_ pairs $ \[(_, ty1), (_, ty2)] -> do
+                _ <- subsCheck ty1 ty2
                 subsCheck ty2 ty1
         return $ CaseE match' (Just match_ty) alts
 tcRho (AnnE body ann_ty) exp_ty = do

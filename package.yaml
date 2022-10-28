@@ -35,6 +35,7 @@ dependencies:
   - mtl
   - prettyprinter
   - safe-exceptions
+  - transformers
   - text
   - vector
 
@@ -44,10 +45,11 @@ ghc-options:
   - -Widentities
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
-  - -Wmissing-export-lists
   - -Wmissing-home-modules
   - -Wpartial-fields
   - -Wredundant-constraints
+  - -Wno-name-shadowing
+  - -Wno-incomplete-uni-pattern
 
 library:
   source-dirs: src

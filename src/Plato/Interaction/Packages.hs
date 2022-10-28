@@ -1,6 +1,5 @@
 module Plato.Interaction.Packages where
 
-import qualified Data.Text as T
 import Plato.Common.Error
 import Plato.Common.Name
 
