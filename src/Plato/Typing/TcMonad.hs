@@ -23,7 +23,7 @@ data TcEnv = TcEnv
 
 newtype Tc m a = Tc (TcEnv -> m a)
 
-unTc :: Monad m => Tc m a -> (TcEnv -> m a)
+unTc :: Monad m => Tc m a -> TcEnv -> m a
 unTc (Tc a) = a
 
 instance Monad m => Functor (Tc m) where

@@ -9,46 +9,56 @@ import Plato.Syntax.Typing
 
 import Control.Exception.Safe
 import Control.Monad.State
-import Data.List
+import qualified Data.Text as T
 
 type Names = [(GenName, GenName)]
 
 data RenameState = RenameState
         { moduleName :: Maybe ModuleName
-        , names :: Names
+        , internalNames :: Names
+        , externalNames :: Names
         , level :: Int
         }
 
-initRenameState :: Maybe ModuleName -> RenameState
-initRenameState modn =
+names :: RenameState -> Names
+names st = internalNames st ++ externalNames st
+
+emptyRenameState :: RenameState
+emptyRenameState =
         RenameState
-                { moduleName = modn
-                , names = []
+                { moduleName = Nothing
+                , internalNames = []
+                , externalNames = []
                 , level = 0
                 }
 
-getWrapperName :: RenameState -> Name
+getWrapperName :: RenameState -> GenName
 getWrapperName st = case moduleName st of
-        Just modn | level st == 0 -> mod2conName modn --tmp: conflict
-        _ -> str2conName (':' : show (level st))
+        Just modn | level st == 0 -> newName $ mod2conName modn
+        _ -> newName $ str2conName (':' : show (level st))
 
 updateNames :: [FuncD] -> GenName -> Names -> Names
 updateNames decs name st = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
 
-mkProj :: GenName -> GenName -> Expr
-mkProj r = ProjE (VarE r)
+isExternal :: RenameState -> GenName -> Bool
+isExternal st n =
+        nameSpace (g_name n) == ConName
+                && T.head (nameText (g_name n)) /= ':'
+                && (mod2conName <$> moduleName st) /= Just (g_name n)
 
-mkValue :: Names -> GenName -> Expr
-mkValue names x = case lookup x names of
-        Just r -> mkProj r x
-        Nothing -> VarE x
+mkValue :: RenameState -> GenName -> Expr
+mkValue st x = case lookup x (internalNames st) of
+        Just r -> ProjE (VarE r) x
+        Nothing -> case lookup x (externalNames st) of
+                Just r -> ProjE (VarE r) x{g_sort = External}
+                Nothing -> VarE x
 
 -- | Renaming
 class Rename a where
         rename :: MonadThrow m => RenameState -> a -> m a
 
 instance Rename Expr where
-        rename st (VarE x) = return $ mkValue (names st) x
+        rename st (VarE x) = return $ mkValue st x
         rename st (AbsE x ty e) = AbsE x ty <$> rename st e
         rename st (AppE e1 e2) = AppE <$> rename st e1 <*> rename st e2
         rename st (TAbsE xs e) = TAbsE xs <$> rename st e
@@ -68,8 +78,8 @@ instance Rename FuncD where
 
 renameFuncDs :: MonadThrow m => RenameState -> [FuncD] -> m (FuncD, RenameState)
 renameFuncDs st decs = do
-        let r = newName $ getWrapperName st
-            st' = st{names = updateNames decs r (names st)}
+        let r = getWrapperName st
+            st' = st{internalNames = updateNames decs r (internalNames st)}
         fields <- forM decs $ \(FuncD var body ty) -> do
                 body' <- rename st' body
                 return (var, body')

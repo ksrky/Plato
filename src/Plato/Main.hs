@@ -55,8 +55,10 @@ process input = do
         (typ, typenv') <- ps2typ typenv ps
         modify $ \s -> s{typingEnv = typenv `M.union` typenv'}
         -- processing Core
+        ns <- gets renames
         ctx <- gets context
-        cmds <- typ2core ctx typ
+        (ns', cmds) <- typ2core ns ctx typ
+        modify $ \s -> s{renames = ns'}
         ctx' <- foldM processCommand ctx cmds
         modify $ \s -> s{context = ctx'}
 
@@ -75,5 +77,5 @@ processModule (L sp mod) = do
         when (mod `elem` impng_list) $ throwLocatedErr sp "Cyclic dependencies"
         modify $ \s -> s{importingList = mod : impng_list}
         base_path <- gets basePath
-        processFile (base_path ++ "/" ++ mod2path mod)
+        processFile (base_path ++ mod2path mod)
         modify $ \s -> s{importingList = impng_list, importedList = mod : imped_list}

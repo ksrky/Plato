@@ -22,7 +22,7 @@ instance Show GenName where
         show n = show (g_name n)
 
 data NameSort
-        = External ModuleName
+        = External
         | Internal
         | System
         deriving (Eq, Show)

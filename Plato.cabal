@@ -35,6 +35,7 @@ library
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Interaction.Monad
+      Plato.Interaction.Packages
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -92,6 +93,7 @@ executable plato
       Plato.Core.Context
       Plato.Core.Eval
       Plato.Interaction.Monad
+      Plato.Interaction.Packages
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Error

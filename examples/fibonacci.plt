@@ -1,3 +1,5 @@
+import Plato.Nat
+
 fib : Nat -> Nat
 fib n = case n of
     Zero -> Zero

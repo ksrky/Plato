@@ -23,7 +23,7 @@ catchError =
                 , Handler $ \e@LocatedErr{} -> liftIO $ putStrLn $ pretty e
                 , Handler $ \e@PsError{} -> liftIO $ putStrLn $ pretty e
                 , Handler $ \e@UnexpectedErr{} -> liftIO $ putStrLn $ pretty e
-                , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
+                -- , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
                 -- Handler $ \(e :: SomeException) -> liftIO $ putStrLn "Unknown error"
                 ]
         )
