@@ -3,6 +3,8 @@ module Plato.Common.GlbName where
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 
+import Prettyprinter
+
 ----------------------------------------------------------------
 -- Global Name
 ----------------------------------------------------------------
@@ -20,6 +22,9 @@ instance Ord GlbName where
 
 instance Show GlbName where
         show n = show (g_name n)
+
+instance Pretty GlbName where
+        pretty n = pretty (g_name n)
 
 data NameSort
         = External

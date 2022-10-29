@@ -125,7 +125,7 @@ lookupVar x = do
         env <- getEnv
         case M.lookup x env of
                 Just ty -> return ty
-                Nothing -> lift $ throwLocatedErr (g_loc x) $ "Not in scope: " ++ show x
+                Nothing -> lift $ throwLocErr (g_loc x) $ hsep ["Not in scope:", pretty x]
 
 -- | KMeta
 newKnVar :: MonadIO m => Ki m Kind
@@ -221,7 +221,7 @@ unifyUnboundVar kv1 kn2 = do
                 else writeKv kv1 kn2
 
 occursCheckErr :: MonadThrow m => MetaKv -> Kind -> Ki m ()
-occursCheckErr tv ty = lift $ throwString "Occurs check fail" --tmp
+occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv <> comma, pretty ty]
 
 -- | Inference
 infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
@@ -235,8 +235,8 @@ infer t = case t of
         ArrT ty1 ty2 -> do
                 (ty1', kn1) <- infer ty1
                 (ty2', kn2) <- infer ty2
-                s3 <- unify kn1 StarK
-                s4 <- unify kn2 StarK
+                unify kn1 StarK
+                unify kn2 StarK
                 return (ArrT ty1' ty2', StarK)
         AllT tvs ty1 -> do
                 binds <- forM tvs $ \tv -> do
@@ -258,7 +258,7 @@ infer t = case t of
         RecT x ty1 -> do
                 kv <- newKnVar
                 (ty1', kn1) <- extendEnv x kv (infer ty1)
-                s2 <- unify kn1 StarK
+                unify kn1 StarK
                 return (RecT x ty1', StarK)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do

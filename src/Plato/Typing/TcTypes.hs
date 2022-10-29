@@ -2,12 +2,10 @@ module Plato.Typing.TcTypes where
 
 import Plato.Common.Error
 import Plato.Common.GlbName
-import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 
 import Data.IORef
-import Data.List
+import Data.List (nub)
 import Data.Maybe
 
 type Sigma = Type

@@ -12,7 +12,6 @@ import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
 
-import qualified Control.Exception as E
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class

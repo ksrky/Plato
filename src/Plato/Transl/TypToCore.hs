@@ -39,7 +39,7 @@ transExpr knenv ctx = traexpr
                 t1 <- traexpr e1
                 tyTs' <- mapM (transType ctx) tys
                 return $ foldl C.TmTApp t1 tyTs'
-        traexpr exp@(T.TAbsE xs e1) = do
+        traexpr (T.TAbsE xs e1) = do
                 ctx' <- foldM (flip addName) ctx xs
                 t2 <- transExpr knenv ctx' e1
                 return $ foldr C.TmTAbs t2 xs
@@ -78,7 +78,7 @@ transExpr knenv ctx = traexpr
                                 return (li, (length as, ti))
                         T.VarP x -> do
                                 ctx' <- addName x ctx
-                                ti <- traexpr body
+                                ti <- transExpr knenv ctx' body
                                 return (newName $ str2varName "", (1, ti))
                         T.WildP -> do
                                 ti <- traexpr body

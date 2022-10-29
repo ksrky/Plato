@@ -9,16 +9,13 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.TcMonad
 import Plato.Typing.TcTypes
 import Plato.Typing.TypeCheck
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
-import Data.List ((\\))
 import qualified Data.Map.Strict as M
-import qualified Data.Text as T
 
 transName :: Located Name -> GlbName
 transName (L sp n) = GlbName Internal n sp
@@ -49,7 +46,7 @@ transExpr = traexpr
                         execWriterT $
                                 let transAlts :: MonadThrow m => [(Located P.Pat, Located P.Expr)] -> WriterT [(T.Pat, T.Expr)] m ()
                                     transAlts [] = return ()
-                                    transAlts (alt@(pi, ei) : alts) =
+                                    transAlts ((pi, ei) : alts) =
                                         traexpr ei >>= \ei' -> case unLoc pi of
                                                 P.ConP l ps -> do
                                                         ps' <- mapM transPat ps
@@ -131,8 +128,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     tag = T.TagE l (map (T.VarE . transName) args) (Just res_ty)
                     foldtag = T.AppE (T.FoldE (T.ConT $ transName name)) tag --tmp: con
                     exp = foldr (\(x, ty) -> T.AbsE (transName x) (Just ty)) foldtag (zip args field)
-                    exp' = T.TAbsE (map transName tyargs) exp
-                tell ([], [L sp $ T.FuncD l exp sigma_ty], [])
+                    exp' = if null tyargs then exp else T.TAbsE (map transName tyargs) exp
+                tell ([], [L sp $ T.FuncD l exp' sigma_ty], [])
 transTopDecl (L sp (P.TypeD name params ty1)) = do
         ty1' <- Writer.lift $ transType ty1
         tell ([L sp (T.TypeD (transName name) (foldr (\x -> T.AbsT (transName x) Nothing) ty1' params))], [], [])

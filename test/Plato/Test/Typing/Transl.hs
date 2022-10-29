@@ -3,8 +3,6 @@
 
 module Plato.Test.Typing.Transl where
 
-import Plato.Common.Error
-import Plato.Common.Name
 import Plato.Syntax.Typing
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
@@ -50,14 +48,14 @@ testcases =
                                 Program
                                         { binds =
                                                 [ FuncD
-                                                                f
+                                                                (VN "f")
                                                                 ( TAbsE
                                                                                 [TVN "a"]
                                                                                 ( LetE
                                                                                                 [ FuncD (VN "g") (TAbsE [TVN "b"] (AbsE (VN "x") (Just (SVT "b")) (VE "x"))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
-                                                                                                        , FuncD (VN "h") (TAbsE [TVN "c"] (AbsE (VN "y") (Just (SVT "c")) (VarE y))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
+                                                                                                        , FuncD (VN "h") (TAbsE [TVN "c"] (AbsE (VN "y") (Just (SVT "c")) (VE "y"))) (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))
                                                                                                         ]
-                                                                                                (AbsE (VN "x") (Just (SVT "a")) (AppE (TAppE (VE "g") [VT "a"]) (VE "x")))
+                                                                                                (AbsE (VN "x") (Just (SVT "a")) (AppE (TAppE (VE "g") [SVT "a"]) (VE "x")))
                                                                                         )
                                                                         )
                                                                 (AllT [(TV "a", _)] (ArrT (VT "a") (VT "a")))

@@ -2,19 +2,15 @@ module Plato.Test.Core.KindInfer where
 
 import Plato.Common.Error
 import Plato.Common.SrcLoc
-import Plato.Core.Context
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
-import Plato.Syntax.Core as C
-import qualified Plato.Syntax.Core as C
+import Plato.Syntax.Core
 import qualified Plato.Syntax.Typing as T
 import qualified Plato.Transl.PsToTyp as T
 import qualified Plato.Transl.SrcToPs as P
 import qualified Plato.Transl.TypToCore as C
 import Plato.Typing.KindInfer
-
-import Plato.Test.Utils
 
 import Control.Exception.Safe
 import Control.Monad.State
@@ -26,15 +22,15 @@ testcases :: [(String, IO [Kind] -> Expectation)]
 testcases =
         [
                 ( "data Bool = True | False"
-                , (`shouldReturn` [C.KnStar])
+                , (`shouldReturn` [KnStar])
                 )
         ,
                 ( "data Maybe a = Nothing | Just a"
-                , (`shouldReturn` [C.KnArr C.KnStar C.KnStar])
+                , (`shouldReturn` [KnArr KnStar KnStar])
                 )
         ,
                 ( "data Either a b = Left a | Right b"
-                , (`shouldReturn` [C.KnArr C.KnStar (C.KnArr C.KnStar C.KnStar)])
+                , (`shouldReturn` [KnArr KnStar (KnArr KnStar KnStar)])
                 )
         ]
 
@@ -44,7 +40,7 @@ test (inp, iscorrect) = it inp $
                 (ps, st) <- eitherToMonadThrow (P.parseLine (T.pack inp) topdeclParser)
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
-                (tydecs, fundecs, _) <- execWriterT $ T.transTopDecl ps'
-                forM tydecs $ \(L _ (T.TypeD name ty)) -> do
-                        (ty', kn) <- inferKind emptyKnTable ty
+                (tydecs, _, _) <- execWriterT $ T.transTopDecl ps'
+                forM tydecs $ \(L _ (T.TypeD _ ty)) -> do
+                        (_, kn) <- inferKind emptyKnTable ty
                         C.transKind kn
