@@ -60,7 +60,7 @@ library
       Paths_Plato
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
   build-tools:
       alex
     , happy
@@ -118,7 +118,7 @@ executable plato
       Paths_Plato
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -Wincomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
     , happy
@@ -150,6 +150,7 @@ test-suite Plato-test
       Plato.Test.Core.Utils
       Plato.Test.CoreSpec
       Plato.Test.Parsing.FixResol
+      Plato.Test.Parsing.Parser
       Plato.Test.ParsingSpec
       Plato.Test.Typing.DeclTransl
       Plato.Test.Typing.ExprTransl
@@ -162,7 +163,7 @@ test-suite Plato-test
       Paths_Plato
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -Wincomplete-uni-patterns -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
     , happy

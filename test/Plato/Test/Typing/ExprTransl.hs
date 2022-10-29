@@ -3,8 +3,7 @@
 
 module Plato.Test.Typing.ExprTransl where
 
-import Plato.Common.Error
-import Plato.Common.SrcLoc
+import Plato.Common.Error 
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser

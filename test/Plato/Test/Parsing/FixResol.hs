@@ -7,9 +7,9 @@ module Plato.Test.Parsing.FixResol where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
+import Plato.Parsing.FixResol
 import Plato.Parsing.Fixity
 import Plato.Parsing.Parser
-import Plato.Parsing.FixResol
 import Plato.Syntax.Parsing
 import Plato.Transl.SrcToPs
 
@@ -62,5 +62,5 @@ opdict =
 test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
-                (res, st) <- eitherToMonadThrow (parseLine (T.pack inp) exprParser)
+                (res, _) <- eitherToMonadThrow (parseLine (T.pack inp) exprParser)
                 unLoc <$> resolve opdict res

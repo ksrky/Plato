@@ -62,12 +62,19 @@ data Program = Program
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
+hsep' :: [Doc ann] -> Doc ann
+hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
+
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = pprapp exp
         pretty (OpE lhs op rhs) = pretty lhs <+> pretty op <+> pretty rhs
-        pretty (LamE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
-        pretty (LetE decs body) = sep ["let", lbrace, line, indent 4 (vsep (map pretty decs)), line, rbrace, "in", pretty body]
+        pretty (LamE vars body) = backslash <> hsep (map pretty vars) <+> "->" <+> pretty body
+        pretty (LetE decs body) =
+                "let" <+> lbrace <> line
+                        <> indent 4 (vsep (map pretty decs))
+                        <> line
+                        <> rbrace <+> "in" <+> pretty body
         pretty (CaseE match alts) =
                 "case" <+> pretty match <+> "of" <+> lbrace <> line
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
@@ -86,7 +93,7 @@ pprapp e = walk e []
         pprParendExpr e = parens (pretty e)
 
 instance Pretty Pat where
-        pretty (ConP con pats) = pretty con <+> hsep (map pprpat pats)
+        pretty (ConP con pats) = pretty con <> hsep' (map pprpat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
@@ -116,20 +123,20 @@ pprty p (L _ ty)
         | otherwise = pretty ty
 
 instance Pretty Decl where
-        pretty (FuncD var args body) = pretty var <+> hsep (map pretty args) <+> equals <+> pretty body
+        pretty (FuncD var args body) = pretty var <> hsep' (map pretty args) <+> equals <+> pretty body
         pretty (FuncTyD var body_ty) = pretty var <+> colon <+> pretty body_ty
 
 instance Pretty TopDecl where
         pretty (DataD con args fields) =
-                pretty con <+> hsep (map pretty args) <+> equals
-                        <+> concatWith (surround pipe) (map (\(c, tys) -> pretty c <+> hsep (map pretty tys)) fields)
-        pretty (TypeD con args body) = pretty con <+> hsep (map pretty args) <+> equals <+> pretty body
+                pretty con <> hsep' (map pretty args) <+> equals
+                        <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
+        pretty (TypeD con args body) = pretty con <> hsep' (map pretty args) <+> equals <+> pretty body
         pretty FixD = emptyDoc
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp
 
 instance Pretty Program where
         pretty (Program mod imps topdecs) =
-                maybe emptyDoc pretty mod <> line
+                maybe emptyDoc (\d -> pretty d <> line) mod
                         <> vsep (map (\imp -> "import" <+> pretty imp) imps)
                         <> vsep (map pretty topdecs)

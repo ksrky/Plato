@@ -19,7 +19,7 @@ instance Show Name where
         show (Name _ t) = T.unpack t
 
 instance Pretty Name where
-        pretty n = viaShow (show n)
+        pretty n = viaShow n
 
 -- | NameSpace
 data NameSpace

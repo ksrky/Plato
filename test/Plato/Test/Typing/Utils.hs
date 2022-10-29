@@ -52,4 +52,5 @@ pattern CP x ps <- ConP (CN x) ps
 pattern ABSE :: T.Text -> Expr -> Expr
 pattern ABSE x e <- AbsE (VN x) Nothing e
 
+pattern ALLT :: T.Text -> Type -> Type
 pattern ALLT x ty <- AllT [(TV x, _)] ty

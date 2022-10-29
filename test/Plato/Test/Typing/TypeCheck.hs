@@ -4,8 +4,6 @@
 module Plato.Test.Typing.TypeCheck where
 
 import Plato.Common.Error
-import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
