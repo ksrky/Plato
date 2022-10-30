@@ -62,3 +62,4 @@
 - ignore: { name: Fuse foldr/map }
 - ignore: { name: Use second }
 - ignore: { name: Use lambda-case }
+- ignore: { name: Use isNothing }

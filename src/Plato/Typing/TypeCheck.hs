@@ -168,7 +168,7 @@ checkSigma expr sigma = do
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         check (null bad_tvs) NoSpan "Type not polymorphic enough" --tmp
-        return $ coercion $ TAbsE (map tyVarName skol_tvs) expr'
+        return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarName skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --

@@ -1,9 +1,10 @@
-module Plato.Test.Parsing.Parser where
+module Plato.Test.Parsing.Pretty where
+
+import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import qualified Data.Text.IO as T
-import Plato.Transl.SrcToPs
 import Prettyprinter
 import Test.Hspec
 

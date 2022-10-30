@@ -72,14 +72,16 @@ type TypEnv = M.Map GlbName Type {- Sigma -}
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
+hsep' :: [Doc ann] -> Doc ann
+hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty (AppE (FoldE ty) exp) = "fold" <+> lbracket <> pretty ty <> rbracket <+> pretty exp
         pretty exp@AppE{} = pprapp exp
-        pretty (AbsE var mty body) = sep [backslash, pretty var, colon, maybe emptyDoc pretty mty, dot] <+> pretty body
-        pretty (TAppE fun tyargs) = pretty fun <+> hsep (map pretty tyargs)
+        pretty (AbsE var mty body) = backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
+        pretty (TAppE fun tyargs) = pretty fun <> hsep' (map pretty tyargs)
         pretty (TAbsE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
-        pretty (LetE decs body) = hsep ["let", lbrace, line, indent 4 (vsep (map pretty decs)), line, rbrace, "in", pretty body]
+        pretty (LetE decs body) = hsep ["let", lbrace <> line, indent 4 (vsep (map pretty decs)), line <> rbrace, "in", pretty body]
         pretty (ProjE exp lab) = surround "." (pretty exp) (pretty lab)
         pretty (RecordE fields) =
                 hsep
@@ -92,7 +94,7 @@ instance Pretty Expr where
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace
-        pretty (TagE con args _) = pretty con <+> hsep (map pretty args)
+        pretty (TagE con args _) = pretty con <> hsep' (map pretty args)
         pretty (FoldE ty) = sep [lbracket, pretty ty, rbracket]
         pretty (AnnE exp ty) = pprexpr exp <+> colon <+> pretty ty
 
@@ -119,13 +121,13 @@ pprpat pat@(ConP con pats)
 pprpat pat = pretty pat
 
 instance Pretty Type where
-        pretty (VarT var) = viaShow var
+        pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
         pretty (AppT fun arg) = pretty fun <+> pprty AppPrec arg
         pretty (ArrT arg res) = pprty ArrPrec arg <+> "->" <+> pprty TopPrec res
-        pretty (AllT vars body) = lbrace <> hsep (map viaShow vars) <> rbrace <+> pretty body
-        pretty (AbsT var mkn body) = sep [backslash, pretty var, colon, maybe emptyDoc pretty mkn] <+> pretty body
-        pretty (RecT var body) = sep [slash, pretty var, dot] <+> pretty body
+        pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
+        pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <+> pretty body
+        pretty (RecT var body) = "μ" <> pretty var <> dot <+> pretty body
         pretty (RecordT fields) =
                 hsep
                         [ lbrace
@@ -133,16 +135,14 @@ instance Pretty Type where
                         , rbrace
                         ]
         pretty (SumT fields) =
-                hsep
-                        [ langle
-                        , concatWith
-                                (\d -> (<+> pipe <+> d))
+                langle
+                        <> concatWith
+                                (\d e -> d <+> pipe <+> e)
                                 ( map
-                                        (\(var, tys) -> pretty var <+> hsep (map (pprty AppPrec) tys))
+                                        (\(c, tys) -> pretty c <> hsep' (map (pprty AppPrec) tys))
                                         fields
                                 )
-                        , rangle
-                        ]
+                        <> rangle
         pretty (MetaT m) = viaShow (show m)
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
@@ -170,15 +170,15 @@ instance Pretty FuncD where
         pretty (FuncD var body body_ty) = hsep [pretty var, equals, pretty body, colon, pretty body_ty]
 
 instance Pretty Decl where
-        pretty (TypeD var body) = hsep [pretty var, equals, pretty body]
+        pretty (TypeD con body) = hsep [pretty con, equals, pretty body]
         pretty (VarD var ty) = hsep [pretty var, colon, pretty ty]
         pretty (ConD fund) = pretty fund
 
 instance Pretty Program where
         pretty (Program mod decs binds body) =
-                vsep
-                        [ maybe emptyDoc pretty mod
-                        , vsep (map pretty decs)
-                        , vsep (map pretty binds)
-                        , vsep (map pretty body)
-                        ]
+                maybe emptyDoc (\d -> pretty d <> line) mod
+                        <> vsep (map pretty decs)
+                        <> (if null decs then emptyDoc else line)
+                        <> vsep (map pretty binds)
+                        <> (if null binds then emptyDoc else line)
+                        <> vsep (map pretty body)

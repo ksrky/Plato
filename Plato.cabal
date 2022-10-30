@@ -150,10 +150,11 @@ test-suite Plato-test
       Plato.Test.Core.Utils
       Plato.Test.CoreSpec
       Plato.Test.Parsing.FixResol
-      Plato.Test.Parsing.Parser
+      Plato.Test.Parsing.Pretty
       Plato.Test.ParsingSpec
       Plato.Test.Typing.DeclTransl
       Plato.Test.Typing.ExprTransl
+      Plato.Test.Typing.Pretty
       Plato.Test.Typing.TopDeclTransl
       Plato.Test.Typing.Transl
       Plato.Test.Typing.TypeCheck

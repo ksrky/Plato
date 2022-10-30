@@ -7,6 +7,7 @@ import Plato.Syntax.Typing
 import Data.IORef
 import Data.List (nub)
 import Data.Maybe
+import Prettyprinter
 
 type Sigma = Type
 type Rho = Type
@@ -23,16 +24,20 @@ type TyRef = IORef (Maybe Tau)
 
 type Uniq = Int
 
+instance Eq TyVar where
+        (BoundTv s1) == (BoundTv s2) = s1 == s2
+        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
+        _ == _ = False
+
+instance Pretty TyVar where
+        pretty (BoundTv n) = pretty n
+        pretty (SkolemTv n _) = pretty n
+
 instance Eq MetaTv where
         (Meta u1 _) == (Meta u2 _) = u1 == u2
 
 instance Show MetaTv where
         show (Meta u _) = "$" ++ show u
-
-instance Eq TyVar where
-        (BoundTv s1) == (BoundTv s2) = s1 == s2
-        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
-        _ == _ = False
 
 metaTvs :: [Type] -> [MetaTv]
 metaTvs = foldr go []
