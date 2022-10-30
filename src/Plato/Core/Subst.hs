@@ -14,7 +14,7 @@ tymap onvar c tyT = walk c tyT
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
                 TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
-                TyRec tyX tyT2 -> TyRec tyX (walk (c + 1) tyT)
+                TyRec tyX tyT1 -> TyRec tyX (walk (c + 1) tyT1)
                 TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
                 TyVariant fieldtys -> TyVariant (map (\(li, tyTi) -> (li, map (walk c) tyTi)) fieldtys)
 
@@ -84,11 +84,11 @@ termSubst j s =
                                 then termShift j s
                                 else TmVar x n
                 )
-                (\j tyT -> tyT)
+                (\_ tyT -> tyT)
                 j
 
 tytermSubst :: Ty -> Int -> Term -> Term
-tytermSubst tyS = tmmap (\c x n -> TmVar x n) (typeSubst tyS)
+tytermSubst tyS = tmmap (\_ x n -> TmVar x n) (typeSubst tyS)
 
 termSubstTop :: Term -> Term -> Term
 termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)

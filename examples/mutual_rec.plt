@@ -1,5 +1,5 @@
-import Data.Bool
-import Data.Nat
+import Plato.Bool
+import Plato.Nat
 
 iseven : Nat -> Bool
 iseven n = case n of
