@@ -3,6 +3,8 @@
 
 module Plato.Core.Pretty where
 
+import Plato.Common.GlbName
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Syntax.Core
@@ -47,7 +49,17 @@ instance PrettyCore Term where
                 TmTag li ts1 _ -> hcat [pretty li, hsep' (map (pprtm ctx) ts1)]
                 TmCase t1 alts ->
                         "case" <+> ppr ctx t1 <+> "of" <+> lbrace <> line
-                                <> indent 4 (vsep (map (\(li, (ki, ti)) -> hsep [pretty li, pretty ki, "->", ppr ctx ti]) alts))
+                                <> indent
+                                        4
+                                        ( vsep
+                                                ( map
+                                                        ( \(li, (ki, ti)) ->
+                                                                let ctx' = foldr addFreshName ctx (map (newName . str2varName . show) [1 .. ki])
+                                                                 in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
+                                                        )
+                                                        alts
+                                                )
+                                        )
                                 <> line
                                 <> rbrace
 

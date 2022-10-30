@@ -115,7 +115,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                 forM fields $ \(l, tys) -> do
                         tys' <- mapM transType tys
                         return (transName l, tys')
-        let bodyty = T.RecT (transName name) (T.SumT fields')
+        let fieldty = T.SumT fields'
+            bodyty = T.RecT (transName name) fieldty
         tell ([L sp (T.TypeD (transName name) (foldr (\x -> T.AbsT (transName x) Nothing) bodyty params))], [], [])
         forM_ fields' $ \(l, field) -> do
                 let res_ty = foldl T.AppT (T.ConT $ transName name) (map (T.VarT . BoundTv . transName) params)
@@ -126,8 +127,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                                 else T.AllT (map (\x -> (BoundTv $ transName x, Nothing)) params) rho_ty
                     tyargs = params
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
-                    tag = T.TagE l (map (T.VarE . transName) args) (Just res_ty)
-                    foldtag = T.AppE (T.FoldE (T.ConT $ transName name)) tag --tmp: con
+                    tag = T.TagE l (map (T.VarE . transName) args) fieldty
+                    foldtag = T.AppE (T.FoldE res_ty) tag --tmp: con
                     exp = foldr (\(x, ty) -> T.AbsE (transName x) (Just ty)) foldtag (zip args field)
                     exp' = if null tyargs then exp else T.TAbsE (map transName tyargs) exp
                 tell ([], [L sp $ T.FuncD l exp' sigma_ty], [])

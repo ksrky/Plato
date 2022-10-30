@@ -66,17 +66,15 @@ tcPat (VarP v) (Infer ref) = do
 tcPat (VarP v) (Check ty) = return [(v, ty)]
 tcPat (ConP con ps) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
-        envs <- mapM check_arg (ps `zip` arg_tys)
+        envs <- zipWithM checkPat ps arg_tys
         _ <- instPatSigma res_ty exp_ty
         return (concat envs)
-    where
-        check_arg (p, ty) = checkPat p ty
 
 instPatSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Tc m (Expr -> Expr)
 instPatSigma pat_ty (Infer ref) = writeTcRef ref pat_ty >> return id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadIO m, MonadThrow m) => GlbName -> Tc m ([Sigma], Tau) --tmp: data constructor be in TcEnv
+instDataCon :: (MonadIO m, MonadThrow m) => GlbName -> Tc m ([Sigma], Tau)
 instDataCon con = do
         con_ty <- lookupVar con
         (_, con_ty') <- instantiate con_ty
@@ -129,15 +127,15 @@ tcRho (LetE decs body) exp_ty = do
 tcRho (CaseE match _ alts) (Check exp_ty) = do
         (match', match_ty) <- inferRho match
         alts' <- forM alts $ \(pat, body) -> do
-                _ <- checkPat pat match_ty
-                body' <- checkRho body exp_ty
+                args <- checkPat pat match_ty
+                body' <- extendVarEnvList args (checkRho body exp_ty)
                 return (pat, body')
         return $ CaseE match' (Just match_ty) alts'
 tcRho (CaseE match _ alts) (Infer ref) = do
         (match', match_ty) <- inferRho match
         body_tys <- forM alts $ \(pat, body) -> do
-                _ <- checkPat pat match_ty
-                inferRho body
+                args <- checkPat pat match_ty
+                extendVarEnvList args (inferRho body)
         let pairs = filter ((2 ==) . length) $ subsequences body_tys
         forM_ pairs $ \case
                 [(_, ty1), (_, ty2)] -> do

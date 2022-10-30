@@ -63,7 +63,7 @@ instance Rename Expr where
         rename st (TAbsE xs e) = TAbsE xs <$> rename st e
         rename st (TAppE e tys) = TAppE <$> rename st e <*> pure tys
         rename st (LetE decs body) = do
-                (dec, st') <- renameFuncDs st decs
+                (dec, st') <- renameFuncDs st{level = level st + 1} decs
                 body' <- rename st' body
                 return $ LetE [dec] body'
         rename st (CaseE e ty alts) = do

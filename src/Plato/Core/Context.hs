@@ -36,10 +36,10 @@ addName x = addBinding x NameBind
 addNames :: MonadThrow m => [GlbName] -> Context -> m Context
 addNames = flip $ foldM (flip addName)
 
-addFreshName :: GlbName -> Binding -> Context -> Context
-addFreshName x bind ctx = case lookupContext x ctx of
-        Just _ -> addFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) bind ctx
-        Nothing -> V.cons (x, bind) ctx
+addFreshName :: GlbName -> Context -> Context
+addFreshName x ctx = case lookupContext x ctx of
+        Just _ -> addFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) ctx
+        Nothing -> V.cons (x, NameBind) ctx
 
 pickFreshName :: GlbName -> Context -> (GlbName, Context)
 pickFreshName x ctx = case lookupContext x ctx of

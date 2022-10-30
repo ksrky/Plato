@@ -21,7 +21,7 @@ data Expr
         | ProjE Expr GlbName
         | RecordE [(GlbName, Expr)]
         | CaseE Expr (Maybe Type) [(Pat, Expr)]
-        | TagE GlbName [Expr] (Maybe Type)
+        | TagE GlbName [Expr] Type
         | FoldE Type
         | AnnE Expr Type {-Sigma-}
         deriving (Eq, Show)

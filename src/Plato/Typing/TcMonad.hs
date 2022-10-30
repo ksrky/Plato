@@ -74,7 +74,7 @@ extendVarEnv var ty (Tc m) = Tc (m . extend)
         extend env = env{var_env = M.insert var ty (var_env env)}
 
 extendVarEnvList :: [(GlbName, Sigma)] -> Tc m a -> Tc m a
-extendVarEnvList binds tr = foldr (uncurry extendVarEnv) tr binds
+extendVarEnvList binds tc = foldr (uncurry extendVarEnv) tc binds
 
 getEnv :: Monad m => Tc m (M.Map GlbName Sigma)
 getEnv = Tc (return . var_env)
