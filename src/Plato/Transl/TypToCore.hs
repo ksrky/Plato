@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Transl.TypToCore where
@@ -101,9 +102,11 @@ transType ctx = tratype
                 tyT2 <- tratype ty2
                 return $ C.TyArr tyT1 tyT2
         tratype (T.AllT xs ty) = do
-                xs' <- forM xs $ \(tv, Just kn) -> do
-                        knK <- transKind kn
-                        return (tyVarName tv, knK)
+                xs' <- forM xs $ \case
+                        (tv, Just kn) -> do
+                                knK <- transKind kn
+                                return (tyVarName tv, knK)
+                        _ -> throwUnexpectedErr "Kind inference failed"
                 ctx' <- addNames (map (tyVarName . fst) xs) ctx
                 tyT2 <- transType ctx' ty
                 return $ foldr (uncurry C.TyAll) tyT2 xs'

@@ -1,8 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Typing.TypeCheck where
 
+import Plato.Common.Error
 import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
@@ -136,9 +139,14 @@ tcRho (CaseE match _ alts) (Infer ref) = do
                 _ <- checkPat pat match_ty
                 inferRho body
         let pairs = filter ((2 ==) . length) $ subsequences body_tys
-        forM_ pairs $ \[(_, ty1), (_, ty2)] -> do
-                _ <- subsCheck ty1 ty2
-                subsCheck ty2 ty1
+        forM_ pairs $ \case
+                [(_, ty1), (_, ty2)] -> do
+                        _ <- subsCheck ty1 ty2
+                        subsCheck ty2 ty1
+                _ -> unreachable ""
+        case body_tys of
+                [] -> writeTcRef ref (SumT [])
+                (_, ty) : _ -> writeTcRef ref ty
         return $ CaseE match' (Just match_ty) alts
 tcRho (AnnE body ann_ty) exp_ty = do
         body' <- checkSigma body ann_ty
@@ -167,7 +175,7 @@ checkSigma expr sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-        check (null bad_tvs) NoSpan "Type not polymorphic enough" --tmp
+        unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Type not polymorphic enough" --tmp: location
         return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarName skol_tvs) expr'
 
 ------------------------------------------
@@ -180,7 +188,7 @@ subsCheck sigma1 sigma2 = do
         co2 <- subsCheckRho sigma1 rho2
         esc_tvs <- getFreeTyVars [sigma1, sigma2]
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-        check (null bad_tvs) NoSpan "Subsumption check failed" --tmp
+        unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Subsumption check failed" --tmp: location
         if null skol_tvs
                 then return id
                 else return $ \e -> co1 (TAbsE (map tyVarName skol_tvs) (co2 e))

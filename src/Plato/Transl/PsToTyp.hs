@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Plato.Transl.PsToTyp where
@@ -103,7 +104,7 @@ transDecls decs = do
                                         e' <- Writer.lift $ transExpr $ if null args then e else cLnL args e $ P.LamE args e
                                         tell [(x, e')]
                                 | otherwise -> do
-                                        Writer.lift $ throwLocatedErr sp "lacks type signature"
+                                        Writer.lift $ throwLocErr sp "lacks type signature"
                         _ -> return ()
         when (length fields /= length fieldtys) $ throwUnexpectedErr "number of function bodies and signatures are not match"
         return ([T.FuncD (transName var1) exp ty | (var1, exp) <- fields, (var2, ty) <- fieldtys, unLoc var1 == unLoc var2], vardecls)
@@ -152,7 +153,7 @@ ps2typ env (P.Program modn _ topds) = do
         fundecs' <- mapM (typeCheck env') fundecs
         exps' <- forM exps $ \(L sp e) -> do
                 (e', ty) <- typeInfer env' e
-                unless (isBasicType ty) $ throwLocatedErr sp "Invalid type for evaluation expression" --tmp
+                unless (isBasicType ty) $ throwLocErr sp "Invalid type for evaluation expression"
                 return $ L sp e'
         return
                 ( T.Program

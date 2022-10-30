@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Plato.Core.Context where
 
 import Plato.Common.Error
@@ -11,6 +13,7 @@ import Control.Exception.Safe
 import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import Prettyprinter
 
 type Context = V.Vector (GlbName, Binding)
 
@@ -24,7 +27,7 @@ lookupContext k v = do
 
 addBinding :: MonadThrow m => GlbName -> Binding -> Context -> m Context
 addBinding x bind ctx = case lookupContext x ctx of
-        Just _ | g_sort x /= System -> throwLocatedErr (g_loc x) $ "Conflicting definition of " ++ show x
+        Just _ | g_sort x /= System -> throwLocErr (g_loc x) $ "Conflicting definition of" <+> pretty x
         _ -> return $ V.cons (x, bind) ctx
 
 addName :: MonadThrow m => GlbName -> Context -> m Context
@@ -61,13 +64,13 @@ getTypeFromContext :: MonadThrow m => Span -> Context -> Int -> m (Located Ty)
 getTypeFromContext sp ctx i = case getBinding ctx i of
         VarBind tyT -> return tyT
         TmAbbBind _ (Just tyT) -> return tyT
-        TmAbbBind _ Nothing -> throwLocatedErr sp $ "No type recorded for variable " ++ show (index2name ctx i)
-        _ -> throwLocatedErr sp $ "Wrong kind of binding for variable " ++ show (index2name ctx i)
+        TmAbbBind _ Nothing -> throwLocErr sp $ "No type recorded for variable" <+> pretty (index2name ctx i)
+        _ -> throwLocErr sp $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
 
 getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
-        Nothing -> throwLocatedErr (g_loc x) $ "Unbound variable name: '" ++ show x ++ "'"
+        Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
 
 getVarIndex' :: Context -> GlbName -> Int
 getVarIndex' ctx x = case V.elemIndex x (V.map fst ctx) of

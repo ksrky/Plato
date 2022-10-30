@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Typing.TcMonad where
@@ -5,7 +6,6 @@ module Plato.Typing.TcMonad where
 import Plato.Common.Error
 import Plato.Common.GlbName
 import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 import Plato.Typing.TcTypes
 
@@ -16,6 +16,7 @@ import Control.Monad.Trans.Class
 import Data.IORef
 import Data.List ((\\))
 import qualified Data.Map.Strict as M
+import Prettyprinter
 
 data TcEnv = TcEnv
         { uniqs :: IORef Uniq
@@ -48,13 +49,6 @@ instance MonadThrow m => MonadFail (Tc m) where
 
 instance MonadTrans Tc where
         lift m = Tc (const m)
-
-failTc :: MonadThrow m => Span -> String -> Tc m a
-failTc sp msg = Tc $ \_ -> throwLocatedErr sp msg
-
-check :: MonadThrow m => Bool -> Span -> String -> Tc m ()
-check True _ _ = return ()
-check False sp d = failTc sp d
 
 runTc :: MonadIO m => TypEnv -> Tc m a -> m a
 runTc binds (Tc tc) = do
@@ -90,7 +84,7 @@ lookupVar x = do
         env <- getEnv
         case M.lookup x env of
                 Just ty -> return ty
-                Nothing -> failTc (g_loc x) $ "Not in scope: " ++ show x
+                Nothing -> lift $ throwLocErr (g_loc x) $ hsep ["Not in scope:", pretty x]
 
 --------------------------------------------------
 --      Creating, reading, writing MetaTvs      --
@@ -212,7 +206,7 @@ zonkType (MetaT tv) = do
                         ty' <- zonkType ty
                         writeTv tv ty'
                         return ty'
-zonkType _ = unreachable "AbsType, RecordType, RecType, SumType"
+zonkType _ = unreachable ""
 
 zonkExpr :: MonadIO m => Expr -> Tc m Expr
 zonkExpr (AbsE var mty expr) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr expr
@@ -247,7 +241,7 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
         unify fun1 fun2
         unify arg1 arg2
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwString $ "Cannot unify types: " ++ show ty1 ++ ", " ++ show ty2 --tmp: location
+unify ty1 ty2 = lift $ throwError $ hsep ["Cannot unify types:", pretty ty1 <> comma, pretty ty2] --tmp: location
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do
@@ -277,7 +271,7 @@ unifyFun tau = do
         return (arg_ty, res_ty)
 
 occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Tc m ()
-occursCheckErr tv ty = lift $ throwString "Occurs check fail" --tmp
+occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv, pretty ty]
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True

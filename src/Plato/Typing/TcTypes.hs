@@ -51,7 +51,7 @@ metaTvs = foldr go []
         go (ArrT arg res) acc = go arg (go res acc)
         go (AllT _ ty) acc = go ty acc
         go (AppT fun arg) acc = go fun (go arg acc)
-        go _ _ = unreachable "Invalid types"
+        go _ _ = unreachable ""
 
 freeTyVars :: [Type] -> [TyVar]
 freeTyVars = foldr (go []) []
@@ -66,7 +66,7 @@ freeTyVars = foldr (go []) []
         go bound (ArrT arg res) acc = go bound arg (go bound res acc)
         go bound (AllT tvs ty) acc = go (map fst tvs ++ bound) ty acc
         go bound (AppT fun arg) acc = go bound fun (go bound arg acc)
-        go _ _ _ = unreachable "AbsType, RecType, RecordType, SumType"
+        go _ _ _ = unreachable ""
 
 tyVarBndrs :: Rho -> [TyVar]
 tyVarBndrs ty = nub (bndrs ty)

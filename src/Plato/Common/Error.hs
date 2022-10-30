@@ -43,8 +43,5 @@ data LocatedErr = LocatedErr Span String deriving (Show)
 
 instance Exception LocatedErr
 
-throwLocatedErr :: MonadThrow m => Span -> String -> m a
-throwLocatedErr sp msg = throw $ LocatedErr sp msg
-
 throwLocErr :: MonadThrow m => Span -> Doc ann -> m a
 throwLocErr sp doc = throw $ LocatedErr sp (show doc)

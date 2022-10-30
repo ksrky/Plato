@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Plato.Main where
 
 import Plato.Common.Error
@@ -73,7 +75,7 @@ processModule (L sp mod) = do
         imped_list <- gets importedList
         impng_list <- gets importingList
         when (mod `elem` imped_list) $ return ()
-        when (mod `elem` impng_list) $ throwLocatedErr sp "Cyclic dependencies"
+        when (mod `elem` impng_list) $ throwLocErr sp "Cyclic dependencies"
         modify $ \s -> s{importingList = mod : impng_list}
         base_path <- gets basePath
         processFile (base_path ++ mod2path mod)
