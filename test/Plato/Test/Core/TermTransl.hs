@@ -53,5 +53,5 @@ test (inp, iscorrect) = it inp $
                 (fundec, _) <- renameFuncDs emptyRenameState fundecs'
                 ((_, b), _) <- (StateT . C.transDecl) (noLoc $ T.ConD fundec) `runStateT` (emptyContext, emptyKnTable)
                 case b of
-                        TmAbbBind t (Just tyT) -> return (unLoc t, unLoc tyT)
+                        TmAbbBind t tyT -> return (unLoc t, unLoc tyT)
                         _ -> unreachable ""

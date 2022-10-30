@@ -33,6 +33,7 @@ library
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Core.Pretty
       Plato.Core.Subst
       Plato.Interaction.Monad
       Plato.Interaction.Packages
@@ -92,6 +93,7 @@ executable plato
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
+      Plato.Core.Pretty
       Plato.Core.Subst
       Plato.Interaction.Monad
       Plato.Interaction.Packages

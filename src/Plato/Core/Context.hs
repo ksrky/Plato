@@ -54,7 +54,7 @@ bindingShift d bind = case bind of
         NameBind -> NameBind
         VarBind tyT -> VarBind (typeShift d <$> tyT)
         TyVarBind knK -> TyVarBind knK
-        TmAbbBind t tyT_opt -> TmAbbBind (termShift d <$> t) ((typeShift d <$>) <$> tyT_opt)
+        TmAbbBind t tyT_opt -> TmAbbBind (termShift d <$> t) (typeShift d <$> tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (typeShift d <$> tyT) opt
 
 getBinding :: Context -> Int -> Binding
@@ -63,8 +63,7 @@ getBinding ctx i = if i + 1 < 0 then error $ show i else bindingShift (i + 1) (s
 getTypeFromContext :: MonadThrow m => Span -> Context -> Int -> m (Located Ty)
 getTypeFromContext sp ctx i = case getBinding ctx i of
         VarBind tyT -> return tyT
-        TmAbbBind _ (Just tyT) -> return tyT
-        TmAbbBind _ Nothing -> throwLocErr sp $ "No type recorded for variable" <+> pretty (index2name ctx i)
+        TmAbbBind _ tyT -> return tyT
         _ -> throwLocErr sp $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
 
 getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
