@@ -154,7 +154,7 @@ ps2typ env (P.Program modn _ topds) = do
         exps' <- forM exps $ \(L sp e) -> do
                 (e', ty) <- typeInfer env' e
                 unless (isBasicType ty) $ throwLocErr sp "Invalid type for evaluation expression"
-                return $ L sp e'
+                return (L sp e', ty)
         return
                 ( T.Program
                         { T.mmodule = unLoc <$> modn

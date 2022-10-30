@@ -15,5 +15,5 @@ spec = do
         describe "Decl translation" $ mapM_ DT.test DT.testcases
         describe "TopDecl translation" $ mapM_ TT.test TT.testcases
         describe "Type reconstruction" $ mapM_ TC.test TC.testcases
-        describe "translation: file test" $ mapM_ T.test T.testcases
-        describe "pretty test" $ mapM_ P.test P.testcases
+        describe "Translation: file test" $ mapM_ T.test T.testcases
+        describe "Pretty test" $ mapM_ P.test P.testcases

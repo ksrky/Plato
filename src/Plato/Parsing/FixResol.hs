@@ -84,6 +84,7 @@ instance Resolver TopDecl where
         resolve od (L sp td) =
                 L sp <$> case td of
                         Decl d -> Decl <$> resolve od d
+                        Eval e -> Eval <$> resolve od e
                         _ -> return td
 
 resolveFixity :: MonadThrow m => OpDict -> Program -> m Program

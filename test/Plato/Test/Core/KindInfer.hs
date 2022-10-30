@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Plato.Test.Core.KindInfer where
 
 import Plato.Common.Error
@@ -41,6 +43,8 @@ test (inp, iscorrect) = it inp $
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
                 (tydecs, _, _) <- execWriterT $ T.transTopDecl ps'
-                forM tydecs $ \(L _ (T.TypeD _ ty)) -> do
-                        (_, kn) <- inferKind emptyKnTable ty
-                        C.transKind kn
+                forM tydecs $ \case
+                        (L _ (T.TypeD _ ty)) -> do
+                                (_, kn) <- inferKind emptyKnTable ty
+                                C.transKind kn
+                        _ -> unreachable ""

@@ -63,7 +63,7 @@ data Program = Program
         { mmodule :: Maybe ModuleName
         , decls :: [Located Decl]
         , binds :: [FuncD]
-        , body :: [Located Expr]
+        , body :: [(Located Expr, Type)]
         }
         deriving (Eq, Show)
 
@@ -181,4 +181,4 @@ instance Pretty Program where
                         <> (if null decs then emptyDoc else line)
                         <> vsep (map pretty binds)
                         <> (if null binds then emptyDoc else line)
-                        <> vsep (map pretty body)
+                        <> vsep (map (pretty . fst) body)

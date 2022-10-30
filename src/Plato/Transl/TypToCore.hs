@@ -42,14 +42,14 @@ transExpr knenv ctx = traexpr
                 return $ foldl C.TmTApp t1 tyTs'
         traexpr (T.TAbsE xs e1) = do
                 ctx' <- foldM (flip addName) ctx xs
-                t2 <- transExpr knenv ctx' e1
-                return $ foldr C.TmTAbs t2 xs
+                t1 <- transExpr knenv ctx' e1
+                return $ foldr C.TmTAbs t1 xs
         traexpr (T.LetE [T.FuncD x e11 ty12] e2) = do
                 ty12' <- checkKindStar knenv NoSpan ty12
                 tyT1 <- transType ctx ty12'
-                t1 <- traexpr e11
-                let t1' = C.TmFix (C.TmAbs x tyT1 t1)
                 ctx' <- addName x ctx
+                t1 <- transExpr knenv ctx' e11
+                let t1' = C.TmFix (C.TmAbs x tyT1 t1)
                 t2 <- transExpr knenv ctx' e2
                 return $ C.TmLet x t1' t2
         traexpr (T.TagE l as (Just ty)) = do
@@ -162,10 +162,17 @@ transDecl (L sp dec) (ctx, knenv) = case dec of
                 ctx' <- addName f ctx
                 return ((f, C.TmAbbBind (noLoc t) (L sp tyT)), (ctx', knenv))
 
+transEval :: (MonadThrow m, MonadIO m) => RenameState -> KnTable -> Context -> (Located T.Expr, T.Type) -> m (Located C.Term)
+transEval st knenv ctx (L sp e, ty) = do
+        e' <- rename st e
+        t <- transExpr knenv ctx e'
+        tyT <- transType ctx ty
+        return (L sp (C.TmApp (C.TmUnfold tyT) t))
+
 typ2core :: (MonadThrow m, MonadIO m) => Names -> Context -> T.Program -> m (Names, [C.Command])
 typ2core ns ctx (T.Program modn binds fundecs exps) = do
         (fundec, st) <- renameFuncDs emptyRenameState{moduleName = modn, externalNames = ns} fundecs --tmp: rename state, 'renameFuncDs'
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList ctx]
-        (binds', (ctx', knenv')) <- mapM (StateT . transDecl) (binds ++ [noLoc $ T.ConD fundec]) `runStateT` (ctx, knenv) --tmp: T.ConD fundec
-        body <- mapM ((transExpr knenv ctx' <=< rename st) `traverse`) exps
+        (binds', (ctx', _)) <- mapM (StateT . transDecl) (binds ++ [noLoc $ T.ConD fundec]) `runStateT` (ctx, knenv) --tmp: T.ConD fundec
+        body <- mapM (transEval st knenv ctx') exps
         return (names st, map (uncurry C.Bind) binds' ++ map C.Eval body)

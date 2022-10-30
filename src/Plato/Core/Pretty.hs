@@ -25,7 +25,9 @@ instance PrettyCore Term where
                          in "\\" <> pretty x' <> colon <> ppr ctx tyT1 <> dot <+> ppr ctx' t2
                 TmApp{} -> pprapp ctx t
                 TmTApp t1 tyT2 -> ppr ctx t1 <+> ppr ctx tyT2
-                TmTAbs tyX t2 -> "\\" <> pretty tyX <> dot <+> ppr ctx t2
+                TmTAbs tyX t2 ->
+                        let (tyX', ctx') = pickFreshName tyX ctx
+                         in "\\" <> pretty tyX' <> dot <+> ppr ctx' t2
                 TmLet x t1 t2 ->
                         let (x', ctx') = pickFreshName x ctx
                          in hsep ["let", pretty x', equals, ppr ctx t1, "in", ppr ctx' t2]
@@ -34,12 +36,15 @@ instance PrettyCore Term where
                 TmUnfold tyT -> "unfold" <+> lbracket <> ppr ctx tyT <> rbracket
                 TmProj t1 l -> ppr ctx t1 <> dot <> pretty l
                 TmRecord fields ->
-                        hsep
-                                [ lbrace
-                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, ti) -> pretty xi <+> equals <+> ppr ctx ti) fields)
-                                , rbrace
-                                ]
-                TmTag li ts1 tyT2 -> hcat [pretty li, hsep' (map (pprtm ctx) ts1), colon, ppr ctx tyT2]
+                        if null fields
+                                then lbrace <> rbrace
+                                else
+                                        hsep
+                                                [ lbrace
+                                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, ti) -> pretty xi <+> equals <+> ppr ctx ti) fields)
+                                                , rbrace
+                                                ]
+                TmTag li ts1 _ -> hcat [pretty li, hsep' (map (pprtm ctx) ts1)]
                 TmCase t1 alts ->
                         "case" <+> ppr ctx t1 <+> "of" <+> lbrace <> line
                                 <> indent 4 (vsep (map (\(li, (ki, ti)) -> hsep [pretty li, pretty ki, "->", ppr ctx ti]) alts))
@@ -48,6 +53,9 @@ instance PrettyCore Term where
 
 pprtm :: Context -> Term -> Doc ann
 pprtm ctx t@TmVar{} = ppr ctx t
+pprtm ctx t@TmFold{} = ppr ctx t
+pprtm ctx t@TmUnfold{} = ppr ctx t
+pprtm ctx t@(TmTag _ as _) | null as = ppr ctx t
 pprtm ctx t = parens $ ppr ctx t
 
 pprapp :: Context -> Term -> Doc ann
@@ -63,18 +71,23 @@ instance PrettyCore Ty where
                 TyArr tyT1 tyT2 -> pprty ArrPrec ctx tyT1 <+> "->" <+> pprty TopPrec ctx tyT2
                 TyAll tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
-                         in hcat [lbracket, pretty tyX', rbracket, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
+                         in hcat [lbrace, pretty tyX', colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
                 TyApp tyT1 tyT2 -> ppr ctx tyT1 <+> pprty AppPrec ctx tyT2
                 TyAbs tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
                          in hcat [backslash, pretty tyX', colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
-                TyRec tyX tyT1 -> hcat [backslash, pretty tyX, dot <+> ppr ctx tyT1]
+                TyRec tyX tyT1 ->
+                        let (tyX', ctx') = pickFreshName tyX ctx
+                         in hcat [backslash, pretty tyX', dot <+> ppr ctx' tyT1]
                 TyRecord fields ->
-                        hsep
-                                [ lbrace
-                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, tyTi) -> pretty xi <+> colon <+> ppr ctx tyTi) fields)
-                                , rbrace
-                                ]
+                        if null fields
+                                then lbrace <> rbrace
+                                else
+                                        hsep
+                                                [ lbrace
+                                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, tyTi) -> pretty xi <+> colon <+> ppr ctx tyTi) fields)
+                                                , rbrace
+                                                ]
                 TyVariant fields ->
                         langle
                                 <> concatWith
