@@ -1,5 +1,5 @@
-import Data.List
-import Data.Nat
+import Plato.List
+import Plato.Nat
 
 qsort : List Nat -> List Nat
 qsort l = case l of

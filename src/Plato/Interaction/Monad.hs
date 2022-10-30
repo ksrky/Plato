@@ -31,6 +31,6 @@ initPlatoState src =
         getBasePath :: String -> String
         getBasePath [] = ""
         getBasePath ('/' : xs) = '/' : xs
-        getBasePath (x : xs) = getBasePath xs
+        getBasePath (_ : xs) = getBasePath xs
 
 type Plato m a = StateT PlatoState m a
