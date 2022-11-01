@@ -6,7 +6,8 @@ import Control.Monad.State
 import qualified Data.Map.Strict as M
 import Plato.Common.Name
 import Plato.Core.Eval
-import Plato.Core.Pretty
+import Plato.Core.Pretty as C
+import Plato.Interaction.Pretty as I
 import Plato.Syntax.Core
 import Plato.Syntax.Typing
 import Plato.Typing.Renamer
@@ -40,4 +41,10 @@ initPlatoState src =
 type Plato m a = StateT PlatoState m a
 
 printResult :: MonadIO m => Context -> Term -> Plato m ()
-printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
+printResult ctx t = liftIO $ putDoc $ I.ppr ctx $ eval ctx t
+
+debugResult :: MonadIO m => Context -> Term -> Plato m ()
+debugResult ctx t = liftIO $ do
+        putDoc $ C.ppr ctx $ eval ctx t
+        putStrLn ""
+        print $ eval ctx t

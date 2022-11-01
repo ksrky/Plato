@@ -3,7 +3,7 @@ module Plato.Test.Core.Eval where
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Core.Pretty
+import Plato.Interaction.Pretty
 import Plato.Syntax.Core
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
@@ -28,7 +28,7 @@ testcases =
         , ("test06.plt", (`shouldReturn` ""))
         , ("test07.plt", (`shouldReturn` "True\n"))
         , ("test08.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ Zero))))\n"))
-        , ("test09.plt", (`shouldReturn` "\n"))
+        , ("test09.plt", (`shouldReturn` "T1\n"))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m String -> Expectation) -> SpecWith ()
@@ -45,4 +45,4 @@ pprcmds :: Context -> [Command] -> Doc ann
 pprcmds _ [] = emptyDoc
 pprcmds ctx (Import{} : cmds) = pprcmds ctx cmds
 pprcmds ctx ((Bind x bind) : cmds) = pprcmds (V.cons (x, bind) ctx) cmds
-pprcmds ctx (Eval t : cmds) = vsep [ppr ctx $ eval ctx (unLoc t), pprcmds ctx cmds]
+pprcmds ctx (Eval t : cmds) = ppr ctx (eval ctx (unLoc t)) <> pprcmds ctx cmds

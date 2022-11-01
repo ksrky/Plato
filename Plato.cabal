@@ -36,6 +36,7 @@ library
       Plato.Core.Pretty
       Plato.Core.Subst
       Plato.Interaction.Monad
+      Plato.Interaction.Pretty
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Fixity
@@ -95,6 +96,7 @@ executable plato
       Plato.Core.Pretty
       Plato.Core.Subst
       Plato.Interaction.Monad
+      Plato.Interaction.Pretty
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.Fixity

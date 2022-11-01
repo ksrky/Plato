@@ -174,8 +174,8 @@ transEval :: (MonadThrow m, MonadIO m) => RenameState -> KnTable -> Context -> (
 transEval st knenv ctx (L sp e, ty) = do
         e' <- rename st e
         t <- transExpr knenv ctx e'
-        tyT <- transType ctx ty
-        return (L sp (C.TmApp (C.TmUnfold tyT) t))
+        _ <- transType ctx ty --tmp
+        return (L sp t)
 
 typ2core :: (MonadThrow m, MonadIO m) => Names -> Context -> T.Program -> m (Names, [C.Command])
 typ2core ns ctx (T.Program modn binds fundecs exps) = do

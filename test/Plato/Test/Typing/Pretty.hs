@@ -21,7 +21,6 @@ testcases =
         , ("test06.plt", (`shouldReturn` "f = \\a. let {\n     g = \\b. \\x:b. x : {a} a -> a\n     h = \\c. \\y:c. y : {a} a -> a \n} in \\x:a. (g a) x : {a} a -> a\n"))
         , ("test07.plt", (`shouldReturn` "Bool = μBool. <True | False>\nTrue = fold [Bool] True : Bool\nFalse = fold [Bool] False : Bool\n(\\b:Bool. case b : Bool of {\n    True  -> False\n    False  -> True\n}) False"))
         , ("test08.plt", (`shouldReturn` "Nat = μNat. <Zero | Succ Nat>\nZero = fold [Nat] Zero : Nat\nSucc = \\1:Nat. fold [Nat] (Succ 1) : Nat -> Nat\n+ = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> n\n    Succ m' -> Succ (+ m' n)\n} : Nat -> Nat -> Nat\n* = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> Zero\n    Succ m' -> + n (* m' n)\n} : Nat -> Nat -> Nat\n+ (* (Succ (Succ Zero)) (Succ Zero)) (Succ (Succ (Succ Zero)))"))
-        , ("test09.plt", (`shouldReturn` ""))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m String -> Expectation) -> SpecWith ()
