@@ -6,8 +6,6 @@ import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
-import Plato.Core.Eval
-import Plato.Core.Pretty
 import Plato.Interaction.Monad
 import Plato.Syntax.Core
 import qualified Plato.Syntax.Parsing as P
@@ -23,7 +21,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
-import Prettyprinter.Render.Text (putDoc)
 import System.Console.Haskeline
 
 runPlato :: String -> IO ()
@@ -56,20 +53,18 @@ process input = do
         -- processing Typing
         typenv <- gets typingEnv
         (typ, typenv') <- ps2typ typenv ps
-        modify $ \s -> s{typingEnv = typenv `M.union` typenv'}
         -- processing Core
         ns <- gets renames
         ctx <- gets context
         (ns', cmds) <- typ2core ns ctx typ
-        modify $ \s -> s{renames = ns'}
         ctx' <- foldM processCommand ctx cmds
-        modify $ \s -> s{context = ctx'}
+        modify $ \s -> s{typingEnv = typenv `M.union` typenv', renames = ns', context = ctx'}
 
 processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> Plato m Context
 processCommand ctx Import{} = return ctx
 processCommand ctx (Bind name bind) = return $ V.cons (name, bind) ctx
 processCommand ctx (Eval t) = do
-        liftIO $ putDoc $ pprtm ctx $ eval ctx (unLoc t)
+        printResult ctx (unLoc t)
         return ctx
 
 processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()

@@ -5,8 +5,12 @@ import Plato.Core.Context
 import Control.Monad.State
 import qualified Data.Map.Strict as M
 import Plato.Common.Name
+import Plato.Core.Eval
+import Plato.Core.Pretty
+import Plato.Syntax.Core
 import Plato.Syntax.Typing
 import Plato.Typing.Renamer
+import Prettyprinter.Render.Text (putDoc)
 
 data PlatoState = PlatoState
         { basePath :: String
@@ -34,3 +38,6 @@ initPlatoState src =
         getBasePath (_ : xs) = getBasePath xs
 
 type Plato m a = StateT PlatoState m a
+
+printResult :: MonadIO m => Context -> Term -> Plato m ()
+printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t

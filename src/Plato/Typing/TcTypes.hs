@@ -89,12 +89,12 @@ substTy :: [TyVar] -> [Type] -> Type -> Type
 substTy tvs tys = subst_ty (tvs `zip` tys)
 
 subst_ty :: Env -> Type -> Type
-subst_ty env (ArrT arg res) = ArrT (subst_ty env arg) (subst_ty env res)
 subst_ty env (VarT x) = fromMaybe (VarT x) (lookup x env)
 subst_ty _ (ConT tc) = ConT tc
+subst_ty env (ArrT arg res) = ArrT (subst_ty env arg) (subst_ty env res)
+subst_ty env (AppT fun arg) = AppT (subst_ty env fun) (subst_ty env arg)
 subst_ty _ (MetaT tv) = MetaT tv
 subst_ty env (AllT tvs rho) = AllT tvs (subst_ty env' rho)
     where
         env' = [(n, ty') | (n, ty') <- env, n `notElem` map fst tvs]
-subst_ty env (AppT fun arg) = ArrT (subst_ty env fun) (subst_ty env arg)
 subst_ty _ ty = ty
