@@ -74,9 +74,10 @@ type TypEnv = M.Map GlbName Type {- Sigma -}
 ----------------------------------------------------------------
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
+
 instance Pretty Expr where
         pretty (VarE var) = pretty var
-        pretty (AppE (FoldE ty) exp) = "fold" <+> lbracket <> pretty ty <> rbracket <+> pretty exp
+        pretty (AppE (FoldE ty) exp) = "fold" <+> lbracket <> pretty ty <> rbracket <+> pprexpr exp
         pretty exp@AppE{} = pprapp exp
         pretty (AbsE var mty body) = backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
         pretty (TAppE fun tyargs) = pretty fun <> hsep' (map pretty tyargs)
@@ -94,12 +95,13 @@ instance Pretty Expr where
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace
-        pretty (TagE con args _) = pretty con <> hsep' (map pretty args)
+        pretty (TagE con args _) = pretty con <> hsep' (map pprexpr args)
         pretty (FoldE ty) = sep [lbracket, pretty ty, rbracket]
         pretty (AnnE exp ty) = pprexpr exp <+> colon <+> pretty ty
 
 pprexpr :: Expr -> Doc ann
 pprexpr e@VarE{} = pretty e
+pprexpr e@(TagE _ as _) | null as = pretty e
 pprexpr e = parens (pretty e)
 
 pprapp :: Expr -> Doc ann
@@ -126,7 +128,7 @@ instance Pretty Type where
         pretty (AppT fun arg) = pretty fun <+> pprty AppPrec arg
         pretty (ArrT arg res) = pprty ArrPrec arg <+> "->" <+> pprty TopPrec res
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
-        pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <+> pretty body
+        pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
         pretty (RecT var body) = "μ" <> pretty var <> dot <+> pretty body
         pretty (RecordT fields) =
                 hsep

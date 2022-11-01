@@ -44,7 +44,7 @@ data Expected a = Infer (IORef a) | Check a
 ------------------------------------------
 -- tcPat, and its variants
 ------------------------------------------
--- tmp: no translation for patterns
+--tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
 checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(GlbName, Sigma)]
@@ -92,7 +92,7 @@ checkRho expr ty = tcRho expr (Check ty)
 
 inferRho :: (MonadIO m, MonadThrow m) => Expr -> Tc m (Expr, Rho)
 inferRho expr = do
-        ref <- newTcRef (error "inferRho: empty result")
+        ref <- newTcRef (unreachable "inferRho: empty result")
         expr <- tcRho expr (Infer ref)
         (expr,) <$> readTcRef ref
 
@@ -145,10 +145,11 @@ tcRho (CaseE match _ alts) (Infer ref) = do
         case body_tys of
                 [] -> writeTcRef ref (SumT [])
                 (_, ty) : _ -> writeTcRef ref ty
-        return $ CaseE match' (Just match_ty) alts
+        let alts' = zipWith (\(p, _) (e, _) -> (p, e)) alts body_tys
+        return $ CaseE match' (Just match_ty) alts'
 tcRho (AnnE body ann_ty) exp_ty = do
         body' <- checkSigma body ann_ty
-        coercion <- instSigma ann_ty exp_ty --tmp
+        _ <- instSigma ann_ty exp_ty --tmp
         return $ AnnE body' ann_ty
 tcRho e _ = return e
 
@@ -219,8 +220,8 @@ subsCheckFun a1 r1 a2 r2 = do
                 )
 
 instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Tc m (Expr -> Expr)
-instSigma t1 (Check t2) = subsCheckRho t1 t2
-instSigma t1 (Infer r) = do
-        (coercion, t1') <- instantiate t1
-        writeTcRef r t1'
+instSigma ty1 (Check ty2) = subsCheckRho ty1 ty2
+instSigma ty1 (Infer r) = do
+        (coercion, ty1') <- instantiate ty1
+        writeTcRef r ty1'
         return coercion

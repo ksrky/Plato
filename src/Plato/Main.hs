@@ -7,6 +7,7 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
+import Plato.Core.Pretty
 import Plato.Interaction.Monad
 import Plato.Syntax.Core
 import qualified Plato.Syntax.Parsing as P
@@ -22,6 +23,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
+import Prettyprinter.Render.Text (putDoc)
 import System.Console.Haskeline
 
 runPlato :: String -> IO ()
@@ -67,7 +69,7 @@ processCommand :: (MonadThrow m, MonadIO m) => Context -> Command -> Plato m Con
 processCommand ctx Import{} = return ctx
 processCommand ctx (Bind name bind) = return $ V.cons (name, bind) ctx
 processCommand ctx (Eval t) = do
-        liftIO $ print $ eval ctx (unLoc t)
+        liftIO $ putDoc $ pprtm ctx $ eval ctx (unLoc t)
         return ctx
 
 processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()

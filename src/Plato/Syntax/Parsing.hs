@@ -131,7 +131,7 @@ instance Pretty TopDecl where
                 pretty con <> hsep' (map pretty args) <+> equals
                         <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
         pretty (TypeD con args body) = pretty con <> hsep' (map pretty args) <+> equals <+> pretty body
-        pretty FixD = emptyDoc
+        pretty FixD = "<fixity decl>"
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp
 

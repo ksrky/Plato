@@ -1,7 +1,6 @@
 data Nat = Zero | Succ Nat
 
 infixl 6 +
-infixl 6 -
 infixl 7 *
 
 

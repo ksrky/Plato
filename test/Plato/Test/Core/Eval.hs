@@ -27,7 +27,8 @@ testcases =
         , ("test05.plt", (`shouldReturn` ""))
         , ("test06.plt", (`shouldReturn` ""))
         , ("test07.plt", (`shouldReturn` "True\n"))
-        -- , ("test08.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ Zero))))\n"))
+        , ("test08.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ Zero))))\n"))
+        , ("test09.plt", (`shouldReturn` "\n"))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m String -> Expectation) -> SpecWith ()

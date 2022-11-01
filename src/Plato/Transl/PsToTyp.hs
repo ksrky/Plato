@@ -17,6 +17,7 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import qualified Data.Map.Strict as M
+import Prettyprinter
 
 transName :: Located Name -> GlbName
 transName (L sp n) = GlbName Internal n sp
@@ -128,7 +129,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                     tyargs = params
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
                     tag = T.TagE l (map (T.VarE . transName) args) fieldty
-                    foldtag = T.AppE (T.FoldE res_ty) tag --tmp: con
+                    foldtag = T.AppE (T.FoldE res_ty) tag
                     exp = foldr (\(x, ty) -> T.AbsE (transName x) (Just ty)) foldtag (zip args field)
                     exp' = if null tyargs then exp else T.TAbsE (map transName tyargs) exp
                 tell ([], [L sp $ T.FuncD l exp' sigma_ty], [])
@@ -154,7 +155,7 @@ ps2typ env (P.Program modn _ topds) = do
         fundecs' <- mapM (typeCheck env') fundecs
         exps' <- forM exps $ \(L sp e) -> do
                 (e', ty) <- typeInfer env' e
-                unless (isBasicType ty) $ throwLocErr sp "Invalid type for evaluation expression"
+                unless (isBasicType ty) $ throwLocErr sp $ hsep ["Invalid type for evaluation expression:", pretty ty]
                 return (L sp e', ty)
         return
                 ( T.Program
