@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Plato.Interaction.Pretty where
+module Plato.Main.Pretty where
 
 import qualified Data.Text as T
 import Plato.Common.Error
@@ -44,11 +44,3 @@ ppr ctx t = pprtm t <> line
                 walk :: Term -> [Term] -> Doc ann
                 walk (TmApp t1 t2) ts = walk t1 (t2 : ts)
                 walk t' ts = pprtm1 t' <+> sep (map pprtm1 ts)
-
-data List a = Nil | a ::: List a
-
-data T = T1 | T2
-
-infixr 5 :::
-l :: List T
-l = T1 ::: (T2 ::: Nil)

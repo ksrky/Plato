@@ -30,9 +30,11 @@ dependencies:
   - bytestring
   - containers
   - directory
+  - filepath
   - haskeline
   - hspec
   - mtl
+  - optparse-applicative
   - prettyprinter
   - safe-exceptions
   - transformers

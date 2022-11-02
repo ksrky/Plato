@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Interface.Options
       Main
       Plato.Common.Error
       Plato.Common.GlbName
@@ -35,9 +36,9 @@ library
       Plato.Core.Eval
       Plato.Core.Pretty
       Plato.Core.Subst
-      Plato.Interaction.Monad
-      Plato.Interaction.Pretty
       Plato.Main
+      Plato.Main.Monad
+      Plato.Main.Pretty
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -73,9 +74,11 @@ library
     , bytestring
     , containers
     , directory
+    , filepath
     , haskeline
     , hspec
     , mtl
+    , optparse-applicative
     , prettyprinter
     , safe-exceptions
     , text
@@ -86,6 +89,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Interface.Options
       Plato.Common.Error
       Plato.Common.GlbName
       Plato.Common.Name
@@ -95,9 +99,9 @@ executable plato
       Plato.Core.Eval
       Plato.Core.Pretty
       Plato.Core.Subst
-      Plato.Interaction.Monad
-      Plato.Interaction.Pretty
       Plato.Main
+      Plato.Main.Monad
+      Plato.Main.Pretty
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -133,9 +137,11 @@ executable plato
     , bytestring
     , containers
     , directory
+    , filepath
     , haskeline
     , hspec
     , mtl
+    , optparse-applicative
     , prettyprinter
     , safe-exceptions
     , text
@@ -184,10 +190,12 @@ test-suite Plato-test
     , bytestring
     , containers
     , directory
+    , filepath
     , haskeline
     , hspec
     , hspec-discover
     , mtl
+    , optparse-applicative
     , prettyprinter
     , safe-exceptions
     , text

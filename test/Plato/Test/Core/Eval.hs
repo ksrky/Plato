@@ -3,7 +3,7 @@ module Plato.Test.Core.Eval where
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Interaction.Pretty
+import Plato.Main.Pretty
 import Plato.Syntax.Core
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs

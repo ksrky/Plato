@@ -73,5 +73,5 @@ mod2conName (ModuleName modn) = Name ConName (T.intercalate (T.pack ".") modn)
 mod2tyconName :: ModuleName -> Name
 mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)
 
-mod2path :: ModuleName -> String
+mod2path :: ModuleName -> FilePath
 mod2path (ModuleName modn) = intercalate "/" (map T.unpack modn) ++ ".plt"
