@@ -3,7 +3,7 @@
 
 module Plato.Test.Typing.ExprTransl where
 
-import Plato.Common.Error 
+import Plato.Common.Error
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
@@ -56,7 +56,7 @@ testcases =
 test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
-                (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) exprParser)
+                (ps, st) <- eitherToMonadThrow (parseLine exprParser (T.pack inp))
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
                 transExpr ps'

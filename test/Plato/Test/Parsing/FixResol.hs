@@ -62,5 +62,5 @@ opdict =
 test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
-                (res, _) <- eitherToMonadThrow (parseLine (T.pack inp) exprParser)
+                (res, _) <- eitherToMonadThrow (parseLine exprParser (T.pack inp))
                 unLoc <$> resolve opdict res

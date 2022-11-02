@@ -15,7 +15,7 @@ import Test.Hspec
 
 testcases :: [(String, IO String -> Expectation)]
 testcases =
-        [ ("test08.plt", (`shouldReturn` ":0 = { * = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> Zero\n    Succ m' -> (:0.+) n ((:0.*) m' n)\n} , + = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> n\n    Succ m' -> Succ ((:0.+) m' n)\n} } : { * : Nat -> Nat -> Nat , + : Nat -> Nat -> Nat }"))
+        [ ("test08.plt", (`shouldReturn` ":l0 = { * = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> Zero\n    Succ m' -> (:l0.+) n ((:l0.*) m' n)\n} , + = \\m:Nat. \\n:Nat. case m : Nat of {\n    Zero  -> n\n    Succ m' -> Succ ((:l0.+) m' n)\n} } : { * : Nat -> Nat -> Nat , + : Nat -> Nat -> Nat }"))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m String -> Expectation) -> SpecWith ()

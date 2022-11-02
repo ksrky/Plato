@@ -43,7 +43,7 @@ testcases =
 test :: (MonadThrow m, MonadIO m) => (String, m [FuncD] -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
-                (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) declsParser)
+                (ps, st) <- eitherToMonadThrow (parseLine declsParser (T.pack inp))
                 let opdict = opDict (parser_ust st)
                 ps' <- mapM (resolve opdict) ps
                 (fundecs, _) <- transDecls ps'

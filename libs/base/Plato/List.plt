@@ -2,6 +2,7 @@ module Plato.List
 
 import Plato.Bool
 import Plato.Nat
+import Plato.Maybe
 
 data List a = Nil | a :: List a
 
@@ -22,7 +23,7 @@ head l = case l of
 last : {a} List a -> Maybe a
 last l = case l of
     Nil -> Nothing
-    _ :: tl -> case tl of
+    hd :: tl -> case tl of
         Nil -> Just hd
         _ -> last tl
 
@@ -35,7 +36,7 @@ init : {a} List a -> List a
 init l = case l of
     Nil -> Nil
     x :: xs -> let
-        init' : {a} List a -> List a
+        init' : {a} a -> List a -> List a
         init' y l' = case l' of
             Nil -> Nil
             z :: zs -> y :: init' z zs

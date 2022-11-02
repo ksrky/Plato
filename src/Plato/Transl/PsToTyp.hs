@@ -58,7 +58,7 @@ transExpr = traexpr
                                                 P.WildP -> tell [(T.WildP, ei')]
                                  in transAlts alts
                 return $ T.CaseE e' Nothing alts'
-        traexpr (L _ (P.FactorE _)) = unreachable "fixity resolution failed"
+        traexpr (L _ (P.FactorE e)) = unreachable $ "fixity resolution failed\n" ++ show e
 
 transPat :: MonadThrow m => Located P.Pat -> m T.Pat
 transPat (L _ (P.ConP c ps)) = do

@@ -143,7 +143,7 @@ skolemise (ArrT arg_ty res_ty) = do
                         (Just arg_ty)
                         ( coercion $
                                 TAbsE
-                                        (map tyVarName sks)
+                                        (map (tyVarName) sks)
                                         (AppE (TAppE e (map VarT sks)) (VarE $ newName $ str2varName "x"))
                         )
         return (if null sks then coercion else coercion', sks, ArrT arg_ty res_ty')
@@ -229,7 +229,7 @@ zonkExpr expr = return expr
 -- Unification
 ----------------------------------------------------------------
 unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = error ""
+unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ hsep ["Cannot unify types:", pretty ty1 <> comma, pretty ty2] --tmp: location
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty

@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Plato.Common.Error where
 
 import Plato.Common.SrcLoc
@@ -19,8 +21,8 @@ catchError =
         ( `catches`
                 [ Handler $ \e@LocatedErr{} -> liftIO $ print e
                 , Handler $ \e@UnexpectedErr{} -> liftIO $ print e
-                -- , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
-                -- Handler $ \(e :: SomeException) -> liftIO $ putStrLn "Unknown error"
+                , Handler $ \(e :: IOException) -> liftIO $ print e
+                , Handler $ \(e :: SomeException) -> liftIO $ print e
                 ]
         )
 
@@ -29,8 +31,8 @@ continueError cont =
         ( `catches`
                 [ Handler $ \e@LocatedErr{} -> liftIO (print e) >> cont
                 , Handler $ \e@UnexpectedErr{} -> liftIO (print e) >> cont
-                -- , Handler $ \(e :: IOException) -> liftIO $ putStrLn "File not found"
-                -- Handler $ \(e :: SomeException) -> liftIO $ putStrLn "Unknown error"
+                , Handler $ \(e :: IOException) -> liftIO (print e) >> cont
+                , Handler $ \(e :: SomeException) -> liftIO (print e) >> cont
                 ]
         )
 
@@ -41,7 +43,7 @@ unreachable s = error $ "unreachable: " ++ s
 newtype UnexpectedErr = UnexpectedErr String
 
 instance Show UnexpectedErr where
-        show (UnexpectedErr msg) = msg
+        show (UnexpectedErr msg) = "report this bug:\n" ++ msg
 
 instance Exception UnexpectedErr
 

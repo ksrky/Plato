@@ -12,7 +12,6 @@ import Plato.Syntax.Core
 import Plato.Syntax.Typing
 import Plato.Typing.Renamer
 import Prettyprinter.Render.Text (putDoc)
-import System.FilePath (takeDirectory)
 
 data PlatoState = PlatoState
         { isEntry :: Bool
@@ -24,11 +23,11 @@ data PlatoState = PlatoState
         , importingList :: [ModuleName]
         }
 
-initPlatoState :: String -> PlatoState
-initPlatoState src =
+initPlatoState :: PlatoState
+initPlatoState =
         PlatoState
                 { isEntry = True
-                , basePath = takeDirectory src
+                , basePath = "."
                 , context = emptyContext
                 , typingEnv = M.empty
                 , renames = []

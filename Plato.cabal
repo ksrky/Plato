@@ -39,6 +39,7 @@ library
       Plato.Main
       Plato.Main.Monad
       Plato.Main.Pretty
+      Plato.Main.REPL
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -102,6 +103,7 @@ executable plato
       Plato.Main
       Plato.Main.Monad
       Plato.Main.Pretty
+      Plato.Main.REPL
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol

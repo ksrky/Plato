@@ -27,7 +27,7 @@ testcases =
 test :: MonadThrow m => (String, m String -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
-                (ps, st) <- eitherToMonadThrow (parseLine (T.pack inp) topdeclParser)
+                (ps, st) <- eitherToMonadThrow (parseLine topdeclParser (T.pack inp))
                 let opdict = opDict (parser_ust st)
                 ps' <- resolve opdict ps
                 (tydecs, fundecs, _) <- execWriterT $ transTopDecl ps'

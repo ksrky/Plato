@@ -34,7 +34,7 @@ emptyRenameState =
 getWrapperName :: RenameState -> GlbName
 getWrapperName st = case moduleName st of
         Just modn | level st == 0 -> newName $ mod2conName modn
-        _ -> newName $ str2conName (':' : show (level st))
+        _ -> newName $ str2conName (":l" ++ show (level st))
 
 mkNames :: [FuncD] -> GlbName -> Names
 mkNames decs name = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)

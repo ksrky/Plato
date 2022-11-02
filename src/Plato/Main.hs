@@ -21,14 +21,16 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
 import System.Console.Haskeline
+import System.Directory
 import System.FilePath ((</>))
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ evalStateT (processFile src) (initPlatoState src)
+runPlato src = catchError $ evalStateT (processFile src) initPlatoState{basePath = src}
 
 repl :: [FilePath] -> IO ()
 repl files = do
-        st <- execStateT (mapM processFile files) (initPlatoState ""){isEntry = False}
+        base_path <- getCurrentDirectory
+        st <- execStateT (mapM processFile files) initPlatoState{isEntry = False, basePath = base_path}
         runInputT defaultSettings (catchError $ loop st{isEntry = True})
     where
         loop :: (MonadIO m, MonadMask m) => PlatoState -> InputT m ()
@@ -48,13 +50,13 @@ processFile src = do
 
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do
-        st <- get
         -- processing Parsing
         ps <- src2ps input
         -- processing Imports
         let imps = P.importDecls ps
         mapM_ processModule imps
         -- processing Typing
+        st <- get
         (typ, typenv') <- ps2typ (typingEnv st) ps
         -- processing Core
         let ctx = context st
@@ -71,12 +73,12 @@ processCommand opt ctx (Eval t) = do
 
 processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
 processModule (L sp mod) = do
-        st <- get
-        let imped_list = importedList st
-            impng_list = importingList st
-        when (mod `elem` imped_list) $ return ()
+        is_entry <- gets isEntry
+        imped_list <- gets importedList
+        impng_list <- gets importingList
         when (mod `elem` impng_list) $ throwLocErr sp "Cyclic dependencies"
-        put st{isEntry = False, importingList = mod : impng_list}
-        base_path <- gets basePath
-        processFile (base_path </> mod2path mod)
-        put st{importedList = mod : imped_list}
+        unless (mod `elem` imped_list) $ do
+                modify $ \s -> s{isEntry = False, importingList = mod : impng_list}
+                base_path <- gets basePath
+                processFile (base_path </> mod2path mod)
+                modify $ \s -> s{isEntry = is_entry, importedList = mod : importedList s, importingList = impng_list}

@@ -117,9 +117,10 @@ tcRho (AbsE var Nothing body) (Infer ref) = do
         writeTcRef ref (ArrT var_ty body_ty)
         return $ AbsE var (Just var_ty) body'
 tcRho (LetE decs body) exp_ty = do
+        let exenv = extendVarEnvList [(var, ty) | FuncD var _ ty <- decs]
         (decs', binds) <- execWriterT $
                 forM decs $ \(FuncD var var_e ann_ty) -> do
-                        (AnnE var_e' _, var_ty) <- Writer.lift $ inferSigma (AnnE var_e ann_ty)
+                        (AnnE var_e' _, var_ty) <- Writer.lift $ exenv $ inferSigma (AnnE var_e ann_ty)
                         let d = FuncD var var_e' var_ty
                         tell ([d], [(var, var_ty)])
         body' <- extendVarEnvList binds (tcRho body exp_ty)
@@ -175,7 +176,7 @@ checkSigma expr sigma = do
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Type not polymorphic enough" --tmp: location
-        return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarName skol_tvs) expr'
+        return $ coercion $ if null skol_tvs then expr' else TAbsE (map (tyVarName) skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --
@@ -190,7 +191,7 @@ subsCheck sigma1 sigma2 = do
         unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Subsumption check failed" --tmp: location
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (TAbsE (map tyVarName skol_tvs) (co2 e))
+                else return $ \e -> co1 (TAbsE (map (tyVarName) skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckRho sigma1@AllT{} rho2 = do

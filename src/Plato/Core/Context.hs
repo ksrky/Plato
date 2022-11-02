@@ -26,9 +26,10 @@ lookupContext k v = do
         if k == x then Just y else lookupContext k tl
 
 addBinding :: MonadThrow m => GlbName -> Binding -> Context -> m Context
-addBinding x bind ctx = case lookupContext x ctx of
+addBinding x bind ctx =
+        {-case lookupContext x ctx of
         Just _ | g_sort x /= System -> throwLocErr (g_loc x) $ "Conflicting definition of" <+> pretty x
-        _ -> return $ V.cons (x, bind) ctx
+        _ -> -} return $ V.cons (x, bind) ctx
 
 addName :: MonadThrow m => GlbName -> Context -> m Context
 addName x = addBinding x NameBind

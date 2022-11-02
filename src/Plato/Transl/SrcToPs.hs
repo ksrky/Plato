@@ -16,5 +16,5 @@ src2ps inp = do
         let opdict = opDict (parser_ust st)
         resolveFixity opdict res
 
-parseLine :: T.Text -> ParserT m a -> m (a, PsState)
-parseLine inp p = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})
+parseLine :: ParserT m a -> T.Text -> m (a, PsState)
+parseLine p inp = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})

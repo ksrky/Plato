@@ -34,3 +34,6 @@ data NameSort
 
 newName :: Name -> GlbName
 newName n = GlbName System n NoSpan
+
+toSystem :: GlbName -> GlbName
+toSystem n = n{g_sort = System}

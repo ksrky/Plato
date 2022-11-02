@@ -169,10 +169,7 @@ op          :: { Located Name }
 
 -- | Expressions
 expr        :: { Located Expr }
-            : infixexpr                             { $1 }
-
-infixexpr   :: { Located Expr }
-            : lexpr op infixexpr                    { cLL $1 $3 (OpE $1 $2 $3) }
+            : lexpr op expr                         { cLL $1 $3 (OpE $1 $2 $3) }
             | lexpr                                 { $1 }
 
 lexpr       :: { Located Expr }

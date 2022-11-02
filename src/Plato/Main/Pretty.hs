@@ -19,7 +19,7 @@ ppr ctx t = pprtm t <> line
         pprtm :: Term -> Doc ann
         pprtm t =
                 case t of
-                        TmVar x n -> if length ctx == n then pretty $ index2name ctx x else unreachable "Something unexpected occured."
+                        TmVar x n -> if length ctx == n then pretty $ index2name ctx x else unreachable "Something unexpected occured.\n"
                         TmApp (TmFold _) t2 | isTag t2 -> pprtm t2
                         TmApp{} -> pprapp t
                         TmTag op [t1, t2] _ | isConOp op -> pprtm1 t1 <+> pretty op <+> pprtm1 t2
