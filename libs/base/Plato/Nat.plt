@@ -23,6 +23,12 @@ infixl 7 *
     Zero -> Zero
     Succ m' -> n + m' * n  
 
+infix 4 ==
+infix 4 <
+infix 4 <=
+infix 4 >
+infix 4 >=
+
 (==) : Nat -> Nat -> Bool
 (==) m n = case m of
     Succ m' -> case n of
@@ -32,7 +38,29 @@ infixl 7 *
         Succ _ -> False
         Zero -> True
 
-infix 9 ==
+(<) : Nat -> Nat -> Bool
+(<) m n = case n of
+    Succ n' -> case m of
+        Succ m' -> m' < n'
+        Zero -> True
+    Zero -> False
+
+(<=) : Nat -> Nat -> Bool
+(<=) m n = case m of
+    Succ m' -> m' < n
+    Zero -> True
+
+(>) : Nat -> Nat -> Bool
+(>) m n = case m of
+    Succ m' -> case n of
+        Succ n' -> m' > n'
+        Zero -> True
+    Zero -> False
+
+(>=) : Nat -> Nat -> Bool
+(>=) m n = case n of
+    Succ n' -> m > n'
+    Zero -> True
 
 one : Nat
 one = Succ Zero

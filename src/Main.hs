@@ -1,5 +1,6 @@
 module Main where
 
+import Interface.Constant (version)
 import Interface.Options (Options (..), runWithOptions)
 import Plato.Main (repl, runPlato)
 
@@ -11,6 +12,3 @@ processOptions (Install _) = undefined
 processOptions (REPL files) = repl files
 processOptions (Run src) = runPlato src
 processOptions Version = putStrLn $ "Plato version " ++ version
-
-version :: String
-version = "1.0.0"

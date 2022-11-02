@@ -16,7 +16,6 @@ import qualified Data.Vector as V
 import Prettyprinter
 
 type Context = V.Vector (GlbName, Binding)
-
 emptyContext :: Context
 emptyContext = V.empty
 

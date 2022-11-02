@@ -143,7 +143,7 @@ skolemise (ArrT arg_ty res_ty) = do
                         (Just arg_ty)
                         ( coercion $
                                 TAbsE
-                                        (map (tyVarName) sks)
+                                        (map tyVarName sks)
                                         (AppE (TAppE e (map VarT sks)) (VarE $ newName $ str2varName "x"))
                         )
         return (if null sks then coercion else coercion', sks, ArrT arg_ty res_ty')

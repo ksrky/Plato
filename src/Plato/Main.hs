@@ -2,6 +2,13 @@
 
 module Plato.Main where
 
+import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.State
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Data.Vector as V
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
@@ -12,20 +19,12 @@ import qualified Plato.Syntax.Parsing as P
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
-
-import Control.Exception.Safe
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.State
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Data.Vector as V
 import System.Console.Haskeline
 import System.Directory
-import System.FilePath ((</>))
+import System.FilePath (takeDirectory, (</>))
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ evalStateT (processFile src) initPlatoState{basePath = src}
+runPlato src = catchError $ evalStateT (processFile src) initPlatoState{basePath = takeDirectory src}
 
 repl :: [FilePath] -> IO ()
 repl files = do

@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Interface.Constant
       Interface.Options
       Main
       Plato.Common.Error
@@ -39,7 +40,6 @@ library
       Plato.Main
       Plato.Main.Monad
       Plato.Main.Pretty
-      Plato.Main.REPL
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -90,6 +90,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Interface.Constant
       Interface.Options
       Plato.Common.Error
       Plato.Common.GlbName
@@ -103,7 +104,6 @@ executable plato
       Plato.Main
       Plato.Main.Monad
       Plato.Main.Pretty
-      Plato.Main.REPL
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol

@@ -186,6 +186,7 @@ fexpr       :: { Located Expr }
 
 aexpr       :: { Located Expr }
             : '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
+            | '(' lexpr op ')'                      { L (combineSpans $1 $4) (AppE (cL $3 (VarE $3)) $2) }
             | varid                                 { cL $1 (VarE (mkLvarName $1)) }
             | conid                                 { cL $1 (VarE (mkLconName $1)) }
 
