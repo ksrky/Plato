@@ -9,8 +9,8 @@ import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 import qualified Plato.Syntax.Parsing as P
+import Plato.Syntax.Typing
 import qualified Plato.Syntax.Typing as T
-import Plato.Typing.TcTypes
 import Plato.Typing.TypeCheck
 
 import Control.Exception.Safe

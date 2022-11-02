@@ -5,12 +5,14 @@ module Plato.Syntax.Typing where
 import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
-import {-# SOURCE #-} Plato.Typing.KindInfer
-import {-# SOURCE #-} Plato.Typing.TcTypes
 
+import Data.IORef
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
+type Uniq = Int
+
+-- | Expressions
 data Expr
         = VarE GlbName
         | AppE Expr Expr
@@ -26,11 +28,18 @@ data Expr
         | AnnE Expr Type {-Sigma-}
         deriving (Eq, Show)
 
+-- Patterns
 data Pat
         = VarP GlbName
         | ConP GlbName [Pat]
         | WildP
         deriving (Eq, Show)
+
+-- | Types
+type Sigma = Type
+
+type Rho = Type
+type Tau = Type
 
 data Type
         = VarT TyVar
@@ -45,12 +54,48 @@ data Type
         | MetaT MetaTv
         deriving (Eq, Show)
 
+data TyVar
+        = BoundTv GlbName
+        | SkolemTv GlbName Uniq
+        deriving (Show)
+
+data MetaTv = Meta Uniq TyRef
+
+type TyRef = IORef (Maybe Tau)
+
+instance Eq TyVar where
+        (BoundTv s1) == (BoundTv s2) = s1 == s2
+        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
+        _ == _ = False
+
+instance Pretty TyVar where
+        pretty (BoundTv n) = pretty n
+        pretty (SkolemTv n _) = pretty n
+
+instance Eq MetaTv where
+        (Meta u1 _) == (Meta u2 _) = u1 == u2
+
+instance Show MetaTv where
+        show (Meta u _) = "$" ++ show u
+
+-- | Kinds
 data Kind
         = MetaK MetaKv
         | StarK
         | ArrK Kind Kind
         deriving (Eq, Show)
 
+data MetaKv = MetaKv Uniq KnRef
+
+type KnRef = IORef (Maybe Kind)
+
+instance Eq MetaKv where
+        (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
+
+instance Show MetaKv where
+        show (MetaKv u _) = "$" ++ show u
+
+-- | Function decl
 data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
 
 data Decl

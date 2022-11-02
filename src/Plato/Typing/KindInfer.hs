@@ -40,18 +40,6 @@ emptyKnTable :: KnTable
 emptyKnTable = M.empty
 
 -- | Kinds
-data MetaKv = MetaKv Uniq KnRef
-
-type KnRef = IORef (Maybe Kind)
-
-type Uniq = Int
-
-instance Eq MetaKv where
-        (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
-
-instance Show MetaKv where
-        show (MetaKv u _) = "$" ++ show u
-
 metaKvs :: [Kind] -> [MetaKv]
 metaKvs = foldr go []
     where
