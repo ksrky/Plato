@@ -130,7 +130,7 @@ transType ctx = tratype
                 fields' <- forM fieldtys $ \(l, field) -> (l,) <$> mapM tratype field
                 return $ C.TyVariant fields'
         tratype T.MetaT{} = throwUnexpectedErr "Zonking failed"
-        tratype ty = throwUnexpectedErr $ "illegal type: " ++ show ty
+        tratype ty = throwUnexpectedErr $ "Illegal type: " ++ show ty
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
 transKind T.StarK = return C.KnStar

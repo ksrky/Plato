@@ -13,7 +13,7 @@ infixr 5 ::
     Nil -> m
     x :: xs -> x :: (xs ++ m)
 
-infixl 5 ++
+infixr 5 ++
 
 head : {a} List a -> Maybe a
 head l = case l of

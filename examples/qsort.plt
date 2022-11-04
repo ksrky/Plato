@@ -5,8 +5,10 @@ qsort : List Nat -> List Nat
 qsort l = case l of
     Nil -> Nil
     x :: xs ->
-        let smaller = filter (x >=) xs
+        let smaller : List Nat
+            smaller = filter (x >=) xs
+            larger : List Nat
             larger = filter (x <) xs
-         in smaller ++ x :: larger
+         in qsort smaller ++ x :: qsort larger
 
 qsort (three :: four :: two :: one :: Nil)
