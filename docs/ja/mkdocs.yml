@@ -1,8 +1,10 @@
 site_name: Plato
-repo_url: https://github.com/ksrky/Plato/
+site_url: https://ksrky.github.io/Plato/ja/
 site_author: ksrk
 copyright: 2022 ksrk
-site_dir: ../site/ja
+site_dir: ../../site/ja
+repo_url: https://github.com/ksrky/Plato/
+edit_uri: blob/master/docs/ja/docs
 
 nav:
   - Home: index.md
@@ -17,10 +19,10 @@ theme:
 extra:
   alternate:
     - name: English
-      link: /en/
+      link: /Plato/en/
       lang: en
     - name: Japanese
-      link: /ja/
+      link: /Plato/ja/
       lang: ja
 markdown_extensions:
   - pymdownx.arithmatex
