@@ -39,7 +39,6 @@ library
       Plato.Core.Subst
       Plato.Main
       Plato.Main.Monad
-      Plato.Main.Pretty
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -51,6 +50,7 @@ library
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
@@ -103,7 +103,6 @@ executable plato
       Plato.Core.Subst
       Plato.Main
       Plato.Main.Monad
-      Plato.Main.Pretty
       Plato.Parsing.Action
       Plato.Parsing.Fixity
       Plato.Parsing.FixResol
@@ -115,6 +114,7 @@ executable plato
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore

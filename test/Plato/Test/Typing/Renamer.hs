@@ -23,7 +23,7 @@ test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
-                ps <- src2ps inp
+                (_, _, ps) <- src2ps M.empty inp
                 typ <- fst <$> ps2typ M.empty ps
                 (fundec, _) <- renameFuncDs emptyRenameState (T.binds typ)
                 return $ renderString $ layoutPretty defaultLayoutOptions (pretty fundec)

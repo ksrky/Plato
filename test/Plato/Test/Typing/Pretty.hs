@@ -28,6 +28,6 @@ test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
-                ps <- src2ps inp
+                (_, _, ps) <- src2ps M.empty inp
                 typ <- fst <$> ps2typ M.empty ps
                 return $ renderString $ layoutPretty defaultLayoutOptions (pretty typ)

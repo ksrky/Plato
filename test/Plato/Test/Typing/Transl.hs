@@ -71,5 +71,5 @@ test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
-                ps <- src2ps inp
+                (_, _, ps) <- src2ps M.empty inp
                 fst <$> ps2typ M.empty ps

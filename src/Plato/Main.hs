@@ -2,23 +2,23 @@
 
 module Plato.Main where
 
+import Plato.Common.Error
+import Plato.Common.Name
+import Plato.Common.SrcLoc
+
+import Plato.Main.Monad
+
+import Plato.Transl.CoreToIO
+import Plato.Transl.PsToTyp
+import Plato.Transl.SrcToPs
+import Plato.Transl.TypToCore
+
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.State
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import qualified Data.Vector as V
-import Plato.Common.Error
-import Plato.Common.Name
-import Plato.Common.SrcLoc
-import Plato.Core.Context
-import Plato.Main.Monad
-import Plato.Syntax.Core
-import qualified Plato.Syntax.Parsing as P
-import Plato.Transl.PsToTyp
-import Plato.Transl.SrcToPs
-import Plato.Transl.TypToCore
 import System.Console.Haskeline
 import System.Directory
 import System.FilePath (takeDirectory, (</>))
@@ -49,29 +49,23 @@ processFile src = do
 
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do
+        is_entry <- gets isEntry
         -- processing Parsing
-        ps <- src2ps input
+        opdict <- gets opDict
+        (opdict', imps, ps) <- src2ps opdict input
         -- processing Imports
-        let imps = P.importDecls ps
-        mapM_ processModule imps
+        mapM_ processImport imps
         -- processing Typing
         st <- get
         (typ, typenv') <- ps2typ (typingEnv st) ps
         -- processing Core
         let ctx = context st
         (ns', cmds) <- typ2core (renames st) ctx typ
-        ctx' <- foldM (processCommand $ isEntry st) ctx cmds
-        put st{typingEnv = typenv', renames = ns', context = ctx'}
+        ctx' <- foldM (processCommand is_entry) ctx cmds
+        put st{opDict = opdict', typingEnv = typenv', renames = ns', context = ctx'}
 
-processCommand :: (MonadThrow m, MonadIO m) => Bool -> Context -> Command -> Plato m Context
-processCommand _ ctx Import{} = return ctx
-processCommand _ ctx (Bind name bind) = return $ V.cons (name, bind) ctx
-processCommand opt ctx (Eval t) = do
-        when opt $ debugResult ctx (unLoc t)
-        return ctx
-
-processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
-processModule (L sp mod) = do
+processImport :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
+processImport (L sp mod) = do
         is_entry <- gets isEntry
         imped_list <- gets importedList
         impng_list <- gets importingList

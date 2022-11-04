@@ -3,8 +3,8 @@ module Plato.Test.Core.Eval where
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
-import Plato.Main.Pretty
 import Plato.Syntax.Core
+import Plato.Transl.CoreToIO
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
@@ -36,7 +36,7 @@ test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
-                ps <- src2ps inp
+                (_, _, ps) <- src2ps M.empty inp
                 typ <- fst <$> ps2typ M.empty ps
                 cmds <- snd <$> typ2core [] emptyContext typ
                 return $ renderString $ layoutPretty defaultLayoutOptions (pprcmds emptyContext cmds)

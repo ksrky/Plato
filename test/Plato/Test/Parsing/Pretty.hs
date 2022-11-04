@@ -4,6 +4,7 @@ import Plato.Transl.SrcToPs
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
+import qualified Data.Map.Strict as M
 import qualified Data.Text.IO as T
 import Prettyprinter
 import Test.Hspec
@@ -25,5 +26,5 @@ test (fname, iscorrect) = it fname $
         iscorrect $ do
                 let src = "test/testcases/" ++ fname
                 inp <- liftIO $ T.readFile src
-                ps <- src2ps inp
+                (_, _, ps) <- src2ps M.empty inp
                 return $ show $ pretty ps
