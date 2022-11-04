@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Typing.Renamer where
+module Plato.Typing.Rename where
 
 import Plato.Common.GlbName
 import Plato.Common.Name

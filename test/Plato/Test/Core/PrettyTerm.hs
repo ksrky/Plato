@@ -17,7 +17,7 @@ import qualified Plato.Transl.SrcToPs as P
 import qualified Plato.Transl.TypToCore as C
 
 import Plato.Typing.KindInfer
-import Plato.Typing.Renamer
+import Plato.Typing.Rename
 import Plato.Typing.TypeCheck
 
 import Control.Exception.Safe

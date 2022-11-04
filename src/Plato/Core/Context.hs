@@ -58,7 +58,7 @@ bindingShift d bind = case bind of
         TyAbbBind tyT opt -> TyAbbBind (typeShift d <$> tyT) opt
 
 getBinding :: Context -> Int -> Binding
-getBinding ctx i = if i + 1 < 0 then error $ show i else bindingShift (i + 1) (snd $ ctx V.! i)
+getBinding ctx i = bindingShift (i + 1) (snd $ ctx V.! i)
 
 getTypeFromContext :: MonadThrow m => Span -> Context -> Int -> m (Located Ty)
 getTypeFromContext sp ctx i = case getBinding ctx i of

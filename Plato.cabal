@@ -10,7 +10,7 @@ description:    Please see the README on GitHub at <https://github.com/ksrky/Pla
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
 author:         ksrk
-maintainer:     example@example.com
+maintainer:     kswgrky@gmail.com
 copyright:      2022 ksrk
 license:        BSD3
 license-file:   LICENSE
@@ -55,7 +55,7 @@ library
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
       Plato.Typing.KindInfer
-      Plato.Typing.Renamer
+      Plato.Typing.Rename
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
@@ -119,7 +119,7 @@ executable plato
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
       Plato.Typing.KindInfer
-      Plato.Typing.Renamer
+      Plato.Typing.Rename
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck

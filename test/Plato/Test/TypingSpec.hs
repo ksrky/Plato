@@ -3,7 +3,7 @@ module Plato.Test.TypingSpec where
 import Plato.Test.Typing.DeclTransl as DT
 import Plato.Test.Typing.ExprTransl as ET
 import Plato.Test.Typing.Pretty as P
-import Plato.Test.Typing.Renamer as R
+import Plato.Test.Typing.Rename as R
 import Plato.Test.Typing.TopDeclPretty as TP
 import Plato.Test.Typing.TopDeclTransl as TT
 import Plato.Test.Typing.Transl as T

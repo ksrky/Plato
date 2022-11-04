@@ -68,7 +68,7 @@ instance Pretty ModuleName where
         pretty (ModuleName modn) = concatWith (surround dot) (map pretty modn)
 
 mod2conName :: ModuleName -> Name
-mod2conName (ModuleName modn) = Name ConName (T.intercalate (T.pack ".") modn)
+mod2conName (ModuleName modn) = Name ConName (':' `T.cons` T.intercalate (T.pack ".") modn)
 
 mod2tyconName :: ModuleName -> Name
 mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)

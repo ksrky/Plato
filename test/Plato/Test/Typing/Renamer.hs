@@ -1,9 +1,9 @@
-module Plato.Test.Typing.Renamer where
+module Plato.Test.Typing.Rename where
 
 import Plato.Syntax.Typing as T
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
-import Plato.Typing.Renamer
+import Plato.Typing.Rename
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

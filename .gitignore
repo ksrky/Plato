@@ -4,3 +4,4 @@ dist-newstyle/
 site
 stack.yaml.lock
 *~
+examples/Plato

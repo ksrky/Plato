@@ -4,4 +4,4 @@ version :: String
 version = "1.0.0"
 
 libsBase :: FilePath
-libsBase = ""
+libsBase = "~/workspace/Plato/libs/base"

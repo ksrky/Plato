@@ -67,7 +67,7 @@ processCommand :: (MonadThrow m, MonadIO m) => Bool -> Context -> Command -> Pla
 processCommand _ ctx Import{} = return ctx
 processCommand _ ctx (Bind name bind) = return $ V.cons (name, bind) ctx
 processCommand opt ctx (Eval t) = do
-        when opt $ printResult ctx (unLoc t)
+        when opt $ debugResult ctx (unLoc t)
         return ctx
 
 processModule :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()

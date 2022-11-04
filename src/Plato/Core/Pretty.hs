@@ -141,3 +141,10 @@ instance PrettyCore Command where
         ppr _ (Import imp) = pretty imp
         ppr ctx (Bind x bind) = hsep [pretty x, equals, ppr ctx bind]
         ppr ctx (Eval t) = ppr ctx (unLoc t)
+
+instance PrettyCore [Command] where
+        ppr _ [] = emptyDoc
+        ppr ctx (cmd@(Bind x _) : cmds) =
+                let ctx' = addFreshName x ctx
+                 in vsep [ppr ctx cmd, ppr ctx' cmds]
+        ppr ctx (cmd : cmds) = vsep [ppr ctx cmd, ppr ctx cmds]

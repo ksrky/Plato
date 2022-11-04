@@ -25,7 +25,7 @@ import Control.Exception.Safe
 import Control.Monad.State
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import Plato.Typing.Renamer
+import Plato.Typing.Rename
 import Test.Hspec
 
 testcases :: [(String, IO (Term, Ty) -> Expectation)]
