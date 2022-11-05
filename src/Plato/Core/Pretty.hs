@@ -88,9 +88,9 @@ instance PrettyCore Ty where
                 TyAbs tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
                          in hcat [backslash, pretty tyX', colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
-                TyRec tyX tyT1 ->
+                TyRec tyX knK1 tyT2 ->
                         let (tyX', ctx') = pickFreshName tyX ctx
-                         in hcat [backslash, pretty tyX', dot <+> ppr ctx' tyT1]
+                         in hcat [backslash, pretty tyX', colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRecord fields ->
                         if null fields
                                 then lbrace <> rbrace

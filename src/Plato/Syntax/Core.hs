@@ -29,7 +29,7 @@ data Ty
         | TyAll GlbName Kind Ty
         | TyAbs GlbName Kind Ty
         | TyApp Ty Ty
-        | TyRec GlbName Ty
+        | TyRec GlbName Kind Ty
         | TyRecord [(GlbName, Ty)]
         | TyVariant [(GlbName, [Ty])]
         deriving (Eq, Show)

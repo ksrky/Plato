@@ -119,10 +119,11 @@ transType ctx = tratype
                 tyT1 <- tratype ty1
                 tyT2 <- tratype ty2
                 return $ C.TyApp tyT1 tyT2
-        tratype (T.RecT x ty) = do
+        tratype (T.RecT x kn ty) = do
                 ctx' <- addName x ctx
+                knK1 <- transKind kn
                 tyT2 <- transType ctx' ty
-                return $ C.TyRec x tyT2
+                return $ C.TyRec x knK1 tyT2
         tratype (T.RecordT fieldtys) = do
                 fields' <- forM fieldtys $ \(l, field) -> (l,) <$> tratype field
                 return $ C.TyRecord fields'

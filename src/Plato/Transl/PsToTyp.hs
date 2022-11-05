@@ -117,7 +117,8 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                         tys' <- mapM transType tys
                         return (transName l, tys')
         let fieldty = T.SumT fields'
-            bodyty = T.RecT (transName name) fieldty
+            kn = foldr ArrK StarK (replicate (length params) StarK)
+            bodyty = T.RecT (transName name) kn fieldty
         tell ([L sp (T.TypeD (transName name) (foldr (\x -> T.AbsT (transName x) Nothing) bodyty params))], [], [])
         forM_ fields' $ \(l, field) -> do
                 let res_ty = foldl T.AppT (T.ConT $ transName name) (map (T.VarT . BoundTv . transName) params)

@@ -16,11 +16,5 @@ Stack を使ってビルドする。バージョンは 2.7.5 のみでテスト�
 ```command
 $ cd Plato
 $ stack install
-```
-
-以下のコマンドでパスが通っているか確認できる。
-
-```commad
 $ plato --version
-Plato version 0.1.0.0
 ```

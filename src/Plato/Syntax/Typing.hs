@@ -48,7 +48,7 @@ data Type
         | AllT [(TyVar, Maybe Kind)] Type {- Rho -}
         | AbsT GlbName (Maybe Kind) Type
         | AppT Type Type
-        | RecT GlbName Type
+        | RecT GlbName Kind Type
         | RecordT [(GlbName, Type)]
         | SumT [(GlbName, [Type])]
         | MetaT MetaTv
@@ -174,7 +174,7 @@ instance Pretty Type where
         pretty (ArrT arg res) = pprty ArrPrec arg <+> "->" <+> pprty TopPrec res
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
         pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
-        pretty (RecT var body) = "μ" <> pretty var <> dot <+> pretty body
+        pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
         pretty (RecordT fields) =
                 hsep
                         [ lbrace

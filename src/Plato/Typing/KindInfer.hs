@@ -170,7 +170,7 @@ zonkType (AllT tvs ty) = do
         AllT tvs' <$> zonkType ty
 zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType ty
 zonkType (AppT fun arg) = AppT <$> zonkType fun <*> zonkType arg
-zonkType (RecT x ty) = RecT x <$> zonkType ty
+zonkType (RecT x kn ty) = RecT x kn <$> zonkType ty
 zonkType (RecordT fields) = do
         fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType ty
         return $ RecordT fields'
@@ -243,11 +243,10 @@ infer t = case t of
                 (ty2', kn2) <- infer ty2
                 unify kn1 (ArrK kn2 kv)
                 return (AppT ty1' ty2', kv)
-        RecT x ty1 -> do
-                kv <- newKnVar
-                (ty1', kn1) <- extendEnv x kv (infer ty1)
+        RecT x kn ty1 -> do
+                (ty1', kn1) <- extendEnv x kn (infer ty1)
                 unify kn1 StarK
-                return (RecT x ty1', StarK)
+                return (RecT x kn ty1', StarK)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do
                         (ty1', kn1) <- infer ty1
