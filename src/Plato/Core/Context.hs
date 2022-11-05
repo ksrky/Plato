@@ -16,12 +16,13 @@ import qualified Data.Vector as V
 import Prettyprinter
 
 type Context = V.Vector (GlbName, Binding)
+
 emptyContext :: Context
 emptyContext = V.empty
 
 lookupContext :: GlbName -> Context -> Maybe Binding
-lookupContext k v = do
-        ((x, y), tl) <- V.uncons v
+lookupContext k ctx = do
+        ((x, y), tl) <- V.uncons ctx
         if k == x then Just y else lookupContext k tl
 
 addBinding :: MonadThrow m => GlbName -> Binding -> Context -> m Context
@@ -70,16 +71,6 @@ getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
         Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
-
-getVarIndex' :: Context -> GlbName -> Int
-getVarIndex' ctx x = case V.elemIndex x (V.map fst ctx) of
-        Just i -> i
-        Nothing -> unreachable $ "Unbound variable name: '" ++ show x ++ "'"
-
-isVarExist :: Context -> GlbName -> Bool
-isVarExist ctx x = case V.elemIndex x (V.map fst ctx) of
-        Just _ -> True
-        Nothing -> False
 
 commandShift :: Int -> Command -> Command
 commandShift d (Bind x b) = Bind x (bindingShift d b)

@@ -23,7 +23,7 @@ testcases =
                         \case
                                 Program
                                         { decls =
-                                                [ NL (TypeD (TCN "Bool") (RecT (TCN "Bool") (SumT [(CN "True", []), (CN "False", [])])))
+                                                [ NL (TypeD (TCN "Bool") (RecT (TCN "Bool") StarK (SumT [(CN "True", []), (CN "False", [])])))
                                                         , NL (ConD (FuncD (CN "True") (AppE (FoldE (CT "Bool")) (TagE (CN "True") [] (SumT [(CN "True", []), (CN "False", [])]))) (CT "Bool")))
                                                         , NL (ConD (FuncD (CN "False") (AppE (FoldE (CT "Bool")) (TagE (CN "False") [] (SumT [(CN "True", []), (CN "False", [])]))) (CT "Bool")))
                                                         ]

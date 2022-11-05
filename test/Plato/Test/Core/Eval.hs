@@ -29,6 +29,15 @@ testcases =
         , ("test07.plt", (`shouldReturn` "True\n"))
         , ("test08.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ Zero))))\n"))
         , ("test09.plt", (`shouldReturn` "T1\n"))
+        , ("test10.plt", (`shouldReturn` "T1 :: (T2 :: (T2 :: (T1 :: Nil)))\n"))
+        , ("test11.plt", (`shouldReturn` "T1\n"))
+        , ("test12.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))\n"))
+        , -- , ("test13.plt", (`shouldReturn` ""))
+          ("test14.plt", (`shouldReturn` "Succ (Succ (Succ Zero))\n"))
+        , ("test15.plt", (`shouldReturn` "Succ Zero\n"))
+        , ("test16.plt", (`shouldReturn` "Succ Zero :: (Succ (Succ Zero) :: (Succ (Succ (Succ Zero)) :: (Succ (Succ (Succ (Succ Zero))) :: Nil)))\n"))
+        , ("test17.plt", (`shouldReturn` "Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))))))))))))))))))\n"))
+        , ("test18.plt", (`shouldReturn` "anything\n"))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m String -> Expectation) -> SpecWith ()

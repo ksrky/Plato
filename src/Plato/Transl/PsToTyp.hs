@@ -152,7 +152,10 @@ ps2typ :: (MonadIO m, MonadThrow m) => T.TypEnv -> P.Program -> m (T.Program, T.
 ps2typ env (P.Program modn _ topds) = do
         (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl topds
         (fundecs, vardecs) <- transDecls (getDecls topds)
-        let env' = M.fromList [(var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs] `M.union` env
+        let env' =
+                M.fromList [(var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
+                        `M.union` M.fromList [(var, ty) | L _ (T.VarD var ty) <- vardecs]
+                        `M.union` env
         fundecs' <- mapM (typeCheck env') fundecs
         exps' <- forM exps $ \(L sp e) -> do
                 (e', ty) <- typeInfer env' e

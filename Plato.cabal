@@ -168,7 +168,7 @@ test-suite Plato-test
       Plato.Test.Typing.DeclTransl
       Plato.Test.Typing.ExprTransl
       Plato.Test.Typing.Pretty
-      Plato.Test.Typing.Renamer
+      Plato.Test.Typing.Rename
       Plato.Test.Typing.TopDeclPretty
       Plato.Test.Typing.TopDeclTransl
       Plato.Test.Typing.Transl

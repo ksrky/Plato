@@ -11,6 +11,8 @@ import Plato.Syntax.Core
 
 import Control.Exception.Safe
 import Control.Monad
+import Plato.Common.GlbName
+import Plato.Common.Name
 import Prettyprinter
 
 ----------------------------------------------------------------
@@ -207,24 +209,22 @@ typeof ctx t = case t of
                 tyT2' -> throwError $ hsep ["Expected variant type, but got ", ppr ctx tyT2']
         TmCase t alts -> do
                 tyT <- typeof ctx t
-                undefined
-
-{-case simplifyty ctx tyT of
-        TyVariant fieldtys -> do
-                when (null fieldtys) $ return ()
-                (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
-                        Just tys -> do
-                                let ctx' = foldr addFreshName ctx (VarBind tyT)
-                                tyTi <- typeof ctx' ti
-                                return $ typeShift (- ki) tyTi
-                        Nothing | null (g_name (nameText li)) -> do
-                                let ctx' = foldr addFreshName ctx (VarBind $ TyVariant fieldtys)
-                                tyTi <- typeof ctx' ti
-                                return $ typeShift (- ki) tyTi
-                        Nothing -> throwError $ hsep ["label", pretty li, "not found"]
-                forM_ restTy $ \tyTi -> tyeqv ctx tyTi tyT1
-                return tyT1
-        tyT' -> throwError $ hsep ["Expected variant type, but got", ppr ctx tyT']-}
+                case simplifyty ctx tyT of
+                        TyVariant [] -> return $ TyVariant []
+                        TyVariant fieldtys -> do
+                                (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
+                                        Just tys -> do
+                                                ctx' <- foldM (flip $ addBinding (newName $ str2varName "") . VarBind . noLoc) ctx tys
+                                                tyTi <- typeof ctx' ti
+                                                return $ typeShift (- ki) tyTi
+                                        Nothing | nameText (g_name li) == "" -> do
+                                                ctx' <- addBinding (newName $ str2varName "") (VarBind $ noLoc $ TyVariant fieldtys) ctx
+                                                tyTi <- typeof ctx' ti
+                                                return $ typeShift (- ki) tyTi
+                                        Nothing -> throwError $ hsep ["label", pretty li, "not found"]
+                                forM_ restTy $ \tyTi -> tyeqv ctx tyTi tyT1
+                                return tyT1
+                        tyT' -> throwError $ hsep ["Expected variant type, but got", ppr ctx tyT']
 
 ----------------------------------------------------------------
 -- Type check of binding

@@ -39,8 +39,8 @@ ppr ctx t = pprtm t <> line
                 case t of
                         TmVar x n -> if length ctx == n then pretty $ index2name ctx x else unreachable "Something unexpected occured.\n"
                         TmApp (TmFold _) t2 | isTag t2 -> pprtm t2
-                        TmApp{} -> pprapp t
-                        TmTag op [t1, t2] _ | isConOp op -> pprtm1 t1 <+> pretty op <+> pprtm1 t2
+                        TmTApp t1 _ -> pprtm t1
+                        TmTag op [t1, t2] _ | isConOp op -> pprtm2 t1 <+> pretty op <+> pprtm2 t2
                         TmTag li ts _ -> hcat [pretty li, hsep' (map pprtm1 ts)]
                         _ -> unreachable "Something unexpected occured."
 
@@ -57,9 +57,9 @@ ppr ctx t = pprtm t <> line
         pprtm1 t@(TmTag _ as _) | null as = pprtm t
         pprtm1 t = parens $ pprtm t
 
-        pprapp :: Term -> Doc ann
-        pprapp t = walk t []
-            where
-                walk :: Term -> [Term] -> Doc ann
-                walk (TmApp t1 t2) ts = walk t1 (t2 : ts)
-                walk t' ts = pprtm1 t' <+> sep (map pprtm1 ts)
+        pprtm2 :: Term -> Doc ann
+        pprtm2 t@TmVar{} = pprtm t
+        pprtm2 (TmApp (TmFold _) t2) | isTag t2 = pprtm2 t2
+        pprtm2 t@(TmTag op [_, _] _) | isConOp op = parens $ pprtm t
+        pprtm2 t@TmTag{} = pprtm t
+        pprtm2 t = parens $ pprtm t
