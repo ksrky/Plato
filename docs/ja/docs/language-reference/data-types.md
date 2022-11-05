@@ -5,12 +5,13 @@ data Bool = True | False
 ```
 
 ## General form
+
 ```
-datatype : 'data' con
-         | 'data' con '=' constrs
+datatype : 'data' conid
+         | 'data' conid '=' constrs
 
 constrs : constr '|' constrs
         | constr
 
-constr : con types
+constr : conid types
 ```

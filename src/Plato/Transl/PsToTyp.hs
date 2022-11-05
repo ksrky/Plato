@@ -8,9 +8,10 @@ import Plato.Common.Error
 import Plato.Common.GlbName
 import Plato.Common.Name
 import Plato.Common.SrcLoc
+
 import qualified Plato.Syntax.Parsing as P
-import Plato.Syntax.Typing
 import qualified Plato.Syntax.Typing as T
+
 import Plato.Typing.TypeCheck
 
 import Control.Exception.Safe
@@ -70,7 +71,7 @@ transPat (L _ P.WildP) = do
         return T.WildP
 
 transType :: MonadThrow m => Located P.Type -> m T.Type
-transType (L _ (P.VarT x)) = return $ T.VarT $ BoundTv $ transName x
+transType (L _ (P.VarT x)) = return $ T.VarT $ T.BoundTv $ transName x
 transType (L _ (P.ConT x)) = return $ T.ConT $ transName x
 transType (L _ (P.AppT ty1 ty2)) = do
         ty1' <- transType ty1
@@ -82,7 +83,7 @@ transType (L _ (P.ArrT ty1 ty2)) = do
         return $ T.ArrT ty1' ty2'
 transType (L _ (P.AllT xs ty1)) = do
         ty1' <- transType ty1
-        return $ T.AllT (map (\x -> (BoundTv $ transName x, Nothing)) xs) ty1'
+        return $ T.AllT (map (\x -> (T.BoundTv $ transName x, Nothing)) xs) ty1'
 
 transDecls :: MonadThrow m => [Located P.Decl] -> m ([T.FuncD], [Located T.Decl])
 transDecls decs = do
@@ -117,16 +118,16 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                         tys' <- mapM transType tys
                         return (transName l, tys')
         let fieldty = T.SumT fields'
-            kn = foldr ArrK StarK (replicate (length params) StarK)
+            kn = foldr T.ArrK T.StarK (replicate (length params) T.StarK)
             bodyty = T.RecT (transName name) kn fieldty
         tell ([L sp (T.TypeD (transName name) (foldr (\x -> T.AbsT (transName x) Nothing) bodyty params))], [], [])
         forM_ fields' $ \(l, field) -> do
-                let res_ty = foldl T.AppT (T.ConT $ transName name) (map (T.VarT . BoundTv . transName) params)
+                let res_ty = foldl T.AppT (T.ConT $ transName name) (map (T.VarT . T.BoundTv . transName) params)
                     rho_ty = foldr T.ArrT res_ty field
                     sigma_ty =
                         if null params
                                 then rho_ty
-                                else T.AllT (map (\x -> (BoundTv $ transName x, Nothing)) params) rho_ty
+                                else T.AllT (map (\x -> (T.BoundTv $ transName x, Nothing)) params) rho_ty
                     tyargs = params
                     args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
                     tag = T.TagE l (map (T.VarE . transName) args) fieldty
