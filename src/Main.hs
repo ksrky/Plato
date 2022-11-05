@@ -1,7 +1,7 @@
 module Main where
 
-import Interface.Constant (version)
-import Interface.Options (Options (..), runWithOptions)
+import Iface.Constant (version)
+import Iface.Options (Options (..), runWithOptions)
 import Plato.Main (repl, runPlato)
 
 main :: IO ()

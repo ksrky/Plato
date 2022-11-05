@@ -52,9 +52,11 @@ process input = do
         is_entry <- gets isEntry
         -- processing Parsing
         opdict <- gets opDict
-        (opdict', imps, ps) <- src2ps opdict input
+        (opdict', ps) <- src2ps opdict input
         -- processing Imports
-        mapM_ processImport imps
+        -- let mbmod = moduleName ps
+        --     imps = importModule ps 
+        -- mapM_ (processImport mbmod) imps
         -- processing Typing
         st <- get
         (typ, typenv') <- ps2typ (typingEnv st) ps
@@ -64,14 +66,17 @@ process input = do
         ctx' <- foldM (processCommand is_entry) ctx cmds
         put st{opDict = opdict', typingEnv = typenv', renames = ns', context = ctx'}
 
-processImport :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
-processImport (L sp mod) = do
+{-}
+processImport :: (MonadThrow m, MonadIO m) => Maybe ModuleName -> Located ModuleName -> Plato m ()
+processImport mbmod (L sp impmod) = do
         is_entry <- gets isEntry
         imped_list <- gets importedList
         impng_list <- gets importingList
-        when (mod `elem` impng_list) $ throwLocErr sp "Cyclic dependencies"
-        unless (mod `elem` imped_list) $ do
-                modify $ \s -> s{isEntry = False, importingList = mod : impng_list}
+        when (impmod `elem` impng_list) $ throwLocErr sp "Cyclic dependencies"
+        unless (impmod `elem` imped_list) $ do
+                modify $ \s -> s{isEntry = False, importingList = impmod : impng_list}
+                path <- solveModpath mbmod impmod
                 base_path <- gets basePath
-                processFile (base_path </> mod2path mod)
-                modify $ \s -> s{isEntry = is_entry, importedList = mod : importedList s, importingList = impng_list}
+                processFile (base_path </> mod2path impmod)
+                modify $ \s -> s{isEntry = is_entry, importedList = impmod : importedList s, importingList = impng_list}
+-}

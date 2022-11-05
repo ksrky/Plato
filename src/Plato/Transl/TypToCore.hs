@@ -70,7 +70,7 @@ transExpr knenv ctx = traexpr
                 tyT2 <- transType ctx ty2
                 alts' <- forM alts $ \(pat, body) -> case pat of
                         T.ConP li ps -> do
-                                xs <- (concat <$>) <$> forM ps $ \p -> case p of
+                                xs <- (concat <$>) $ forM ps $ \p -> case p of
                                         T.VarP x -> return [x]
                                         T.WildP -> return []
                                         T.ConP{} -> throwString "pattern argument" --tmp

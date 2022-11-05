@@ -1,10 +1,11 @@
 module Plato.Core.Eval where
 
-import Plato.Common.GlbName
 import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Subst
 import Plato.Syntax.Core
+
+import Control.Monad ( forM )
 
 ----------------------------------------------------------------
 -- Evaluation
@@ -12,8 +13,8 @@ import Plato.Syntax.Core
 isval :: Context -> Term -> Bool
 isval ctx t = case t of
         TmAbs{} -> True
-        TmRecord fields -> all (\(_, ti) -> isval ctx ti) fields
-        TmTag _ ts1 _ -> all (isval ctx) ts1
+        TmRecord fields -> all (\(_, vi) -> isval ctx vi) fields
+        TmTag _ vs _ -> all (isval ctx) vs
         TmApp (TmFold _) v -> isval ctx v
         TmTAbs{} -> True
         TmVar i _ -> case getBinding ctx i of
@@ -36,8 +37,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmApp (TmUnfold tyS) t2 -> do
                         t2' <- eval1 t2
                         Just $ TmApp (TmUnfold tyS) t2'
-                TmApp (TmAbs _ _ t12) v2 | isval ctx v2 -> do
-                        return $ termSubstTop v2 t12
+                TmApp (TmAbs _ _ t12) v2 | isval ctx v2 -> return $ termSubstTop v2 t12
                 TmApp v1 t2 | isval ctx v1 -> do
                         t2' <- eval1 t2
                         return $ TmApp v1 t2'
@@ -55,9 +55,7 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                 TmLet x t1 t2 -> do
                         t1' <- eval1 t1
                         Just $ TmLet x t1' t2
-                TmFix v1 | isval ctx v1 -> case v1 of
-                        TmAbs _ _ t12 -> Just $ termSubstTop t t12
-                        _ -> Nothing
+                TmFix (TmAbs _ _ t12) -> Just $ termSubstTop t t12
                 TmFix t1 -> do
                         t1' <- eval1 t1
                         Just $ TmFix t1'
@@ -66,16 +64,11 @@ eval ctx t = maybe t (eval ctx) (eval1 t)
                         t1' <- eval1 t1
                         Just $ TmProj t1' l
                 TmRecord fields -> do
-                        let evalafield :: [(GlbName, Term)] -> Maybe [(GlbName, Term)]
-                            evalafield l = case l of
-                                [] -> Nothing
-                                (l, vi) : rest | isval ctx vi -> do
-                                        rest' <- evalafield rest
-                                        Just $ (l, vi) : rest'
-                                (l, ti) : rest -> do
+                        fields' <- forM fields $ \field -> case field of
+                                (li, vi) | isval ctx vi -> Just (li, vi)
+                                (li, ti) -> do
                                         ti' <- eval1 ti
-                                        Just $ (l, ti') : rest
-                        fields' <- evalafield fields
+                                        Just (li, ti')
                         Just $ TmRecord fields'
                 TmTag _ vs _ | all (isval ctx) vs -> Nothing
                 TmTag l ts tyT -> do

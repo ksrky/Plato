@@ -1,4 +1,4 @@
-module Interface.Constant where
+module Iface.Constant where
 
 version :: String
 version = "1.0.0"

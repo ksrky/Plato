@@ -25,8 +25,8 @@ source-repository head
 
 library
   exposed-modules:
-      Interface.Constant
-      Interface.Options
+      Iface.Constant
+      Iface.Options
       Main
       Plato.Common.Error
       Plato.Common.GlbName
@@ -90,8 +90,8 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Interface.Constant
-      Interface.Options
+      Iface.Constant
+      Iface.Options
       Plato.Common.Error
       Plato.Common.GlbName
       Plato.Common.Name

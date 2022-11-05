@@ -18,11 +18,17 @@ import Control.Exception.Safe (MonadThrow)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
-src2ps :: MonadThrow m => OpDict -> T.Text -> m (OpDict, [Located ModuleName], Program)
+src2ps :: MonadThrow m => OpDict -> T.Text -> m (OpDict,  Program)
 src2ps opdict inp = do
         (res, st) <- eitherToMonadThrow (parse inp parser)
         let opdict' = opdict `M.union` opDict (parser_ust st)
-        (opdict',importDecls res,) <$> resolveFixity opdict' res
+        (opdict',) <$> resolveFixity opdict' res
 
 parseLine :: ParserT m a -> T.Text -> m (a, PsState)
 parseLine p inp = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})
+
+moduleName :: Program -> Maybe ModuleName
+moduleName = (unLoc <$>) . Plato.Syntax.Parsing.moduleDecl
+
+importModule :: Program -> [Located ModuleName]
+importModule = Plato.Syntax.Parsing.importDecls

@@ -19,7 +19,10 @@ processCommand :: (MonadThrow m, MonadIO m) => Bool -> Context -> Command -> m C
 processCommand _ ctx Import{} = return ctx
 processCommand _ ctx (Bind name bind) = addBinding name bind ctx
 processCommand opt ctx (Eval t) = do
-        when opt $ printResult ctx (unLoc t)
+        when opt $ do
+                liftIO $ print (unLoc t)
+                liftIO $ print ctx
+                printResult ctx (unLoc t)
         return ctx
 
 printResult :: MonadIO m => Context -> Term -> m ()
