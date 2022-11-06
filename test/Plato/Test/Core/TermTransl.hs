@@ -46,8 +46,8 @@ test :: (MonadThrow m, MonadIO m) => (String, m (Term, Ty) -> Expectation) -> Sp
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (P.parseLine declsParser (T.pack inp))
-                let opdict = opDict (parser_ust st)
-                ps' <- mapM (resolve opdict) ps
+                let OpTable = OpTable (parser_ust st)
+                ps' <- mapM (resolve OpTable) ps
                 (fundecs, _) <- T.transDecls ps'
                 fundecs' <- mapM (typeCheck M.empty) fundecs
                 (fundec, _) <- renameFuncDs emptyRenameState fundecs'

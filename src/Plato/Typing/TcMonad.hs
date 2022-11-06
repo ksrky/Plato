@@ -20,7 +20,7 @@ import Prettyprinter
 
 data TcEnv = TcEnv
         { uniqs :: IORef Uniq
-        , var_env :: M.Map GlbName Sigma
+        , var_env :: TypTable
         }
 
 newtype Tc m a = Tc (TcEnv -> m a)
@@ -50,7 +50,7 @@ instance MonadThrow m => MonadFail (Tc m) where
 instance MonadTrans Tc where
         lift m = Tc (const m)
 
-runTc :: MonadIO m => TypEnv -> Tc m a -> m a
+runTc :: MonadIO m => TypTable -> Tc m a -> m a
 runTc binds (Tc tc) = do
         ref <- liftIO $ newIORef 0
         let env = TcEnv{uniqs = ref, var_env = binds}

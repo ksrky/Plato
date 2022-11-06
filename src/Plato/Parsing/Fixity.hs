@@ -10,7 +10,7 @@ data Fixity = Leftfix | Rightfix | Nonfix
 data Op = Op (Located Name) Int Fixity
         deriving (Eq, Show)
 
-type OpDict = M.Map Name Op
+type OpTable = M.Map Name Op
 
 maxPrec :: Int
 maxPrec = 9

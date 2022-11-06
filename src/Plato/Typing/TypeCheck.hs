@@ -20,14 +20,14 @@ import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List (subsequences, (\\))
 
-typeCheck :: (MonadIO m, MonadThrow m) => TypEnv -> FuncD -> m FuncD
+typeCheck :: (MonadIO m, MonadThrow m) => TypTable -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
         (AnnE body' _, ty') <- inferSigma (AnnE body ty)
         body'' <- zonkExpr body'
         ty'' <- zonkType ty'
         return (FuncD var body'' ty'')
 
-typeInfer :: (MonadIO m, MonadThrow m) => TypEnv -> Expr -> m (Expr, Sigma)
+typeInfer :: (MonadIO m, MonadThrow m) => TypTable -> Expr -> m (Expr, Sigma)
 typeInfer env e = runTc env $ do
         (e', ty') <- inferSigma e
         e'' <- zonkExpr e'

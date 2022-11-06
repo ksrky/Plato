@@ -149,7 +149,7 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-ps2typ :: (MonadIO m, MonadThrow m) => T.TypEnv -> P.Program -> m (T.Program, T.TypEnv)
+ps2typ :: (MonadIO m, MonadThrow m) => T.TypTable -> P.Program -> m (T.Program, T.TypTable)
 ps2typ env (P.Program modn _ topds) = do
         (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl topds
         (fundecs, vardecs) <- transDecls (getDecls topds)

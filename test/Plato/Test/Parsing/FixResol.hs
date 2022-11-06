@@ -50,8 +50,8 @@ testcases =
         , ("x > y > z", (`shouldThrow` anyException))
         ]
 
-opdict :: OpDict
-opdict =
+OpTable :: OpTable
+OpTable =
         M.fromList
                 [ (varName "+", Op (L NoSpan (Name VarName "+")) 6 Leftfix)
                 , (varName "*", Op (L NoSpan (Name VarName "*")) 7 Leftfix)
@@ -63,4 +63,4 @@ test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (res, _) <- eitherToMonadThrow (parseLine exprParser (T.pack inp))
-                unLoc <$> resolve opdict res
+                unLoc <$> resolve OpTable res

@@ -1,7 +1,6 @@
 module Plato.Syntax.Core where
 
 import Plato.Common.GlbName
-import Plato.Common.Name
 import Plato.Common.SrcLoc
 
 ----------------------------------------------------------------
@@ -44,8 +43,14 @@ data Binding
         | TyAbbBind (Located Ty) Kind
         deriving (Eq, Show)
 
-data Command
-        = Import ModuleName
-        | Bind GlbName Binding
-        | Eval (Located Term)
+-- data Command
+--         = Import ModuleName
+--         | Bind GlbName Binding
+--         | Eval (Located Term)
+--         deriving (Eq, Show)
+
+data Module = Module
+        { moduleBind :: [(GlbName, Binding)]
+        , moduleEval :: [Located Term]
+        }
         deriving (Eq, Show)

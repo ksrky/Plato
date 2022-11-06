@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Plato.Core.Pretty where
@@ -137,14 +138,15 @@ instance PrettyCore Binding where
         ppr ctx (TmAbbBind t tyT) = hsep [ppr ctx (unLoc t), colon, ppr ctx (unLoc tyT)]
         ppr ctx (TyAbbBind tyT knK) = hsep [ppr ctx (unLoc tyT), colon, ppr ctx knK]
 
-instance PrettyCore Command where
-        ppr _ (Import imp) = pretty imp
-        ppr ctx (Bind x bind) = hsep [pretty x, equals, ppr ctx bind]
-        ppr ctx (Eval t) = ppr ctx (unLoc t)
-
-instance PrettyCore [Command] where
+instance PrettyCore a => PrettyCore [a] where
         ppr _ [] = emptyDoc
-        ppr ctx (cmd@(Bind x _) : cmds) =
-                let ctx' = addFreshName x ctx
-                 in vsep [ppr ctx cmd, ppr ctx' cmds]
-        ppr ctx (cmd : cmds) = vsep [ppr ctx cmd, ppr ctx cmds]
+        ppr ctx (x : xs) = vsep [ppr ctx x, ppr ctx xs]
+
+instance PrettyCore Module where
+        ppr ctx (Module binds evals) =
+                let pprBinds :: Context -> [(GlbName, Binding)] -> Doc ann
+                    pprBinds ctx [] = vsep (map (ppr ctx . unLoc) evals)
+                    pprBinds ctx ((x, b) : bs) =
+                        let ctx' = addFreshName x ctx
+                         in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
+                 in pprBinds ctx binds

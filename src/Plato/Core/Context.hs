@@ -34,8 +34,8 @@ addBinding x bind ctx =
 addName :: MonadThrow m => GlbName -> Context -> m Context
 addName x = addBinding x NameBind
 
-addNames :: MonadThrow m => [GlbName] -> Context -> m Context
-addNames = flip $ foldM (flip addName)
+addNameTable :: MonadThrow m => [GlbName] -> Context -> m Context
+addNameTable = flip $ foldM (flip addName)
 
 addFreshName :: GlbName -> Context -> Context
 addFreshName x ctx = case lookupContext x ctx of
@@ -71,7 +71,3 @@ getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
         Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
-
-commandShift :: Int -> Command -> Command
-commandShift d (Bind x b) = Bind x (bindingShift d b)
-commandShift _ cmd = cmd

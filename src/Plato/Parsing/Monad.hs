@@ -144,7 +144,7 @@ setStartCode scd = modify $ \s -> s{parser_scd = scd}
 ----------------------------------------------------------------
 data PsUserState = PsUserState
         { commentDepth :: Int
-        , opDict :: OpDict
+        , opTable :: OpTable
         , indentLevels :: [Int]
         }
 
@@ -158,7 +158,7 @@ initUserState :: PsUserState
 initUserState =
         PsUserState
                 { commentDepth = 0
-                , opDict = M.empty
+                , opTable = M.empty
                 , indentLevels = []
                 }
 
@@ -170,13 +170,13 @@ setCommentDepth cd = do
         ust <- getUserState
         setUserState ust{commentDepth = cd}
 
-getOpDict :: Monad m => ParserT m OpDict
-getOpDict = opDict <$> getUserState
+getOpTable :: Monad m => ParserT m OpTable
+getOpTable = opTable <$> getUserState
 
-setOpDict :: Monad m => OpDict -> ParserT m ()
-setOpDict od = do
+setOpTable :: Monad m => OpTable -> ParserT m ()
+setOpTable od = do
         ust <- getUserState
-        setUserState ust{opDict = od}
+        setUserState ust{opTable = od}
 
 getIndentLevels :: Monad m => ParserT m [Int]
 getIndentLevels = indentLevels <$> getUserState

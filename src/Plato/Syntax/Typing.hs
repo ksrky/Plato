@@ -25,7 +25,7 @@ data Expr
         | CaseE Expr (Maybe Type) [(Pat, Expr)]
         | TagE GlbName [Expr] Type
         | FoldE Type
-        | AnnE Expr Type {-Sigma-}
+        | AnnE Expr Sigma
         deriving (Eq, Show)
 
 -- Patterns
@@ -45,7 +45,7 @@ data Type
         = VarT TyVar
         | ConT GlbName
         | ArrT Type Type
-        | AllT [(TyVar, Maybe Kind)] Type {- Rho -}
+        | AllT [(TyVar, Maybe Kind)] Rho
         | AbsT GlbName (Maybe Kind) Type
         | AppT Type Type
         | RecT GlbName Kind Type
@@ -112,7 +112,7 @@ data Program = Program
         }
         deriving (Eq, Show)
 
-type TypEnv = M.Map GlbName Type {- Sigma -}
+type TypTable = M.Map GlbName Sigma
 
 ----------------------------------------------------------------
 -- Pretty printing

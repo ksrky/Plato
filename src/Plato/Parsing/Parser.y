@@ -236,9 +236,9 @@ parseError (L sp tok) = lift $ throwLocErr sp $ sep ["parse error at", pretty to
 
 setFixity :: MonadThrow m => Located Name -> Located Int -> Fixity -> ParserT m ()
 setFixity lop@(L _ op) (L sp prec) fix = do
-    opdict <- getOpDict
+    optab <- getOpTable
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwLocErr sp $ sep ["invalid precedence", pretty prec]
-    setOpDict $ M.insert op (Op lop prec fix) opdict
+    setOpTable $ M.insert op (Op lop prec fix) optab
 
 splitModid :: Located T.Text -> [T.Text]
 splitModid = loop 0 . ((`T.snoc` '.') <$>)

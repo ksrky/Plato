@@ -35,6 +35,6 @@ test :: MonadThrow m => (String, m ([FuncD], [Located Decl]) -> Expectation) -> 
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine declsParser (T.pack inp))
-                let opdict = opDict (parser_ust st)
-                ps' <- mapM (resolve opdict) ps
+                let OpTable = OpTable (parser_ust st)
+                ps' <- mapM (resolve OpTable) ps
                 transDecls ps'

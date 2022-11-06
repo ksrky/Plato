@@ -18,11 +18,11 @@ import Control.Exception.Safe (MonadThrow)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
-src2ps :: MonadThrow m => OpDict -> T.Text -> m (OpDict,  Program)
-src2ps opdict inp = do
+src2ps :: MonadThrow m => OpTable -> T.Text -> m (OpTable, Program)
+src2ps optab inp = do
         (res, st) <- eitherToMonadThrow (parse inp parser)
-        let opdict' = opdict `M.union` opDict (parser_ust st)
-        (opdict',) <$> resolveFixity opdict' res
+        let optab' = optab `M.union` opTable (parser_ust st)
+        (optab',) <$> resolveFixity optab' res
 
 parseLine :: ParserT m a -> T.Text -> m (a, PsState)
 parseLine p inp = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})

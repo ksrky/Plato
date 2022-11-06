@@ -40,8 +40,8 @@ test :: (MonadThrow m, MonadIO m) => (String, m [Kind] -> Expectation) -> SpecWi
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (P.parseLine topdeclParser (T.pack inp))
-                let opdict = opDict (parser_ust st)
-                ps' <- resolve opdict ps
+                let OpTable = OpTable (parser_ust st)
+                ps' <- resolve OpTable ps
                 (tydecs, _, _) <- execWriterT $ T.transTopDecl ps'
                 forM tydecs $ \case
                         (L _ (T.TypeD _ ty)) -> do

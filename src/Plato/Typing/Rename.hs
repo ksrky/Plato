@@ -8,26 +8,27 @@ import Plato.Syntax.Typing
 
 import Control.Exception.Safe
 import Control.Monad.State
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
-type Names = [(GlbName, GlbName)]
+type NameTable = M.Map GlbName GlbName
 
 data RenameState = RenameState
         { moduleName :: Maybe ModuleName
-        , internalNames :: Names
-        , externalNames :: Names
+        , internalNameTable :: NameTable
+        , externalNameTable :: NameTable
         , level :: Int
         }
 
-names :: RenameState -> Names
-names st = internalNames st ++ externalNames st
+names :: RenameState -> NameTable
+names st = internalNameTable st `M.union` externalNameTable st
 
 emptyRenameState :: RenameState
 emptyRenameState =
         RenameState
                 { moduleName = Nothing
-                , internalNames = []
-                , externalNames = []
+                , internalNameTable = M.empty
+                , externalNameTable = M.empty
                 , level = 0
                 }
 
@@ -36,8 +37,8 @@ getWrapperName st = case moduleName st of
         Just modn | level st == 0 -> newName $ mod2conName modn
         _ -> newName $ str2conName (":l" ++ show (level st))
 
-mkNames :: [FuncD] -> GlbName -> Names
-mkNames decs name = zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
+mkNameTable :: [FuncD] -> GlbName -> NameTable
+mkNameTable decs name = M.fromList $ zip (map (\(FuncD x _ _) -> x) decs) (repeat name)
 
 isExternal :: RenameState -> GlbName -> Bool
 isExternal st n =
@@ -46,9 +47,9 @@ isExternal st n =
                 && (mod2conName <$> moduleName st) /= Just (g_name n)
 
 mkValue :: RenameState -> GlbName -> Expr
-mkValue st x = case lookup x (internalNames st) of
+mkValue st x = case M.lookup x (internalNameTable st) of
         Just r -> ProjE (VarE r) x
-        Nothing -> case lookup x (externalNames st) of
+        Nothing -> case M.lookup x (externalNameTable st) of
                 Just r -> ProjE (VarE r) x{g_sort = External}
                 Nothing -> VarE x
 
@@ -72,7 +73,7 @@ rename _ e = return e
 renameFuncDs :: MonadThrow m => RenameState -> [FuncD] -> m (FuncD, RenameState)
 renameFuncDs st decs = do
         let r = getWrapperName st
-            st' = st{internalNames = mkNames decs r ++ internalNames st}
+            st' = st{internalNameTable = mkNameTable decs r `M.union` internalNameTable st}
         fields <- forM decs $ \(FuncD var body _) -> do
                 body' <- rename st' body
                 return (var, body')

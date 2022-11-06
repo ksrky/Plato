@@ -57,6 +57,6 @@ test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine exprParser (T.pack inp))
-                let opdict = opDict (parser_ust st)
-                ps' <- resolve opdict ps
+                let OpTable = OpTable (parser_ust st)
+                ps' <- resolve OpTable ps
                 transExpr ps'

@@ -14,20 +14,20 @@ import qualified Data.Map.Strict as M
 
 data Tok = TExp (Located Expr) | TOp Op deriving (Eq, Show)
 
-linear :: MonadThrow m => OpDict -> Located Expr -> m [Tok]
-linear opdict (L _ (OpE e1 lx@(L _ x) e2)) = do
-        e1' <- linear opdict e1
-        e2' <- linear opdict e2
-        let op = case M.lookup x opdict of
+linear :: MonadThrow m => OpTable -> Located Expr -> m [Tok]
+linear optab (L _ (OpE e1 lx@(L _ x) e2)) = do
+        e1' <- linear optab e1
+        e2' <- linear optab e2
+        let op = case M.lookup x optab of
                 Just op' -> op'
                 Nothing -> Op lx maxPrec Leftfix
         return $ e1' ++ [TOp op] ++ e2'
-linear opdict e = do
-        e' <- resolve opdict e
+linear optab e = do
+        e' <- resolve optab e
         return [TExp e']
 
 class Resolver a where
-        resolve :: MonadThrow m => OpDict -> Located a -> m (Located a)
+        resolve :: MonadThrow m => OpTable -> Located a -> m (Located a)
 
 instance Resolver Expr where
         resolve od = resolve'
@@ -91,7 +91,7 @@ instance Resolver TopDecl where
                         Eval e -> Eval <$> resolve od e
                         _ -> return td
 
-resolveFixity :: MonadThrow m => OpDict -> Program -> m Program
+resolveFixity :: MonadThrow m => OpTable -> Program -> m Program
 resolveFixity od prg = do
         tds <- mapM (resolve od) (topDecls prg)
         return prg{topDecls = tds}

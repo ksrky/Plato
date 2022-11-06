@@ -70,10 +70,11 @@ transExpr knenv ctx = traexpr
                 tyT2 <- transType ctx ty2
                 alts' <- forM alts $ \(pat, body) -> case pat of
                         T.ConP li ps -> do
-                                xs <- (concat <$>) $ forM ps $ \p -> case p of
-                                        T.VarP x -> return [x]
-                                        T.WildP -> return []
-                                        T.ConP{} -> throwString "pattern argument" --tmp
+                                xs <- (concat <$>) $
+                                        forM ps $ \p -> case p of
+                                                T.VarP x -> return [x]
+                                                T.WildP -> return []
+                                                T.ConP{} -> throwString "pattern argument" --tmp
                                 ctx' <- foldM (flip addName) ctx xs
                                 ti <- transExpr knenv ctx' body
                                 return (li, (length xs, ti))
@@ -107,7 +108,7 @@ transType ctx = tratype
                                 knK <- transKind kn
                                 return (tyVarName tv, knK)
                         _ -> throwUnexpectedErr "Kind inference failed"
-                ctx' <- addNames (map (tyVarName . fst) xs) ctx
+                ctx' <- addNameTable (map (tyVarName . fst) xs) ctx
                 tyT2 <- transType ctx' ty
                 return $ foldr (uncurry C.TyAll) tyT2 xs'
         tratype (T.AbsT x (Just kn) ty) = do
@@ -178,12 +179,12 @@ transEval st knenv ctx (L sp e, ty) = do
         _ <- transType ctx ty --tmp
         return (L sp t)
 
-typ2core :: (MonadThrow m, MonadIO m) => Names -> Context -> T.Program -> m (Names, [C.Command])
+typ2core :: (MonadThrow m, MonadIO m) => NameTable -> Context -> T.Program -> m (NameTable, C.Module)
 typ2core ns ctx (T.Program modn binds fundecs exps) = do
-        (fundec, st) <- renameFuncDs emptyRenameState{moduleName = modn, externalNames = ns} fundecs
+        (fundec, st) <- renameFuncDs emptyRenameState{moduleName = modn, externalNameTable = ns} fundecs
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList ctx]
         (binds', (ctx', _)) <- mapM (StateT . transDecl) binds `runStateT` (ctx, knenv)
         let knenv' = knenv `M.union` M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList (V.take (length binds) ctx')]
         (funbind, ctx'') <- transTopFuncDs fundec (ctx', knenv')
         body <- mapM (transEval st knenv' ctx'') exps
-        return (names st, map (uncurry C.Bind) (binds' ++ [funbind]) ++ map C.Eval body)
+        return (names st, C.Module (binds' ++ [funbind]) body)

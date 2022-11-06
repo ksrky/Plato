@@ -15,14 +15,10 @@ import qualified Data.Text as T
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-processCommand :: (MonadThrow m, MonadIO m) => Bool -> Context -> Command -> m Context
-processCommand _ ctx Import{} = return ctx
-processCommand _ ctx (Bind name bind) = addBinding name bind ctx
-processCommand opt ctx (Eval t) = do
-        when opt $ do
-                liftIO $ print (unLoc t)
-                liftIO $ print ctx
-                printResult ctx (unLoc t)
+processModule :: (MonadThrow m, MonadIO m) => Bool -> Context -> Module -> m Context
+processModule opt ctx (Module binds evals) = do
+        ctx' <- foldM (flip $ uncurry addBinding) ctx binds
+        when opt $ mapM_ (printResult ctx'  . unLoc) evals
         return ctx
 
 printResult :: MonadIO m => Context -> Term -> m ()

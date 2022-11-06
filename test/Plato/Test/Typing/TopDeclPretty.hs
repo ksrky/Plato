@@ -28,8 +28,8 @@ test :: MonadThrow m => (String, m String -> Expectation) -> SpecWith ()
 test (inp, iscorrect) = it inp $
         iscorrect $ do
                 (ps, st) <- eitherToMonadThrow (parseLine topdeclParser (T.pack inp))
-                let opdict = opDict (parser_ust st)
-                ps' <- resolve opdict ps
+                let OpTable = OpTable (parser_ust st)
+                ps' <- resolve OpTable ps
                 (tydecs, fundecs, _) <- execWriterT $ transTopDecl ps'
                 let decs = map unLoc tydecs ++ map (ConD . unLoc) fundecs
                 return $ renderString $ layoutPretty defaultLayoutOptions (pretty decs)

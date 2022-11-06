@@ -51,20 +51,20 @@ process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do
         is_entry <- gets isEntry
         -- processing Parsing
-        opdict <- gets opDict
-        (opdict', ps) <- src2ps opdict input
+        optab <- gets opTable
+        (optab', ps) <- src2ps optab input
         -- processing Imports
         -- let mbmod = moduleName ps
-        --     imps = importModule ps 
+        --     imps = importModule ps
         -- mapM_ (processImport mbmod) imps
         -- processing Typing
         st <- get
         (typ, typenv') <- ps2typ (typingEnv st) ps
         -- processing Core
         let ctx = context st
-        (ns', cmds) <- typ2core (renames st) ctx typ
-        ctx' <- foldM (processCommand is_entry) ctx cmds
-        put st{opDict = opdict', typingEnv = typenv', renames = ns', context = ctx'}
+        (ns', modul) <- typ2core (renames st) ctx typ
+        ctx' <- processModule is_entry ctx modul
+        put st{opTable = optab', typingEnv = typenv', renames = ns', context = ctx'}
 
 {-}
 processImport :: (MonadThrow m, MonadIO m) => Maybe ModuleName -> Located ModuleName -> Plato m ()
