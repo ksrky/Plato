@@ -10,19 +10,21 @@
         <meta name="author" content="ksrk">
       
       
-      <link rel="icon" href="/Plato/ja/assets/images/favicon.png">
+        <link rel="canonical" href="https://ksrky.github.io/Plato/ja/implementation-notes/compiler-structure/">
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-8.5.7">
     
     
       
-        <title>Plato</title>
+        <title>コンパイラの構成 - Plato</title>
       
     
     
-      <link rel="stylesheet" href="/Plato/ja/assets/stylesheets/main.20d9efc8.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.20d9efc8.min.css">
       
         
-        <link rel="stylesheet" href="/Plato/ja/assets/stylesheets/palette.cbb835fc.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
         
       
       
@@ -39,7 +41,7 @@
       
     
     
-    <script>__md_scope=new URL("/Plato/ja/",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -63,6 +65,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#_1" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -73,7 +80,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="ヘッダー">
-    <a href="/Plato/ja/." title="Plato" class="md-header__button md-logo" aria-label="Plato" data-md-component="logo">
+    <a href="../.." title="Plato" class="md-header__button md-logo" aria-label="Plato" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -92,7 +99,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              コンパイラの構成
             
           </span>
         </div>
@@ -197,7 +204,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="ナビゲーション" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/Plato/ja/." title="Plato" class="md-nav__button md-logo" aria-label="Plato" data-md-component="logo">
+    <a href="../.." title="Plato" class="md-nav__button md-logo" aria-label="Plato" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -228,7 +235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         Home
       </a>
     </li>
@@ -269,7 +276,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         入門
       </a>
     </li>
@@ -283,7 +290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         インストール
       </a>
     </li>
@@ -297,7 +304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/getting-started/tutorial/" class="md-nav__link">
+      <a href="../../getting-started/tutorial/" class="md-nav__link">
         チュートリアル
       </a>
     </li>
@@ -345,7 +352,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/core-language/" class="md-nav__link">
+      <a href="../../language-reference/core-language/" class="md-nav__link">
         コア言語
       </a>
     </li>
@@ -359,7 +366,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/declarations/" class="md-nav__link">
+      <a href="../../language-reference/declarations/" class="md-nav__link">
         宣言
       </a>
     </li>
@@ -373,7 +380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/expressions/" class="md-nav__link">
+      <a href="../../language-reference/expressions/" class="md-nav__link">
         式
       </a>
     </li>
@@ -387,7 +394,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/lexical-structure/" class="md-nav__link">
+      <a href="../../language-reference/lexical-structure/" class="md-nav__link">
         字句構造
       </a>
     </li>
@@ -401,7 +408,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/program-structure/" class="md-nav__link">
+      <a href="../../language-reference/program-structure/" class="md-nav__link">
         プログラム構造
       </a>
     </li>
@@ -415,7 +422,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/recursive-function/" class="md-nav__link">
+      <a href="../../language-reference/recursive-function/" class="md-nav__link">
         再帰関数
       </a>
     </li>
@@ -429,7 +436,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/language-reference/types/" class="md-nav__link">
+      <a href="../../language-reference/types/" class="md-nav__link">
         型
       </a>
     </li>
@@ -451,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/Plato/ja/implementation-notes/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         実装上の議論
       </a>
     </li>
@@ -475,6 +482,8 @@
   
   
   
+    
+  
   
 </nav>
                   </div>
@@ -486,8 +495,21 @@
             <div class="md-content" data-md-component="content">
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+  <a href="https://github.com/ksrky/Plato/blob/master/docs/ja/docs/implementation-notes/compiler-structure.md" title="編集" class="md-content__button md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+<h1 id="_1">コンパイラの構成</h1>
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -523,10 +545,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "/Plato/ja/", "features": [], "search": "/Plato/ja/assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\s\\-\u3000\u3001\u3002\uff0c\uff0e]+", "search.placeholder": "\u691c\u7d22", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\s\\-\u3000\u3001\u3002\uff0c\uff0e]+", "search.placeholder": "\u691c\u7d22", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version.title": "Select version"}}</script>
     
     
-      <script src="/Plato/ja/assets/javascripts/bundle.8492ddcf.min.js"></script>
+      <script src="../../assets/javascripts/bundle.8492ddcf.min.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
       
