@@ -1,72 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/index.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/getting-started/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/getting-started/index.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/getting-started/installation/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/getting-started/installation.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/getting-started/tutorial/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/getting-started/tutorial.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/implementation-notes/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/implementation-notes/index.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/implementation-notes/compiler-structure/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/implementation-notes/compiler-structure.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/index.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/core-language/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/core-language.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/declarations/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/declarations.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/expressions/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/expressions.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/lexical-structure/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/lexical-structure.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/program-structure/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/program-structure.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/recursive-function/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/recursive-function.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://ksrky.github.io/Plato/ja/language-reference/types/</loc>
+         <loc>https://ksrky.github.io/Plato/ja/language-reference/types.html</loc>
          <lastmod>2022-11-09</lastmod>
          <changefreq>daily</changefreq>
     </url>

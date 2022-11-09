@@ -10,21 +10,21 @@
         <meta name="author" content="ksrk">
       
       
-        <link rel="canonical" href="https://ksrky.github.io/Plato/ja/implementation-notes/compiler-structure/">
+        <link rel="canonical" href="https://ksrky.github.io/Plato/ja/language-reference/core-language.html">
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-8.5.7">
     
     
       
-        <title>コンパイラの構成 - Plato</title>
+        <title>コア言語 - Plato</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.20d9efc8.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.20d9efc8.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
         
       
       
@@ -41,7 +41,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="ヘッダー">
-    <a href="../.." title="Plato" class="md-header__button md-logo" aria-label="Plato" data-md-component="logo">
+    <a href="../index.html" title="Plato" class="md-header__button md-logo" aria-label="Plato" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -99,7 +99,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              コンパイラの構成
+              コア言語
             
           </span>
         </div>
@@ -204,7 +204,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="ナビゲーション" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Plato" class="md-nav__button md-logo" aria-label="Plato" data-md-component="logo">
+    <a href="../index.html" title="Plato" class="md-nav__button md-logo" aria-label="Plato" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -235,7 +235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../index.html" class="md-nav__link">
         Home
       </a>
     </li>
@@ -276,7 +276,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
+      <a href="../getting-started/index.html" class="md-nav__link">
         入門
       </a>
     </li>
@@ -290,7 +290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../getting-started/installation.html" class="md-nav__link">
         インストール
       </a>
     </li>
@@ -304,7 +304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/tutorial/" class="md-nav__link">
+      <a href="../getting-started/tutorial.html" class="md-nav__link">
         チュートリアル
       </a>
     </li>
@@ -324,12 +324,14 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
       
       
       
@@ -350,11 +352,86 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../language-reference/core-language/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          コア言語
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="core-language.html" class="md-nav__link md-nav__link--active">
         コア言語
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    コア言語の構文
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    モジュール
+  </a>
+  
+    <nav class="md-nav" aria-label="モジュール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    モジュールの構文
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    モジュールのセマンティクス
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands" class="md-nav__link">
+    Commands
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -366,7 +443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/declarations/" class="md-nav__link">
+      <a href="declarations.html" class="md-nav__link">
         宣言
       </a>
     </li>
@@ -380,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/expressions/" class="md-nav__link">
+      <a href="expressions.html" class="md-nav__link">
         式
       </a>
     </li>
@@ -394,7 +471,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/lexical-structure/" class="md-nav__link">
+      <a href="lexical-structure.html" class="md-nav__link">
         字句構造
       </a>
     </li>
@@ -408,7 +485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/program-structure/" class="md-nav__link">
+      <a href="program-structure.html" class="md-nav__link">
         プログラム構造
       </a>
     </li>
@@ -422,7 +499,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/recursive-function/" class="md-nav__link">
+      <a href="recursive-function.html" class="md-nav__link">
         再帰関数
       </a>
     </li>
@@ -436,7 +513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../language-reference/types/" class="md-nav__link">
+      <a href="types.html" class="md-nav__link">
         型
       </a>
     </li>
@@ -458,7 +535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../implementation-notes/index.html" class="md-nav__link">
         実装上の議論
       </a>
     </li>
@@ -485,6 +562,55 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    コア言語の構文
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    モジュール
+  </a>
+  
+    <nav class="md-nav" aria-label="モジュール">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    モジュールの構文
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    モジュールのセマンティクス
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands" class="md-nav__link">
+    Commands
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -497,13 +623,121 @@
                 
                   
 
-  <a href="https://github.com/ksrky/Plato/blob/master/docs/ja/docs/implementation-notes/compiler-structure.md" title="編集" class="md-content__button md-icon">
+  <a href="https://github.com/ksrky/Plato/blob/master/docs/ja/docs/language-reference/core-language.md" title="編集" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-<h1 id="_1">コンパイラの構成</h1>
+<h1 id="_1">コア言語</h1>
+<h2 id="_2">コア言語の構文</h2>
+<div class="arithmatex">
+<div class="MathJax_Preview">
+\begin{align*}
+t::\:   &amp; &amp; &amp; \textsf{term:} \\
+        &amp; x &amp;   &amp; \textsf{variable} \\
+        &amp; t\:t &amp; &amp; \textsf{application} \\
+        &amp; \lambda x.\:t &amp; &amp; \textsf{abstraction} \\
+        &amp; t\:T &amp; &amp; \textsf{type application} \\
+        &amp; \Lambda X.\:t &amp; &amp; \textsf{type abstraction} \\
+        &amp; \texttt{let}\:x\:\texttt{=}\:t\:\texttt{in}\:t &amp; &amp; \textsf{let expression} \\
+        &amp; \texttt{fix}\:t &amp; &amp; \textsf{fix combinator} \\
+        &amp; t.x &amp; &amp; \textsf{projection} \\
+        &amp; \{x_i\:\texttt{=}\:t_i\}^{i \in 1..n} &amp; &amp; \textsf{record} \\
+        &amp; \texttt{&lt;}x\:\{t_i\}^{i \in 1..n} : T \texttt{&gt;} &amp; &amp; \textsf{tag value} \\
+        &amp; \texttt{case}\:t\:\texttt{of}\:\{k_i\:\rightarrow\:t_i\}^{i \in 1..n} &amp; &amp; \textsf{case expression} \\
+        &amp; \texttt{fold}\:T\:t  &amp; &amp; \textsf{fold} \\
+        &amp; \texttt{unfold}\:T\:t  &amp; &amp; \textsf{unfold} \\
+        \\
+T::\:   &amp; &amp; &amp; \textsf{type:} \\
+        &amp; X &amp;                                  &amp; \textsf{type variable} \\
+        &amp; T \rightarrow T &amp;                              &amp; \textsf{type of functions} \\
+        &amp; \forall X:K.\:T &amp;                    &amp; \textsf{universal type} \\
+        &amp; T\:T &amp;                                 &amp; \textsf{operator application} \\
+        &amp; \lambda X:K.\:T &amp;                            &amp; \textsf{operator abstraction} \\
+        &amp; \mu X:K.\:T &amp; &amp; \textsf{recursive type} \\
+        &amp; \{x_i : T_i\}^{i \in 1..n} &amp;                        &amp; \textsf{type of record} \\
+        &amp; \{x_i: \{T_j\}^{j \in 1..M_i}\}^{i \in 1..n} &amp;                      &amp; \textsf{variant type} \\
+        \\
+K::\:   &amp; &amp; &amp; \textsf{kind:} \\
+        &amp; * &amp; &amp; \textsf{kind of proper types} \\
+        &amp; K \rightarrow K &amp; &amp; \textsf{kind of operators} \\
+        \\
+\Gamma::\: &amp; &amp; &amp; \textsf{context:} \\
+          &amp; \varnothing &amp; &amp; \textsf{empty context} \\
+          &amp; \Gamma,\:x : T &amp; &amp; \textsf{variable binding} \\
+          &amp; \Gamma,\:x : T = t &amp; &amp; \textsf{function binding} \\
+          &amp; \Gamma,\:X : K = T &amp; &amp; \textsf{type binding}
+\end{align*}
+</div>
+<script type="math/tex; mode=display">
+\begin{align*}
+t::\:   & & & \textsf{term:} \\
+        & x &   & \textsf{variable} \\
+        & t\:t & & \textsf{application} \\
+        & \lambda x.\:t & & \textsf{abstraction} \\
+        & t\:T & & \textsf{type application} \\
+        & \Lambda X.\:t & & \textsf{type abstraction} \\
+        & \texttt{let}\:x\:\texttt{=}\:t\:\texttt{in}\:t & & \textsf{let expression} \\
+        & \texttt{fix}\:t & & \textsf{fix combinator} \\
+        & t.x & & \textsf{projection} \\
+        & \{x_i\:\texttt{=}\:t_i\}^{i \in 1..n} & & \textsf{record} \\
+        & \texttt{<}x\:\{t_i\}^{i \in 1..n} : T \texttt{>} & & \textsf{tag value} \\
+        & \texttt{case}\:t\:\texttt{of}\:\{k_i\:\rightarrow\:t_i\}^{i \in 1..n} & & \textsf{case expression} \\
+        & \texttt{fold}\:T\:t  & & \textsf{fold} \\
+        & \texttt{unfold}\:T\:t  & & \textsf{unfold} \\
+        \\
+T::\:   & & & \textsf{type:} \\
+        & X &                                  & \textsf{type variable} \\
+        & T \rightarrow T &                              & \textsf{type of functions} \\
+        & \forall X:K.\:T &                    & \textsf{universal type} \\
+        & T\:T &                                 & \textsf{operator application} \\
+        & \lambda X:K.\:T &                            & \textsf{operator abstraction} \\
+        & \mu X:K.\:T & & \textsf{recursive type} \\
+        & \{x_i : T_i\}^{i \in 1..n} &                        & \textsf{type of record} \\
+        & \{x_i: \{T_j\}^{j \in 1..M_i}\}^{i \in 1..n} &                      & \textsf{variant type} \\
+        \\
+K::\:   & & & \textsf{kind:} \\
+        & * & & \textsf{kind of proper types} \\
+        & K \rightarrow K & & \textsf{kind of operators} \\
+        \\
+\Gamma::\: & & & \textsf{context:} \\
+          & \varnothing & & \textsf{empty context} \\
+          & \Gamma,\:x : T & & \textsf{variable binding} \\
+          & \Gamma,\:x : T = t & & \textsf{function binding} \\
+          & \Gamma,\:X : K = T & & \textsf{type binding}
+\end{align*}
+</script>
+</div>
+<h2 id="_3">モジュール</h2>
+<h3 id="_4">モジュールの構文</h3>
+<div class="arithmatex">
+<div class="MathJax_Preview">
+\begin{align*}
+M::\:\Gamma\:\times\:\{t_i : T_i\}^{i \in 1..n}
+\end{align*}
+</div>
+<script type="math/tex; mode=display">
+\begin{align*}
+M::\:\Gamma\:\times\:\{t_i : T_i\}^{i \in 1..n}
+\end{align*}
+</script>
+</div>
+<h3 id="_5">モジュールのセマンティクス</h3>
+<div class="arithmatex">
+<div class="MathJax_Preview">
+\frac{\Gamma_0 \vdash M}{\Gamma_0,\:\Gamma \vdash \{t_i : T_i\}^{i \in 1..n}}{\:\text{E-Module}}
+</div>
+<script type="math/tex; mode=display">
+\frac{\Gamma_0 \vdash M}{\Gamma_0,\:\Gamma \vdash \{t_i : T_i\}^{i \in 1..n}}{\:\text{E-Module}}
+</script>
+</div>
+<h2 id="commands">Commands</h2>
+<p>核言語において、プログラム全体は Commands というデータ型に変換される。
+Commands はインポートされたモジュールと、トップレベルで定義された型コンストラクタ、データコンストラクタの記録、そして、main 関数からなる。main 関数は、Let 式で表され、トップレベルの関数が束縛に、ソースプログラムに現れる main 関数の項が Let 式の本体に当てられる。このように翻訳することにより、相互再帰関数が扱いやすくなる。</p>
+<p>変数は抽象された識別子の相対位置として自然数で表される。これを de Bruijn インデックスという。
+トップレベルで定義された型コンストラクタやデータコンストラクタは文脈（Context）に大域的に保持され、
+プログラム中のどこでも参照することができる。</p>
 
 
 
@@ -519,6 +753,42 @@
       </main>
       
         <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="フッター" >
+      
+        
+        <a href="../getting-started/tutorial.html" class="md-footer__link md-footer__link--prev" aria-label="前: チュートリアル" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                前
+              </span>
+              チュートリアル
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="declarations.html" class="md-footer__link md-footer__link--next" aria-label="次: 宣言" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                次
+              </span>
+              宣言
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -545,10 +815,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\s\\-\u3000\u3001\u3002\uff0c\uff0e]+", "search.placeholder": "\u691c\u7d22", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\s\\-\u3000\u3001\u3002\uff0c\uff0e]+", "search.placeholder": "\u691c\u7d22", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.8492ddcf.min.js"></script>
+      <script src="../assets/javascripts/bundle.8492ddcf.min.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML"></script>
       
