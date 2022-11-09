@@ -105,7 +105,7 @@ data Decl
         deriving (Eq, Show)
 
 data Program = Program
-        { mmodule :: Maybe ModuleName
+        { mmodule :: Maybe (Located ModuleName)
         , decls :: [Located Decl]
         , binds :: [FuncD]
         , body :: [(Located Expr, Type)]

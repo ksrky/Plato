@@ -1,7 +1,11 @@
+# generated dirs
 .stack-work/
 dist-newstyle/
-.vscode/
-site
 stack.yaml.lock
-*~
-examples/Plato
+
+# editor settings
+.vscode/
+
+# documentation
+/site
+static

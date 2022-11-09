@@ -2,54 +2,60 @@ module Plato.Main.Monad where
 
 import Plato.Core.Context
 
-import Control.Monad.RWS
-import Control.Monad.State
-import qualified Data.Map.Strict as M
 import Plato.Common.Name
 import Plato.Parsing.Fixity (OpTable)
 import Plato.Syntax.Typing
 import Plato.Typing.Rename
 
-data PlatoState = PlatoState
-        { isEntry :: Bool
-        , basePath :: FilePath
-        , context :: Context
-        , typingEnv :: TypTable
-        , renames :: NameTable
-        , opTable :: OpTable
-        , importedList :: [ModuleName]
-        , importingList :: [ModuleName]
+import Control.Monad.RWS
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
+
+data PlatoInfo = PInfo
+        { pr_isEntry :: Bool
+        , pr_importingSet :: S.Set ModuleName
         }
 
-initPlatoState :: PlatoState
-initPlatoState =
-        PlatoState
-                { isEntry = True
-                , basePath = "."
-                , context = emptyContext
-                , typingEnv = M.empty
-                , renames = M.empty
-                , opTable = M.empty
-                , importedList = []
-                , importingList = []
+newtype PlatoStore = PStore
+        { pw_nameTable :: NameTable
+        }
+
+data PlatoState = PState
+        { ps_opTable :: OpTable
+        , ps_typTable :: TypTable
+        , ps_context :: Context
+        , ps_importedSet :: S.Set ModuleName
+        }
+
+initPInfo :: PlatoInfo
+initPInfo =
+        PInfo
+                { pr_isEntry = True
+                , pr_importingSet = S.empty
                 }
 
-type Plato m a = StateT PlatoState m a
+initPStore :: PlatoStore
+initPStore = PStore{pw_nameTable = M.empty}
 
-data PR = PR
-        { pr_isEntry' :: Bool
-        , pr_moduleName :: ModuleName
-        }
+instance Semigroup PlatoStore where
+        ps1 <> ps2 = PStore{pw_nameTable = pw_nameTable ps1 <> pw_nameTable ps2}
 
-data PW = PW
-        { pw_opTable :: OpTable
-        , pw_typTable :: TypTable
-        , pw_nameTable :: NameTable
-        }
+instance Monoid PlatoStore where
+        mempty = PStore{pw_nameTable = M.empty}
 
-data PS = PS
-        { ps_importedList :: [ModuleName]
-        , ps_importingList :: [ModuleName]
-        }
+initPState :: PlatoState
+initPState =
+        PState
+                { ps_opTable = M.empty
+                , ps_typTable = M.empty
+                , ps_context = emptyContext
+                , ps_importedSet = S.empty
+                }
 
-type Plato' m a = RWST () () PlatoState m a
+type PlatoM m = RWST PlatoInfo PlatoStore PlatoState m
+
+runPlatoM :: PlatoM m a -> PlatoInfo -> PlatoState -> m (a, PlatoState, PlatoStore)
+runPlatoM = runRWST
+
+evalPlatoM :: Monad m => PlatoM m a -> PlatoInfo -> PlatoState -> m (a, PlatoStore)
+evalPlatoM = evalRWST

@@ -1,30 +1,61 @@
-# 核言語
+# コア言語
 
-Plato は核言語に型付ラムダ計算という計算体系を使用している。核言語の文法を以下に示す。
+## コア言語の構文
 
-```
-term : 	x				                variable
-	    \x. term	                    abstraction
-	    term term			            application
-	    \X. term		                type abstraction
-	    term @type			            type application
-	    'let' x = term 'in' term	    let expression
-	    'fix' term			            fix combinator
-	    term.x				            projection
-	    [x '=' term]       		        record
-	    x [term]			            tag value
-        'case' term 'of' [n '->' term]    case expression
+$$
+\begin{align*}
+t::\:   & & & \textsf{term:} \\
+        & x &   & \textsf{variable} \\
+        & t\:t & & \textsf{application} \\
+        & \lambda x.\:t & & \textsf{abstraction} \\
+        & t\:T & & \textsf{type application} \\
+        & \Lambda X.\:t & & \textsf{type abstraction} \\
+        & \texttt{let}\:x\:\texttt{=}\:t\:\texttt{in}\:t & & \textsf{let expression} \\
+        & \texttt{fix}\:t & & \textsf{fix combinator} \\
+        & t.x & & \textsf{projection} \\
+        & \{x_i\:\texttt{=}\:t_i\}^{i \in 1..n} & & \textsf{record} \\
+        & \texttt{<}x\:\{t_i\}^{i \in 1..n} : T \texttt{>} & & \textsf{tag value} \\
+        & \texttt{case}\:t\:\texttt{of}\:\{k_i\:\rightarrow\:t_i\}^{i \in 1..n} & & \textsf{case expression} \\
+        & \texttt{fold}\:T\:t  & & \textsf{fold} \\
+        & \texttt{unfold}\:T\:t  & & \textsf{unfold} \\
+        \\
+T::\:   & & & \textsf{type:} \\
+        & X &                                  & \textsf{type variable} \\
+        & T \rightarrow T &                              & \textsf{type of functions} \\
+        & \forall X:K.\:T &                    & \textsf{universal type} \\
+        & T\:T &                                 & \textsf{operator application} \\
+        & \lambda X:K.\:T &                            & \textsf{operator abstraction} \\
+        & \mu X:K.\:T & & \textsf{recursive type} \\
+        & \{x_i : T_i\}^{i \in 1..n} &                        & \textsf{type of record} \\
+        & \{x_i: \{T_j\}^{j \in 1..M_i}\}^{i \in 1..n} &                      & \textsf{variant type} \\
+        \\
+K::\:   & & & \textsf{kind:} \\
+        & * & & \textsf{kind of proper types} \\
+        & K \rightarrow K & & \textsf{kind of operators} \\
+        \\
+\Gamma::\: & & & \textsf{context:} \\
+          & \varnothing & & \textsf{empty context} \\
+          & \Gamma,\:x : T & & \textsf{variable binding} \\
+          & \Gamma,\:x : T = t & & \textsf{function binding} \\
+          & \Gamma,\:X : K = T & & \textsf{type binding}
+\end{align*}
+$$
 
-type :  X                               type variable
-        T -> T                          type of functions
-        'forall' X:K. T                 universal type
-        \X:K. T                         operator abstraction
-        T T                             operator application
-        [x ':' type]                    type of record
-        [(x, [type])]                   variant type
-```
+## モジュール
 
-バージョン 0.1.0.0 時点では、この文法に識別子型を追加して、相互再帰を実現しているが、これは以降のバージョンで取り除かれる可能性がある。なぜなら、名前を参照する型システムでは大域的情報を保持しておく必要があり、型検査が煩雑になってしまうからである。相互再帰関数の実装を応用した、同型再帰による再帰型の実装を検討している。
+### モジュールの構文
+
+$$
+\begin{align*}
+M::\:\Gamma\:\times\:\{t_i : T_i\}^{i \in 1..n}
+\end{align*}
+$$
+
+### モジュールのセマンティクス
+
+$$
+\frac{\Gamma_0 \vdash M}{\Gamma_0,\:\Gamma \vdash \{t_i : T_i\}^{i \in 1..n}}{\:\text{E-Module}}
+$$
 
 ## Commands
 
@@ -34,37 +65,3 @@ Commands はインポートされたモジュールと、トップレベルで�
 変数は抽象された識別子の相対位置として自然数で表される。これを de Bruijn インデックスという。
 トップレベルで定義された型コンストラクタやデータコンストラクタは文脈（Context）に大域的に保持され、
 プログラム中のどこでも参照することができる。
-
-## 再帰関数
-
-関数はトップレベルや Let 式の束縛として以下のように記述される。
-
-```haskell
-iseven : Nat -> Bool
-iseven n = case n of
-    Zero -> True
-    Succ n' -> isodd n'
-
-isodd : Nat -> Bool
-isodd n = case n of
-    Zero -> False
-    Succ n' -> iseven n'
-
-main : Bool
-main = iseven (Succ (Succ Zero))
-```
-
-これは核言語において以下のように表現される。
-
-```haskell
-let
-    r = fix (\ieio: {iseven: Nat -> Bool, isodd: Nat -> Bool}.
-        { iseven = \ case n of
-            Zero -> True
-            Succ n' -> isodd n'
-        , isodd n = case n of
-            Zero -> False
-            Succ n' -> iseven n'
-        })
- in r.iseven (Succ (Succ Zero))
-```

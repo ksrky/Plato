@@ -28,5 +28,3 @@ main 関数はプログラムのエントリポイントであり、計算結果
 $ plato run examples/fibonacci.plt
 Succ (Succ (Succ Zero))
 ```
-
-デバッグオプションをつけることで、ラムダ項の簡約の様子を追跡できる。

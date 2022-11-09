@@ -21,10 +21,10 @@ theme:
 extra:
   alternate:
     - name: English
-      link: /Plato/en/
+      link: /en/
       lang: en
     - name: Japanese
-      link: /Plato/ja/
+      link: /ja/
       lang: ja
 markdown_extensions:
   - pymdownx.arithmatex

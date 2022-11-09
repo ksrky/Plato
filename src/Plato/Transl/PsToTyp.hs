@@ -164,7 +164,7 @@ ps2typ env (P.Program modn _ topds) = do
                 return (L sp e', ty)
         return
                 ( T.Program
-                        { T.mmodule = unLoc <$> modn
+                        { T.mmodule = modn
                         , T.decls = tydecs ++ map (T.ConD <$>) condecs ++ vardecs
                         , T.binds = fundecs'
                         , T.body = exps'

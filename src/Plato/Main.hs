@@ -16,7 +16,10 @@ import Plato.Transl.TypToCore
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.RWS
 import Control.Monad.State
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Console.Haskeline
@@ -24,59 +27,64 @@ import System.Directory
 import System.FilePath (takeDirectory, (</>))
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ evalStateT (processFile src) initPlatoState{basePath = takeDirectory src}
+runPlato src = catchError $ fst <$> evalPlatoM (processFile src) initPInfo initPState
 
 repl :: [FilePath] -> IO ()
-repl files = do
-        base_path <- getCurrentDirectory
-        st <- execStateT (mapM processFile files) initPlatoState{isEntry = False, basePath = base_path}
-        runInputT defaultSettings (catchError $ loop st{isEntry = True})
-    where
-        loop :: (MonadIO m, MonadMask m) => PlatoState -> InputT m ()
-        loop st = do
-                minput <- getInputLine ">> "
-                case minput of
-                        Nothing -> return ()
-                        Just "" -> return ()
-                        Just input -> do
-                                st' <- continueError (return st) $ process (T.pack input) `execStateT` st
-                                loop st'
+repl files = undefined {-do
+                           base_path <- getCurrentDirectory
+                           (_, ps, pw) <- runPlatoM (mapM processFile files) initPR initPS
+                           runInputT defaultSettings (catchError undefined)
+                       where
+                           loop :: (MonadIO m, MonadMask m) => InputT (PlatoM m) ()
+                           loop = do
+                                   minput <- getInputLine ">> "
+                                   case minput of
+                                           Nothing -> return ()
+                                           Just "" -> return ()
+                                           Just input -> do
+                                                   pr <- RWS.ask
+                                                   ps <- RWS.get
+                                                   undefined-}
 
-processFile :: (MonadThrow m, MonadIO m) => FilePath -> Plato m ()
+-- st' <- continueError (return st) $ runPlatoM (process (T.pack input)) pr ps
+-- loop
+
+processFile :: (MonadThrow m, MonadIO m) => FilePath -> PlatoM m ()
 processFile src = do
         input <- liftIO $ T.readFile src
         process input
 
-process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
+process :: (MonadThrow m, MonadIO m) => T.Text -> PlatoM m ()
 process input = do
-        is_entry <- gets isEntry
+        is_entry <- asks pr_isEntry
         -- processing Parsing
-        optab <- gets opTable
+        optab <- gets ps_opTable
         (optab', ps) <- src2ps optab input
         -- processing Imports
-        -- let mbmod = moduleName ps
-        --     imps = importModule ps
-        -- mapM_ (processImport mbmod) imps
+        modn <- case moduleName ps of
+                Just modn' -> return modn'
+                Nothing
+                        | is_entry -> undefined
+                        | otherwise -> throwError "Module name declaration missing"
+        let imps = importModule ps
+        (_, store) <- listen $ mapM processImport imps
         -- processing Typing
         st <- get
-        (typ, typenv') <- ps2typ (typingEnv st) ps
+        (typ, typenv') <- ps2typ (ps_typTable st) ps
         -- processing Core
-        let ctx = context st
-        (ns', modul) <- typ2core (renames st) ctx typ
+        let ctx = ps_context st
+        (names', modul) <- typ2core (pw_nameTable store) ctx typ
         ctx' <- processModule is_entry ctx modul
-        put st{opTable = optab', typingEnv = typenv', renames = ns', context = ctx'}
+        put st{ps_opTable = optab', ps_typTable = typenv', ps_context = ctx'}
+        tell PStore{pw_nameTable = M.singleton modn names'}
 
-{-}
-processImport :: (MonadThrow m, MonadIO m) => Maybe ModuleName -> Located ModuleName -> Plato m ()
-processImport mbmod (L sp impmod) = do
-        is_entry <- gets isEntry
-        imped_list <- gets importedList
-        impng_list <- gets importingList
-        when (impmod `elem` impng_list) $ throwLocErr sp "Cyclic dependencies"
-        unless (impmod `elem` imped_list) $ do
-                modify $ \s -> s{isEntry = False, importingList = impmod : impng_list}
-                path <- solveModpath mbmod impmod
-                base_path <- gets basePath
-                processFile (base_path </> mod2path impmod)
-                modify $ \s -> s{isEntry = is_entry, importedList = impmod : importedList s, importingList = impng_list}
--}
+processImport :: (MonadThrow m, MonadIO m) => Located ModuleName -> PlatoM m ()
+processImport (L sp impmod) = do
+        imped_set <- gets ps_importedSet
+        impng_set <- asks pr_importingSet
+        when (impmod `S.member` impng_set) $ throwLocErr sp "Cyclic dependencies"
+        if impmod `S.member` imped_set
+                then undefined -- tmp: add external nametable to writer
+                else local (\r -> r{pr_isEntry = False, pr_importingSet = impmod `S.insert` imped_set}) $ do
+                        let path = mod2path impmod --tmp
+                        processFile path

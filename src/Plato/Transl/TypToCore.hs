@@ -179,12 +179,12 @@ transEval st knenv ctx (L sp e, ty) = do
         _ <- transType ctx ty --tmp
         return (L sp t)
 
-typ2core :: (MonadThrow m, MonadIO m) => NameTable -> Context -> T.Program -> m (NameTable, C.Module)
+typ2core :: (MonadThrow m, MonadIO m) => NameTable -> Context -> T.Program -> m (Names, C.Module)
 typ2core ns ctx (T.Program modn binds fundecs exps) = do
-        (fundec, st) <- renameFuncDs emptyRenameState{moduleName = modn, externalNameTable = ns} fundecs
+        (fundec, st) <- renameFuncDs (newRenameState modn ns) fundecs
         let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList ctx]
         (binds', (ctx', _)) <- mapM (StateT . transDecl) binds `runStateT` (ctx, knenv)
         let knenv' = knenv `M.union` M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList (V.take (length binds) ctx')]
         (funbind, ctx'') <- transTopFuncDs fundec (ctx', knenv')
         body <- mapM (transEval st knenv' ctx'') exps
-        return (names st, C.Module (binds' ++ [funbind]) body)
+        return (internalNames st, C.Module (binds' ++ [funbind]) body)
