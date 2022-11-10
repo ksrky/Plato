@@ -61,11 +61,17 @@ bindingShift d bind = case bind of
 getBinding :: Context -> Int -> Binding
 getBinding ctx i = bindingShift (i + 1) (snd $ ctx V.! i)
 
-getTypeFromContext :: MonadThrow m => Span -> Context -> Int -> m (Located Ty)
-getTypeFromContext sp ctx i = case getBinding ctx i of
-        VarBind tyT -> return tyT
-        TmAbbBind _ tyT -> return tyT
+getType :: MonadThrow m => Span -> Context -> Int -> m Ty
+getType sp ctx i = case getBinding ctx i of
+        VarBind tyT -> return $ unLoc tyT
+        TmAbbBind _ tyT -> return $ unLoc tyT
         _ -> throwLocErr sp $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
+
+getKind :: MonadThrow m => Context -> Int -> m Kind
+getKind ctx i = case getBinding ctx i of
+        TyVarBind knK -> return knK
+        TyAbbBind _ knK -> return knK
+        _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
 
 getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of

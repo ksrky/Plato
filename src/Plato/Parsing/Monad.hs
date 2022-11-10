@@ -174,9 +174,9 @@ getOpTable :: Monad m => ParserT m OpTable
 getOpTable = opTable <$> getUserState
 
 setOpTable :: Monad m => OpTable -> ParserT m ()
-setOpTable od = do
+setOpTable optab = do
         ust <- getUserState
-        setUserState ust{opTable = od}
+        setUserState ust{opTable = optab}
 
 getIndentLevels :: Monad m => ParserT m [Int]
 getIndentLevels = indentLevels <$> getUserState

@@ -90,22 +90,13 @@ tyeqv ctx = tyeqv'
 ----------------------------------------------------------------
 -- Type check
 ----------------------------------------------------------------
-getkind :: MonadThrow m => Context -> Int -> m Kind
-getkind ctx i = case getBinding ctx i of
-        TyVarBind knK -> return knK
-        TyAbbBind tyT knK -> do
-                knK' <- kindof ctx (unLoc tyT)
-                unless (knK /= knK') $ throwError "Kind attachment failed"
-                return knK
-        _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
-
 kindof :: MonadThrow m => Context -> Ty -> m Kind
 kindof ctx tyT = case tyT of
         TyArr tyT1 tyT2 -> do
                 checkKindStar ctx tyT1
                 checkKindStar ctx tyT2
                 return KnStar
-        TyVar i _ -> getkind ctx i
+        TyVar i _ -> getKind ctx i
         TyAbs tyX knK1 tyT2 -> do
                 ctx' <- addBinding tyX (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
@@ -143,7 +134,7 @@ checkKindStar ctx tyT = do
 
 typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
-        TmVar i _ -> unLoc <$> getTypeFromContext NoSpan ctx i
+        TmVar i _ -> getType NoSpan ctx i
         TmAbs x tyT1 t2 -> do
                 checkKindStar ctx tyT1
                 ctx' <- addBinding x (VarBind $ noLoc tyT1) ctx

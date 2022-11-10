@@ -20,7 +20,8 @@ nav:
       - プログラム構造: language-reference/program-structure.md
       - 再帰関数: language-reference/recursive-function.md
       - 型: language-reference/types.md
-  - 実装上の議論: implementation-notes/index.md
+  - 実装上の議論:
+      - コンパイラの構成: implementation-notes/compiler-structure.md
 theme:
   name: material
   language: ja
