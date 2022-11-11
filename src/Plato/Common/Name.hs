@@ -1,6 +1,7 @@
 module Plato.Common.Name where
 
 import Data.List (intercalate)
+import qualified Data.Map as M
 import qualified Data.Text as T
 import Prettyprinter
 
@@ -52,6 +53,17 @@ str2tyvarName = tyvarName . T.pack
 
 str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
+
+----------------------------------------------------------------
+-- NameEnv
+----------------------------------------------------------------
+type NameEnv = M.Map Name
+
+lookup :: Name -> NameEnv a -> Maybe a
+lookup = M.lookup
+
+member :: Name -> NameEnv a -> Bool
+member = M.member
 
 ----------------------------------------------------------------
 -- Module Name

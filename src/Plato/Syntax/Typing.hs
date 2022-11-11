@@ -10,7 +10,14 @@ import Data.IORef
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
-type Uniq = Int
+----------------------------------------------------------------
+-- Syntax
+----------------------------------------------------------------
+data TypName = TypName
+        { typ_loc :: Span
+        , typ_name :: Name
+        , typ_sort :: NameSort
+        }
 
 -- | Expressions
 data Expr
@@ -28,7 +35,7 @@ data Expr
         | AnnE Expr Sigma
         deriving (Eq, Show)
 
--- Patterns
+-- | Patterns
 data Pat
         = VarP GlbName
         | ConP GlbName [Pat]
@@ -63,20 +70,7 @@ data MetaTv = Meta Uniq TyRef
 
 type TyRef = IORef (Maybe Tau)
 
-instance Eq TyVar where
-        (BoundTv s1) == (BoundTv s2) = s1 == s2
-        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
-        _ == _ = False
-
-instance Pretty TyVar where
-        pretty (BoundTv n) = pretty n
-        pretty (SkolemTv n _) = pretty n
-
-instance Eq MetaTv where
-        (Meta u1 _) == (Meta u2 _) = u1 == u2
-
-instance Show MetaTv where
-        show (Meta u _) = "$" ++ show u
+type Uniq = Int
 
 -- | Kinds
 data Kind
@@ -88,12 +82,6 @@ data Kind
 data MetaKv = MetaKv Uniq KnRef
 
 type KnRef = IORef (Maybe Kind)
-
-instance Eq MetaKv where
-        (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
-
-instance Show MetaKv where
-        show (MetaKv u _) = "$" ++ show u
 
 -- | Function decl
 data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
@@ -113,6 +101,26 @@ data Program = Program
         deriving (Eq, Show)
 
 type TypTable = M.Map GlbName Sigma
+
+----------------------------------------------------------------
+-- Set Eq and Show class
+----------------------------------------------------------------
+instance Eq TyVar where
+        (BoundTv s1) == (BoundTv s2) = s1 == s2
+        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
+        _ == _ = False
+
+instance Eq MetaTv where
+        (Meta u1 _) == (Meta u2 _) = u1 == u2
+
+instance Show MetaTv where
+        show (Meta u _) = "$" ++ show u
+
+instance Eq MetaKv where
+        (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
+
+instance Show MetaKv where
+        show (MetaKv u _) = "$" ++ show u
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -166,6 +174,10 @@ pprpat pat@(ConP con pats)
         | null pats = pretty con
         | otherwise = parens $ pretty pat
 pprpat pat = pretty pat
+
+instance Pretty TyVar where
+        pretty (BoundTv n) = pretty n
+        pretty (SkolemTv n _) = pretty n
 
 instance Pretty Type where
         pretty (VarT var) = pretty var

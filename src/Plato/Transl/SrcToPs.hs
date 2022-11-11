@@ -24,6 +24,14 @@ src2ps optab inp = do
         let optab' = optab `M.union` opTable (parser_ust st)
         (optab',) <$> resolveFixity optab' res
 
+src2ps1 :: MonadThrow m => T.Text -> m (OpTable, Program)
+src2ps1 inp = do
+        (res, st) <- eitherToMonadThrow (parse inp parser)
+        return (opTable (parser_ust st), res)
+
+src2ps2 :: MonadThrow m => OpTable -> Program -> m Program
+src2ps2 = resolveFixity
+
 parseLine :: ParserT m a -> T.Text -> m (a, PsState)
 parseLine p inp = parse inp (ParserT $ \st -> runParserT p st{parser_scd = code})
 

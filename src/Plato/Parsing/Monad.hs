@@ -2,13 +2,14 @@
 
 module Plato.Parsing.Monad where
 
-import Plato.Parsing.Fixity
+import Plato.Common.Name
+import Plato.Types.Fixity
 
 import Control.Exception.Safe
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import qualified Data.ByteString.Internal as BS
-import Data.Map.Strict as M
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Data.Word
 
@@ -143,9 +144,9 @@ setStartCode scd = modify $ \s -> s{parser_scd = scd}
 -- PsUserState
 ----------------------------------------------------------------
 data PsUserState = PsUserState
-        { commentDepth :: Int
-        , opTable :: OpTable
-        , indentLevels :: [Int]
+        { ust_commentDepth :: Int
+        , ust_fixityEnv :: FixityEnv Name
+        , ust_indentLevels :: [Int]
         }
 
 getUserState :: Monad m => ParserT m PsUserState
@@ -157,31 +158,31 @@ setUserState ust = modify $ \s -> s{parser_ust = ust}
 initUserState :: PsUserState
 initUserState =
         PsUserState
-                { commentDepth = 0
-                , opTable = M.empty
-                , indentLevels = []
+                { ust_commentDepth = 0
+                , ust_fixityEnv = M.empty
+                , ust_indentLevels = []
                 }
 
 getCommentDepth :: Monad m => ParserT m Int
-getCommentDepth = commentDepth <$> getUserState
+getCommentDepth = ust_commentDepth <$> getUserState
 
 setCommentDepth :: Monad m => Int -> ParserT m ()
 setCommentDepth cd = do
         ust <- getUserState
-        setUserState ust{commentDepth = cd}
+        setUserState ust{ust_commentDepth = cd}
 
-getOpTable :: Monad m => ParserT m OpTable
-getOpTable = opTable <$> getUserState
+getFixityEnv :: Monad m => ParserT m (FixityEnv Name)
+getFixityEnv = ust_fixityEnv <$> getUserState
 
-setOpTable :: Monad m => OpTable -> ParserT m ()
-setOpTable optab = do
+setFixityEnv :: Monad m => FixityEnv Name -> ParserT m ()
+setFixityEnv fixenv = do
         ust <- getUserState
-        setUserState ust{opTable = optab}
+        setUserState ust{ust_fixityEnv = fixenv}
 
 getIndentLevels :: Monad m => ParserT m [Int]
-getIndentLevels = indentLevels <$> getUserState
+getIndentLevels = ust_indentLevels <$> getUserState
 
 setIndentLevels :: Monad m => [Int] -> ParserT m ()
 setIndentLevels lev = do
         ust <- getUserState
-        setUserState ust{indentLevels = lev}
+        setUserState ust{ust_indentLevels = lev}

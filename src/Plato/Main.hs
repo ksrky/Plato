@@ -73,8 +73,8 @@ process input = do
         (typ, typenv') <- ps2typ (ps_typTable st) ps
         -- processing Core
         let ctx = ps_context st
-        (names', modul) <- typ2core (pw_nameTable store) ctx typ
-        ctx' <- processModule is_entry ctx modul
+        (names', cmod) <- typ2core (pw_nameTable store) ctx typ
+        ctx' <- processModule is_entry ctx cmod
         put st{ps_opTable = optab', ps_typTable = typenv', ps_context = ctx'}
         tell PStore{pw_nameTable = M.singleton modn names'}
 
