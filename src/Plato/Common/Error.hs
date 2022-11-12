@@ -47,8 +47,8 @@ instance Show UnexpectedErr where
 
 instance Exception UnexpectedErr
 
-throwUnexpectedErr :: MonadThrow m => String -> m a
-throwUnexpectedErr msg = throw $ UnexpectedErr msg
+throwUnexpectedErr :: MonadThrow m => Doc ann -> m a
+throwUnexpectedErr doc = throw $ UnexpectedErr (renderString $ layoutPretty defaultLayoutOptions doc)
 
 -- | Doc Error
 throwError :: MonadThrow m => Doc ann -> m a

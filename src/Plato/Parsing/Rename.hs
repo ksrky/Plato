@@ -27,10 +27,10 @@ instance Rename Located where
         rename (L sp (Unqual n)) = asks $ \env -> L sp $ lookupGlbNameEnv env (L sp n)
         rename (L sp (Qual modn n)) = do
                 env <- ask
-                unless (n `member` env) $
+                unless (n `M.member` env) $
                         throwLocErr sp $
                                 hsep ["No module named", squotes $ pretty n, "is imported"]
-                return $ L sp $ exportedName modn (L sp n)
+                return $ L sp $ exportedName modn OccRight (L sp n)
 
 instance Rename Expr where
         rename (VarE var) = VarE <$> rename var
@@ -92,10 +92,13 @@ instance Rename Program where
                         Decl (L _ (FuncTyD var _)) -> return var
                         _ -> throwLocErr sp ""
                 namesCheck names
+                let modn = case mb_modn of
+                        Just modn -> modn
+                        Nothing -> L NoSpan mainModname
                 topds' <-
-                        local (\env -> foldr (insertGlbNameEnv $ unLoc <$> mb_modn) env names) $
+                        local (\env -> foldr (insertGlbNameEnv $ unLoc modn) env names) $
                                 mapM (rename `traverse`) topds
-                return $ Program mb_modn imp_modns topds'
+                return $ Program (Just modn) imp_modns topds'
 
 renameFixityEnv :: GlbNameEnv -> FixityEnv (Located Name) -> FixityEnv GlbName
 renameFixityEnv = M.mapKeys . lookupGlbNameEnv

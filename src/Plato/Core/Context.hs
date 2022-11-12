@@ -5,7 +5,6 @@ module Plato.Core.Context where
 import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.Name.Global
-import Plato.Common.SrcLoc
 import Plato.Core.Subst
 import Plato.Syntax.Core
 
@@ -13,67 +12,65 @@ import Control.Exception.Safe
 import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import Plato.Common.SrcLoc
 import Prettyprinter
 
-type Context = V.Vector (Name, Binding)
+type Context a = V.Vector (a, Binding)
 
-emptyContext :: Context
+emptyContext :: Context a
 emptyContext = V.empty
 
-lookupContext :: Name -> Context -> Maybe Binding
+lookupContext :: Eq a => a -> Context a -> Maybe Binding
 lookupContext k ctx = do
         ((x, y), tl) <- V.uncons ctx
         if k == x then Just y else lookupContext k tl
 
-addBinding :: MonadThrow m => Located Name -> Binding -> Context -> m Context
-addBinding x bind ctx =
-        {-case lookupContext x ctx of
-        Just _ | g_sort x /= System -> throwLocErr (g_loc x) $ "Conflicting definition of" <+> pretty x
-        _ -> -} return $ V.cons (unLoc x, bind) ctx
+addBinding :: MonadThrow m => a -> Binding -> Context a -> m (Context a)
+addBinding x bind ctx = return $ V.cons (x, bind) ctx
 
-addName :: MonadThrow m => Located Name -> Context -> m Context
-addName x = addBinding x NameBind
+addName :: MonadThrow m => Located Name -> Context GlbName -> m (Context GlbName)
+addName x = addBinding (localName x) NameBind
 
-addNameList :: MonadThrow m => [Located Name] -> Context -> m Context
+addNameList :: MonadThrow m => [Located Name] -> Context GlbName -> m (Context GlbName)
 addNameList = flip $ foldM (flip addName)
 
-addFreshName :: GlbName -> Context -> Context
+addFreshName :: Name -> Context Name -> Context Name
 addFreshName x ctx = case lookupContext x ctx of
-        Just _ -> addFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) ctx
+        Just _ -> addFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
         Nothing -> V.cons (x, NameBind) ctx
 
-pickFreshName :: GlbName -> Context -> (GlbName, Context)
+pickFreshName :: Name -> Context Name -> (Name, Context Name)
 pickFreshName x ctx = case lookupContext x ctx of
-        Just _ -> pickFreshName (newName (g_name x){nameText = T.snoc (nameText (g_name x)) '\''}) ctx
+        Just _ -> pickFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
         Nothing -> (x, V.cons (x, NameBind) ctx)
 
-index2name :: Context -> Int -> GlbName
+index2name :: Context a -> Int -> a
 index2name ctx x = fst (ctx V.! x)
 
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of
         NameBind -> NameBind
-        VarBind tyT -> VarBind (typeShift d <$> tyT)
+        VarBind tyT -> VarBind (typeShift d tyT)
         TyVarBind knK -> TyVarBind knK
-        TmAbbBind t tyT_opt -> TmAbbBind (termShift d <$> t) (typeShift d <$> tyT_opt)
-        TyAbbBind tyT opt -> TyAbbBind (typeShift d <$> tyT) opt
+        TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d tyT_opt)
+        TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
 
-getBinding :: Context -> Int -> Binding
+getBinding :: Context a -> Int -> Binding
 getBinding ctx i = bindingShift (i + 1) (snd $ ctx V.! i)
 
-getType :: MonadThrow m => Span -> Context -> Int -> m Ty
-getType sp ctx i = case getBinding ctx i of
-        VarBind tyT -> return $ unLoc tyT
-        TmAbbBind _ tyT -> return $ unLoc tyT
-        _ -> throwLocErr sp $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
+getType :: MonadThrow m => Context Name -> Int -> m Ty
+getType ctx i = case getBinding ctx i of
+        VarBind tyT -> return tyT
+        TmAbbBind _ tyT -> return tyT
+        _ -> throwUnexpectedErr $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
 
-getKind :: MonadThrow m => Context -> Int -> m Kind
+getKind :: MonadThrow m => Context Name -> Int -> m Kind
 getKind ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ knK -> return knK
         _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
 
-getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
+getVarIndex :: MonadThrow m => Context GlbName -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
         Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"

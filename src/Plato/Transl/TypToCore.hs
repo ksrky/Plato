@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Transl.TypToCore where
@@ -11,16 +12,16 @@ import Plato.Core.Context
 import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
 import Plato.Typing.KindInfer
-import Plato.Typing.Rename
 import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State
 import qualified Data.Map.Strict as M
-import qualified Data.Vector as V
+import Plato.Typing.Bundle
+import Prettyprinter
 
-transExpr :: (MonadThrow m, MonadIO m) => KnEnv -> Context -> T.Expr -> m C.Term
+transExpr :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context GlbName -> T.Expr -> m C.Term
 transExpr knenv ctx = traexpr
     where
         traexpr :: (MonadThrow m, MonadIO m) => T.Expr -> m C.Term
@@ -29,7 +30,7 @@ transExpr knenv ctx = traexpr
                 return $ C.TmVar i (length ctx)
         traexpr (T.AbsE x (Just ty1) e2) = do
                 tyT1 <- transType ctx ty1
-                ctx' <- addName x ctx
+                ctx' <- addName (localName x) ctx
                 t2 <- transExpr knenv ctx' e2
                 return $ C.TmAbs (unLoc x) tyT1 t2
         traexpr (T.AppE e1 e2) = do
@@ -41,13 +42,13 @@ transExpr knenv ctx = traexpr
                 tyTs' <- mapM (transType ctx) tys
                 return $ foldl C.TmTApp t1 tyTs'
         traexpr (T.TAbsE xs e1) = do
-                ctx' <- foldM (flip addName) ctx xs
+                ctx' <- foldM (flip (addName . localName)) ctx xs
                 t1 <- transExpr knenv ctx' e1
                 return $ foldr (C.TmTAbs . unLoc) t1 xs
         traexpr (T.LetE [T.FuncD x e11 ty12] e2) = do
                 ty12' <- checkKindStar knenv NoSpan ty12
                 tyT1 <- transType ctx ty12'
-                ctx' <- addName x ctx
+                ctx' <- addName (localName x) ctx
                 t1 <- transExpr knenv ctx' e11
                 let t1' = C.TmFix (C.TmAbs (unLoc x) tyT1 t1)
                 t2 <- transExpr knenv ctx' e2
@@ -63,7 +64,7 @@ transExpr knenv ctx = traexpr
         traexpr (T.RecordE fields) = do
                 fields' <- forM fields $ \(li, ei) -> do
                         ti <- traexpr ei
-                        return (g_name li, ti)
+                        return (unLoc li, ti)
                 return $ C.TmRecord fields'
         traexpr (T.CaseE e1 (Just ty2) alts) = do
                 t1 <- traexpr e1
@@ -75,20 +76,20 @@ transExpr knenv ctx = traexpr
                                                 T.VarP x -> return [x]
                                                 T.WildP -> return []
                                                 T.ConP{} -> throwString "pattern argument" --tmp
-                                ctx' <- foldM (flip addName) ctx xs
+                                ctx' <- foldM (flip (addName . localName)) ctx xs
                                 ti <- transExpr knenv ctx' body
                                 return (g_name li, (length xs, ti))
                         T.VarP x -> do
-                                ctx' <- addName x ctx
+                                ctx' <- addName (localName x) ctx
                                 ti <- transExpr knenv ctx' body
                                 return (str2varName "", (1, ti))
                         T.WildP -> do
                                 ti <- traexpr body
                                 return (str2varName "", (0, ti))
                 return $ C.TmCase (C.TmApp (C.TmUnfold tyT2) t1) alts'
-        traexpr e = throwUnexpectedErr $ "illegal expression: " ++ show e
+        traexpr e = throwUnexpectedErr $ "illegal expression:" <+> pretty e
 
-transType :: MonadThrow m => Context -> T.Type -> m C.Ty
+transType :: MonadThrow m => Context GlbName -> T.Type -> m C.Ty
 transType ctx = tratype
     where
         tratype :: MonadThrow m => T.Type -> m C.Ty
@@ -108,12 +109,12 @@ transType ctx = tratype
                                 knK <- transKind kn
                                 return (tyVarName tv, knK)
                         _ -> throwUnexpectedErr "Kind inference failed"
-                ctx' <- addNameList (map (tyVarLName . fst) xs) ctx
+                ctx' <- addNameList (map (tyVarGlbName . fst) xs) ctx
                 tyT2 <- transType ctx' ty
                 return $ foldr (uncurry C.TyAll) tyT2 xs'
         tratype (T.AbsT x (Just kn) ty) = do
                 knK1 <- transKind kn
-                ctx' <- addName x ctx
+                ctx' <- addName (localName x) ctx
                 tyT2 <- transType ctx' ty
                 return $ C.TyAbs (unLoc x) knK1 tyT2
         tratype (T.AppT ty1 ty2) = do
@@ -121,7 +122,7 @@ transType ctx = tratype
                 tyT2 <- tratype ty2
                 return $ C.TyApp tyT1 tyT2
         tratype (T.RecT x kn ty) = do
-                ctx' <- addName x ctx
+                ctx' <- addName (localName x) ctx
                 knK1 <- transKind kn
                 tyT2 <- transType ctx' ty
                 return $ C.TyRec (unLoc x) knK1 tyT2
@@ -132,7 +133,7 @@ transType ctx = tratype
                 fields' <- forM fieldtys $ \(l, field) -> (unLoc l,) <$> mapM tratype field
                 return $ C.TyVariant fields'
         tratype T.MetaT{} = throwUnexpectedErr "Zonking failed"
-        tratype ty = throwUnexpectedErr $ "Illegal type: " ++ show ty
+        tratype ty = throwUnexpectedErr $ "Illegal type:" <+> pretty ty
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
 transKind T.StarK = return C.KnStar
@@ -143,47 +144,51 @@ transKind' :: C.Kind -> T.Kind
 transKind' C.KnStar = T.StarK
 transKind' (C.KnArr knK1 knK2) = T.ArrK (transKind' knK1) (transKind' knK2)
 
-transDecl :: (MonadThrow m, MonadIO m) => Located T.Decl -> StateT (Context, KnEnv) m (Name, C.Binding)
-transDecl (L sp dec) = case dec of
-        T.TypeD con ty -> do
-                (ty', kn) <- inferKind knenv ty
-                let knenv' = M.insert con kn knenv
-                knK <- transKind kn
-                tyT <- transType ctx ty'
-                ctx' <- addBinding con (C.TyAbbBind (L sp tyT) knK) ctx
-                return (unLoc con, C.TyAbbBind (L sp tyT) knK)
-        T.VarD var ty -> do
-                ty' <- checkKindStar knenv sp ty
-                tyT <- transType ctx ty'
-                ctx' <- addName var ctx
-                return (unLoc var, C.VarBind $ L sp tyT)
-        T.ConD (T.FuncD var exp ty) -> do
-                ty' <- checkKindStar knenv sp ty
-                t <- transExpr knenv ctx exp
-                tyT <- transType ctx ty'
-                ctx' <- addName var ctx
-                return (unLoc var, C.TmAbbBind (noLoc t) (L sp tyT))
+transDecl :: (MonadThrow m, MonadIO m) => ModuleName -> Located T.Decl -> StateT (Context GlbName, T.KnEnv) m (Name, C.Binding)
+transDecl modn (L sp dec) = do
+        (ctx, knenv) <- get
+        case dec of
+                T.TypeD con ty -> do
+                        (ty', kn) <- inferKind knenv ty
+                        let knenv' = M.insert (exportedName modn con) kn knenv
+                        knK <- transKind kn
+                        tyT <- transType ctx ty'
+                        ctx' <- addBinding (exportedName modn con) (C.TyAbbBind tyT knK) ctx
+                        put (ctx', knenv')
+                        return (unLoc con, C.TyAbbBind tyT knK)
+                T.VarD var ty -> do
+                        ty' <- checkKindStar knenv sp ty
+                        tyT <- transType ctx ty'
+                        ctx' <- addName (exportedName modn var) ctx
+                        put (ctx', knenv)
+                        return (unLoc var, C.VarBind tyT)
+                T.ConD (T.FuncD var exp ty) -> do
+                        ty' <- checkKindStar knenv sp ty
+                        t <- transExpr knenv ctx exp
+                        tyT <- transType ctx ty'
+                        ctx' <- addName (exportedName modn var) ctx
+                        put (ctx', knenv)
+                        return (unLoc var, C.TmAbbBind t tyT)
 
-transTopFuncDs :: (MonadThrow m, MonadIO m) => T.FuncD -> (Context, KnEnv) -> m ((Name, C.Binding), Context)
+transTopFuncDs :: (MonadThrow m, MonadIO m) => T.FuncD -> (Context GlbName, T.KnEnv) -> m ((Name, C.Binding), Context GlbName)
 transTopFuncDs (T.FuncD x e ty) (ctx, knenv) = do
         ty' <- checkKindStar knenv NoSpan ty
         t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
         tyT <- transType ctx ty'
-        ctx' <- addName x ctx
+        ctx' <- addName x ctx -- tmp
         return ((unLoc x, C.TmAbbBind (noLoc $ C.TmFix t) (L NoSpan tyT)), ctx')
 
-transEval :: (MonadThrow m, MonadIO m) => RenameState -> KnEnv -> Context -> (Located T.Expr, T.Type) -> m (Located C.Term)
-transEval st knenv ctx (L sp e, ty) = do
-        e' <- rename st e
+transEval :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context GlbName -> (Located T.Expr, T.Type) -> m C.Term
+transEval knenv ctx (L _ e, ty) = do
+        e' <- bundleEval e
         t <- transExpr knenv ctx e'
         _ <- transType ctx ty --tmp
-        return (L sp t)
+        return t
 
-typ2core :: (MonadThrow m, MonadIO m) => NameTable -> Context -> T.Program -> m (Names, C.Module)
-typ2core ns ctx (T.Program modn binds fundecs exps) = do
-        (fundec, st) <- renameFuncDs (newRenameState modn ns) fundecs
-        let knenv = M.fromList [(x, transKind' knK) | (x, C.TyAbbBind _ knK) <- V.toList ctx]
-        (binds', (ctx', knenv')) <- mapM transDecl binds `runStateT` (ctx, knenv)
+typ2core :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context GlbName -> T.Program -> m C.Module
+typ2core knenv ctx (T.Program modn binds fundecs exps) = do
+        fundec <- bundleTopFuncDs modn fundecs
+        (binds', (ctx', knenv')) <- mapM (transDecl modn) binds `runStateT` (ctx, knenv)
         (funbind, ctx'') <- transTopFuncDs fundec (ctx', knenv')
-        body <- mapM (transEval st knenv' ctx'') exps
-        return (internalNames st, C.Module (binds' ++ [funbind]) body)
+        evals <- mapM (transEval knenv' ctx'') exps
+        return (C.Module (binds' ++ [funbind]) evals)

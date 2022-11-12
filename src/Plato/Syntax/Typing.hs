@@ -29,7 +29,7 @@ data Expr
         | TAbsE [LArg] Expr
         | LetE [FuncD] Expr
         | ProjE Expr GlbName
-        | RecordE [(GlbName, Expr)]
+        | RecordE [(LName, Expr)]
         | CaseE Expr (Maybe Type) [(Pat, Expr)]
         | TagE GlbName [Expr] Type
         | FoldE Type
@@ -85,23 +85,24 @@ data MetaKv = MetaKv Uniq KnRef
 type KnRef = IORef (Maybe Kind)
 
 -- | Function decl
-data FuncD = FuncD LName Expr Type deriving (Eq, Show)
+data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
 
 data Decl
-        = TypeD LName Type
-        | VarD LName Type
+        = TypeD GlbName Type
+        | VarD GlbName Type
         | ConD FuncD
         deriving (Eq, Show)
 
 data Program = Program
-        { mmodule :: Maybe (Located ModuleName)
-        , decls :: [Located Decl]
-        , binds :: [FuncD]
-        , body :: [(Located Expr, Type)]
+        { typ_modn :: ModuleName
+        , typ_decls :: [Located Decl]
+        , typ_binds :: [FuncD]
+        , typ_body :: [(Located Expr, Type)]
         }
         deriving (Eq, Show)
 
-type TypTable = M.Map GlbName Sigma
+type TyEnv = M.Map GlbName Sigma
+type KnEnv = M.Map GlbName Kind
 
 ----------------------------------------------------------------
 -- Set Eq and Show class
@@ -236,7 +237,7 @@ instance Pretty Decl where
 
 instance Pretty Program where
         pretty (Program mod decs binds body) =
-                maybe emptyDoc (\d -> pretty d <> line) mod
+                pretty mod <> line
                         <> vsep (map pretty decs)
                         <> (if null decs then emptyDoc else line)
                         <> vsep (map pretty binds)

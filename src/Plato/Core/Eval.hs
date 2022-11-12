@@ -1,6 +1,6 @@
 module Plato.Core.Eval where
 
-import Plato.Common.SrcLoc
+import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Subst
 import Plato.Syntax.Core
@@ -10,7 +10,7 @@ import Control.Monad (forM)
 ----------------------------------------------------------------
 -- Evaluation
 ----------------------------------------------------------------
-isval :: Context -> Term -> Bool
+isval :: Context Name -> Term -> Bool
 isval ctx t = case t of
         TmVar i _ -> case getBinding ctx i of
                 VarBind{} -> True
@@ -21,13 +21,13 @@ isval ctx t = case t of
         TmTag _ vs _ -> all (isval ctx) vs
         _ -> False
 
-eval :: Context -> Term -> Term
+eval :: Context Name -> Term -> Term
 eval ctx t = maybe t (eval ctx) (eval' t)
     where
         eval' :: Term -> Maybe Term
         eval' t = case t of
                 TmVar i _ -> case getBinding ctx i of
-                        TmAbbBind t _ -> Just $ unLoc t
+                        TmAbbBind t _ -> Just t
                         _ -> Nothing
                 TmApp (TmUnfold _) (TmApp (TmFold _) v) | isval ctx v -> Just v
                 TmApp (TmFold tyS) t2 -> do

@@ -1,9 +1,7 @@
 module Plato.Transl.CoreToIO where
 
 import Plato.Common.Error
-import Plato.Common.GlbName
 import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Syntax.Core
@@ -15,13 +13,13 @@ import qualified Data.Text as T
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-processModule :: (MonadThrow m, MonadIO m) => Bool -> Context -> Module -> m Context
+processModule :: (MonadThrow m, MonadIO m) => Bool -> Context Name -> Module -> m (Context Name)
 processModule opt ctx (Module binds evals) = do
         ctx' <- foldM (flip $ uncurry addBinding) ctx binds
-        when opt $ mapM_ (printResult ctx'  . unLoc) evals
+        when opt $ mapM_ (printResult ctx') evals
         return ctx
 
-printResult :: MonadIO m => Context -> Term -> m ()
+printResult :: MonadIO m => Context Name -> Term -> m ()
 printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
 
 ----------------------------------------------------------------
@@ -30,7 +28,7 @@ printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-ppr :: Context -> Term -> Doc ann
+ppr :: Context Name -> Term -> Doc ann
 ppr ctx t = pprtm t <> line
     where
         pprtm :: Term -> Doc ann
@@ -47,8 +45,8 @@ ppr ctx t = pprtm t <> line
         isTag TmTag{} = True
         isTag _ = False
 
-        isConOp :: GlbName -> Bool
-        isConOp = (':' ==) . T.head . nameText . g_name
+        isConOp :: Name -> Bool
+        isConOp = (':' ==) . T.head . nameText
 
         pprtm1 :: Term -> Doc ann
         pprtm1 t@TmVar{} = pprtm t

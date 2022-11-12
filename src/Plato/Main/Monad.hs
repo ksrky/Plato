@@ -22,7 +22,7 @@ newtype PlatoStore = PStore
 
 data PlatoState = PState
         { ps_opTable :: OpTable
-        , ps_typTable :: TypTable
+        , ps_typTable :: TyEnv
         , ps_context :: Context
         , ps_importedSet :: S.Set ModuleName
         }

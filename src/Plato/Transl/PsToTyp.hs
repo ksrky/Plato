@@ -80,7 +80,7 @@ transType (L _ (P.ArrT ty1 ty2)) = do
         return $ T.ArrT ty1' ty2'
 transType (L _ (P.AllT xs ty1)) = do
         ty1' <- transType ty1
-        return $ T.AllT (map (\x -> (T.BoundTv   x, Nothing)) xs) ty1'
+        return $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) xs) ty1'
 
 transDecls :: MonadThrow m => [P.LDecl GlbName] -> m ([T.FuncD], [Located T.Decl])
 transDecls decs = do
@@ -94,7 +94,7 @@ transDecls decs = do
                                         tell ([(x, ty')], mempty)
                                 | otherwise -> do
                                         ty' <- Writer.lift $ transType ty
-                                        tell (mempty, [L sp $ T.VarD x ty'])
+                                        tell (mempty, [L sp $ T.VarD (localName OccLeft x) ty'])
                         _ -> return ()
         fields <- execWriterT $
                 forM decs $ \case
@@ -106,10 +106,10 @@ transDecls decs = do
                                         Writer.lift $ throwLocErr sp "lacks type signature"
                         _ -> return ()
         when (length fields /= length fieldtys) $ throwUnexpectedErr "number of function bodies and signatures are not match"
-        return ([T.FuncD var1 exp ty | (var1, exp) <- fields, (var2, ty) <- fieldtys, unLoc var1 == unLoc var2], vardecls)
+        return ([T.FuncD (localName OccLeft var1) exp ty | (var1, exp) <- fields, (var2, ty) <- fieldtys, unLoc var1 == unLoc var2], vardecls)
 
-transTopDecl :: MonadThrow m => P.LTopDecl GlbName -> WriterT ([Located T.Decl], [Located T.FuncD], [Located T.Expr]) m ()
-transTopDecl (L sp (P.DataD name params fields)) = do
+transTopDecl :: MonadThrow m => ModuleName -> P.LTopDecl GlbName -> WriterT ([Located T.Decl], [Located T.FuncD], [Located T.Expr]) m ()
+transTopDecl modn (L sp (P.DataD name params fields)) = do
         fields' <- Writer.lift $
                 forM fields $ \(l, tys) -> do
                         tys' <- mapM transType tys
@@ -117,28 +117,28 @@ transTopDecl (L sp (P.DataD name params fields)) = do
         let fieldty = T.SumT fields'
             kn = foldr T.ArrK T.StarK (replicate (length params) T.StarK)
             bodyty = T.RecT name kn fieldty
-        tell ([L sp (T.TypeD name (foldr (`T.AbsT` Nothing) bodyty params))], [], [])
+        tell ([L sp (T.TypeD (exportedName modn OccLeft name) (foldr (`T.AbsT` Nothing) bodyty params))], [], [])
         forM_ fields' $ \(l, field) -> do
-                let res_ty = foldl T.AppT (T.ConT $ systemName name) (map (T.VarT . T.BoundTv) params) --tmp: systemName
+                let res_ty = foldl T.AppT (T.ConT $ exportedName modn OccLeft name) (map (T.VarT . T.BoundTv) params)
                     rho_ty = foldr T.ArrT res_ty field
                     sigma_ty =
                         if null params
                                 then rho_ty
                                 else T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) rho_ty
                     tyargs = params
-                    args = map (noLoc . str2varName . show) [length params + 1 .. length params + length field]
-                    tag = T.TagE l (map (T.VarE . systemName) args) fieldty
+                    args = map (str2varName . show) [length params + 1 .. length params + length field]
+                    tag = T.TagE (exportedName modn OccRight l) (map (T.VarE . systemName) args) fieldty
                     foldtag = T.AppE (T.FoldE res_ty) tag
-                    exp = foldr (\(x, ty) -> T.AbsE x (Just ty)) foldtag (zip args field)
+                    exp = foldr (\(x, ty) -> T.AbsE (noLoc x) (Just ty)) foldtag (zip args field)
                     exp' = if null tyargs then exp else T.TAbsE tyargs exp
-                tell ([], [L sp $ T.FuncD l exp' sigma_ty], [])
-transTopDecl (L sp (P.TypeD name params ty1)) = do
+                tell ([], [L sp $ T.FuncD (exportedName modn OccLeft l) exp' sigma_ty], [])
+transTopDecl modn (L sp (P.TypeD name params ty1)) = do
         ty1' <- Writer.lift $ transType ty1
-        tell ([L sp (T.TypeD name (foldr (`T.AbsT` Nothing) ty1' params))], [], [])
-transTopDecl (L sp (P.Eval exp)) = do
+        tell ([L sp (T.TypeD (exportedName modn OccLeft name) (foldr (`T.AbsT` Nothing) ty1' params))], [], [])
+transTopDecl _ (L sp (P.Eval exp)) = do
         exp' <- transExpr exp
         tell ([], [], [L sp exp'])
-transTopDecl _ = return ()
+transTopDecl _ _ = return ()
 
 getDecls :: [P.LTopDecl GlbName] -> [P.LDecl GlbName]
 getDecls tds = execWriter $
@@ -146,13 +146,16 @@ getDecls tds = execWriter $
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-ps2typ :: (MonadIO m, MonadThrow m) => T.TypTable -> P.Program GlbName -> m (T.Program, T.TypTable)
-ps2typ env (P.Program modn _ topds) = do
-        (tydecs, condecs, exps) <- execWriterT $ mapM_ transTopDecl topds
+ps2typ :: (MonadIO m, MonadThrow m) => T.TyEnv -> P.Program GlbName -> m (T.Program, T.TyEnv)
+ps2typ _ (P.Program Nothing _ _) = unreachable "Renaming failed"
+ps2typ env (P.Program (Just modn) _ topds) = do
+        (tydecs, condecs, exps) <- execWriterT $ mapM_ (transTopDecl $ unLoc modn) topds
         (fundecs, vardecs) <- transDecls (getDecls topds)
         let env' =
-                M.fromList [(var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
-                        `M.union` M.fromList [(var, ty) | L _ (T.VarD var ty) <- vardecs]
+                M.fromList
+                        ( [(var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
+                          ++ [(var, ty) | L _ (T.VarD var ty) <- vardecs]
+                        )
                         `M.union` env
         fundecs' <- mapM (typeCheck env') fundecs
         exps' <- forM exps $ \(L sp e) -> do
@@ -161,10 +164,10 @@ ps2typ env (P.Program modn _ topds) = do
                 return (L sp e', ty)
         return
                 ( T.Program
-                        { T.mmodule = modn
-                        , T.decls = tydecs ++ map (T.ConD <$>) condecs ++ vardecs
-                        , T.binds = fundecs'
-                        , T.body = exps'
+                        { T.typ_modn = unLoc modn
+                        , T.typ_decls = tydecs ++ map (T.ConD <$>) condecs ++ vardecs
+                        , T.typ_binds = fundecs'
+                        , T.typ_body = exps'
                         }
                 , env'
                 )

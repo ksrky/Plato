@@ -1,7 +1,6 @@
 module Plato.Syntax.Core where
 
 import Plato.Common.Name
-import Plato.Common.SrcLoc
 
 ----------------------------------------------------------------
 -- Syntax
@@ -37,10 +36,10 @@ data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
 
 data Binding
         = NameBind
-        | VarBind (Located Ty)
+        | VarBind Ty
         | TyVarBind Kind
-        | TmAbbBind (Located Term) (Located Ty)
-        | TyAbbBind (Located Ty) Kind
+        | TmAbbBind Term Ty
+        | TyAbbBind Ty Kind
         deriving (Eq, Show)
 
 -- data Command
@@ -51,6 +50,6 @@ data Binding
 
 data Module = Module
         { moduleBind :: [(Name, Binding)]
-        , moduleEval :: [Located Term]
+        , moduleEval :: [Term]
         }
         deriving (Eq, Show)

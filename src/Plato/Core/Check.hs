@@ -3,7 +3,6 @@
 module Plato.Core.Check where
 
 import Plato.Common.Error
-import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Core.Pretty
 import Plato.Core.Subst
@@ -11,30 +10,29 @@ import Plato.Syntax.Core
 
 import Control.Exception.Safe
 import Control.Monad
-import Plato.Common.GlbName
 import Plato.Common.Name
 import Prettyprinter
 
 ----------------------------------------------------------------
 -- Type equality check
 ----------------------------------------------------------------
-istyabb :: Context -> Int -> Bool
+istyabb :: Context Name -> Int -> Bool
 istyabb ctx i = case getBinding ctx i of
         TyAbbBind{} -> True
         _ -> False
 
-gettyabb :: Context -> Int -> Ty
+gettyabb :: Context Name -> Int -> Ty
 gettyabb ctx i = case getBinding ctx i of
-        TyAbbBind tyT _ -> unLoc tyT
+        TyAbbBind tyT _ -> tyT
         _ -> unreachable ""
 
-computety :: Context -> Ty -> Maybe Ty
+computety :: Context Name -> Ty -> Maybe Ty
 computety ctx tyT = case tyT of
         TyApp (TyAbs _ _ tyT12) tyT2 -> Just $ typeSubstTop tyT2 tyT12
         TyVar i _ | istyabb ctx i -> Just $ gettyabb ctx i
         _ -> Nothing
 
-simplifyty :: Context -> Ty -> Ty
+simplifyty :: Context Name -> Ty -> Ty
 simplifyty ctx tyT =
         let tyT' = case tyT of
                 TyApp tyT1 tyT2 -> TyApp (simplifyty ctx tyT1) tyT2
@@ -43,7 +41,7 @@ simplifyty ctx tyT =
                 Just tyT'' -> simplifyty ctx tyT''
                 Nothing -> tyT'
 
-tyeqv :: MonadThrow m => Context -> Ty -> Ty -> m ()
+tyeqv :: MonadThrow m => Context Name -> Ty -> Ty -> m ()
 tyeqv ctx = tyeqv'
     where
         tyeqv' :: MonadThrow m => Ty -> Ty -> m ()
@@ -90,7 +88,7 @@ tyeqv ctx = tyeqv'
 ----------------------------------------------------------------
 -- Type check
 ----------------------------------------------------------------
-kindof :: MonadThrow m => Context -> Ty -> m Kind
+kindof :: MonadThrow m => Context Name -> Ty -> m Kind
 kindof ctx tyT = case tyT of
         TyArr tyT1 tyT2 -> do
                 checkKindStar ctx tyT1
@@ -125,19 +123,19 @@ kindof ctx tyT = case tyT of
                         forM_ tys $ \tyS -> checkKindStar ctx tyS
                 return KnStar
 
-checkKindStar :: MonadThrow m => Context -> Ty -> m ()
+checkKindStar :: MonadThrow m => Context Name -> Ty -> m ()
 checkKindStar ctx tyT = do
         k <- kindof ctx tyT
         if k == KnStar
                 then return ()
                 else throwError $ hsep ["Kind * expected:", ppr ctx tyT]
 
-typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
+typeof :: (MonadThrow m, MonadFail m) => Context Name -> Term -> m Ty
 typeof ctx t = case t of
-        TmVar i _ -> getType NoSpan ctx i
+        TmVar i _ -> getType ctx i
         TmAbs x tyT1 t2 -> do
                 checkKindStar ctx tyT1
-                ctx' <- addBinding x (VarBind $ noLoc tyT1) ctx
+                ctx' <- addBinding x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyArr tyT1 (typeShift (-1) tyT2)
         TmApp t1 t2 -> do
@@ -162,7 +160,7 @@ typeof ctx t = case t of
                         _ -> throwError "universal type expected"
         TmLet x t1 t2 -> do
                 tyT1 <- typeof ctx t1
-                ctx' <- addBinding x (VarBind $ noLoc tyT1) ctx
+                ctx' <- addBinding x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ typeShift (-1) tyT2
         TmFix t1 -> do
@@ -205,11 +203,11 @@ typeof ctx t = case t of
                         TyVariant fieldtys -> do
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
                                         Just tys -> do
-                                                ctx' <- foldM (flip $ addBinding (newName $ str2varName "") . VarBind . noLoc) ctx tys
+                                                ctx' <- foldM (flip $ addBinding (str2varName "") . VarBind) ctx tys
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
-                                        Nothing | nameText (g_name li) == "" -> do
-                                                ctx' <- addBinding (newName $ str2varName "") (VarBind $ noLoc $ TyVariant fieldtys) ctx
+                                        Nothing | nameText li == "" -> do
+                                                ctx' <- addBinding (str2varName "") (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing -> throwError $ hsep ["label", pretty li, "not found"]
@@ -220,11 +218,11 @@ typeof ctx t = case t of
 ----------------------------------------------------------------
 -- Type check of binding
 ----------------------------------------------------------------
-checkBinding :: (MonadThrow m, MonadFail m) => Context -> Binding -> m ()
-checkBinding ctx (TyAbbBind (L _ tyT) knK) = do
+checkBinding :: (MonadThrow m, MonadFail m) => Context Name -> Binding -> m ()
+checkBinding ctx (TyAbbBind tyT knK) = do
         knK' <- kindof ctx tyT
         unless (knK == knK') $ throwError "Kind of binding does not match declared kind"
-checkBinding ctx (TmAbbBind (L _ t) (L _ tyT)) = do
+checkBinding ctx (TmAbbBind t tyT) = do
         tyT' <- typeof ctx t
         tyeqv ctx tyT tyT'
 checkBinding _ _ = return ()

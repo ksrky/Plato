@@ -4,9 +4,7 @@
 
 module Plato.Core.Pretty where
 
-import Plato.Common.GlbName
 import Plato.Common.Name
-import Plato.Common.SrcLoc
 import Plato.Core.Context
 import Plato.Syntax.Core
 import Prettyprinter
@@ -18,7 +16,7 @@ hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
 class PrettyCore a where
-        ppr :: Context -> a -> Doc ann
+        ppr :: Context Name -> a -> Doc ann
 
 instance PrettyCore Term where
         ppr ctx t = case t of
@@ -55,7 +53,7 @@ instance PrettyCore Term where
                                         ( vsep
                                                 ( map
                                                         ( \(li, (ki, ti)) ->
-                                                                let ctx' = foldr addFreshName ctx (map (newName . str2varName . show) [1 .. ki])
+                                                                let ctx' = foldr addFreshName ctx (map (str2varName . show) [1 .. ki])
                                                                  in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
                                                         )
                                                         alts
@@ -64,14 +62,14 @@ instance PrettyCore Term where
                                 <> line
                                 <> rbrace
 
-pprtm :: Context -> Term -> Doc ann
+pprtm :: Context Name -> Term -> Doc ann
 pprtm ctx t@TmVar{} = ppr ctx t
 pprtm ctx t@TmFold{} = ppr ctx t
 pprtm ctx t@TmUnfold{} = ppr ctx t
 pprtm ctx t@(TmTag _ as _) | null as = ppr ctx t
 pprtm ctx t = parens $ ppr ctx t
 
-pprapp :: Context -> Term -> Doc ann
+pprapp :: Context Name -> Term -> Doc ann
 pprapp ctx t = walk t []
     where
         walk :: Term -> [Term] -> Doc ann
@@ -118,7 +116,7 @@ precty TyAll{} = TopPrec
 precty TyArr{} = ArrPrec
 precty _ = AtomPrec
 
-pprty :: Prec -> Context -> Ty -> Doc ann
+pprty :: Prec -> Context Name -> Ty -> Doc ann
 pprty p ctx ty
         | fromEnum p >= fromEnum (precty ty) = parens (ppr ctx ty)
         | otherwise = ppr ctx ty
@@ -127,16 +125,16 @@ instance PrettyCore Kind where
         ppr _ KnStar = "*"
         ppr ctx (KnArr knK1 knK2) = pprkn ctx knK1 <+> ppr ctx knK2
 
-pprkn :: Context -> Kind -> Doc ann
+pprkn :: Context Name -> Kind -> Doc ann
 pprkn _ KnStar = "*"
 pprkn ctx knK = parens (ppr ctx knK)
 
 instance PrettyCore Binding where
         ppr _ NameBind = emptyDoc
-        ppr ctx (VarBind tyT) = ppr ctx (unLoc tyT)
+        ppr ctx (VarBind tyT) = ppr ctx tyT
         ppr ctx (TyVarBind knK) = ppr ctx knK
-        ppr ctx (TmAbbBind t tyT) = hsep [ppr ctx (unLoc t), colon, ppr ctx (unLoc tyT)]
-        ppr ctx (TyAbbBind tyT knK) = hsep [ppr ctx (unLoc tyT), colon, ppr ctx knK]
+        ppr ctx (TmAbbBind t tyT) = hsep [ppr ctx t, colon, ppr ctx tyT]
+        ppr ctx (TyAbbBind tyT knK) = hsep [ppr ctx tyT, colon, ppr ctx knK]
 
 instance PrettyCore a => PrettyCore [a] where
         ppr _ [] = emptyDoc
@@ -144,8 +142,8 @@ instance PrettyCore a => PrettyCore [a] where
 
 instance PrettyCore Module where
         ppr ctx (Module binds evals) =
-                let pprBinds :: Context -> [(GlbName, Binding)] -> Doc ann
-                    pprBinds ctx [] = vsep (map (ppr ctx . unLoc) evals)
+                let pprBinds :: Context Name -> [(Name, Binding)] -> Doc ann
+                    pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
                         let ctx' = addFreshName x ctx
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]

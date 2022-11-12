@@ -1,7 +1,6 @@
 module Plato.Common.Name where
 
 import Data.List (intercalate)
-import qualified Data.Map as M
 import qualified Data.Text as T
 import Prettyprinter
 
@@ -28,6 +27,7 @@ data NameSpace
         | ConName
         | TyvarName
         | TyconName
+        | ModName
         deriving (Eq, Show)
 
 varName :: T.Text -> Name
@@ -55,14 +55,6 @@ str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
 
 ----------------------------------------------------------------
--- NameEnv
-----------------------------------------------------------------
-type NameEnv = M.Map Name
-
-member :: Name -> NameEnv a -> Bool
-member = M.member
-
-----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------
 newtype ModuleName = ModuleName [T.Text] deriving (Eq)
@@ -76,11 +68,17 @@ instance Show ModuleName where
 instance Pretty ModuleName where
         pretty (ModuleName modn) = concatWith (surround dot) (map pretty modn)
 
+mainModname :: ModuleName
+mainModname = ModuleName [T.pack "Main"]
+
 mod2conName :: ModuleName -> Name
 mod2conName (ModuleName modn) = Name ConName (':' `T.cons` T.intercalate (T.pack ".") modn)
 
 mod2tyconName :: ModuleName -> Name
 mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)
+
+modn2name :: ModuleName -> Name
+modn2name (ModuleName modn) = Name ModName (T.intercalate (T.pack ".") modn)
 
 mod2path :: ModuleName -> FilePath
 mod2path (ModuleName modn) = intercalate "/" (map T.unpack modn) ++ ".plt"

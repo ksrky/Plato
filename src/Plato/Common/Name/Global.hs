@@ -14,6 +14,7 @@ data GlbName = GlbName
         { g_sort :: NameSort
         , g_name :: Name
         , g_loc :: Span
+        , g_occ :: Occurrence
         }
 
 instance Eq GlbName where
@@ -29,6 +30,11 @@ instance Pretty GlbName where
         pretty n = pretty (g_name n)
 
 ----------------------------------------------------------------
+-- Occurance
+----------------------------------------------------------------
+data Occurrence = OccLeft | OccRight deriving (Eq, Show)
+
+----------------------------------------------------------------
 -- NameSort
 ----------------------------------------------------------------
 data NameSort
@@ -37,29 +43,27 @@ data NameSort
         | SystemDef
         deriving (Eq, Show)
 
-exportedName :: ModuleName -> Located Name -> GlbName
-exportedName modn (L sp n) = GlbName{g_sort = ExportedDef modn, g_name = n, g_loc = sp}
+exportedName :: ModuleName -> Occurrence -> Located Name -> GlbName
+exportedName modn occ (L sp n) = GlbName{g_sort = ExportedDef modn, g_name = n, g_loc = sp, g_occ = occ}
 
-localName :: Located Name -> GlbName
-localName (L sp n) = GlbName{g_sort = LocalDef, g_name = n, g_loc = sp}
+localName :: Occurrence -> Located Name -> GlbName
+localName occ (L sp n) = GlbName{g_sort = LocalDef, g_name = n, g_loc = sp, g_occ = occ}
 
-systemName :: Located Name -> GlbName
-systemName (L sp n) = GlbName{g_sort = SystemDef, g_name = n, g_loc = sp}
+systemName :: Occurrence -> Name -> GlbName
+systemName occ n = GlbName{g_sort = SystemDef, g_name = n, g_loc = NoSpan, g_occ = occ}
 
 newGlbName :: (T.Text -> Name) -> T.Text -> GlbName
-newGlbName f t = GlbName{g_sort = SystemDef, g_name = f t, g_loc = NoSpan}
+newGlbName f t = GlbName{g_sort = SystemDef, g_name = f t, g_loc = NoSpan, g_occ = OccLeft}
 
 ----------------------------------------------------------------
 -- Global Name Environment
 ----------------------------------------------------------------
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
-insertGlbNameEnv :: Maybe ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
-insertGlbNameEnv mb_modn n = case mb_modn of
-        Just modn -> M.insert (unLoc n) (exportedName modn n)
-        Nothing -> M.insert (unLoc n) (localName n)
+insertGlbNameEnv :: ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
+insertGlbNameEnv modn n = M.insert (unLoc n) (exportedName modn OccLeft n)
 
 lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> glbn
-        Nothing -> localName (L sp n)
+        Nothing -> localName OccLeft (L sp n)

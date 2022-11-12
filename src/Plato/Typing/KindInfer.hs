@@ -4,10 +4,10 @@
 module Plato.Typing.KindInfer where
 
 import Plato.Common.Error
-import Plato.Common.GlbName
+import Plato.Common.Name.Global
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
-import Plato.Typing.TcTypes (tyVarName)
+import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad
@@ -34,8 +34,6 @@ checkKindStar knenv sp ty = runKi knenv $ do
         return ty''
 
 -- | Kind environment
-type KnEnv = M.Map GlbName Kind
-
 emptyKnEnv :: KnEnv
 emptyKnEnv = M.empty
 
@@ -53,7 +51,7 @@ metaKvs = foldr go []
 -- | Kind environment
 data KiEnv = KiEnv
         { uniqs :: IORef Uniq
-        , var_env :: KnEnv
+        , ki_knenv :: KnEnv
         }
 
 -- | Inference Monad
@@ -84,7 +82,7 @@ instance MonadTrans Ki where
 runKi :: MonadIO m => KnEnv -> Ki m a -> m a
 runKi knenv (Ki ki) = do
         ref <- liftIO $ newIORef 0
-        let env = KiEnv{uniqs = ref, var_env = knenv}
+        let env = KiEnv{uniqs = ref, ki_knenv = knenv}
         ki env
 
 newKiRef :: MonadIO m => a -> Ki m (IORef a)
@@ -97,16 +95,16 @@ writeKiRef :: MonadIO m => IORef a -> a -> Ki m ()
 writeKiRef r v = lift (liftIO $ writeIORef r v)
 
 -- | Kind environment
-extendEnv :: GlbName -> Kind -> Ki m a -> Ki m a
+extendEnv :: LName -> Kind -> Ki m a -> Ki m a
 extendEnv x kn (Ki m) = Ki (m . extend)
     where
-        extend env = env{var_env = M.insert x kn (var_env env)}
+        extend env = env{ki_knenv = M.insert (localName x) kn (ki_knenv env)}
 
-extendEnvList :: [(GlbName, Kind)] -> Ki m a -> Ki m a
+extendEnvList :: [(LName, Kind)] -> Ki m a -> Ki m a
 extendEnvList binds tr = foldr (uncurry extendEnv) tr binds
 
 getEnv :: Monad m => Ki m KnEnv
-getEnv = Ki (return . var_env)
+getEnv = Ki (return . ki_knenv)
 
 lookupVar :: MonadThrow m => GlbName -> Ki m Kind
 lookupVar x = do
@@ -215,7 +213,7 @@ occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv
 infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
 infer t = case t of
         VarT tv -> do
-                kn <- lookupVar (tyVarName tv)
+                kn <- lookupVar (tyVarGlbName tv)
                 return (VarT tv, kn)
         ConT x -> do
                 kn <- lookupVar x
@@ -230,7 +228,7 @@ infer t = case t of
                 binds <- forM tvs $ \tv -> do
                         kv <- newKnVar
                         return (fst tv, kv)
-                (ty1', kn1) <- extendEnvList (map (first tyVarName) binds) (infer ty1)
+                (ty1', kn1) <- extendEnvList (map (first tyVarLName) binds) (infer ty1)
                 unify kn1 StarK
                 return (AllT (map (second Just) binds) ty1', StarK)
         AbsT x _ ty1 -> do
