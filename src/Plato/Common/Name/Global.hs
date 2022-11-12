@@ -4,6 +4,7 @@ import Plato.Common.Name
 import Plato.Common.SrcLoc
 
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Prettyprinter
 
 ----------------------------------------------------------------
@@ -42,6 +43,12 @@ exportedName modn (L sp n) = GlbName{g_sort = ExportedDef modn, g_name = n, g_lo
 localName :: Located Name -> GlbName
 localName (L sp n) = GlbName{g_sort = LocalDef, g_name = n, g_loc = sp}
 
+systemName :: Located Name -> GlbName
+systemName (L sp n) = GlbName{g_sort = SystemDef, g_name = n, g_loc = sp}
+
+newGlbName :: (T.Text -> Name) -> T.Text -> GlbName
+newGlbName f t = GlbName{g_sort = SystemDef, g_name = f t, g_loc = NoSpan}
+
 ----------------------------------------------------------------
 -- Global Name Environment
 ----------------------------------------------------------------
@@ -56,4 +63,3 @@ lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> glbn
         Nothing -> localName (L sp n)
-

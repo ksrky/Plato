@@ -1,6 +1,6 @@
 module Plato.Syntax.Core where
 
-import Plato.Common.GlbName
+import Plato.Common.Name
 import Plato.Common.SrcLoc
 
 ----------------------------------------------------------------
@@ -9,28 +9,28 @@ import Plato.Common.SrcLoc
 data Term
         = TmVar Int Int
         | TmApp Term Term
-        | TmAbs GlbName Ty Term
+        | TmAbs Name Ty Term
         | TmTApp Term Ty
-        | TmTAbs GlbName Term
-        | TmLet GlbName Term Term
+        | TmTAbs Name Term
+        | TmLet Name Term Term
         | TmFix Term
         | TmFold Ty
         | TmUnfold Ty
-        | TmProj Term GlbName
-        | TmRecord [(GlbName, Term)]
-        | TmTag GlbName [Term] Ty
-        | TmCase Term [(GlbName, (Int, Term))]
+        | TmProj Term Name
+        | TmRecord [(Name, Term)]
+        | TmTag Name [Term] Ty
+        | TmCase Term [(Name, (Int, Term))]
         deriving (Eq, Show)
 
 data Ty
         = TyVar Int Int
         | TyArr Ty Ty
-        | TyAll GlbName Kind Ty
-        | TyAbs GlbName Kind Ty
+        | TyAll Name Kind Ty
+        | TyAbs Name Kind Ty
         | TyApp Ty Ty
-        | TyRec GlbName Kind Ty
-        | TyRecord [(GlbName, Ty)]
-        | TyVariant [(GlbName, [Ty])]
+        | TyRec Name Kind Ty
+        | TyRecord [(Name, Ty)]
+        | TyVariant [(Name, [Ty])]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
@@ -50,7 +50,7 @@ data Binding
 --         deriving (Eq, Show)
 
 data Module = Module
-        { moduleBind :: [(GlbName, Binding)]
+        { moduleBind :: [(Name, Binding)]
         , moduleEval :: [Located Term]
         }
         deriving (Eq, Show)

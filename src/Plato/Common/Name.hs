@@ -59,9 +59,6 @@ str2tyconName = tyconName . T.pack
 ----------------------------------------------------------------
 type NameEnv = M.Map Name
 
-lookup :: Name -> NameEnv a -> Maybe a
-lookup = M.lookup
-
 member :: Name -> NameEnv a -> Bool
 member = M.member
 

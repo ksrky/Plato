@@ -18,14 +18,14 @@ import Data.IORef
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
-inferKind :: (MonadThrow m, MonadIO m) => KnTable -> Type -> m (Type, Kind)
+inferKind :: (MonadThrow m, MonadIO m) => KnEnv -> Type -> m (Type, Kind)
 inferKind knenv ty = runKi knenv $ do
         (ty', kn) <- infer ty
         ty'' <- zonkType ty'
         kn' <- zonkKind kn
         return (ty'', kn')
 
-checkKindStar :: (MonadThrow m, MonadIO m) => KnTable -> Span -> Type -> m Type
+checkKindStar :: (MonadThrow m, MonadIO m) => KnEnv -> Span -> Type -> m Type
 checkKindStar knenv sp ty = runKi knenv $ do
         (ty', kn) <- infer ty
         ty'' <- zonkType ty'
@@ -33,11 +33,11 @@ checkKindStar knenv sp ty = runKi knenv $ do
         when (kn' /= StarK) $ lift $ throwLocErr sp $ sep [pretty ty, " doesn't have Kind *"]
         return ty''
 
--- | kind Table
-type KnTable = M.Map GlbName Kind
+-- | Kind environment
+type KnEnv = M.Map GlbName Kind
 
-emptyKnTable :: KnTable
-emptyKnTable = M.empty
+emptyKnEnv :: KnEnv
+emptyKnEnv = M.empty
 
 -- | Kinds
 metaKvs :: [Kind] -> [MetaKv]
@@ -53,7 +53,7 @@ metaKvs = foldr go []
 -- | Kind environment
 data KiEnv = KiEnv
         { uniqs :: IORef Uniq
-        , var_env :: KnTable
+        , var_env :: KnEnv
         }
 
 -- | Inference Monad
@@ -81,7 +81,7 @@ instance Monad m => Monad (Ki m) where
 instance MonadTrans Ki where
         lift m = Ki (const m)
 
-runKi :: MonadIO m => KnTable -> Ki m a -> m a
+runKi :: MonadIO m => KnEnv -> Ki m a -> m a
 runKi knenv (Ki ki) = do
         ref <- liftIO $ newIORef 0
         let env = KiEnv{uniqs = ref, var_env = knenv}
@@ -105,7 +105,7 @@ extendEnv x kn (Ki m) = Ki (m . extend)
 extendEnvList :: [(GlbName, Kind)] -> Ki m a -> Ki m a
 extendEnvList binds tr = foldr (uncurry extendEnv) tr binds
 
-getEnv :: Monad m => Ki m KnTable
+getEnv :: Monad m => Ki m KnEnv
 getEnv = Ki (return . var_env)
 
 lookupVar :: MonadThrow m => GlbName -> Ki m Kind

@@ -2,8 +2,8 @@
 
 module Plato.Syntax.Typing where
 
-import Plato.Common.GlbName
 import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Common.SrcLoc
 
 import Data.IORef
@@ -13,19 +13,20 @@ import Prettyprinter
 ----------------------------------------------------------------
 -- Syntax
 ----------------------------------------------------------------
-data TypName = TypName
-        { typ_loc :: Span
-        , typ_name :: Name
-        , typ_sort :: NameSort
-        }
+type LName = Located Name
+type LExpr = Located Expr
+type LPat = Located Pat
+type LType = Located Type
+type LDecl = Located Decl
+type LArg = LName
 
 -- | Expressions
 data Expr
         = VarE GlbName
         | AppE Expr Expr
-        | AbsE GlbName (Maybe Type) Expr
+        | AbsE LArg (Maybe Type) Expr
         | TAppE Expr [Type]
-        | TAbsE [GlbName] Expr
+        | TAbsE [LArg] Expr
         | LetE [FuncD] Expr
         | ProjE Expr GlbName
         | RecordE [(GlbName, Expr)]
@@ -37,8 +38,8 @@ data Expr
 
 -- | Patterns
 data Pat
-        = VarP GlbName
-        | ConP GlbName [Pat]
+        = ConP GlbName [Pat]
+        | VarP LArg
         | WildP
         deriving (Eq, Show)
 
@@ -53,17 +54,17 @@ data Type
         | ConT GlbName
         | ArrT Type Type
         | AllT [(TyVar, Maybe Kind)] Rho
-        | AbsT GlbName (Maybe Kind) Type
+        | AbsT LArg (Maybe Kind) Type
         | AppT Type Type
-        | RecT GlbName Kind Type
-        | RecordT [(GlbName, Type)]
-        | SumT [(GlbName, [Type])]
+        | RecT LArg Kind Type
+        | RecordT [(LName, Type)]
+        | SumT [(LName, [Type])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
 data TyVar
-        = BoundTv GlbName
-        | SkolemTv GlbName Uniq
+        = BoundTv LName
+        | SkolemTv LName Uniq
         deriving (Show)
 
 data MetaTv = Meta Uniq TyRef
@@ -84,11 +85,11 @@ data MetaKv = MetaKv Uniq KnRef
 type KnRef = IORef (Maybe Kind)
 
 -- | Function decl
-data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
+data FuncD = FuncD LName Expr Type deriving (Eq, Show)
 
 data Decl
-        = TypeD GlbName Type
-        | VarD GlbName Type
+        = TypeD LName Type
+        | VarD LName Type
         | ConD FuncD
         deriving (Eq, Show)
 

@@ -3,8 +3,8 @@
 module Plato.Core.Context where
 
 import Plato.Common.Error
-import Plato.Common.GlbName
 import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Common.SrcLoc
 import Plato.Core.Subst
 import Plato.Syntax.Core
@@ -15,27 +15,27 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import Prettyprinter
 
-type Context = V.Vector (GlbName, Binding)
+type Context = V.Vector (Name, Binding)
 
 emptyContext :: Context
 emptyContext = V.empty
 
-lookupContext :: GlbName -> Context -> Maybe Binding
+lookupContext :: Name -> Context -> Maybe Binding
 lookupContext k ctx = do
         ((x, y), tl) <- V.uncons ctx
         if k == x then Just y else lookupContext k tl
 
-addBinding :: MonadThrow m => GlbName -> Binding -> Context -> m Context
+addBinding :: MonadThrow m => Located Name -> Binding -> Context -> m Context
 addBinding x bind ctx =
         {-case lookupContext x ctx of
         Just _ | g_sort x /= System -> throwLocErr (g_loc x) $ "Conflicting definition of" <+> pretty x
-        _ -> -} return $ V.cons (x, bind) ctx
+        _ -> -} return $ V.cons (unLoc x, bind) ctx
 
-addName :: MonadThrow m => GlbName -> Context -> m Context
+addName :: MonadThrow m => Located Name -> Context -> m Context
 addName x = addBinding x NameBind
 
-addNameTable :: MonadThrow m => [GlbName] -> Context -> m Context
-addNameTable = flip $ foldM (flip addName)
+addNameList :: MonadThrow m => [Located Name] -> Context -> m Context
+addNameList = flip $ foldM (flip addName)
 
 addFreshName :: GlbName -> Context -> Context
 addFreshName x ctx = case lookupContext x ctx of

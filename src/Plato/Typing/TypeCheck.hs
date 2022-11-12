@@ -6,8 +6,8 @@
 module Plato.Typing.TypeCheck where
 
 import Plato.Common.Error
-import Plato.Common.GlbName
 import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 import Plato.Typing.TcMonad
@@ -47,17 +47,17 @@ data Expected a = Infer (IORef a) | Check a
 --tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
-checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(GlbName, Sigma)]
+checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(LName, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
-inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(GlbName, Sigma)], Sigma)
+inferPat :: (MonadIO m, MonadThrow m) => Pat -> Tc m ([(LName, Sigma)], Sigma)
 inferPat pat = do
         ref <- newTcRef (error "inferRho: empty result")
         binds <- tcPat pat (Infer ref)
         tc <- readTcRef ref
         return (binds, tc)
 
-tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(GlbName, Sigma)]
+tcPat :: (MonadIO m, MonadThrow m) => Pat -> Expected Sigma -> Tc m [(LName, Sigma)]
 tcPat WildP _ = return []
 tcPat (VarP v) (Infer ref) = do
         ty <- newTyVar
@@ -175,8 +175,8 @@ checkSigma expr sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-        unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Type not polymorphic enough" --tmp: location
-        return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarName skol_tvs) expr'
+        unless (null bad_tvs) $ lift $ throwUnexpectedErr "Type not polymorphic enough"
+        return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarLName skol_tvs) expr'
 
 ------------------------------------------
 --        Subsumption checking          --
@@ -188,10 +188,10 @@ subsCheck sigma1 sigma2 = do
         co2 <- subsCheckRho sigma1 rho2
         esc_tvs <- getFreeTyVars [sigma1, sigma2]
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-        unless (null bad_tvs) $ lift $ throwLocErr NoSpan "Subsumption check failed" --tmp: location
+        unless (null bad_tvs) $ lift $ throwUnexpectedErr "Subsumption check failed"
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (TAbsE (map tyVarName skol_tvs) (co2 e))
+                else return $ \e -> co1 (TAbsE (map tyVarLName skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckRho sigma1@AllT{} rho2 = do
@@ -215,9 +215,9 @@ subsCheckFun a1 r1 a2 r2 = do
         return
                 ( \f ->
                         AbsE
-                                (newName $ str2varName "x")
+                                (noLoc $ varName "x")
                                 (Just a2)
-                                (co_res $ AppE f (co_arg (VarE $ newName $ str2varName "x")))
+                                (co_res $ AppE f (co_arg (VarE $ newGlbName varName "x")))
                 )
 
 instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Tc m (Expr -> Expr)

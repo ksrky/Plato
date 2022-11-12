@@ -4,8 +4,9 @@
 module Plato.Typing.TcMonad where
 
 import Plato.Common.Error
-import Plato.Common.GlbName
 import Plato.Common.Name
+import Plato.Common.Name.Global
+import Plato.Common.SrcLoc
 import Plato.Syntax.Typing
 import Plato.Typing.TcTypes
 
@@ -68,12 +69,12 @@ writeTcRef r v = lift (liftIO $ writeIORef r v)
 ----------------------------------------------------------------
 -- Type Environment
 ----------------------------------------------------------------
-extendVarEnv :: GlbName -> Sigma -> Tc m a -> Tc m a
+extendVarEnv :: Located Name -> Sigma -> Tc m a -> Tc m a
 extendVarEnv var ty (Tc m) = Tc (m . extend)
     where
-        extend env = env{var_env = M.insert var ty (var_env env)}
+        extend env = env{var_env = M.insert (localName var) ty (var_env env)}
 
-extendVarEnvList :: [(GlbName, Sigma)] -> Tc m a -> Tc m a
+extendVarEnvList :: [(Located Name, Sigma)] -> Tc m a -> Tc m a
 extendVarEnvList binds tc = foldr (uncurry extendVarEnv) tc binds
 
 getEnv :: Monad m => Tc m (M.Map GlbName Sigma)
@@ -99,7 +100,7 @@ newMetaTyVar = do
         return (Meta uniq tref)
 
 newSkolemTyVar :: MonadIO m => TyVar -> Tc m TyVar
-newSkolemTyVar tv = SkolemTv (tyVarName tv) <$> newUnique
+newSkolemTyVar tv = SkolemTv (tyVarLName tv) <$> newUnique
 
 readTv :: MonadIO m => MetaTv -> Tc m (Maybe Tau)
 readTv (Meta _ ref) = readTcRef ref
@@ -132,19 +133,19 @@ skolemise (AllT tvs ty) = do
         (coercion, sks2, ty') <- skolemise (substTy (map fst tvs) (map VarT sks1) ty)
         let coercion' = \e ->
                 TAbsE
-                        (map (tyVarName . fst) tvs)
+                        (map (tyVarLName . fst) tvs)
                         (coercion $ TAppE e (map (VarT . fst) tvs))
         return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
         (coercion, sks, res_ty') <- skolemise res_ty
         let coercion' = \e ->
                 AbsE
-                        (newName $ str2varName "x")
+                        (noLoc $ varName "x")
                         (Just arg_ty)
                         ( coercion $
                                 TAbsE
-                                        (map tyVarName sks)
-                                        (AppE (TAppE e (map VarT sks)) (VarE $ newName $ str2varName "x"))
+                                        (map tyVarLName sks)
+                                        (AppE (TAppE e (map VarT sks)) (VarE $ newGlbName varName "x"))
                         )
         return (if null sks then coercion else coercion', sks, ArrT arg_ty res_ty')
 skolemise ty = return (id, [], ty)
@@ -164,8 +165,8 @@ quantify tvs ty = do
 
 allBinders :: [TyVar]
 allBinders =
-        [BoundTv $ newName $ str2tyvarName [x] | x <- ['a' .. 'z']]
-        ++ [BoundTv (newName $ str2tyvarName (x : show i)) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
+        [BoundTv $ noLoc $ str2tyvarName [x] | x <- ['a' .. 'z']]
+        ++ [BoundTv $ noLoc $ str2tyvarName (x : show i) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
 
 getEnvTypes :: Monad m => Tc m [Type]
 getEnvTypes = M.elems <$> getEnv

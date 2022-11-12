@@ -3,9 +3,6 @@
 
 module Plato.Types.Fixity where
 
-import Plato.Common.Name
-import Plato.Common.SrcLoc
-
 import Data.Map.Strict as M
 import Prettyprinter
 
@@ -36,8 +33,3 @@ data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 -- FixityEnv
 ----------------------------------------------------------------
 type FixityEnv a = M.Map a Fixity
-
-data Op = Op (Located Name) Int FixDir
-        deriving (Eq, Show)
-
-type OpTable = M.Map Name Op

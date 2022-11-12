@@ -162,7 +162,7 @@ btype       :: { LType RdrName }
 
 atype       :: { LType RdrName }
             : '(' type ')'                          { $2 }
-            | tycon                                 { cL $1 (ConT $1) }
+            | qtycon                                { cL $1 (ConT $1) }
             | tyvar                                 { cL $1 (VarT $1) }
 
 constrs     :: { [(LName, [LType RdrName])] }
@@ -194,8 +194,8 @@ fexpr       :: { LExpr RdrName }
 aexpr       :: { LExpr RdrName }
             : '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
             | '(' lexpr qop ')'                     { L (combineSpans $1 $4) (AppE (cL $3 (VarE $3)) $2) }
-            | var                                   { cL $1 (VarE $1) }
-            | con                                   { cL $1 (VarE $1) }
+            | qvar                                  { cL $1 (VarE $1) }
+            | qcon                                  { cL $1 (VarE $1) }
 
 lvars       :: { [LName] }
             : lvar lvars                            { $1 : $2 }

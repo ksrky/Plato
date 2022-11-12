@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
 module Plato.Parsing.Rename where
 
@@ -56,7 +55,7 @@ instance Rename Pat where
         rename WildP = return WildP
 
 instance Rename Type where
-        rename (VarT var) = VarT <$> rename var
+        rename (VarT var) = return $ VarT var
         rename (ConT con) = ConT <$> rename con
         rename (AppT funty argty) = AppT <$> rename `traverse` funty <*> rename `traverse` argty
         rename (ArrT argty resty) = ArrT <$> rename `traverse` argty <*> rename `traverse` resty

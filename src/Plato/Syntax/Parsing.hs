@@ -37,7 +37,7 @@ data Pat a
         deriving (Eq, Show)
 
 data Type a
-        = VarT (Located a)
+        = VarT LArg
         | ConT (Located a)
         | AppT (LType a) (LType a)
         | ArrT (LType a) (LType a)
