@@ -27,16 +27,21 @@ library
   exposed-modules:
       Main
       Plato.Parsing.Action
+      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
       Plato.Parsing.Parser
+      Plato.Parsing.Rename
       Plato.Parsing.Token
       Plato.Syntax.Parsing
+      Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
       Plato.Types.Location
+      Plato.Types.Monad
       Plato.Types.Name
+      Plato.Types.Name.Global
       Plato.Types.Name.Reader
   other-modules:
       Paths_Plato
@@ -72,16 +77,21 @@ executable plato
   main-is: Main.hs
   other-modules:
       Plato.Parsing.Action
+      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
       Plato.Parsing.Parser
+      Plato.Parsing.Rename
       Plato.Parsing.Token
       Plato.Syntax.Parsing
+      Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
       Plato.Types.Location
+      Plato.Types.Monad
       Plato.Types.Name
+      Plato.Types.Name.Global
       Plato.Types.Name.Reader
       Paths_Plato
   hs-source-dirs:

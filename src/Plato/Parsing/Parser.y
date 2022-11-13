@@ -287,10 +287,10 @@ parseError (L sp tok) = lift $ throwLocErr sp $ sep ["parse error at", pretty to
 setFixities :: MonadThrow m => [LName] -> Located Int -> FixDir -> ParserT m (Decl RdrName)
 setFixities ops (L sp prec) fix = do
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwLocErr sp $ hsep ["invalid precedence", pretty prec]
-    ops' <- forM ops $ \lop@(L _ op) -> do
+    ops' <- forM ops $ \op -> do
         fixenv <- getFixityEnv
         setFixityEnv $ M.insert op (Fixity prec fix) fixenv
-        return lop
+        return op
     return $ FixityD fix prec ops'
 
 splitOnDot :: T.Text -> [T.Text]

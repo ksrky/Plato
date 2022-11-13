@@ -56,9 +56,9 @@ data TopDecl a
         deriving (Eq, Show)
 
 data Program a = Program
-        { moduleDecl :: Maybe (Located ModuleName)
-        , importDecls :: [Located ModuleName]
-        , topDecls :: [LTopDecl a]
+        { ps_moduleDecl :: Maybe (Located ModuleName)
+        , ps_importDecls :: [Located ModuleName]
+        , ps_topDecls :: [LTopDecl a]
         }
         deriving (Show)
 
