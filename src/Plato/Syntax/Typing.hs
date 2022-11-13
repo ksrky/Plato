@@ -29,7 +29,7 @@ data Expr
         | TAbsE [LArg] Expr
         | LetE [FuncD] Expr
         | ProjE Expr GlbName
-        | RecordE [(LName, Expr)]
+        | RecordE [(GlbName, Expr)]
         | CaseE Expr (Maybe Type) [(Pat, Expr)]
         | TagE GlbName [Expr] Type
         | FoldE Type
@@ -57,7 +57,7 @@ data Type
         | AbsT LArg (Maybe Kind) Type
         | AppT Type Type
         | RecT LArg Kind Type
-        | RecordT [(LName, Type)]
+        | RecordT [(GlbName, Type)]
         | SumT [(LName, [Type])]
         | MetaT MetaTv
         deriving (Eq, Show)
@@ -85,11 +85,11 @@ data MetaKv = MetaKv Uniq KnRef
 type KnRef = IORef (Maybe Kind)
 
 -- | Function decl
-data FuncD = FuncD GlbName Expr Type deriving (Eq, Show)
+data FuncD = FuncD LName Expr Type deriving (Eq, Show)
 
 data Decl
-        = TypeD GlbName Type
-        | VarD GlbName Type
+        = TypeD LName Type
+        | VarD LName Type
         | ConD FuncD
         deriving (Eq, Show)
 

@@ -72,7 +72,7 @@ writeTcRef r v = lift (liftIO $ writeIORef r v)
 extendVarEnv :: Located Name -> Sigma -> Tc m a -> Tc m a
 extendVarEnv var ty (Tc m) = Tc (m . extend)
     where
-        extend env = env{var_env = M.insert (localName var) ty (var_env env)}
+        extend env = env{var_env = M.insert (internalName var) ty (var_env env)}
 
 extendVarEnvList :: [(Located Name, Sigma)] -> Tc m a -> Tc m a
 extendVarEnvList binds tc = foldr (uncurry extendVarEnv) tc binds

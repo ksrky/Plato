@@ -1,5 +1,9 @@
+{-# LANGUAGE StrictData #-}
+{-# OPTIONS_GHC -Wno-partial-fields #-}
+
 module Plato.Common.Name.Global where
 
+import Plato.Common.Error
 import Plato.Common.Name
 import Plato.Common.SrcLoc
 
@@ -10,12 +14,7 @@ import Prettyprinter
 ----------------------------------------------------------------
 -- Global Name
 ----------------------------------------------------------------
-data GlbName = GlbName
-        { g_sort :: NameSort
-        , g_name :: Name
-        , g_loc :: Span
-        , g_occ :: Occurrence
-        }
+data GlbName = GlbName {g_sort :: NameSort, g_name :: Name, g_loc :: Span}
 
 instance Eq GlbName where
         n1 == n2 = g_sort n1 == g_sort n2 && g_name n1 == g_name n2
@@ -30,30 +29,30 @@ instance Pretty GlbName where
         pretty n = pretty (g_name n)
 
 ----------------------------------------------------------------
--- Occurance
-----------------------------------------------------------------
-data Occurrence = OccLeft | OccRight deriving (Eq, Show)
-
-----------------------------------------------------------------
 -- NameSort
 ----------------------------------------------------------------
 data NameSort
-        = ExportedDef ModuleName
-        | LocalDef
-        | SystemDef
+        = External ModuleName
+        | Internal
+        | System
         deriving (Eq, Show)
 
-exportedName :: ModuleName -> Occurrence -> Located Name -> GlbName
-exportedName modn occ (L sp n) = GlbName{g_sort = ExportedDef modn, g_name = n, g_loc = sp, g_occ = occ}
+externalName :: ModuleName -> Located Name -> GlbName
+externalName modn (L sp n) = GlbName{g_sort = External modn, g_name = n, g_loc = sp}
 
-localName :: Occurrence -> Located Name -> GlbName
-localName occ (L sp n) = GlbName{g_sort = LocalDef, g_name = n, g_loc = sp, g_occ = occ}
+internalName :: Located Name -> GlbName
+internalName (L sp n) = GlbName{g_sort = Internal, g_name = n, g_loc = sp}
 
-systemName :: Occurrence -> Name -> GlbName
-systemName occ n = GlbName{g_sort = SystemDef, g_name = n, g_loc = NoSpan, g_occ = occ}
+systemName :: Name -> GlbName
+systemName n = GlbName{g_sort = System, g_name = n, g_loc = NoSpan}
 
 newGlbName :: (T.Text -> Name) -> T.Text -> GlbName
-newGlbName f t = GlbName{g_sort = SystemDef, g_name = f t, g_loc = NoSpan, g_occ = OccLeft}
+newGlbName f t = GlbName{g_sort = System, g_name = f t, g_loc = NoSpan}
+
+int2ext :: ModuleName -> GlbName -> GlbName
+int2ext _ glbn@(GlbName External{} _ _) = glbn
+int2ext modn glbn@(GlbName Internal _ _) = glbn{g_sort = External modn}
+int2ext _ (GlbName System _ _) = unreachable "Local name shouldn't be appeared in top level"
 
 ----------------------------------------------------------------
 -- Global Name Environment
@@ -61,9 +60,9 @@ newGlbName f t = GlbName{g_sort = SystemDef, g_name = f t, g_loc = NoSpan, g_occ
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
 insertGlbNameEnv :: ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
-insertGlbNameEnv modn n = M.insert (unLoc n) (exportedName modn OccLeft n)
+insertGlbNameEnv modn n = M.insert (unLoc n) (externalName modn n)
 
 lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> glbn
-        Nothing -> localName OccLeft (L sp n)
+        Nothing -> internalName (L sp n)

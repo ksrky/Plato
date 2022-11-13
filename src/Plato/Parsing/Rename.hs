@@ -30,7 +30,7 @@ instance Rename Located where
                 unless (n `M.member` env) $
                         throwLocErr sp $
                                 hsep ["No module named", squotes $ pretty n, "is imported"]
-                return $ L sp $ exportedName modn OccRight (L sp n)
+                return $ L sp $ externalName modn (L sp n)
 
 instance Rename Expr where
         rename (VarE var) = VarE <$> rename var
