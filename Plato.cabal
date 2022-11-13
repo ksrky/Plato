@@ -25,45 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Iface.Constant
-      Iface.Options
       Main
-      Plato.Common.Error
-      Plato.Common.GlbName
-      Plato.Common.Name
-      Plato.Common.Name.Global
-      Plato.Common.Name.Reader
-      Plato.Common.SrcLoc
-      Plato.Core.Check
-      Plato.Core.Context
-      Plato.Core.Eval
-      Plato.Core.Pretty
-      Plato.Core.Subst
-      Plato.Main
-      Plato.Main.Monad
-      Plato.Parsing.Action
-      Plato.Parsing.FixResol
-      Plato.Parsing.Layout
-      Plato.Parsing.Lexer
-      Plato.Parsing.Monad
-      Plato.Parsing.Parser
-      Plato.Parsing.Rename
-      Plato.Parsing.Token
-      Plato.Syntax.Core
-      Plato.Syntax.Parsing
-      Plato.Syntax.Typing
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
-      Plato.Types.Fixity
-      Plato.Typing.Bundle
-      Plato.Typing.KindInfer
-      Plato.Typing.TcMonad
-      Plato.Typing.TcTypes
-      Plato.Typing.TypeCheck
-      Plato.Unit.Module
-      Plato.Unit.Monad
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -95,44 +57,6 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Iface.Constant
-      Iface.Options
-      Plato.Common.Error
-      Plato.Common.GlbName
-      Plato.Common.Name
-      Plato.Common.Name.Global
-      Plato.Common.Name.Reader
-      Plato.Common.SrcLoc
-      Plato.Core.Check
-      Plato.Core.Context
-      Plato.Core.Eval
-      Plato.Core.Pretty
-      Plato.Core.Subst
-      Plato.Main
-      Plato.Main.Monad
-      Plato.Parsing.Action
-      Plato.Parsing.FixResol
-      Plato.Parsing.Layout
-      Plato.Parsing.Lexer
-      Plato.Parsing.Monad
-      Plato.Parsing.Parser
-      Plato.Parsing.Rename
-      Plato.Parsing.Token
-      Plato.Syntax.Core
-      Plato.Syntax.Parsing
-      Plato.Syntax.Typing
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
-      Plato.Types.Fixity
-      Plato.Typing.Bundle
-      Plato.Typing.KindInfer
-      Plato.Typing.TcMonad
-      Plato.Typing.TcTypes
-      Plato.Typing.TypeCheck
-      Plato.Unit.Module
-      Plato.Unit.Monad
       Paths_Plato
   hs-source-dirs:
       src
@@ -165,27 +89,6 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.Test.Core.Eval
-      Plato.Test.Core.KindInfer
-      Plato.Test.Core.Pretty
-      Plato.Test.Core.PrettyTerm
-      Plato.Test.Core.TermTransl
-      Plato.Test.Core.Utils
-      Plato.Test.CoreSpec
-      Plato.Test.Parsing.FixResol
-      Plato.Test.Parsing.Pretty
-      Plato.Test.ParsingSpec
-      Plato.Test.Typing.DeclTransl
-      Plato.Test.Typing.ExprTransl
-      Plato.Test.Typing.Pretty
-      Plato.Test.Typing.Rename
-      Plato.Test.Typing.TopDeclPretty
-      Plato.Test.Typing.TopDeclTransl
-      Plato.Test.Typing.Transl
-      Plato.Test.Typing.TypeCheck
-      Plato.Test.Typing.Utils
-      Plato.Test.TypingSpec
-      Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:
       test
