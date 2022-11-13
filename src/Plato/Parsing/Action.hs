@@ -3,6 +3,7 @@ module Plato.Parsing.Action where
 import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
+
 import Plato.Types.Error
 import Plato.Types.Location
 

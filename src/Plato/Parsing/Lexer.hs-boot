@@ -1,8 +1,8 @@
 module Plato.Parsing.Lexer where
 
-import Plato.Types.Location
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
+import Plato.Types.Location
 
 code :: Int
 layout :: Int

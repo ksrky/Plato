@@ -30,7 +30,9 @@ library
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Parsing
       Plato.Types.Error
       Plato.Types.Fixity
       Plato.Types.Location
@@ -73,7 +75,9 @@ executable plato
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Parsing
       Plato.Types.Error
       Plato.Types.Fixity
       Plato.Types.Location

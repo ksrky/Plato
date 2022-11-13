@@ -12,7 +12,7 @@ import Plato.Parsing.Token
 import Plato.Types.Error
 import Plato.Types.Location
 
-import Control.Monad
+import Control.Monad (when)
 import Control.Monad.State (lift)
 }
 
