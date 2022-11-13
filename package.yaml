@@ -52,6 +52,9 @@ ghc-options:
   - -Wredundant-constraints
   - -Wno-name-shadowing
 
+default-extensions:
+  - OverloadedStrings
+
 library:
   source-dirs: src
 
