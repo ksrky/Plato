@@ -48,3 +48,6 @@ runPlato = runRWST
 
 evalPlato :: Monad m => Plato m a -> PlatoInfo -> PlatoState -> m (a, PlatoStore)
 evalPlato = evalRWST
+
+returnPlato :: Monad m => Plato m a -> PlatoInfo -> PlatoState -> m a
+returnPlato x i s = fst <$> evalRWST x i s

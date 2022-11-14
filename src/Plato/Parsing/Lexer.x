@@ -44,6 +44,9 @@ $symbol = $common
 @decimal = $digit+
 
 tokens :-
+-- start code: code = 1
+--             comment = 2
+--             layout = 3
 
 <0> $nl+                        ;
 <0> $white_nonl+                { spaces }

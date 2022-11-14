@@ -111,6 +111,9 @@ parse file_name inp p =
                         , parser_ust = initUserState
                         }
 
+parseLine :: T.Text -> ParserT m a -> m (a, PsState)
+parseLine inp p = parse "<interactive>" inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
+
 startPos :: PsPosn
 startPos = PsPosn 0 1 1
 

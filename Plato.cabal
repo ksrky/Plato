@@ -132,6 +132,7 @@ test-suite Plato-test
       Plato.Test.Parsing.FixResol
       Plato.Test.Parsing.Utils
       Plato.Test.ParsingSpec
+      Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:
       test
