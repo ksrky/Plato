@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Main
+      Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -76,6 +77,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -127,6 +129,9 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Plato.Test.Parsing.FixResol
+      Plato.Test.Parsing.Utils
+      Plato.Test.ParsingSpec
       Paths_Plato
   hs-source-dirs:
       test

@@ -3,7 +3,6 @@
 module Plato.Parsing.Monad where
 
 import Plato.Types.Fixity
-import Plato.Types.Location
 import Plato.Types.Name
 
 import Control.Exception.Safe
@@ -148,7 +147,7 @@ setStartCode scd = modify $ \s -> s{parser_scd = scd}
 ----------------------------------------------------------------
 data PsUserState = PsUserState
         { ust_commentDepth :: Int
-        , ust_fixityEnv :: FixityEnv (Located Name)
+        , ust_fixityEnv :: FixityEnv Name
         , ust_indentLevels :: [Int]
         }
 
@@ -174,10 +173,10 @@ setCommentDepth cd = do
         ust <- getUserState
         setUserState ust{ust_commentDepth = cd}
 
-getFixityEnv :: Monad m => ParserT m (FixityEnv (Located Name))
+getFixityEnv :: Monad m => ParserT m (FixityEnv Name)
 getFixityEnv = ust_fixityEnv <$> getUserState
 
-setFixityEnv :: Monad m => FixityEnv (Located Name) -> ParserT m ()
+setFixityEnv :: Monad m => FixityEnv Name -> ParserT m ()
 setFixityEnv fixenv = do
         ust <- getUserState
         setUserState ust{ust_fixityEnv = fixenv}

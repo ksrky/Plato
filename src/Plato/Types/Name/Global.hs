@@ -29,6 +29,7 @@ instance Pretty GlbName where
 data NameSort
         = External ModuleName
         | Internal
+        | Local
         deriving (Eq, Show)
 
 externalName :: ModuleName -> Located Name -> GlbName
@@ -37,15 +38,18 @@ externalName modn (L sp n) = GlbName{g_sort = External modn, g_name = n, g_loc =
 internalName :: Located Name -> GlbName
 internalName (L sp n) = GlbName{g_sort = Internal, g_name = n, g_loc = sp}
 
+localName :: Located Name -> GlbName
+localName (L sp n) = GlbName{g_sort = Local, g_name = n, g_loc = sp}
+
 ----------------------------------------------------------------
 -- GlbNameEnv
 ----------------------------------------------------------------
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
-insertGlbNameEnv :: ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
-insertGlbNameEnv modn n = M.insert (unLoc n) (externalName modn n)
+insertGlbNameEnv :: Located Name -> GlbNameEnv -> GlbNameEnv
+insertGlbNameEnv n = M.insert (unLoc n) (internalName n)
 
 lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> glbn
-        Nothing -> internalName (L sp n)
+        Nothing -> localName (L sp n)

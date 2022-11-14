@@ -289,7 +289,7 @@ setFixities ops (L sp prec) fix = do
     unless (minPrec <= prec && prec <= maxPrec) $ lift $ throwLocErr sp $ hsep ["invalid precedence", pretty prec]
     ops' <- forM ops $ \op -> do
         fixenv <- getFixityEnv
-        setFixityEnv $ M.insert op (Fixity prec fix) fixenv
+        setFixityEnv $ M.insert (unLoc op) (Fixity prec fix) fixenv
         return op
     return $ FixityD fix prec ops'
 
