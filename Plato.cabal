@@ -26,6 +26,11 @@ source-repository head
 library
   exposed-modules:
       Main
+      Plato.Core.Check
+      Plato.Core.Context
+      Plato.Core.Eval
+      Plato.Core.Pretty
+      Plato.Core.Subst
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
@@ -35,6 +40,7 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Rename
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
@@ -84,6 +90,11 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Plato.Core.Check
+      Plato.Core.Context
+      Plato.Core.Eval
+      Plato.Core.Pretty
+      Plato.Core.Subst
       Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
@@ -93,6 +104,7 @@ executable plato
       Plato.Parsing.Parser
       Plato.Parsing.Rename
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
