@@ -37,6 +37,7 @@ library
       Plato.Parsing.Token
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
@@ -45,6 +46,8 @@ library
       Plato.Types.Name
       Plato.Types.Name.Global
       Plato.Types.Name.Reader
+      Plato.Typing.Bundle
+      Plato.Typing.KindInfer
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
@@ -92,6 +95,7 @@ executable plato
       Plato.Parsing.Token
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
@@ -100,6 +104,8 @@ executable plato
       Plato.Types.Name
       Plato.Types.Name.Global
       Plato.Types.Name.Reader
+      Plato.Typing.Bundle
+      Plato.Typing.KindInfer
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
@@ -141,6 +147,9 @@ test-suite Plato-test
       Plato.Test.Parsing.Pretty
       Plato.Test.Parsing.Utils
       Plato.Test.ParsingSpec
+      Plato.Test.Typing.ExprTransl
+      Plato.Test.Typing.Utils
+      Plato.Test.TypingSpec
       Plato.Test.Utils
       Paths_Plato
   hs-source-dirs:

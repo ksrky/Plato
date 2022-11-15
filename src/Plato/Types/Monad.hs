@@ -1,5 +1,6 @@
 module Plato.Types.Monad where
 
+import Plato.Syntax.Typing
 import Plato.Types.Fixity
 import Plato.Types.Name.Global
 
@@ -16,6 +17,7 @@ data PlatoStore = PStore {}
 data PlatoState = PState
         { plt_glbNameEnv :: GlbNameEnv
         , plt_fixityEnv :: FixityEnv GlbName
+        , plt_tyEnv :: TyEnv
         }
 
 initPInfo :: PlatoInfo
@@ -39,6 +41,7 @@ initPState =
         PState
                 { plt_glbNameEnv = M.empty
                 , plt_fixityEnv = M.empty
+                , plt_tyEnv = M.empty
                 }
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m
