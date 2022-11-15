@@ -21,10 +21,9 @@ import Data.List (subsequences, (\\))
 
 typeCheck :: (MonadIO m, MonadThrow m) => TyEnv -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
-        (AnnE body' _, ty') <- inferSigma (AnnE body ty)
+        body' <- checkSigma body ty
         body'' <- zonkExpr body'
-        ty'' <- zonkType ty'
-        return (FuncD var body'' ty'')
+        return (FuncD var body'' ty)
 
 typeInfer :: (MonadIO m, MonadThrow m) => TyEnv -> Expr -> m (Expr, Sigma)
 typeInfer env e = runTc env $ do
@@ -116,12 +115,10 @@ tcRho (AbsE var Nothing body) (Infer ref) = do
         writeTcRef ref (ArrT var_ty body_ty)
         return $ AbsE var (Just var_ty) body'
 tcRho (LetE decs body) exp_ty = do
-        let exenv = extendVarEnvList [(var, ty) | FuncD var _ ty <- decs]
-        (decs', binds) <- execWriterT $
-                forM decs $ \(FuncD var var_e ann_ty) -> do
-                        (AnnE var_e' _, var_ty) <- Writer.lift $ exenv $ inferSigma (AnnE var_e ann_ty)
-                        let d = FuncD var var_e' var_ty
-                        tell ([d], [(var, var_ty)])
+        let binds = [(var, ty) | FuncD var _ ty <- decs]
+        decs' <- forM decs $ \(FuncD var exp ann_ty) -> do
+                exp' <- extendVarEnvList binds $ checkSigma exp ann_ty
+                return $ FuncD var exp' ann_ty
         body' <- extendVarEnvList binds (tcRho body exp_ty)
         return $ LetE decs' body'
 tcRho (CaseE match _ alts) (Check exp_ty) = do
@@ -168,14 +165,14 @@ inferSigma e = do
                 else (expr,) <$> quantify forall_tvs exp_ty
 
 checkSigma :: (MonadIO m, MonadThrow m) => Expr -> Sigma -> Tc m Expr
-checkSigma expr sigma = do
+checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
-        expr' <- checkRho expr rho
+        exp' <- checkRho exp rho
         env_tys <- getEnvTypes
         esc_tvs <- getFreeTyVars (sigma : env_tys)
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
         unless (null bad_tvs) $ lift $ throwUnexpErr "Type not polymorphic enough"
-        return $ coercion $ if null skol_tvs then expr' else TAbsE (map tyVarLName skol_tvs) expr'
+        return $ coercion $ if null skol_tvs then exp' else TAbsE (map tyVarLName skol_tvs) exp'
 
 ------------------------------------------
 --        Subsumption checking          --

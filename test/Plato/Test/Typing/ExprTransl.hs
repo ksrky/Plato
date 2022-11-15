@@ -4,17 +4,16 @@
 module Plato.Test.Typing.ExprTransl where
 
 import Plato.Syntax.Typing
-
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
+import Plato.Types.Location
+import Plato.Types.Monad
 
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
-import Plato.Types.Location
 
 import Control.Exception.Safe
 import qualified Data.Text as T
-import Plato.Types.Monad
 import Test.Hspec
 
 testcases :: [(String, IO Expr -> Expectation)]
