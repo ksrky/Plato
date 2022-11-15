@@ -85,16 +85,16 @@ instance Rename TopDecl where
 
 renameTopDecls :: MonadThrow m => Program RdrName -> GlbNameEnv -> m (Program GlbName, GlbNameEnv)
 renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
-        names <- forM topds $ \(L sp tds) -> case tds of
-                DataD con _ _ -> return con
-                TypeD con _ _ -> return con
-                Decl (L _ (FuncTyD var _)) -> return var
-                _ -> throwLocErr sp ""
-        namesCheck names
+        names <- forM topds $ \(L _ tds) -> case tds of
+                DataD con _ _ -> return [con]
+                TypeD con _ _ -> return [con]
+                Decl (L _ (FuncTyD var _)) -> return [var]
+                _ -> return []
+        namesCheck (concat names)
         let modn = case mb_modn of
                 Just modn -> modn
                 Nothing -> L NoSpan mainModname
-            glbenv' = foldr insertGlbNameEnv glbenv names
+            glbenv' = foldr insertGlbNameEnv glbenv (concat names)
         topds' <- mapM (rename `traverse`) topds `runReaderT` glbenv'
         return (Program (Just modn) imp_modns topds', glbenv')
 

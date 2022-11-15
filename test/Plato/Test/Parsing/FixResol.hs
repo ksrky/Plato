@@ -3,11 +3,8 @@
 
 module Plato.Test.Parsing.FixResol where
 
-import Plato.Parsing.FixResol
-import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 import Plato.Transl.SrcToPs
-import Plato.Types.Error
 import Plato.Types.Fixity
 import Plato.Types.Location
 import Plato.Types.Monad
@@ -38,6 +35,7 @@ fixityEnv =
                 , (GlbName Local (varName "++") NoSpan, Fixity 5 Leftfix)
                 , (GlbName Local (varName ">") NoSpan, Fixity 4 Nonfix)
                 ]
+
 test :: MonadThrow m => (String, m (Expr GlbName) -> Expectation) -> SpecWith ()
 test (inp, iscorrect) =
         it inp $

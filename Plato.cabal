@@ -36,6 +36,7 @@ library
       Plato.Parsing.Rename
       Plato.Parsing.Token
       Plato.Syntax.Parsing
+      Plato.Syntax.Typing
       Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
@@ -44,6 +45,9 @@ library
       Plato.Types.Name
       Plato.Types.Name.Global
       Plato.Types.Name.Reader
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -87,6 +91,7 @@ executable plato
       Plato.Parsing.Rename
       Plato.Parsing.Token
       Plato.Syntax.Parsing
+      Plato.Syntax.Typing
       Plato.Transl.SrcToPs
       Plato.Types.Error
       Plato.Types.Fixity
@@ -95,6 +100,9 @@ executable plato
       Plato.Types.Name
       Plato.Types.Name.Global
       Plato.Types.Name.Reader
+      Plato.Typing.TcMonad
+      Plato.Typing.TcTypes
+      Plato.Typing.TypeCheck
       Paths_Plato
   hs-source-dirs:
       src
@@ -130,6 +138,7 @@ test-suite Plato-test
   main-is: Spec.hs
   other-modules:
       Plato.Test.Parsing.FixResol
+      Plato.Test.Parsing.Pretty
       Plato.Test.Parsing.Utils
       Plato.Test.ParsingSpec
       Plato.Test.Utils

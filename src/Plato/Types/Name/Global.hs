@@ -41,6 +41,9 @@ internalName (L sp n) = GlbName{g_sort = Internal, g_name = n, g_loc = sp}
 localName :: Located Name -> GlbName
 localName (L sp n) = GlbName{g_sort = Local, g_name = n, g_loc = sp}
 
+newGlbName :: NameSort -> Name -> GlbName
+newGlbName ns n = GlbName{g_sort = ns, g_name = n, g_loc = NoSpan}
+
 ----------------------------------------------------------------
 -- GlbNameEnv
 ----------------------------------------------------------------

@@ -107,11 +107,20 @@ topdecls    :: { [ LTopDecl RdrName ] }
             | topdecl                               { [$1] }
 
 topdecl     :: { LTopDecl RdrName }
-            : 'data' ltycon tyvars0 '=' constrs     { cSLn $1 (snd $ last $5) (DataD $2 $3 $5) }
+            : 'data' ltycon tyvars0 '=' constrs     { cSLn $1 (snd $ last $5) (DataD $2 $3 ($5)) }
             | 'data' ltycon tyvars0                 { cSLn $1 $3 (DataD $2 $3 []) }
             | ltycon tyvars0 '=' type               { cLL $1 $4 (TypeD $1 $2 $4) }
             | decl                                  { cL $1 (Decl $1) }
             | expr                                  { cL $1 (Eval $1) }
+
+constrs     :: { [(LName, [LType RdrName])] }
+            : constr '|' constrs                    { $1 : $3 }
+            | constr                                { [$1] }
+
+constr      :: { (LName, [LType RdrName]) }
+            : lcon types                            { ($1, $2) }
+            | '(' lconop ')' types                  { ($2, $4) }
+            | type lconop type                      { ($2, [$1, $3])}
 
 tyvars0     :: { [LName] }
             : tyvar tyvars0                         { $1 : $2 }
@@ -125,10 +134,14 @@ decls       :: { [LDecl RdrName] }
 decl        :: { LDecl RdrName }
             : lvar ':' type                        	{ cLL $1 $3 (FuncTyD $1 $3) }
             | '(' lvarop ')' ':' type               { cSL $1 $5 (FuncTyD $2 $5) }
-            | lvar lvars '=' expr                 	{ cLL $1 $4 (FuncD $1 $2 $4) }
-            | '(' lvarop ')' lvars '=' expr         { cSL $1 $6 (FuncD $2 $4 $6) }
+            | lvar lvars0 '=' expr                 	{ cLL $1 $4 (FuncD $1 $2 $4) }
+            | '(' lvarop ')' lvars0 '=' expr        { cSL $1 $6 (FuncD $2 $4 $6) }
             | lvar lvarop lvar '=' expr				{ cLL $1 $5 (FuncD $2 ([$1, $3]) $5) }
             | fixdecl                               { $1 }
+
+lvars0      :: { [LName] }
+            : lvar lvars0                            { $1 : $2 }
+            | {- empty -}                            { [] }
 
 fixdecl     :: { LDecl RdrName }
             : 'infix' int ops                       {% do { fixd <- setFixities $3 $2 Nonfix; return (cSLn $1 $3 fixd) } }
@@ -159,17 +172,9 @@ btype       :: { LType RdrName }
 
 atype       :: { LType RdrName }
             : '(' type ')'                          { $2 }
-            | qtycon                                { cL $1 (ConT $1) }
+            {-| qtycon                                { cL $1 (ConT $1) -}
+            | conid                                 { cL $1 (ConT (mkLRdrName tyconName $1))} -- tmp: ?
             | tyvar                                 { cL $1 (VarT $1) }
-
-constrs     :: { [(LName, [LType RdrName])] }
-            : constr '|' constrs                    { $1 : $3 }
-            | constr                                { [$1] }
-
-constr      :: { (LName, [LType RdrName]) }
-            : lcon types                            { ($1, $2) }
-            | '(' lconop ')' types                  { ($2, $4) }
-            | type lconop type                      { ($2, [$1, $3])}
 
 tyvars      :: { [LName] }
             : tyvar tyvars                          { $1 : $2 }
@@ -236,14 +241,14 @@ apat        :: { LPat RdrName }
             | '_'                                   { L $1 WildP }
 
 -- | Names
-qvar         :: { Located RdrName }
+qvar        :: { Located RdrName }
             : varid                                 { mkLRdrName varName $1 }
             | qvarid                                { mkLRdrName varName $1 }
 
 lvar        :: { LName }
             : varid                                 { mkLName varName $1 }
 
-qcon         :: { Located RdrName }
+qcon        :: { Located RdrName }
             : conid                                 { mkLRdrName conName $1 }
             | qconid                                { mkLRdrName conName $1 }   
 
@@ -253,21 +258,21 @@ lcon        :: { LName }
 tyvar       :: { LName }
             : varid                                 { mkLName tyvarName $1 }
 
-qtycon       :: { Located RdrName }
+qtycon      :: { Located RdrName }
             : conid                                 { mkLRdrName tyconName $1 }
             | qconid                                { mkLRdrName tyconName $1 } 
 
 ltycon      :: { LName }
             : conid                                 { mkLName tyconName $1 }
 
-qvarop       :: { Located RdrName }
+qvarop      :: { Located RdrName }
             : varsym                                { mkLRdrName varName $1 }
             | qvarsym                               { mkLRdrName varName $1 }
 
-lvarop       :: { LName }
+lvarop      :: { LName }
             : varsym                                { mkLName varName $1 }
 
-qconop       :: { Located RdrName }
+qconop      :: { Located RdrName }
             : consym                                { mkLRdrName conName $1 }
             | qconsym                               { mkLRdrName conName $1 }   
 
@@ -323,7 +328,7 @@ mkLConSym (L sp (TokConSym t)) = Just (L sp t)
 mkLConSym _ = Nothing
 
 mkLQVarId :: Located Token -> Maybe (Located T.Text)
-mkLQVarId (L sp (TokVarId t)) = Just (L sp t)
+mkLQVarId (L sp (TokQVarId t)) = Just (L sp t)
 mkLQVarId _ = Nothing
 
 mkLQConId :: Located Token -> Maybe (Located T.Text)

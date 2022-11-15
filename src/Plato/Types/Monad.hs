@@ -21,7 +21,7 @@ data PlatoState = PState
 initPInfo :: PlatoInfo
 initPInfo =
         PInfo
-                { plt_fileName = "Main.plt"
+                { plt_fileName = "<no file name>"
                 , plt_isEntry = True
                 }
 
