@@ -148,6 +148,8 @@ test-suite Plato-test
       Plato.Test.Parsing.Utils
       Plato.Test.ParsingSpec
       Plato.Test.Typing.ExprTransl
+      Plato.Test.Typing.Pretty
+      Plato.Test.Typing.TypeCheck
       Plato.Test.Typing.Utils
       Plato.Test.TypingSpec
       Plato.Test.Utils

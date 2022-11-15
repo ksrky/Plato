@@ -3,10 +3,6 @@
 
 module Plato.Test.Typing.ExprTransl where
 
-import Plato.Parsing.FixResol
-import Plato.Parsing.Monad
-import Plato.Parsing.Parser
-
 import Plato.Syntax.Typing
 
 import Plato.Transl.PsToTyp
@@ -17,7 +13,6 @@ import Plato.Test.Utils
 import Plato.Types.Location
 
 import Control.Exception.Safe
-import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Plato.Types.Monad
 import Test.Hspec
@@ -64,8 +59,7 @@ test (inp, iscorrect) =
                 iscorrect $
                         ( returnPlato $ do
                                 ps <- exp2ps $ T.pack inp
-                                typ <- transExpr (noLoc ps)
-                                return typ
+                                transExpr (noLoc ps)
                         )
                                 initPInfo
                                 initPState

@@ -4,7 +4,6 @@ import Plato.Syntax.Typing
 import Plato.Types.Error
 import Plato.Types.Location
 import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Data.List (nub)
 import Data.Maybe (fromMaybe)
@@ -52,10 +51,6 @@ tyVarName = unLoc . tyVarLName
 tyVarLName :: TyVar -> LName
 tyVarLName (BoundTv x) = x
 tyVarLName (SkolemTv x _) = x
-
-tyVarGlbName :: TyVar -> GlbName
-tyVarGlbName (BoundTv n) = internalName n
-tyVarGlbName (SkolemTv n _) = internalName n
 
 ----------------------------------------------------------------
 -- Substitution

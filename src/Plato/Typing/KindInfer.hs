@@ -212,7 +212,7 @@ occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv
 infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
 infer t = case t of
         VarT tv -> do
-                kn <- lookupVar (tyVarGlbName tv)
+                kn <- lookupVar (localName $ tyVarLName tv)
                 return (VarT tv, kn)
         ConT x -> do
                 kn <- lookupVar x
