@@ -42,11 +42,6 @@ data Pat
         deriving (Eq, Show)
 
 -- | Types
-type Sigma = Type
-
-type Rho = Type
-type Tau = Type
-
 data Type
         = VarT TyVar
         | ConT GlbName
@@ -59,6 +54,10 @@ data Type
         | SumT [(LName, [Type])]
         | MetaT MetaTv
         deriving (Eq, Show)
+
+type Sigma = Type
+type Rho = Type
+type Tau = Type
 
 data TyVar
         = BoundTv LName
@@ -106,7 +105,7 @@ type KnEnv = M.Map GlbName Kind
 -- Set Eq and Show class
 ----------------------------------------------------------------
 instance Eq TyVar where
-        (BoundTv s1) == (BoundTv s2) = s1 == s2
+        (BoundTv s1) == (BoundTv s2) = unLoc s1 == unLoc s2
         (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
         _ == _ = False
 

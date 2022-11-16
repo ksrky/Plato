@@ -1,6 +1,5 @@
 module Plato.Types.Name where
 
-
 import Data.List (intercalate)
 import qualified Data.Text as T
 import Prettyprinter

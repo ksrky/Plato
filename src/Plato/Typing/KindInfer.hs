@@ -97,7 +97,7 @@ writeKiRef r v = lift (liftIO $ writeIORef r v)
 extendEnv :: LName -> Kind -> Ki m a -> Ki m a
 extendEnv x kn (Ki m) = Ki (m . extend)
     where
-        extend env = env{ki_knenv = M.insert (internalName x) kn (ki_knenv env)}
+        extend env = env{ki_knenv = M.insert (localName x) kn (ki_knenv env)}
 
 extendEnvList :: [(LName, Kind)] -> Ki m a -> Ki m a
 extendEnvList binds tr = foldr (uncurry extendEnv) tr binds

@@ -62,5 +62,12 @@ throwLocErr :: MonadThrow m => Span -> Doc ann -> m a
 throwLocErr sp doc = throw $ LocatedError sp (renderString $ layoutPretty defaultLayoutOptions doc)
 
 -- | Error with no location
+newtype PlainError = PlainError String
+
+instance Show PlainError where
+        show (PlainError msg) = msg
+
+instance Exception PlainError
+
 throwError :: MonadThrow m => Doc ann -> m a
-throwError doc = throw $ LocatedError NoSpan (renderString $ layoutPretty defaultLayoutOptions doc)
+throwError doc = throw $ PlainError (renderString $ layoutPretty defaultLayoutOptions doc)

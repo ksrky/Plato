@@ -19,8 +19,8 @@ import qualified Data.Map.Strict as M
 import Prettyprinter
 
 data TcEnv = TcEnv
-        { uniqs :: IORef Uniq
-        , var_env :: TyEnv
+        { tc_uniq :: IORef Uniq
+        , tc_tyenv :: TyEnv
         }
 
 newtype Tc m a = Tc (TcEnv -> m a)
@@ -53,7 +53,7 @@ instance MonadTrans Tc where
 runTc :: MonadIO m => TyEnv -> Tc m a -> m a
 runTc binds (Tc tc) = do
         ref <- liftIO $ newIORef 0
-        let env = TcEnv{uniqs = ref, var_env = binds}
+        let env = TcEnv{tc_uniq = ref, tc_tyenv = binds}
         tc env
 
 newTcRef :: MonadIO m => a -> Tc m (IORef a)
@@ -71,13 +71,13 @@ writeTcRef r v = lift (liftIO $ writeIORef r v)
 extendVarEnv :: Located Name -> Sigma -> Tc m a -> Tc m a
 extendVarEnv var ty (Tc m) = Tc (m . extend)
     where
-        extend env = env{var_env = M.insert (internalName var) ty (var_env env)}
+        extend env = env{tc_tyenv = M.insert (localName var) ty (tc_tyenv env)}
 
 extendVarEnvList :: [(Located Name, Sigma)] -> Tc m a -> Tc m a
 extendVarEnvList binds tc = foldr (uncurry extendVarEnv) tc binds
 
 getEnv :: Monad m => Tc m (M.Map GlbName Sigma)
-getEnv = Tc (return . var_env)
+getEnv = Tc (return . tc_tyenv)
 
 lookupVar :: MonadThrow m => GlbName -> Tc m Sigma
 lookupVar x = do
@@ -110,7 +110,7 @@ writeTv (Meta _ ref) ty = writeTcRef ref (Just ty)
 newUnique :: MonadIO m => Tc m Uniq
 newUnique =
         Tc
-                ( \TcEnv{uniqs = ref} -> liftIO $ do
+                ( \TcEnv{tc_uniq = ref} -> liftIO $ do
                         uniq <- readIORef ref
                         writeIORef ref (uniq + 1)
                         return uniq
@@ -132,8 +132,8 @@ skolemise (AllT tvs ty) = do
         (coercion, sks2, ty') <- skolemise (substTy (map fst tvs) (map VarT sks1) ty)
         let coercion' = \e ->
                 TAbsE
-                        (map (tyVarLName . fst) tvs)
-                        (coercion $ TAppE e (map (VarT . fst) tvs))
+                        (map tyVarLName sks1)
+                        (coercion $ TAppE e (map VarT sks1))
         return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
         (coercion, sks, res_ty') <- skolemise res_ty
@@ -229,7 +229,7 @@ zonkExpr expr = return expr
 -- Unification
 ----------------------------------------------------------------
 unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ hsep ["Expected:", pretty ty2 <> comma, "Actual:", pretty ty1] --tmp: location
+unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] --tmp: location
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
@@ -241,7 +241,7 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
         unify fun1 fun2
         unify arg1 arg2
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwError $ hsep ["Expected:", pretty ty2 <> comma, "Actual:", pretty ty1] --tmp: location
+unify ty1 ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] --tmp: location
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do

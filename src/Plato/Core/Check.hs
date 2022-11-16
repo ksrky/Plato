@@ -123,10 +123,10 @@ kindof ctx tyT = case tyT of
 
 checkKindStar :: MonadThrow m => Context Name -> Ty -> m ()
 checkKindStar ctx tyT = do
-        k <- kindof ctx tyT
-        if k == KnStar
+        knK <- kindof ctx tyT
+        if knK == KnStar
                 then return ()
-                else throwError $ hsep ["Kind * expected:", ppr ctx tyT]
+                else throwError $ vsep ["Couldn't match kind.", indent 2 ("Expected kind:" <+> ppr ctx KnStar), indent 4 ("Actual type:" <+> ppr ctx knK)]
 
 typeof :: (MonadThrow m, MonadFail m) => Context Name -> Term -> m Ty
 typeof ctx t = case t of
