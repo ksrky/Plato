@@ -1,7 +1,10 @@
 module Plato.Main where
 
-{-}
+import Plato.Transl.CoreToIO
+import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
+import Plato.Transl.TypToCore
+
 import Plato.Types.Error
 import Plato.Types.Location
 import Plato.Types.Monad
@@ -22,11 +25,12 @@ processFile src = do
 
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do
-        is_entry <- asks plt_isEntry
-        (fixenv, prg) <- src2ps input
-        (_, store) <- listen $ mapM processImport (importModules prg)
-        prg' <- canonical fixenv prg
-        undefined
+        (fixenv, ps) <- src2ps input
+        (imp_modns, store) <- listen $ mapM processImport (importModules ps)
+        ps' <- psCanon fixenv ps
+        typ <- ps2typ ps'
+        --mod <- typ2core typ
+        liftIO $ print typ
 
-processImport :: (MonadThrow m, MonadIO m) => Located ModuleName -> Plato m ()
-processImport = undefined-}
+processImport :: Located ModuleName -> Plato m [ModuleName]
+processImport = undefined

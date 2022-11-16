@@ -33,7 +33,7 @@ transExpr knenv ctx = traexpr
                 return $ C.TmVar i (length ctx)
         traexpr (T.AbsE x (Just ty1) e2) = do
                 tyT1 <- transType ctx ty1
-                ctx' <- addName (localName x) ctx
+                let ctx' = addName (localName x) ctx
                 t2 <- transExpr knenv ctx' e2
                 return $ C.TmAbs (unLoc x) tyT1 t2
         traexpr (T.AppE e1 e2) = do
@@ -45,13 +45,13 @@ transExpr knenv ctx = traexpr
                 tyTs' <- mapM (transType ctx) tys
                 return $ foldl C.TmTApp t1 tyTs'
         traexpr (T.TAbsE xs e1) = do
-                ctx' <- foldM (flip (addName . localName)) ctx xs
+                let ctx' = foldl (flip $ addName . localName) ctx xs
                 t1 <- transExpr knenv ctx' e1
                 return $ foldr (C.TmTAbs . unLoc) t1 xs
         traexpr (T.LetE [T.FuncD x e11 ty12] e2) = do
                 ty12' <- checkKindStar knenv NoSpan ty12
                 tyT1 <- transType ctx ty12'
-                ctx' <- addName (localName x) ctx
+                let ctx' = addName (localName x) ctx
                 t1 <- transExpr knenv ctx' e11
                 let t1' = C.TmFix (C.TmAbs (unLoc x) tyT1 t1)
                 t2 <- transExpr knenv ctx' e2
@@ -79,11 +79,11 @@ transExpr knenv ctx = traexpr
                                                 T.VarP x -> return [x]
                                                 T.WildP -> return []
                                                 T.ConP{} -> throwString "pattern argument" --tmp
-                                ctx' <- foldM (flip (addName . localName)) ctx xs
+                                let ctx' = addNameList (map localName xs) ctx
                                 ti <- transExpr knenv ctx' body
                                 return (g_name li, (length xs, ti))
                         T.VarP x -> do
-                                ctx' <- addName (localName x) ctx
+                                let ctx' = addName (localName x) ctx
                                 ti <- transExpr knenv ctx' body
                                 return (str2varName "", (1, ti))
                         T.WildP -> do
@@ -112,12 +112,12 @@ transType ctx = tratype
                                 knK <- transKind kn
                                 return (tyVarName tv, knK)
                         _ -> throwUnexpErr "Kind inference failed"
-                ctx' <- addNameList (map (localName . tyVarLName . fst) xs) ctx
+                let ctx' = addNameList (map (localName . tyVarLName . fst) xs) ctx
                 tyT2 <- transType ctx' ty
                 return $ foldr (uncurry C.TyAll) tyT2 xs'
         tratype (T.AbsT x (Just kn) ty) = do
                 knK1 <- transKind kn
-                ctx' <- addName (localName x) ctx
+                let ctx' = addName (localName x) ctx
                 tyT2 <- transType ctx' ty
                 return $ C.TyAbs (unLoc x) knK1 tyT2
         tratype (T.AppT ty1 ty2) = do
@@ -125,7 +125,7 @@ transType ctx = tratype
                 tyT2 <- tratype ty2
                 return $ C.TyApp tyT1 tyT2
         tratype (T.RecT x kn ty) = do
-                ctx' <- addName (localName x) ctx
+                let ctx' = addName (localName x) ctx
                 knK1 <- transKind kn
                 tyT2 <- transType ctx' ty
                 return $ C.TyRec (unLoc x) knK1 tyT2
@@ -152,20 +152,20 @@ transDecl (L sp dec) = do
                         let knenv' = M.insert (internalName con) kn knenv
                         knK <- transKind kn
                         tyT <- transType ctx ty'
-                        ctx' <- addBinding (internalName con) (C.TyAbbBind tyT knK) ctx
+                        let ctx' = addBinding (internalName con) (C.TyAbbBind tyT knK) ctx
                         put (ctx', knenv')
                         return (unLoc con, C.TyAbbBind tyT knK)
                 T.VarD var ty -> do
                         ty' <- checkKindStar knenv sp ty
                         tyT <- transType ctx ty'
-                        ctx' <- addName (internalName var) ctx
+                        let ctx' = addName (internalName var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.VarBind tyT)
                 T.ConD (T.FuncD var exp ty) -> do
                         ty' <- checkKindStar knenv sp ty
                         t <- transExpr knenv ctx exp
                         tyT <- transType ctx ty'
-                        ctx' <- addName (internalName var) ctx
+                        let ctx' = addName (internalName var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.TmAbbBind t tyT)
 
@@ -174,7 +174,7 @@ transTopFuncDs ctx knenv (T.FuncD x e ty) = do
         ty' <- checkKindStar knenv NoSpan ty
         t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
         tyT <- transType ctx ty'
-        ctx' <- addName (internalName x) ctx -- tmp
+        let ctx' = addName (internalName x) ctx -- tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 
 transEval :: (MonadThrow m, MonadIO m) => ModuleName -> T.KnEnv -> Context GlbName -> (Located T.Expr, T.Type) -> m C.Term
@@ -187,10 +187,10 @@ transEval modn knenv ctx (L _ e, ty) = do
 typ2core :: (MonadThrow m, MonadIO m) => T.Program -> Plato m C.Module
 typ2core (T.Program modn binds fundecs exps) = do
         fundec <- bundleTopFuncDs modn fundecs
-        ctx <- gets plt_context
+        ctx <- gets plt_glbContext
         knenv <- gets plt_knEnv
         (binds', (ctx', knenv')) <- mapM transDecl binds `runStateT` (ctx, knenv)
         (funbind, ctx'') <- transTopFuncDs ctx' knenv' fundec
         evals <- mapM (transEval modn knenv' ctx'') exps
-        modify $ \s -> s{plt_context = ctx'', plt_knEnv = knenv'}
+        modify $ \s -> s{plt_glbContext = ctx'', plt_knEnv = knenv'}
         return (C.Module (binds' ++ [funbind]) evals)

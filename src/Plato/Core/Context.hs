@@ -7,7 +7,6 @@ import Plato.Types.Name
 import Plato.Types.Name.Global
 
 import Control.Exception.Safe
-import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Prettyprinter
@@ -22,24 +21,26 @@ lookupContext k ctx = do
         ((x, y), tl) <- V.uncons ctx
         if k == x then Just y else lookupContext k tl
 
-addBinding :: MonadThrow m => a -> Binding -> Context a -> m (Context a)
-addBinding x bind ctx = return $ V.cons (x, bind) ctx
+addBinding :: a -> Binding -> Context a -> Context a
+addBinding x bind = V.cons (x, bind)
 
-addName :: MonadThrow m => a -> Context a -> m (Context a)
+addName :: a -> Context a -> Context a
 addName x = addBinding x NameBind
 
-addNameList :: MonadThrow m => [a] -> Context a -> m (Context a)
-addNameList = flip $ foldM (flip addName)
+addNameList :: [a] -> Context a -> Context a
+addNameList = flip (foldl (flip addName))
 
 addFreshName :: Name -> Context Name -> Context Name
 addFreshName x ctx = case lookupContext x ctx of
         Just _ -> addFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
         Nothing -> V.cons (x, NameBind) ctx
 
-pickFreshName :: Name -> Context Name -> (Name, Context Name)
-pickFreshName x ctx = case lookupContext x ctx of
-        Just _ -> pickFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
-        Nothing -> (x, V.cons (x, NameBind) ctx)
+{-pickFreshName :: Name -> Context GlbName -> (Name, Context GlbName)
+pickFreshName x ctx = case lookupContext glbn ctx of
+        Just _ ->
+                let n = (g_name glbn){nameText = T.snoc (nameText x) '\''}
+                 in pickFreshName (glbn{g_name = n}) ctx
+        Nothing -> (x, V.cons (glbn, NameBind) ctx)-}
 
 index2name :: Context a -> Int -> a
 index2name ctx x = fst (ctx V.! x)

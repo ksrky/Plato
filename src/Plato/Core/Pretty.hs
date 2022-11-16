@@ -22,16 +22,16 @@ instance PrettyCore Term where
         ppr ctx t = case t of
                 TmVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TmAbs x tyT1 t2 ->
-                        let (x', ctx') = pickFreshName x ctx
-                         in "\\" <> pretty x' <> colon <> ppr ctx tyT1 <> dot <+> ppr ctx' t2
+                        let ctx' = addName x ctx
+                         in "\\" <> pretty x <> colon <> ppr ctx tyT1 <> dot <+> ppr ctx' t2
                 TmApp{} -> pprapp ctx t
                 TmTApp t1 tyT2 -> ppr ctx t1 <+> ppr ctx tyT2
                 TmTAbs tyX t2 ->
-                        let (tyX', ctx') = pickFreshName tyX ctx
-                         in "\\" <> pretty tyX' <> dot <+> ppr ctx' t2
+                        let ctx' = addName tyX ctx
+                         in "\\" <> pretty tyX <> dot <+> ppr ctx' t2
                 TmLet x t1 t2 ->
-                        let (x', ctx') = pickFreshName x ctx
-                         in hsep ["let", pretty x', equals, ppr ctx t1, "in", ppr ctx' t2]
+                        let ctx' = addName x ctx
+                         in hsep ["let", pretty x, equals, ppr ctx t1, "in", ppr ctx' t2]
                 TmFix t1 -> "fix" <+> ppr ctx t1
                 TmFold tyT -> "fold" <+> lbracket <> ppr ctx tyT <> rbracket
                 TmUnfold tyT -> "unfold" <+> lbracket <> ppr ctx tyT <> rbracket
@@ -81,15 +81,15 @@ instance PrettyCore Ty where
                 TyVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TyArr tyT1 tyT2 -> pprty ArrPrec ctx tyT1 <+> "->" <+> pprty TopPrec ctx tyT2
                 TyAll tyX knK1 tyT2 ->
-                        let (tyX', ctx') = pickFreshName tyX ctx
-                         in hcat [lbrace, pretty tyX', colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
+                        let ctx' = addName tyX ctx
+                         in hcat [lbrace, pretty tyX, colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
                 TyApp tyT1 tyT2 -> ppr ctx tyT1 <+> pprty AppPrec ctx tyT2
                 TyAbs tyX knK1 tyT2 ->
-                        let (tyX', ctx') = pickFreshName tyX ctx
-                         in hcat [backslash, pretty tyX', colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
+                        let ctx' = addName tyX ctx
+                         in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRec tyX knK1 tyT2 ->
-                        let (tyX', ctx') = pickFreshName tyX ctx
-                         in hcat [backslash, pretty tyX', colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
+                        let ctx' = addName tyX ctx
+                         in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRecord fields ->
                         if null fields
                                 then lbrace <> rbrace

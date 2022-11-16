@@ -229,7 +229,7 @@ zonkExpr expr = return expr
 -- Unification
 ----------------------------------------------------------------
 unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ hsep ["Cannot unify types:", pretty ty1 <> comma, pretty ty2] --tmp: location
+unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ hsep ["Expected:", pretty ty2 <> comma, "Actual:", pretty ty1] --tmp: location
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
@@ -241,7 +241,7 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
         unify fun1 fun2
         unify arg1 arg2
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwError $ hsep ["Cannot unify types:", pretty ty1 <> comma, pretty ty2] --tmp: location
+unify ty1 ty2 = lift $ throwError $ hsep ["Expected:", pretty ty2 <> comma, "Actual:", pretty ty1] --tmp: location
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do

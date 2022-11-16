@@ -7,20 +7,21 @@ import Plato.Types.Name.Global
 
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
+import Plato.Types.Name (Name)
 
 data PlatoInfo = PInfo
         { plt_fileName :: FilePath
         , plt_isEntry :: Bool
         }
 
-data PlatoStore = PStore {}
+newtype PlatoStore = PStore {plt_context :: Context Name}
 
 data PlatoState = PState
         { plt_glbNameEnv :: GlbNameEnv
         , plt_fixityEnv :: FixityEnv GlbName
         , plt_tyEnv :: TyEnv
         , plt_knEnv :: KnEnv
-        , plt_context :: Context GlbName
+        , plt_glbContext :: Context GlbName
         }
 
 initPInfo :: PlatoInfo
@@ -31,13 +32,13 @@ initPInfo =
                 }
 
 initPStore :: PlatoStore
-initPStore = PStore{}
+initPStore = PStore{plt_context = emptyContext}
 
 instance Semigroup PlatoStore where
-        _ <> _ = PStore{}
+        s1 <> s2 = PStore{plt_context = plt_context s1 <> plt_context s2}
 
 instance Monoid PlatoStore where
-        mempty = PStore{}
+        mempty = PStore{plt_context = emptyContext}
 
 initPState :: PlatoState
 initPState =
@@ -46,7 +47,7 @@ initPState =
                 , plt_fixityEnv = M.empty
                 , plt_tyEnv = M.empty
                 , plt_knEnv = M.empty
-                , plt_context = emptyContext
+                , plt_glbContext = emptyContext
                 }
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m
