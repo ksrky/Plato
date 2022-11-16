@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-} 
 
 module Plato.Types.Location where
 

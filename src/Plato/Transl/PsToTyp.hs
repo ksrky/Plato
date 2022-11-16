@@ -62,10 +62,8 @@ transPat :: MonadThrow m => P.LPat GlbName -> m T.Pat
 transPat (L _ (P.ConP c ps)) = do
         ps' <- mapM transPat ps
         return $ T.ConP (unLoc c) ps'
-transPat (L _ (P.VarP x)) = do
-        return $ T.VarP x
-transPat (L _ P.WildP) = do
-        return T.WildP
+transPat (L _ (P.VarP x)) = return $ T.VarP x
+transPat (L _ P.WildP) = return T.WildP
 
 transType :: MonadThrow m => P.LType GlbName -> m T.Type
 transType (L _ (P.VarT x)) = return $ T.VarT $ T.BoundTv x

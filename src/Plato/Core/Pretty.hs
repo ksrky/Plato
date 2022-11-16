@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Plato.Core.Pretty where
 
 import Plato.Core.Context
 import Plato.Syntax.Core
 import Plato.Types.Name
+
 import Prettyprinter
 
 ----------------------------------------------------------------

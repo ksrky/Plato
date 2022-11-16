@@ -1,5 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-} 
 
 module Plato.Test.Parsing.FixResol where
 
