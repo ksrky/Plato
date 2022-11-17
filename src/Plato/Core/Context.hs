@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-missing-fields #-}
-
 module Plato.Core.Context where
 
 import Plato.Core.Subst
@@ -31,10 +29,10 @@ addNameList :: [GlbName] -> Context -> Context
 addNameList = flip (foldl (flip addName))
 
 addSomething :: Context -> Context
-addSomething = addBinding GlbName{} NameBind
+addSomething = addBinding dummyGlbName NameBind
 
 addSomeName :: Binding -> Context -> Context
-addSomeName = addBinding GlbName{}
+addSomeName = addBinding dummyGlbName
 
 index2name :: Context -> Int -> GlbName
 index2name ctx x = fst (ctx V.! x)

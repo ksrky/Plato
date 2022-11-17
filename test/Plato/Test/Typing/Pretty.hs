@@ -32,7 +32,7 @@ test (fname, iscorrect) =
                                                 let src = "test/testcases/" ++ fname
                                                 inp <- liftIO $ T.readFile src
                                                 (fixenv, ps) <- src2ps inp
-                                                ps' <- psCanon fixenv ps
+                                                ps' <- psCanon [] fixenv ps
                                                 ps2typ ps'
                                         )
                                         initPInfo

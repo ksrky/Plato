@@ -41,7 +41,7 @@ test (inp, iscorrect) =
                 iscorrect $
                         ( returnPlato $ do
                                 (fixenv, ps) <- src2ps (T.pack inp)
-                                ps' <- psCanon fixenv ps
+                                ps' <- psCanon [] fixenv ps
                                 typ <- ps2typ ps'
                                 return $ typ_binds typ
                         )

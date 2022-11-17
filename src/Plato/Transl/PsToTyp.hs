@@ -38,7 +38,7 @@ transExpr = traexpr
                 e1' <- traexpr e1
                 return $ foldr (`T.AbsE` Nothing) e1' xs
         traexpr (L _ (P.LetE ds e)) = do
-                (fds, _) <- transDecls ds
+                (fds, _) <- transDecls ds --tmp:vardecls
                 e' <- transExpr e
                 return $ T.LetE fds e'
         traexpr (L _ (P.CaseE e alts)) = do

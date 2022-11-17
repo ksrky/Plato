@@ -6,6 +6,7 @@ module Plato.Core.Pretty where
 import Plato.Core.Context
 import Plato.Syntax.Core
 import Plato.Types.Name
+import Plato.Types.Name.Global
 
 import Prettyprinter
 
@@ -22,15 +23,15 @@ instance PrettyCore Term where
         ppr ctx t = case t of
                 TmVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TmAbs x tyT1 t2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local x) ctx
                          in "\\" <> pretty x <> colon <> ppr ctx tyT1 <> dot <+> ppr ctx' t2
                 TmApp{} -> pprapp ctx t
                 TmTApp t1 tyT2 -> ppr ctx t1 <+> ppr ctx tyT2
                 TmTAbs tyX t2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local tyX) ctx
                          in "\\" <> pretty tyX <> dot <+> ppr ctx' t2
                 TmLet x t1 t2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local x) ctx
                          in hsep ["let", pretty x, equals, ppr ctx t1, "in", ppr ctx' t2]
                 TmFix t1 -> "fix" <+> ppr ctx t1
                 TmFold tyT -> "fold" <+> lbracket <> ppr ctx tyT <> rbracket
@@ -42,7 +43,7 @@ instance PrettyCore Term where
                                 else
                                         hsep
                                                 [ lbrace
-                                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, ti) -> pretty xi <+> equals <+> ppr ctx ti) fields)
+                                                , concatWith (\d e -> d <> comma <+> e) (map (\(xi, ti) -> pretty xi <+> equals <+> ppr ctx ti) fields)
                                                 , rbrace
                                                 ]
                 TmTag li ts1 _ -> hcat [pretty li, hsep' (map (pprtm ctx) ts1)]
@@ -53,7 +54,7 @@ instance PrettyCore Term where
                                         ( vsep
                                                 ( map
                                                         ( \(li, (ki, ti)) ->
-                                                                let ctx' = foldr (const addSomething) ctx [1 .. ki]
+                                                                let ctx' = foldr (\i -> addName (newGlbName Local (str2varName $ show i))) ctx [1 .. ki]
                                                                  in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
                                                         )
                                                         alts
@@ -81,14 +82,14 @@ instance PrettyCore Ty where
                 TyVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TyArr tyT1 tyT2 -> pprty ArrPrec ctx tyT1 <+> "->" <+> pprty TopPrec ctx tyT2
                 TyAll tyX knK1 tyT2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local tyX) ctx
                          in hcat [lbrace, pretty tyX, colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
                 TyApp tyT1 tyT2 -> ppr ctx tyT1 <+> pprty AppPrec ctx tyT2
                 TyAbs tyX knK1 tyT2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local tyX) ctx
                          in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRec tyX knK1 tyT2 ->
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Local tyX) ctx
                          in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRecord fields ->
                         if null fields
@@ -96,7 +97,7 @@ instance PrettyCore Ty where
                                 else
                                         hsep
                                                 [ lbrace
-                                                , concatWith (\d -> (<+> comma <+> d)) (map (\(xi, tyTi) -> pretty xi <+> colon <+> ppr ctx tyTi) fields)
+                                                , concatWith (\d e -> d <> comma <+> e) (map (\(xi, tyTi) -> pretty xi <+> colon <+> ppr ctx tyTi) fields)
                                                 , rbrace
                                                 ]
                 TyVariant fields ->
@@ -145,6 +146,6 @@ instance PrettyCore Module where
                 let pprBinds :: Context -> [(Name, Binding)] -> Doc ann
                     pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
-                        let ctx' = addSomething ctx
+                        let ctx' = addName (newGlbName Internal x) ctx
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
                  in vsep [pretty modn, pprBinds ctx binds]

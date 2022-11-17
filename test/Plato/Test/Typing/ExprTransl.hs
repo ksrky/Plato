@@ -10,6 +10,7 @@ import Plato.Types.Monad
 
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
+import Plato.Types.Location
 
 import Control.Exception.Safe
 import qualified Data.Text as T
@@ -51,13 +52,13 @@ testcases =
                 )
         ]
 
-test :: MonadThrow m => (String, m Expr -> Expectation) -> SpecWith ()
+test :: (MonadThrow m, MonadFail m) => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) =
         it inp $
                 iscorrect $
                         ( returnPlato $ do
-                                ps <- exp2ps $ T.pack inp
-                                transExpr (head $ Parsing.ps_topDecls ps)
+                                Parsing.Program _ _ [L _ (Parsing.Eval exp)] <- exp2ps $ T.pack inp
+                                transExpr exp
                         )
                                 initPInfo
                                 initPState

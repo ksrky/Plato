@@ -163,6 +163,9 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Plato.Test.Core.KindInfer
+      Plato.Test.Core.Pretty
+      Plato.Test.CoreSpec
       Plato.Test.Parsing.FixResol
       Plato.Test.Parsing.Pretty
       Plato.Test.Parsing.Utils

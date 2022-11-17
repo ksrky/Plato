@@ -12,16 +12,16 @@ import Control.Monad.Reader
 
 type Level = Int
 
-mkValue :: MonadThrow m => GlbName -> ReaderT (Level, ModuleName) m Expr
+mkValue :: MonadThrow m => GlbName -> ReaderT (Level, Name) m Expr
 mkValue glbn = case g_sort glbn of
-        External modn -> return $ ProjE (VarE $ newGlbName (External modn) $ modn2name modn) glbn
+        External modn -> return $ ProjE (VarE $ newGlbName Local $ modn2name modn) glbn
         Internal -> do
-                modn <- asks snd
-                return $ ProjE (VarE $ newGlbName Internal $ modn2name modn) glbn
+                n <- asks snd
+                return $ ProjE (VarE $ newGlbName Local n) glbn
         Local -> return $ VarE glbn
 
 -- | Renaming
-bundle :: MonadThrow m => Expr -> ReaderT (Level, ModuleName) m Expr
+bundle :: MonadThrow m => Expr -> ReaderT (Level, Name) m Expr
 bundle (VarE x) = mkValue x
 bundle (AbsE x mty e) = AbsE x mty <$> bundle e
 bundle (AppE e1 e2) = AppE <$> bundle e1 <*> bundle e2
@@ -37,24 +37,24 @@ bundle (CaseE e mty alts) = do
         return $ CaseE e' mty alts'
 bundle e = return e
 
-bundleFuncDs :: MonadThrow m => [FuncD] -> ReaderT (Level, ModuleName) m FuncD
+bundleFuncDs :: MonadThrow m => [FuncD] -> ReaderT (Level, Name) m FuncD
 bundleFuncDs decs = do
         lev <- asks fst
-        let r = noLoc $ str2conName (":l" ++ show lev)
+        let r = str2conName (":l" ++ show lev)
         fields <- forM decs $ \(FuncD var body _) -> do
-                body' <- bundle body
+                body' <- local (const (lev, r)) $ bundle body
                 return (internalName var, body')
         let fieldtys = [(internalName var, ty) | FuncD var _ ty <- decs]
-        return $ FuncD r (RecordE fields) (RecordT fieldtys)
+        return $ FuncD (noLoc r) (RecordE fields) (RecordT fieldtys)
 
 bundleEval :: MonadThrow m => ModuleName -> Expr -> m Expr
-bundleEval modn = (`runReaderT` (1, modn)) . bundle
+bundleEval modn = (`runReaderT` (1, modn2name modn)) . bundle
 
 bundleTopFuncDs :: MonadThrow m => ModuleName -> [FuncD] -> m FuncD
 bundleTopFuncDs modn decs = do
         let r = noLoc $ modn2name modn
         fields <- forM decs $ \(FuncD var body _) -> do
-                body' <- runReaderT (bundle body) (1, modn)
+                body' <- runReaderT (bundle body) (0, modn2name modn)
                 return (internalName var, body')
         let fieldtys = [(internalName var, ty) | FuncD var _ ty <- decs]
         return $ FuncD r (RecordE fields) (RecordT fieldtys)

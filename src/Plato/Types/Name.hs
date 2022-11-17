@@ -71,12 +71,6 @@ instance Pretty ModuleName where
 mainModname :: ModuleName
 mainModname = ModuleName [T.pack "Main"]
 
-mod2conName :: ModuleName -> Name
-mod2conName (ModuleName modn) = Name ConName (':' `T.cons` T.intercalate (T.pack ".") modn)
-
-mod2tyconName :: ModuleName -> Name
-mod2tyconName (ModuleName modn) = Name TyconName (T.intercalate (T.pack ".") modn)
-
 modn2name :: ModuleName -> Name
 modn2name (ModuleName modn) = Name ModName (T.intercalate (T.pack ".") modn)
 

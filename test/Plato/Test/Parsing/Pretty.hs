@@ -30,7 +30,7 @@ test (fname, iscorrect) = it fname $
                 ps <-
                         ( returnPlato $ do
                                         (fixenv, ps) <- src2ps inp
-                                        psCanon fixenv ps
+                                        psCanon [] fixenv ps
                                 )
                                 initPInfo
                                 initPState

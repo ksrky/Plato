@@ -1,8 +1,9 @@
-{-# LANGUAGE LambdaCase #-} 
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Test.Parsing.FixResol where
 
 import Plato.Syntax.Parsing
+import qualified Plato.Syntax.Parsing as Parsing
 import Plato.Transl.SrcToPs
 import Plato.Types.Fixity
 import Plato.Types.Location
@@ -35,7 +36,9 @@ fixityEnv =
                 , (GlbName Local (varName ">") NoSpan, Fixity 4 Nonfix)
                 ]
 
-test :: MonadThrow m => (String, m (Expr GlbName) -> Expectation) -> SpecWith ()
+test :: (MonadThrow m, MonadFail m) => (String, m (Expr GlbName) -> Expectation) -> SpecWith ()
 test (inp, iscorrect) =
         it inp $
-                iscorrect $ returnPlato (exp2ps $ T.pack inp) initPInfo initPState{plt_fixityEnv = fixityEnv}
+                iscorrect $ do
+                        Parsing.Program _ _ [L _ (Parsing.Eval exp)] <- returnPlato (exp2ps $ T.pack inp) initPInfo initPState{plt_fixityEnv = fixityEnv}
+                        return $ unLoc exp

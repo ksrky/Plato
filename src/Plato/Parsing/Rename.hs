@@ -43,7 +43,7 @@ instance Rename Expr where
                         FuncTyD var _ -> return [var]
                         _ -> return []
                 namesCheck (concat names)
-                local (extendEnvListLocal (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
+                local (extendGlbNameEnvList (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
         rename (CaseE match alts) = do
                 match' <- rename `traverse` match
                 alts' <- forM alts $ \(pat, body) -> do
