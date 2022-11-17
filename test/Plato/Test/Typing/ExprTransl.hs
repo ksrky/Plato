@@ -2,10 +2,10 @@
 
 module Plato.Test.Typing.ExprTransl where
 
+import qualified Plato.Syntax.Parsing as Parsing
 import Plato.Syntax.Typing
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
-import Plato.Types.Location
 import Plato.Types.Monad
 
 import Plato.Test.Typing.Utils
@@ -57,7 +57,7 @@ test (inp, iscorrect) =
                 iscorrect $
                         ( returnPlato $ do
                                 ps <- exp2ps $ T.pack inp
-                                transExpr (noLoc ps)
+                                transExpr (head $ Parsing.ps_topDecls ps)
                         )
                                 initPInfo
                                 initPState

@@ -27,21 +27,22 @@ src2ps inp = do
         (res, st) <- eitherToMonadThrow (parse file inp parser)
         return (ust_fixityEnv (parser_ust st), res)
 
-psCanon :: MonadThrow m => FixityEnv Name -> Program RdrName -> Plato m (Program GlbName)
-psCanon fixenv prg = do
-        glbenv <- gets plt_glbNameEnv
+psCanon :: MonadThrow m => [ModuleName] -> FixityEnv Name -> Program RdrName -> Plato m (Program GlbName)
+psCanon imp_modns fixenv prg = do
+        glbenv <- filterGlbNameEnv imp_modns <$> gets plt_glbNameEnv
         (prg', glbenv') <- renameTopDecls prg glbenv
         fixenv' <- M.union (renameFixityEnv glbenv' fixenv) <$> gets plt_fixityEnv
         modify $ \s -> s{plt_fixityEnv = fixenv', plt_glbNameEnv = glbenv'}
         resolveFixity fixenv' prg'
 
-exp2ps :: MonadThrow m => T.Text -> Plato m (Expr GlbName)
+exp2ps :: MonadThrow m => T.Text -> Plato m (Program GlbName)
 exp2ps inp = do
         (expr, _) <- eitherToMonadThrow (parseLine inp exprParser)
         glbenv <- gets plt_glbNameEnv
         expr' <- runReaderT (rename `traverse` expr) glbenv
         fixenv <- gets plt_fixityEnv
-        unLoc <$> runReaderT (resolve expr') fixenv
+        topd <- Eval <$> runReaderT (resolve expr') fixenv
+        return $ Program{ps_moduleDecl = Nothing, ps_importDecls = [], ps_topDecls = [noLoc topd]}
 
 moduleName :: Program GlbName -> Maybe ModuleName
 moduleName = (unLoc <$>) . ps_moduleDecl

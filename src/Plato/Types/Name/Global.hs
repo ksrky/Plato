@@ -1,5 +1,6 @@
 module Plato.Types.Name.Global where
 
+import Plato.Types.Error
 import Plato.Types.Location
 import Plato.Types.Name
 
@@ -65,3 +66,11 @@ lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> glbn
         Nothing -> localName (L sp n)
+
+filterGlbNameEnv :: [ModuleName] -> GlbNameEnv -> GlbNameEnv
+filterGlbNameEnv imp_modns =
+        M.filter
+                ( \glbn -> case g_sort glbn of
+                        External modn -> modn `elem` imp_modns
+                        _ -> unreachable ""
+                )
