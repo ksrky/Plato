@@ -37,13 +37,22 @@ instance Rename Expr where
         rename (OpE lhs op rhs) = OpE <$> rename `traverse` lhs <*> rename op <*> rename `traverse` rhs
         rename (LamE args body) = do
                 argNamesCheck args
-                LamE args <$> rename `traverse` body
-        rename (LetE decs body) = LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
+                local (extendEnvListLocal args) $ LamE args <$> rename `traverse` body
+        rename (LetE decs body) = do
+                names <- forM decs $ \(L _ dec) -> case dec of
+                        FuncTyD var _ -> return [var]
+                        _ -> return []
+                namesCheck (concat names)
+                local (extendEnvListLocal (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
         rename (CaseE match alts) = do
                 match' <- rename `traverse` match
                 alts' <- forM alts $ \(pat, body) -> do
                         pat' <- rename `traverse` pat
-                        body' <- rename `traverse` body
+                        args <- case pat of
+                                L _ (ConP _ pats) -> return [var | L _ (VarP var) <- pats]
+                                L _ (VarP var) -> return [var]
+                                L _ WildP -> return []
+                        body' <- local (extendEnvListLocal args) $ rename `traverse` body
                         return (pat', body')
                 return $ CaseE match' alts'
         rename (FactorE exp) = FactorE <$> rename `traverse` exp
@@ -60,12 +69,12 @@ instance Rename Type where
         rename (ArrT argty resty) = ArrT <$> rename `traverse` argty <*> rename `traverse` resty
         rename (AllT args bodyty) = do
                 argNamesCheck args
-                AllT args <$> rename `traverse` bodyty
+                local (extendEnvListLocal args) $ AllT args <$> rename `traverse` bodyty
 
 instance Rename Decl where
         rename (FuncD var args body) = do
                 argNamesCheck args
-                FuncD var args <$> rename `traverse` body
+                local (extendEnvListLocal args) $ FuncD var args <$> rename `traverse` body
         rename (FuncTyD var body_ty) = FuncTyD var <$> rename `traverse` body_ty
         rename (FixityD fix prec op) = return $ FixityD fix prec op
 
@@ -94,7 +103,7 @@ renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
         let modn = case mb_modn of
                 Just modn -> modn
                 Nothing -> L NoSpan mainModname
-            glbenv' = foldr insertGlbNameEnv glbenv (concat names)
+            glbenv' = extendGlbNameEnvList (concat names) glbenv
         topds' <- mapM (rename `traverse`) topds `runReaderT` glbenv'
         return (Program (Just modn) imp_modns topds', glbenv')
 

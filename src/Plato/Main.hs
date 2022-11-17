@@ -29,8 +29,9 @@ process input = do
         (imp_modns, store) <- listen $ mapM processImport (importModules ps)
         ps' <- psCanon fixenv ps
         typ <- ps2typ ps'
-        --mod <- typ2core typ
-        liftIO $ print typ
+        mod <- typ2core typ
+        processModule mod
+        undefined
 
 processImport :: Located ModuleName -> Plato m [ModuleName]
 processImport = undefined

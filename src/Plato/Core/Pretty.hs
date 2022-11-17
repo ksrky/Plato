@@ -53,7 +53,7 @@ instance PrettyCore Term where
                                         ( vsep
                                                 ( map
                                                         ( \(li, (ki, ti)) ->
-                                                                let ctx' = foldr addFreshName ctx (map (str2varName . show) [1 .. ki])
+                                                                let ctx' = foldr addName ctx (map (str2varName . show) [1 .. ki])
                                                                  in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
                                                         )
                                                         alts
@@ -145,6 +145,6 @@ instance PrettyCore Module where
                 let pprBinds :: Context Name -> [(Name, Binding)] -> Doc ann
                     pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
-                        let ctx' = addFreshName x ctx
+                        let ctx' = addName x ctx
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
                  in pprBinds ctx binds

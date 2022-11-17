@@ -15,12 +15,13 @@ import qualified Data.Text as T
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-processModule :: (MonadThrow m, MonadIO m) => Context Name -> Module -> Plato m (Context Name)
-processModule ctx mod = do
+processModule :: (MonadThrow m, MonadIO m) => Module -> Plato m ()
+processModule mod = do
+        ctx <- convContext <$> gets plt_glbContext
         let ctx' = foldl (flip $ uncurry addBinding) ctx (moduleBind mod)
         opt <- asks plt_isEntry
         when opt $ mapM_ (printResult ctx) (moduleEval mod)
-        return ctx'
+        modify $ \s -> s{plt_glbContext = ctx'}
 
 printResult :: MonadIO m => Context Name -> Term -> m ()
 printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t

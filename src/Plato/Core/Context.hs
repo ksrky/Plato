@@ -7,7 +7,6 @@ import Plato.Types.Name
 import Plato.Types.Name.Global
 
 import Control.Exception.Safe
-import qualified Data.Text as T
 import qualified Data.Vector as V
 import Prettyprinter
 
@@ -29,18 +28,6 @@ addName x = addBinding x NameBind
 
 addNameList :: [a] -> Context a -> Context a
 addNameList = flip (foldl (flip addName))
-
-addFreshName :: Name -> Context Name -> Context Name
-addFreshName x ctx = case lookupContext x ctx of
-        Just _ -> addFreshName (x{nameText = T.snoc (nameText x) '\''}) ctx
-        Nothing -> V.cons (x, NameBind) ctx
-
-{-pickFreshName :: Name -> Context GlbName -> (Name, Context GlbName)
-pickFreshName x ctx = case lookupContext glbn ctx of
-        Just _ ->
-                let n = (g_name glbn){nameText = T.snoc (nameText x) '\''}
-                 in pickFreshName (glbn{g_name = n}) ctx
-        Nothing -> (x, V.cons (glbn, NameBind) ctx)-}
 
 index2name :: Context a -> Int -> a
 index2name ctx x = fst (ctx V.! x)
@@ -72,3 +59,16 @@ getVarIndex :: MonadThrow m => Context GlbName -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
         Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
+
+----
+convContext :: Context GlbName -> Context Name
+convContext = V.map (\(n, b) -> (g_name n, b))
+
+attrModname :: ModuleName -> Context GlbName -> Context GlbName
+attrModname modn =
+        V.map
+                ( \(glbn, bind) -> case g_sort glbn of
+                        External _ -> (glbn, bind)
+                        Internal -> (glbn{g_sort = External modn}, bind)
+                        Local -> unreachable ""
+                )

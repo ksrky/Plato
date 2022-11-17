@@ -49,8 +49,17 @@ newGlbName ns n = GlbName{g_sort = ns, g_name = n, g_loc = NoSpan}
 ----------------------------------------------------------------
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
-insertGlbNameEnv :: Located Name -> GlbNameEnv -> GlbNameEnv
-insertGlbNameEnv n = M.insert (unLoc n) (internalName n)
+extendGlbNameEnv :: Located Name -> GlbNameEnv -> GlbNameEnv
+extendGlbNameEnv n = M.insert (unLoc n) (internalName n)
+
+extendGlbNameEnvList :: [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendGlbNameEnvList = flip $ foldl $ flip extendGlbNameEnv
+
+extendEnvLocal :: Located Name -> GlbNameEnv -> GlbNameEnv
+extendEnvLocal n = M.insert (unLoc n) (localName n)
+
+extendEnvListLocal :: [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendEnvListLocal = flip $ foldl $ flip extendEnvLocal
 
 lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
