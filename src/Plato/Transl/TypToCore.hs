@@ -24,7 +24,7 @@ import Control.Monad.State
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
-transExpr :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context GlbName -> T.Expr -> m C.Term
+transExpr :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context -> T.Expr -> m C.Term
 transExpr knenv ctx = traexpr
     where
         traexpr :: (MonadThrow m, MonadIO m) => T.Expr -> m C.Term
@@ -92,7 +92,7 @@ transExpr knenv ctx = traexpr
                 return $ C.TmCase (C.TmApp (C.TmUnfold tyT2) t1) alts'
         traexpr e = throwUnexpErr $ "illegal expression:" <+> pretty e
 
-transType :: MonadThrow m => Context GlbName -> T.Type -> m C.Ty
+transType :: MonadThrow m => Context -> T.Type -> m C.Ty
 transType ctx = tratype
     where
         tratype :: MonadThrow m => T.Type -> m C.Ty
@@ -140,10 +140,10 @@ transType ctx = tratype
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
 transKind T.StarK = return C.KnStar
-transKind T.MetaK{} = throwString "Kind inference failed" --tmp
+transKind T.MetaK{} = throwUnexpErr "Kind inference failed" --tmp
 transKind (T.ArrK kn1 kn2) = C.KnArr <$> transKind kn1 <*> transKind kn2
 
-transDecl :: (MonadThrow m, MonadIO m) => Located T.Decl -> StateT (Context GlbName, T.KnEnv) m (Name, C.Binding)
+transDecl :: (MonadThrow m, MonadIO m) => Located T.Decl -> StateT (Context, T.KnEnv) m (Name, C.Binding)
 transDecl (L sp dec) = do
         (ctx, knenv) <- get
         case dec of
@@ -169,7 +169,7 @@ transDecl (L sp dec) = do
                         put (ctx', knenv)
                         return (unLoc var, C.TmAbbBind t tyT)
 
-transTopFuncDs :: (MonadThrow m, MonadIO m) => Context GlbName -> T.KnEnv -> T.FuncD -> m ((Name, C.Binding), Context GlbName)
+transTopFuncDs :: (MonadThrow m, MonadIO m) => Context -> T.KnEnv -> T.FuncD -> m ((Name, C.Binding), Context)
 transTopFuncDs ctx knenv (T.FuncD x e ty) = do
         ty' <- checkKindStar knenv NoSpan ty
         t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
@@ -177,7 +177,7 @@ transTopFuncDs ctx knenv (T.FuncD x e ty) = do
         let ctx' = addName (internalName x) ctx -- tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 
-transEval :: (MonadThrow m, MonadIO m) => ModuleName -> T.KnEnv -> Context GlbName -> (Located T.Expr, T.Type) -> m C.Term
+transEval :: (MonadThrow m, MonadIO m) => ModuleName -> T.KnEnv -> Context -> (Located T.Expr, T.Type) -> m C.Term
 transEval modn knenv ctx (L _ e, ty) = do
         e' <- bundleEval modn e
         t <- transExpr knenv ctx e'
@@ -193,4 +193,4 @@ typ2core (T.Program modn binds fundecs exps) = do
         (funbind, ctx'') <- transTopFuncDs ctx' knenv' fundec
         evals <- mapM (transEval modn knenv' ctx'') exps
         modify $ \s -> s{plt_glbContext = ctx'', plt_knEnv = knenv'}
-        return (C.Module (binds' ++ [funbind]) evals)
+        return (C.Module modn (binds' ++ [funbind]) evals)

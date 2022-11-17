@@ -1,35 +1,42 @@
+{-# OPTIONS_GHC -Wno-missing-fields #-}
+
 module Plato.Core.Context where
 
 import Plato.Core.Subst
 import Plato.Syntax.Core
 import Plato.Types.Error
-import Plato.Types.Name
 import Plato.Types.Name.Global
 
 import Control.Exception.Safe
 import qualified Data.Vector as V
 import Prettyprinter
 
-type Context a = V.Vector (a, Binding)
+type Context = V.Vector (GlbName, Binding)
 
-emptyContext :: Context a
+emptyContext :: Context
 emptyContext = V.empty
 
-lookupContext :: Eq a => a -> Context a -> Maybe Binding
+lookupContext :: GlbName -> Context -> Maybe Binding
 lookupContext k ctx = do
         ((x, y), tl) <- V.uncons ctx
         if k == x then Just y else lookupContext k tl
 
-addBinding :: a -> Binding -> Context a -> Context a
+addBinding :: GlbName -> Binding -> Context -> Context
 addBinding x bind = V.cons (x, bind)
 
-addName :: a -> Context a -> Context a
+addName :: GlbName -> Context -> Context
 addName x = addBinding x NameBind
 
-addNameList :: [a] -> Context a -> Context a
+addNameList :: [GlbName] -> Context -> Context
 addNameList = flip (foldl (flip addName))
 
-index2name :: Context a -> Int -> a
+addSomething :: Context -> Context
+addSomething = addBinding GlbName{} NameBind
+
+addSomeName :: Binding -> Context -> Context
+addSomeName = addBinding GlbName{}
+
+index2name :: Context -> Int -> GlbName
 index2name ctx x = fst (ctx V.! x)
 
 bindingShift :: Int -> Binding -> Binding
@@ -40,35 +47,33 @@ bindingShift d bind = case bind of
         TmAbbBind t tyT_opt -> TmAbbBind (termShift d t) (typeShift d tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (typeShift d tyT) opt
 
-getBinding :: Context a -> Int -> Binding
+getBinding :: Context -> Int -> Binding
 getBinding ctx i = bindingShift (i + 1) (snd $ ctx V.! i)
 
-getType :: MonadThrow m => Context Name -> Int -> m Ty
+getType :: MonadThrow m => Context -> Int -> m Ty
 getType ctx i = case getBinding ctx i of
         VarBind tyT -> return tyT
         TmAbbBind _ tyT -> return tyT
         _ -> throwUnexpErr $ "Wrong kind of binding for variable" <+> pretty (index2name ctx i)
 
-getKind :: MonadThrow m => Context Name -> Int -> m Kind
+getKind :: MonadThrow m => Context -> Int -> m Kind
 getKind ctx i = case getBinding ctx i of
         TyVarBind knK -> return knK
         TyAbbBind _ knK -> return knK
         _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
 
-getVarIndex :: MonadThrow m => Context GlbName -> GlbName -> m Int
+getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
         Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
 
 ----
-convContext :: Context GlbName -> Context Name
-convContext = V.map (\(n, b) -> (g_name n, b))
-
-attrModname :: ModuleName -> Context GlbName -> Context GlbName
+{-}
+attrModname :: ModuleName -> Context -> Context
 attrModname modn =
         V.map
                 ( \(glbn, bind) -> case g_sort glbn of
                         External _ -> (glbn, bind)
                         Internal -> (glbn{g_sort = External modn}, bind)
                         Local -> unreachable ""
-                )
+                )-}

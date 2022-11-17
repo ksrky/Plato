@@ -20,7 +20,7 @@ data PlatoState = PState
         , plt_fixityEnv :: FixityEnv GlbName
         , plt_tyEnv :: TyEnv
         , plt_knEnv :: KnEnv
-        , plt_glbContext :: Context GlbName
+        , plt_glbContext :: Context
         }
 
 initPInfo :: PlatoInfo

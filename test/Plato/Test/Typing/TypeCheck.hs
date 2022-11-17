@@ -29,7 +29,7 @@ testcases =
                 ( "f : {a} a -> a; f = let { g : {b} b -> b; g y = y } in g"
                 , ( `shouldSatisfyReturn`
                         \case
-                                [FuncD (VA "f") (TAbsE [TVA "a"] (LetE [FuncD (VA "g") (TAbsE [TVA "b"] (AbsE (VA "y") (Just (SVT "b")) (VE "y"))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] (AbsE (VA "x") (Just (SVT "a")) (VE "x")))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] -> True
+                                [FuncD (VA "f") (TAbsE [TVA "a"] (LetE [FuncD (VA "g") (TAbsE [TVA "b"] (AbsE (VA "y") (Just (SVT "b")) (VE "y"))) (AllT [(TV "b", _)] ((ArrT (VT "b") (VT "b"))))] (AbsE (VA "?x") (Just (SVT "a")) (AppE (TAppE (VE "g") [VarT (STV "a")]) (VE "?x"))))) (AllT [(TV "a", _)] ((ArrT (VT "a") (VT "a"))))] -> True
                                 _ -> False
                   )
                 )

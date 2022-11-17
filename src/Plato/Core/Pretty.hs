@@ -16,21 +16,21 @@ hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
 class PrettyCore a where
-        ppr :: Context Name -> a -> Doc ann
+        ppr :: Context -> a -> Doc ann
 
 instance PrettyCore Term where
         ppr ctx t = case t of
                 TmVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TmAbs x tyT1 t2 ->
-                        let ctx' = addName x ctx
+                        let ctx' = addSomething ctx
                          in "\\" <> pretty x <> colon <> ppr ctx tyT1 <> dot <+> ppr ctx' t2
                 TmApp{} -> pprapp ctx t
                 TmTApp t1 tyT2 -> ppr ctx t1 <+> ppr ctx tyT2
                 TmTAbs tyX t2 ->
-                        let ctx' = addName tyX ctx
+                        let ctx' = addSomething ctx
                          in "\\" <> pretty tyX <> dot <+> ppr ctx' t2
                 TmLet x t1 t2 ->
-                        let ctx' = addName x ctx
+                        let ctx' = addSomething ctx
                          in hsep ["let", pretty x, equals, ppr ctx t1, "in", ppr ctx' t2]
                 TmFix t1 -> "fix" <+> ppr ctx t1
                 TmFold tyT -> "fold" <+> lbracket <> ppr ctx tyT <> rbracket
@@ -53,7 +53,7 @@ instance PrettyCore Term where
                                         ( vsep
                                                 ( map
                                                         ( \(li, (ki, ti)) ->
-                                                                let ctx' = foldr addName ctx (map (str2varName . show) [1 .. ki])
+                                                                let ctx' = foldr (const addSomething) ctx [1 .. ki]
                                                                  in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
                                                         )
                                                         alts
@@ -62,14 +62,14 @@ instance PrettyCore Term where
                                 <> line
                                 <> rbrace
 
-pprtm :: Context Name -> Term -> Doc ann
+pprtm :: Context -> Term -> Doc ann
 pprtm ctx t@TmVar{} = ppr ctx t
 pprtm ctx t@TmFold{} = ppr ctx t
 pprtm ctx t@TmUnfold{} = ppr ctx t
 pprtm ctx t@(TmTag _ as _) | null as = ppr ctx t
 pprtm ctx t = parens $ ppr ctx t
 
-pprapp :: Context Name -> Term -> Doc ann
+pprapp :: Context -> Term -> Doc ann
 pprapp ctx t = walk t []
     where
         walk :: Term -> [Term] -> Doc ann
@@ -81,14 +81,14 @@ instance PrettyCore Ty where
                 TyVar x n -> if length ctx == n then pretty $ index2name ctx x else "[bad index]"
                 TyArr tyT1 tyT2 -> pprty ArrPrec ctx tyT1 <+> "->" <+> pprty TopPrec ctx tyT2
                 TyAll tyX knK1 tyT2 ->
-                        let ctx' = addName tyX ctx
+                        let ctx' = addSomething ctx
                          in hcat [lbrace, pretty tyX, colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
                 TyApp tyT1 tyT2 -> ppr ctx tyT1 <+> pprty AppPrec ctx tyT2
                 TyAbs tyX knK1 tyT2 ->
-                        let ctx' = addName tyX ctx
+                        let ctx' = addSomething ctx
                          in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRec tyX knK1 tyT2 ->
-                        let ctx' = addName tyX ctx
+                        let ctx' = addSomething ctx
                          in hcat [backslash, pretty tyX, colon, ppr ctx knK1, dot <+> ppr ctx' tyT2]
                 TyRecord fields ->
                         if null fields
@@ -116,7 +116,7 @@ precty TyAll{} = TopPrec
 precty TyArr{} = ArrPrec
 precty _ = AtomPrec
 
-pprty :: Prec -> Context Name -> Ty -> Doc ann
+pprty :: Prec -> Context -> Ty -> Doc ann
 pprty p ctx ty
         | fromEnum p >= fromEnum (precty ty) = parens (ppr ctx ty)
         | otherwise = ppr ctx ty
@@ -125,7 +125,7 @@ instance PrettyCore Kind where
         ppr _ KnStar = "*"
         ppr ctx (KnArr knK1 knK2) = pprkn ctx knK1 <+> ppr ctx knK2
 
-pprkn :: Context Name -> Kind -> Doc ann
+pprkn :: Context -> Kind -> Doc ann
 pprkn _ KnStar = "*"
 pprkn ctx knK = parens (ppr ctx knK)
 
@@ -141,10 +141,10 @@ instance PrettyCore a => PrettyCore [a] where
         ppr ctx (x : xs) = vsep [ppr ctx x, ppr ctx xs]
 
 instance PrettyCore Module where
-        ppr ctx (Module binds evals) =
-                let pprBinds :: Context Name -> [(Name, Binding)] -> Doc ann
+        ppr ctx (Module modn binds evals) =
+                let pprBinds :: Context -> [(Name, Binding)] -> Doc ann
                     pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
-                        let ctx' = addName x ctx
+                        let ctx' = addSomething ctx
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
-                 in pprBinds ctx binds
+                 in vsep [pretty modn, pprBinds ctx binds]

@@ -43,7 +43,8 @@ data Binding
         deriving (Eq, Show)
 
 data Module = Module
-        { moduleBind :: [(Name, Binding)]
+        { moduleName :: ModuleName
+        , moduleBind :: [(Name, Binding)]
         , moduleEval :: [Term]
         }
         deriving (Eq, Show)

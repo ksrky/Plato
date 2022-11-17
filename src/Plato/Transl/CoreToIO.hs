@@ -4,8 +4,10 @@ import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Syntax.Core
 import Plato.Types.Error
+import Plato.Types.Location
 import Plato.Types.Monad
 import Plato.Types.Name
+import Plato.Types.Name.Global
 
 import Control.Exception.Safe
 import Control.Monad
@@ -17,13 +19,13 @@ import Prettyprinter.Render.Text
 
 processModule :: (MonadThrow m, MonadIO m) => Module -> Plato m ()
 processModule mod = do
-        ctx <- convContext <$> gets plt_glbContext
-        let ctx' = foldl (flip $ uncurry addBinding) ctx (moduleBind mod)
+        ctx <- gets plt_glbContext
+        let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (externalName (moduleName mod) (noLoc n), b)) (moduleBind mod))
         opt <- asks plt_isEntry
-        when opt $ mapM_ (printResult ctx) (moduleEval mod)
+        when opt $ mapM_ (printResult ctx') (moduleEval mod)
         modify $ \s -> s{plt_glbContext = ctx'}
 
-printResult :: MonadIO m => Context Name -> Term -> m ()
+printResult :: MonadIO m => Context -> Term -> m ()
 printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
 
 ----------------------------------------------------------------
@@ -32,7 +34,7 @@ printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-ppr :: Context Name -> Term -> Doc ann
+ppr :: Context -> Term -> Doc ann
 ppr ctx t = pprtm t <> line
     where
         pprtm :: Term -> Doc ann

@@ -14,7 +14,7 @@ type Level = Int
 
 mkValue :: MonadThrow m => GlbName -> ReaderT (Level, ModuleName) m Expr
 mkValue glbn = case g_sort glbn of
-        External modn -> return $ ProjE (VarE $ newGlbName Local $ modn2name modn) glbn
+        External modn -> return $ ProjE (VarE $ newGlbName (External modn) $ modn2name modn) glbn
         Internal -> do
                 modn <- asks snd
                 return $ ProjE (VarE $ newGlbName Internal $ modn2name modn) glbn
