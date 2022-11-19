@@ -67,8 +67,8 @@ extendEnvListLocal = flip $ foldl $ flip extendEnvLocal
 
 lookupGlbNameEnv :: GlbNameEnv -> Located Name -> GlbName
 lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
-        Just glbn -> glbn
-        Nothing -> localName (L sp n)
+        Just glbn -> glbn{g_loc = sp}
+        Nothing -> unreachable ""
 
 filterGlbNameEnv :: [ModuleName] -> GlbNameEnv -> GlbNameEnv
 filterGlbNameEnv imp_modns =

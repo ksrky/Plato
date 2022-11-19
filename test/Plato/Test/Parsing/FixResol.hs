@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Plato.Test.Parsing.FixResol where
 
@@ -27,6 +28,18 @@ testcases =
         , ("x > y > z", (`shouldThrow` anyException))
         ]
 
+glbNameEnv :: GlbNameEnv
+glbNameEnv =
+        M.fromList
+                [ (varName "x", GlbName Local (varName "x") NoSpan)
+                , (varName "y", GlbName Local (varName "y") NoSpan)
+                , (varName "z", GlbName Local (varName "z") NoSpan)
+                , (varName "+", GlbName Local (varName "+") NoSpan)
+                , (varName "*", GlbName Local (varName "*") NoSpan)
+                , (varName "++", GlbName Local (varName "++") NoSpan)
+                , (varName ">", GlbName Local (varName ">") NoSpan)
+                ]
+
 fixityEnv :: FixityEnv GlbName
 fixityEnv =
         M.fromList
@@ -40,5 +53,13 @@ test :: (MonadThrow m, MonadFail m) => (String, m (Expr GlbName) -> Expectation)
 test (inp, iscorrect) =
         it inp $
                 iscorrect $ do
-                        Parsing.Program _ _ [L _ (Parsing.Eval exp)] <- returnPlato (exp2ps $ T.pack inp) initPInfo initPState{plt_fixityEnv = fixityEnv}
+                        Parsing.Program _ _ [L _ (Parsing.Eval exp)] <-
+                                returnPlato
+                                        ( exp2ps $ T.pack inp
+                                        )
+                                        initPInfo
+                                        initPState
+                                                { plt_glbNameEnv = glbNameEnv
+                                                , plt_fixityEnv = fixityEnv
+                                                }
                         return $ unLoc exp

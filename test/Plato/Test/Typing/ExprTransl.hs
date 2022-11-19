@@ -6,23 +6,26 @@ import qualified Plato.Syntax.Parsing as Parsing
 import Plato.Syntax.Typing
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
+import Plato.Types.Location
 import Plato.Types.Monad
+import Plato.Types.Name
+import Plato.Types.Name.Global
 
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
-import Plato.Types.Location
 
 import Control.Exception.Safe
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.Hspec
 
 testcases :: [(String, IO Expr -> Expectation)]
 testcases =
         [
-                ( "x + y"
+                ( "y + z"
                 , ( `shouldSatisfyReturn`
                         \case
-                                AppE (AppE (VE "+") (VE "x")) (VE "y") -> True
+                                AppE (AppE (VE "+") (VE "y")) (VE "z") -> True
                                 _ -> False
                   )
                 )
@@ -52,6 +55,17 @@ testcases =
                 )
         ]
 
+glbNameEnv :: GlbNameEnv
+glbNameEnv =
+        M.fromList
+                [ (varName "y", GlbName Local (varName "y") NoSpan)
+                , (varName "z", GlbName Local (varName "z") NoSpan)
+                , (varName "+", GlbName Local (varName "+") NoSpan)
+                , (tyconName "T", GlbName Local (tyconName "T") NoSpan)
+                , (conName "True", GlbName Local (conName "True") NoSpan)
+                , (conName "False", GlbName Local (conName "False") NoSpan)
+                ]
+
 test :: (MonadThrow m, MonadFail m) => (String, m Expr -> Expectation) -> SpecWith ()
 test (inp, iscorrect) =
         it inp $
@@ -61,4 +75,4 @@ test (inp, iscorrect) =
                                 transExpr exp
                         )
                                 initPInfo
-                                initPState
+                                initPState{plt_glbNameEnv = glbNameEnv}

@@ -125,7 +125,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                                 else T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) rho_ty
                     tyargs = params
                     args = map (str2varName . show) [length params + 1 .. length params + length field]
-                    tag = T.TagE (internalName l) (map (T.VarE . newGlbName Local) args) fieldty
+                    tag = T.TagE (localName l) (map (T.VarE . newGlbName Local) args) fieldty
                     foldtag = T.AppE (T.FoldE res_ty) tag
                     exp = foldr (\(x, ty) -> T.AbsE (noLoc x) (Just ty)) foldtag (zip args field)
                     exp' = if null tyargs then exp else T.TAbsE tyargs exp

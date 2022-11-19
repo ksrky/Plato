@@ -43,7 +43,7 @@ instance Rename Expr where
                         FuncTyD var _ -> return [var]
                         _ -> return []
                 namesCheck (concat names)
-                local (extendGlbNameEnvList (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
+                local (extendEnvListLocal (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
         rename (CaseE match alts) = do
                 match' <- rename `traverse` match
                 alts' <- forM alts $ \(pat, body) -> do
@@ -94,8 +94,8 @@ instance Rename TopDecl where
 
 renameTopDecls :: MonadThrow m => Program RdrName -> GlbNameEnv -> m (Program GlbName, GlbNameEnv)
 renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
-        names <- forM topds $ \(L _ tds) -> case tds of
-                DataD con _ _ -> return [con]
+        names <- forM topds $ \(L _ topd) -> case topd of
+                DataD con _ fields -> return $ con : map fst fields
                 TypeD con _ _ -> return [con]
                 Decl (L _ (FuncTyD var _)) -> return [var]
                 _ -> return []
