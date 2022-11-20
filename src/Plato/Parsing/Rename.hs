@@ -20,12 +20,12 @@ import Prettyprinter
 -- Renaming
 ----------------------------------------------------------------
 class Rename f where
-        rename :: MonadThrow m => f RdrName -> ReaderT GlbNameEnv m (f GlbName)
+        rename :: MonadThrow m => f RdrName -> ReaderT (GlbNameEnv, Level) m (f GlbName)
 
 instance Rename Located where
-        rename (L sp (Unqual n)) = asks $ \env -> L sp $ lookupGlbNameEnv env (L sp n)
+        rename (L sp (Unqual n)) = asks $ \(env, _) -> L sp $ lookupGlbNameEnv env (L sp n)
         rename (L sp (Qual modn n)) = do
-                env <- ask
+                env <- asks fst
                 unless (n `M.member` env) $
                         throwLocErr sp $
                                 hsep ["No module named", squotes $ pretty n, "is imported"]
@@ -37,13 +37,15 @@ instance Rename Expr where
         rename (OpE lhs op rhs) = OpE <$> rename `traverse` lhs <*> rename op <*> rename `traverse` rhs
         rename (LamE args body) = do
                 argNamesCheck args
-                local (extendEnvListLocal args) $ LamE args <$> rename `traverse` body
+                local (\(env, lev) -> (extendEnvListLocal args env, lev)) $ LamE args <$> rename `traverse` body
         rename (LetE decs body) = do
                 names <- forM decs $ \(L _ dec) -> case dec of
                         FuncTyD var _ -> return [var]
                         _ -> return []
                 namesCheck (concat names)
-                local (extendEnvListLocal (concat names)) $ LetE <$> mapM (rename `traverse`) decs <*> rename `traverse` body
+                local (\(env, lev) -> (extendGlbNameEnvList (DefLevel (lev + 1)) (concat names) env, lev)) $ do
+                        decs' <- local (\(env, lev) -> (env, lev + 1)) $ mapM (rename `traverse`) decs
+                        LetE decs' <$> rename `traverse` body
         rename (CaseE match alts) = do
                 match' <- rename `traverse` match
                 alts' <- forM alts $ \(pat, body) -> do
@@ -52,7 +54,7 @@ instance Rename Expr where
                                 L _ (ConP _ pats) -> return [var | L _ (VarP var) <- pats]
                                 L _ (VarP var) -> return [var]
                                 L _ WildP -> return []
-                        body' <- local (extendEnvListLocal args) $ rename `traverse` body
+                        body' <- local (\(env, lev) -> (extendEnvListLocal args env, lev)) $ rename `traverse` body
                         return (pat', body')
                 return $ CaseE match' alts'
         rename (FactorE exp) = FactorE <$> rename `traverse` exp
@@ -69,12 +71,12 @@ instance Rename Type where
         rename (ArrT argty resty) = ArrT <$> rename `traverse` argty <*> rename `traverse` resty
         rename (AllT args bodyty) = do
                 argNamesCheck args
-                local (extendEnvListLocal args) $ AllT args <$> rename `traverse` bodyty
+                local (\(env, lev) -> (extendEnvListLocal args env, lev)) $ AllT args <$> rename `traverse` bodyty
 
 instance Rename Decl where
         rename (FuncD var args body) = do
                 argNamesCheck args
-                local (extendEnvListLocal args) $ FuncD var args <$> rename `traverse` body
+                local (\(env, lev) -> (extendEnvListLocal args env, lev)) $ FuncD var args <$> rename `traverse` body
         rename (FuncTyD var body_ty) = FuncTyD var <$> rename `traverse` body_ty
         rename (FixityD fix prec op) = return $ FixityD fix prec op
 
@@ -103,9 +105,9 @@ renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
         let modn = case mb_modn of
                 Just modn -> modn
                 Nothing -> noLoc mainModname
-            glbenv' = extendGlbNameEnvList (concat names) glbenv
-        topds' <- mapM (rename `traverse`) topds `runReaderT` glbenv'
-        return (Program (Just modn) imp_modns topds', updateGlbNameEnv (unLoc modn) glbenv')
+            glbenv' = extendGlbNameEnvList (DefTop $ Just $ unLoc modn) (concat names) glbenv
+        topds' <- mapM (rename `traverse`) topds `runReaderT` (glbenv', 0)
+        return (Program (Just modn) imp_modns topds', updateGlbNameEnv glbenv')
 
 renameFixityEnv :: GlbNameEnv -> FixityEnv Name -> FixityEnv GlbName
 renameFixityEnv glbenv = M.mapKeys $ \n -> case M.lookup n glbenv of

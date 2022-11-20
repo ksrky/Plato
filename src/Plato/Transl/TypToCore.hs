@@ -125,7 +125,7 @@ transType ctx = tratype
                 tyT2 <- tratype ty2
                 return $ C.TyApp tyT1 tyT2
         tratype (T.RecT x kn ty) = do
-                let ctx' = addName (internalName x) ctx -- todo: internalName
+                let ctx' = addName (internalName (DefTop Nothing) x) ctx -- todo: internalName
                 knK1 <- transKind kn
                 tyT2 <- transType ctx' ty
                 return $ C.TyRec (unLoc x) knK1 tyT2
@@ -149,23 +149,23 @@ transDecl (L sp dec) = do
         case dec of
                 T.TypeD con ty -> do
                         (ty', kn) <- inferKind knenv ty
-                        let knenv' = M.insert (internalName con) kn knenv
+                        let knenv' = M.insert (internalName (DefTop Nothing) con) kn knenv
                         knK <- transKind kn
                         tyT <- transType ctx ty'
-                        let ctx' = addBinding (internalName con) (C.TyAbbBind tyT knK) ctx
+                        let ctx' = addBinding (internalName (DefTop Nothing) con) (C.TyAbbBind tyT knK) ctx
                         put (ctx', knenv')
                         return (unLoc con, C.TyAbbBind tyT knK)
                 T.VarD var ty -> do
                         ty' <- checkKindStar knenv sp ty
                         tyT <- transType ctx ty'
-                        let ctx' = addName (internalName var) ctx
+                        let ctx' = addName (internalName (DefTop Nothing) var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.VarBind tyT)
                 T.ConD (T.FuncD var exp ty) -> do
                         ty' <- checkKindStar knenv sp ty
                         t <- transExpr knenv ctx exp
                         tyT <- transType ctx ty'
-                        let ctx' = addName (internalName var) ctx
+                        let ctx' = addName (internalName (DefTop Nothing) var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.TmAbbBind t tyT)
 
@@ -177,9 +177,9 @@ transTopFuncD ctx knenv (T.FuncD x e ty) = do
         let ctx' = addName (localName x) ctx -- tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 
-transEval :: (MonadThrow m, MonadIO m) => ModuleName -> T.KnEnv -> Context -> (Located T.Expr, T.Type) -> m C.Term
-transEval modn knenv ctx (L _ e, ty) = do
-        e' <- bundleEval modn e
+transEval :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context -> (Located T.Expr, T.Type) -> m C.Term
+transEval knenv ctx (L _ e, ty) = do
+        e' <- bundleEval e
         t <- transExpr knenv ctx e'
         _ <- transType ctx ty --tmp
         return t
@@ -187,10 +187,11 @@ transEval modn knenv ctx (L _ e, ty) = do
 typ2core :: (MonadThrow m, MonadIO m) => T.Program -> Plato m C.Module
 typ2core (T.Program modn binds fundecs exps) = do
         fundec <- bundleTopFuncDs modn fundecs
+        -- error $ show $ pretty fundec
         ctx <- gets plt_glbContext
         knenv <- gets plt_knEnv
         (binds', (ctx', knenv')) <- mapM transDecl binds `runStateT` (ctx, knenv)
         (funbind, ctx'') <- transTopFuncD ctx' knenv' fundec
-        evals <- mapM (transEval modn knenv' ctx'') exps
+        evals <- mapM (transEval knenv' ctx'') exps
         modify $ \s -> s{plt_knEnv = knenv'}
         return (C.Module modn (binds' ++ [funbind]) evals)

@@ -147,6 +147,6 @@ instance PrettyCore Module where
                 let pprBinds :: Context -> [(Name, Binding)] -> Doc ann
                     pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
-                        let ctx' = addName (newGlbName Internal x) ctx
+                        let ctx' = addName (newGlbName Local x) ctx --tmp: Local
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
                  in vsep [pretty modn, pprBinds ctx binds]

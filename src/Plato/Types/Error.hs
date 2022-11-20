@@ -54,6 +54,7 @@ throwUnexpErr doc = throw $ UnexpectedError (renderString $ layoutPretty default
 data LocatedError = LocatedError Span String
 
 instance Show LocatedError where
+        show (LocatedError NoSpan msg) = "<no location info>: " ++ msg
         show (LocatedError sp msg) = renderString (layoutPretty defaultLayoutOptions $ pretty sp) ++ ": " ++ msg
 
 instance Exception LocatedError

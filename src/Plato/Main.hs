@@ -36,7 +36,7 @@ repl files = do
 processFile :: (MonadThrow m, MonadIO m) => FilePath -> Plato m ()
 processFile src = do
         input <- liftIO $ T.readFile src
-        process input
+        local (\r -> r{plt_fileName = src}) $ process input
 
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do

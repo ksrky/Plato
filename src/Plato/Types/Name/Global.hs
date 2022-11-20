@@ -29,15 +29,27 @@ instance Pretty GlbName where
 ----------------------------------------------------------------
 data NameSort
         = External ModuleName
-        | Internal
+        | Internal DefLevel
         | Local
         deriving (Eq, Show)
+
+data DefLevel
+        = DefTop (Maybe ModuleName)
+        | DefLevel Level
+        deriving (Show)
+
+instance Eq DefLevel where
+        DefTop _ == DefTop _ = True
+        DefLevel l1 == DefLevel l2 = l1 == l2
+        _ == _ = False
+
+type Level = Int
 
 externalName :: ModuleName -> Located Name -> GlbName
 externalName modn (L sp n) = GlbName{g_sort = External modn, g_name = n, g_loc = sp}
 
-internalName :: Located Name -> GlbName
-internalName (L sp n) = GlbName{g_sort = Internal, g_name = n, g_loc = sp}
+internalName :: DefLevel -> Located Name -> GlbName
+internalName ds (L sp n) = GlbName{g_sort = Internal ds, g_name = n, g_loc = sp}
 
 localName :: Located Name -> GlbName
 localName (L sp n) = GlbName{g_sort = Local, g_name = n, g_loc = sp}
@@ -53,11 +65,11 @@ dummyGlbName = GlbName{g_sort = Local, g_name = Name{nameText = "", nameSpace = 
 ----------------------------------------------------------------
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
-extendGlbNameEnv :: Located Name -> GlbNameEnv -> GlbNameEnv
-extendGlbNameEnv n = M.insert (unLoc n) (internalName n)
+extendGlbNameEnv :: DefLevel -> Located Name -> GlbNameEnv -> GlbNameEnv
+extendGlbNameEnv ds n = M.insert (unLoc n) (internalName ds n)
 
-extendGlbNameEnvList :: [Located Name] -> GlbNameEnv -> GlbNameEnv
-extendGlbNameEnvList = flip $ foldl $ flip extendGlbNameEnv
+extendGlbNameEnvList :: DefLevel -> [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendGlbNameEnvList ds = flip $ foldl $ flip (extendGlbNameEnv ds)
 
 extendEnvLocal :: Located Name -> GlbNameEnv -> GlbNameEnv
 extendEnvLocal n = M.insert (unLoc n) (localName n)
@@ -78,11 +90,12 @@ filterGlbNameEnv imp_modns =
                         _ -> unreachable ""
                 )
 
-updateGlbNameEnv :: ModuleName -> GlbNameEnv -> GlbNameEnv
-updateGlbNameEnv modn =
+updateGlbNameEnv :: GlbNameEnv -> GlbNameEnv
+updateGlbNameEnv =
         M.map
                 ( \glbn -> case g_sort glbn of
-                        Internal -> glbn{g_sort = External modn}
-                        Local -> unreachable "Local variable"
+                        Internal (DefTop (Just modn)) -> glbn{g_sort = External modn}
+                        Internal _ -> unreachable "Non-toplevel internal name occured"
+                        Local -> unreachable "Local name in top level"
                         _ -> glbn
                 )

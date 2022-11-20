@@ -41,7 +41,7 @@ test (inp, iscorrect) =
                         ( returnPlato $ do
                                 (fixenv, ps) <- P.src2ps (T.pack inp)
                                 ps' <- P.psCanon [] fixenv ps
-                                (tydecs, _, _) <- execWriterT $ T.transTopDecl (head $ P.ps_topDecls ps')
+                                (tydecs, _, _) <- execWriterT $ T.transTopDecl (P.getModuleName ps') (head $ P.ps_topDecls ps')
                                 forM tydecs $ \case
                                         (L _ (TypeD _ ty)) -> do
                                                 (_, kn) <- inferKind M.empty ty

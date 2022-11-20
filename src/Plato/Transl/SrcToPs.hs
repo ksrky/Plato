@@ -15,7 +15,7 @@ import Plato.Parsing.Rename
 
 import Plato.Syntax.Parsing
 
-import Control.Exception.Safe (MonadThrow)
+import Control.Exception.Safe
 import Control.Monad.RWS
 import Control.Monad.Reader
 import qualified Data.Map.Strict as M
@@ -39,10 +39,15 @@ exp2ps :: MonadThrow m => T.Text -> Plato m (Program GlbName)
 exp2ps inp = do
         (expr, _) <- eitherToMonadThrow (parseLine inp exprParser)
         glbenv <- gets plt_glbNameEnv
-        expr' <- runReaderT (rename `traverse` expr) glbenv
+        expr' <- runReaderT (rename `traverse` expr) (glbenv, 0)
         fixenv <- gets plt_fixityEnv
         topd <- Eval <$> runReaderT (resolve expr') fixenv
         return $ Program{ps_moduleDecl = Nothing, ps_importDecls = [], ps_topDecls = [noLoc topd]}
+
+getModuleName :: Program GlbName -> ModuleName
+getModuleName prg = case ps_moduleDecl prg of
+        Just (L _ modn) -> modn
+        Nothing -> unreachable ""
 
 importModules :: Program RdrName -> [Located ModuleName]
 importModules = ps_importDecls
