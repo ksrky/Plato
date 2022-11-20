@@ -192,5 +192,5 @@ typ2core (T.Program modn binds fundecs exps) = do
         (binds', (ctx', knenv')) <- mapM transDecl binds `runStateT` (ctx, knenv)
         (funbind, ctx'') <- transTopFuncD ctx' knenv' fundec
         evals <- mapM (transEval modn knenv' ctx'') exps
-        modify $ \s -> s{plt_glbContext = ctx'', plt_knEnv = knenv'}
+        modify $ \s -> s{plt_knEnv = knenv'}
         return (C.Module modn (binds' ++ [funbind]) evals)

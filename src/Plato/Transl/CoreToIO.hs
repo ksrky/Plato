@@ -2,7 +2,9 @@ module Plato.Transl.CoreToIO where
 
 import Plato.Core.Context
 import Plato.Core.Eval
+
 import Plato.Syntax.Core
+
 import Plato.Types.Error
 import Plato.Types.Location
 import Plato.Types.Monad
@@ -14,6 +16,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.RWS
 import qualified Data.Text as T
+import qualified Plato.Core.Pretty as P
 import Prettyprinter
 import Prettyprinter.Render.Text
 
@@ -26,7 +29,9 @@ processModule mod = do
         modify $ \s -> s{plt_glbContext = ctx'}
 
 printResult :: MonadIO m => Context -> Term -> m ()
-printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
+printResult ctx t = liftIO $ do
+        -- putDoc $ ppr ctx $ eval ctx t
+        putDoc $ vsep [viaShow ctx, P.ppr ctx $ eval ctx t]
 
 ----------------------------------------------------------------
 -- Pretty printing

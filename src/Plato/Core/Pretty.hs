@@ -36,7 +36,7 @@ instance PrettyCore Term where
                 TmFix t1 -> "fix" <+> ppr ctx t1
                 TmFold tyT -> "fold" <+> lbracket <> ppr ctx tyT <> rbracket
                 TmUnfold tyT -> "unfold" <+> lbracket <> ppr ctx tyT <> rbracket
-                TmProj t1 l -> ppr ctx t1 <> dot <> pretty l
+                TmProj t1 l -> pprtm ctx t1 <> dot <> pretty l
                 TmRecord fields ->
                         if null fields
                                 then lbrace <> rbrace
@@ -68,6 +68,7 @@ pprtm ctx t@TmVar{} = ppr ctx t
 pprtm ctx t@TmFold{} = ppr ctx t
 pprtm ctx t@TmUnfold{} = ppr ctx t
 pprtm ctx t@(TmTag _ as _) | null as = ppr ctx t
+pprtm ctx t@TmRecord{} = ppr ctx t
 pprtm ctx t = parens $ ppr ctx t
 
 pprapp :: Context -> Term -> Doc ann
@@ -83,7 +84,7 @@ instance PrettyCore Ty where
                 TyArr tyT1 tyT2 -> pprty ArrPrec ctx tyT1 <+> "->" <+> pprty TopPrec ctx tyT2
                 TyAll tyX knK1 tyT2 ->
                         let ctx' = addName (newGlbName Local tyX) ctx
-                         in hcat [lbrace, pretty tyX, colon, ppr ctx knK1, rbrace, dot <+> ppr ctx' tyT2]
+                         in hcat [lbrace, pretty tyX, colon, ppr ctx knK1, rbrace <+> ppr ctx' tyT2]
                 TyApp tyT1 tyT2 -> ppr ctx tyT1 <+> pprty AppPrec ctx tyT2
                 TyAbs tyX knK1 tyT2 ->
                         let ctx' = addName (newGlbName Local tyX) ctx

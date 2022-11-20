@@ -18,6 +18,7 @@ isval ctx t = case t of
         TmTAbs{} -> True
         TmRecord fields -> all (\(_, vi) -> isval ctx vi) fields
         TmTag _ vs _ -> all (isval ctx) vs
+        TmApp (TmFold _) t -> isval ctx t
         _ -> False
 
 eval :: Context -> Term -> Term

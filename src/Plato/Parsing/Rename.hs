@@ -102,15 +102,15 @@ renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
         namesCheck (concat names)
         let modn = case mb_modn of
                 Just modn -> modn
-                Nothing -> L NoSpan mainModname
+                Nothing -> noLoc mainModname
             glbenv' = extendGlbNameEnvList (concat names) glbenv
         topds' <- mapM (rename `traverse`) topds `runReaderT` glbenv'
-        return (Program (Just modn) imp_modns topds', glbenv')
+        return (Program (Just modn) imp_modns topds', updateGlbNameEnv (unLoc modn) glbenv')
 
 renameFixityEnv :: GlbNameEnv -> FixityEnv Name -> FixityEnv GlbName
 renameFixityEnv glbenv = M.mapKeys $ \n -> case M.lookup n glbenv of
         Just glbn -> glbn
-        Nothing -> localName (L NoSpan n)
+        Nothing -> localName (noLoc n)
 
 ----------------------------------------------------------------
 -- namesCheck

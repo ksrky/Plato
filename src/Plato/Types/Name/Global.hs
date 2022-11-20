@@ -77,3 +77,12 @@ filterGlbNameEnv imp_modns =
                         External modn -> modn `elem` imp_modns
                         _ -> unreachable ""
                 )
+
+updateGlbNameEnv :: ModuleName -> GlbNameEnv -> GlbNameEnv
+updateGlbNameEnv modn =
+        M.map
+                ( \glbn -> case g_sort glbn of
+                        Internal -> glbn{g_sort = External modn}
+                        Local -> unreachable "Local variable"
+                        _ -> glbn
+                )

@@ -44,8 +44,5 @@ exp2ps inp = do
         topd <- Eval <$> runReaderT (resolve expr') fixenv
         return $ Program{ps_moduleDecl = Nothing, ps_importDecls = [], ps_topDecls = [noLoc topd]}
 
-moduleName :: Program GlbName -> Maybe ModuleName
-moduleName = (unLoc <$>) . ps_moduleDecl
-
 importModules :: Program RdrName -> [Located ModuleName]
 importModules = ps_importDecls
