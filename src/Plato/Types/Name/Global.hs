@@ -34,8 +34,13 @@ instance Pretty GlbName where
 ----------------------------------------------------------------
 data NameSort
         = External ModuleName
-        | Internal DefLevel
+        | Internal Level
         | Local
+        deriving (Eq, Show)
+
+data DefLoc
+        = ExtDef ModuleName
+        | IntDef
         deriving (Eq, Show)
 
 data DefLevel
@@ -53,8 +58,8 @@ type Level = Int
 externalName :: ModuleName -> Located Name -> GlbName
 externalName modn (L sp n) = GlbName{g_sort = External modn, g_name = n, g_loc = sp}
 
-internalName :: DefLevel -> Located Name -> GlbName
-internalName ds (L sp n) = GlbName{g_sort = Internal ds, g_name = n, g_loc = sp}
+internalName :: Level -> Located Name -> GlbName
+internalName lev (L sp n) = GlbName{g_sort = Internal lev, g_name = n, g_loc = sp}
 
 localName :: Located Name -> GlbName
 localName (L sp n) = GlbName{g_sort = Local, g_name = n, g_loc = sp}
@@ -66,22 +71,24 @@ dummyGlbName :: GlbName
 dummyGlbName = GlbName{g_sort = Local, g_name = Name{nameText = "", nameSpace = VarName}, g_loc = NoSpan}
 
 updateGlbName :: GlbName -> GlbName
-updateGlbName glbn = case g_sort glbn of
-        Internal (DefTop (Just modn)) -> glbn{g_sort = External modn}
-        Internal _ -> unreachable $ "Non-toplevel internal name occured: " ++ show glbn
-        Local -> unreachable $ "Local name in top level: " ++ show glbn
-        _ -> glbn
+updateGlbName glbn = glbn
 
 ----------------------------------------------------------------
 -- GlbNameEnv
 ----------------------------------------------------------------
 type GlbNameEnv = M.Map Name GlbName -- stores defined global name
 
-extendGlbNameEnv :: DefLevel -> Located Name -> GlbNameEnv -> GlbNameEnv
-extendGlbNameEnv ds n = M.insert (unLoc n) (internalName ds n)
+extendEnvExt :: ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
+extendEnvExt modn n = M.insert (unLoc n) (externalName modn n)
 
-extendGlbNameEnvList :: DefLevel -> [Located Name] -> GlbNameEnv -> GlbNameEnv
-extendGlbNameEnvList ds = flip $ foldl $ flip (extendGlbNameEnv ds)
+extendEnvListExt :: ModuleName -> [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendEnvListExt modn = flip $ foldl $ flip (extendEnvExt modn)
+
+extendEnvInt :: Level -> Located Name -> GlbNameEnv -> GlbNameEnv
+extendEnvInt lev n = M.insert (unLoc n) (internalName lev n)
+
+extendEnvListInt :: Level -> [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendEnvListInt lev = flip $ foldl $ flip (extendEnvInt lev)
 
 extendEnvLocal :: Located Name -> GlbNameEnv -> GlbNameEnv
 extendEnvLocal n = M.insert (unLoc n) (localName n)

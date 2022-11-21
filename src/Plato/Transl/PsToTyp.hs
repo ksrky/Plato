@@ -114,10 +114,10 @@ transTopDecl modn (L sp (P.DataD name params fields)) = do
                         return (l, tys')
         let fieldty = T.SumT fields'
             kn = foldr T.ArrK T.StarK (replicate (length params) T.StarK)
-            bodyty = T.RecT name kn fieldty
-        tell ([L sp (T.TypeD name (foldr (`T.AbsT` Nothing) bodyty params))], [], [])
+            bodyty = T.RecT name kn (foldr (`T.AbsT` Nothing) fieldty params)
+        tell ([L sp (T.TypeD name bodyty)], [], [])
         forM_ fields' $ \(l, field) -> do
-                let res_ty = foldl T.AppT (T.ConT $ internalName (DefTop $ Just modn) name) (map (T.VarT . T.BoundTv) params)
+                let res_ty = foldl T.AppT (T.ConT $ externalName modn name) (map (T.VarT . T.BoundTv) params)
                     rho_ty = foldr T.ArrT res_ty field
                     sigma_ty =
                         if null params

@@ -19,7 +19,7 @@ testcases =
         , ("test05.plt", (`shouldReturn` ["Bool = True | False", "not : Bool -> Bool", "not = \\b -> case b of {\n    True -> False\n    False -> True\n}"]))
         , ("test06.plt", (`shouldReturn` ["f : {a} a -> a", "f = let {\n    g : {b} b -> b\n    g = \\x -> x\n    h : {c} c -> c\n    h = \\y -> y\n} in g"]))
         , ("test07.plt", (`shouldReturn` ["Bool = True | False", "(\\b -> case b of {\n    True -> False\n    False -> True\n}) False"]))
-        , ("test13.plt", (`shouldReturn` ["List = Nil | :: a List a", "reverse : {a} List a -> List a", "reverse l = let {\n    rev : {a} List a -> List a -> List a\n    rev l' a = case l' of {\n        Nil -> a\n        :: x xs -> rev xs (x :: a)\n    }\n} in rev l Nil"]))
+        , ("test13.plt", (`shouldReturn` ["List a = Nil | :: a List a", "reverse : {a} List a -> List a", "reverse l = let {\n    rev : {a} List a -> List a -> List a\n    rev l' a = case l' of {\n        Nil -> a\n        :: x xs -> rev xs (x :: a)\n    }\n} in rev l Nil"]))
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m [String] -> Expectation) -> SpecWith ()

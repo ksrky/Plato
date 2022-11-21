@@ -1,4 +1,4 @@
-data List = Nil | a :: List a
+data List a = Nil | a :: List a
 
 reverse : {a} List a -> List a
 reverse l =

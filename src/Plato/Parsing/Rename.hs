@@ -43,7 +43,7 @@ instance Rename Expr where
                         FuncTyD var _ -> return [var]
                         _ -> return []
                 namesCheck (concat names)
-                local (\(env, lev) -> (extendGlbNameEnvList (DefLevel (lev + 1)) (concat names) env, lev)) $ do
+                local (\(env, lev) -> (extendEnvListInt (lev + 1) (concat names) env, lev)) $ do
                         decs' <- local (\(env, lev) -> (env, lev + 1)) $ mapM (rename `traverse`) decs
                         LetE decs' <$> rename `traverse` body
         rename (CaseE match alts) = do
@@ -105,7 +105,7 @@ renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
         let modn = case mb_modn of
                 Just modn -> modn
                 Nothing -> noLoc mainModname
-            glbenv' = extendGlbNameEnvList (DefTop $ Just $ unLoc modn) (concat names) glbenv
+            glbenv' = extendEnvListExt (unLoc modn) (concat names) glbenv
         topds' <- mapM (rename `traverse`) topds `runReaderT` (glbenv', 0)
         return (Program (Just modn) imp_modns topds', updateGlbNameEnv glbenv')
 

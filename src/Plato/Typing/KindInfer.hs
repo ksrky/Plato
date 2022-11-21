@@ -184,7 +184,7 @@ unify StarK StarK = return ()
 unify (ArrK l r) (ArrK l' r') = do
         unify l l'
         unify r r'
-unify k1 k2 = lift $ throwString $ "UnificationFail " ++ show k1 ++ ", " ++ show k2
+unify k1 k2 = lift $ throwError $ hsep ["UnificationFail ", pretty k1 <> comma, pretty k2]
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaKv -> Kind -> Ki m ()
 unifyVar kv1 kn2 = do
@@ -242,8 +242,7 @@ infer t = case t of
                 return (AppT ty1' ty2', kv)
         RecT x kn ty1 -> do
                 (ty1', kn1) <- extendEnv x kn (infer ty1)
-                unify kn1 StarK
-                return (RecT x kn ty1', StarK)
+                return (RecT x kn ty1', kn1)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do
                         (ty1', kn1) <- infer ty1
