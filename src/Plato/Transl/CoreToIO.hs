@@ -16,7 +16,8 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.RWS
 import qualified Data.Text as T
-import qualified Plato.Core.Pretty as P
+
+-- import qualified Plato.Core.Pretty as P
 import Prettyprinter
 import Prettyprinter.Render.Text
 
@@ -26,12 +27,12 @@ processModule mod = do
         let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (externalName (moduleName mod) (noLoc n), b)) (moduleBind mod))
         opt <- asks plt_isEntry
         when opt $ mapM_ (printResult ctx') (moduleEval mod)
-        modify $ \s -> s{plt_glbContext = ctx'}
+        modify $ \s -> s{plt_glbContext = updateContext ctx'}
 
 printResult :: MonadIO m => Context -> Term -> m ()
-printResult ctx t = liftIO $ do
-        -- putDoc $ ppr ctx $ eval ctx t
-        putDoc $ vsep [viaShow ctx, P.ppr ctx $ eval ctx t]
+printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t
+
+-- putDoc $ vsep [viaShow ctx, P.ppr ctx $ eval ctx t]
 
 ----------------------------------------------------------------
 -- Pretty printing

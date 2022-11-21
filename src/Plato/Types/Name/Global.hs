@@ -10,7 +10,12 @@ import Prettyprinter
 ----------------------------------------------------------------
 -- Global Name
 ----------------------------------------------------------------
-data GlbName = GlbName {g_sort :: NameSort, g_name :: Name, g_loc :: Span}
+data GlbName = GlbName
+        { g_sort :: NameSort
+        , g_name :: Name
+        , g_loc :: Span
+        }
+        deriving (Show)
 
 instance Eq GlbName where
         n1 == n2 = g_sort n1 == g_sort n2 && g_name n1 == g_name n2
@@ -18,8 +23,8 @@ instance Eq GlbName where
 instance Ord GlbName where
         compare n1 n2 = compare (g_name n1) (g_name n2)
 
-instance Show GlbName where
-        show n = show (g_name n)
+-- instance Show GlbName where
+--        show n = show (g_name n)
 
 instance Pretty GlbName where
         pretty n = pretty (g_name n)
@@ -60,6 +65,13 @@ newGlbName ns n = GlbName{g_sort = ns, g_name = n, g_loc = NoSpan}
 dummyGlbName :: GlbName
 dummyGlbName = GlbName{g_sort = Local, g_name = Name{nameText = "", nameSpace = VarName}, g_loc = NoSpan}
 
+updateGlbName :: GlbName -> GlbName
+updateGlbName glbn = case g_sort glbn of
+        Internal (DefTop (Just modn)) -> glbn{g_sort = External modn}
+        Internal _ -> unreachable $ "Non-toplevel internal name occured: " ++ show glbn
+        Local -> unreachable $ "Local name in top level: " ++ show glbn
+        _ -> glbn
+
 ----------------------------------------------------------------
 -- GlbNameEnv
 ----------------------------------------------------------------
@@ -91,11 +103,4 @@ filterGlbNameEnv imp_modns =
                 )
 
 updateGlbNameEnv :: GlbNameEnv -> GlbNameEnv
-updateGlbNameEnv =
-        M.map
-                ( \glbn -> case g_sort glbn of
-                        Internal (DefTop (Just modn)) -> glbn{g_sort = External modn}
-                        Internal _ -> unreachable "Non-toplevel internal name occured"
-                        Local -> unreachable "Local name in top level"
-                        _ -> glbn
-                )
+updateGlbNameEnv = M.map updateGlbName

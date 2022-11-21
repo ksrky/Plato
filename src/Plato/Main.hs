@@ -18,7 +18,7 @@ import qualified Data.Text.IO as T
 import System.Console.Haskeline
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ fst <$> evalRWST (processFile src) initPInfo initPState
+runPlato src = catchError $ fst <$> evalRWST (processFile src) (initPInfo' src) initPState
 
 repl :: [FilePath] -> IO ()
 repl files = do
@@ -55,6 +55,6 @@ processImport (L sp modn) = do
         unless (modn `S.member` imped_set) $ do
                 local
                         (\r -> r{plt_isEntry = False, plt_importingList = modn `S.insert` impng_set})
-                        $ processFile undefined
+                        $ processFile =<< getModPath modn
                 modify $ \s -> s{plt_importedList = modn `S.insert` plt_importedList s}
         return modn

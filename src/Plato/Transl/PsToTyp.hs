@@ -161,7 +161,7 @@ ps2typ (P.Program (Just modn) _ topds) = do
                 (e', ty) <- typeInfer env' e
                 unless (isBasicType ty) $ throwLocErr sp $ hsep ["Invalid type for evaluation expression:", pretty ty]
                 return (L sp e', ty)
-        modify $ \s -> s{plt_tyEnv = env'}
+        modify $ \s -> s{plt_tyEnv = updateTyEnv env'}
         return $
                 T.Program
                         { T.typ_modn = unLoc modn

@@ -9,3 +9,5 @@ stack.yaml.lock
 # documentation
 /site
 static
+
+examples/Plato

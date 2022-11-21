@@ -9,14 +9,21 @@ import Plato.Types.Name.Global
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import qualified Data.Vector as V
+import System.FilePath
 
+----------------------------------------------------------------
+-- Plato Monad
+----------------------------------------------------------------
 data PlatoInfo = PInfo
-        { plt_fileName :: FilePath
+        { plt_basePath :: FilePath
+        , plt_fileName :: FilePath
         , plt_isEntry :: Bool
         , plt_importingList :: S.Set ModuleName
         }
+        deriving (Show)
 
-data PlatoStore = PStore {}
+data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
         { plt_glbNameEnv :: GlbNameEnv
@@ -26,13 +33,22 @@ data PlatoState = PState
         , plt_glbContext :: Context
         , plt_importedList :: S.Set ModuleName
         }
+        deriving (Show)
 
 initPInfo :: PlatoInfo
 initPInfo =
         PInfo
-                { plt_fileName = "<no file name>"
+                { plt_basePath = ""
+                , plt_fileName = "<no file name>"
                 , plt_isEntry = True
                 , plt_importingList = S.empty
+                }
+
+initPInfo' :: FilePath -> PlatoInfo
+initPInfo' src =
+        initPInfo
+                { plt_basePath = takeDirectory src
+                , plt_fileName = src
                 }
 
 initPStore :: PlatoStore
@@ -62,3 +78,20 @@ evalPlato = evalRWST
 
 returnPlato :: Monad m => Plato m a -> PlatoInfo -> PlatoState -> m a
 returnPlato x i s = fst <$> evalRWST x i s
+
+----------------------------------------------------------------
+-- Utilities
+----------------------------------------------------------------
+getModPath :: Monad m => ModuleName -> Plato m FilePath
+getModPath modn = do
+        base_path <- asks plt_basePath
+        return (base_path </> mod2path modn)
+
+updateTyEnv :: TyEnv -> TyEnv
+updateTyEnv = M.mapKeys updateGlbName
+
+updateKnEnv :: KnEnv -> KnEnv
+updateKnEnv = M.mapKeys updateGlbName
+
+updateContext :: Context -> Context
+updateContext = V.map (\(glbn, bind) -> (updateGlbName glbn, bind))
