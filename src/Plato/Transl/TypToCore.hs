@@ -140,7 +140,7 @@ transType ctx = tratype
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
 transKind T.StarK = return C.KnStar
-transKind T.MetaK{} = throwUnexpErr "Kind inference failed" --tmp
+transKind T.MetaK{} = throwUnexpErr "Kind inference failed"
 transKind (T.ArrK kn1 kn2) = C.KnArr <$> transKind kn1 <*> transKind kn2
 
 transDecl :: (MonadThrow m, MonadIO m) => ModuleName -> Located T.Decl -> StateT (Context, T.KnEnv) m (Name, C.Binding)
@@ -150,32 +150,32 @@ transDecl modn (L sp dec) = do
                 T.TypeD con ty -> do
                         ty' <- renameRecT ty
                         (ty'', kn) <- inferKind knenv ty'
-                        let knenv' = M.insert (externalName modn con) kn knenv
+                        let knenv' = M.insert (toplevelName modn con) kn knenv
                         knK <- transKind kn
                         tyT <- transType ctx ty''
-                        let ctx' = addBinding (externalName modn con) (C.TyAbbBind tyT knK) ctx
+                        let ctx' = addBinding (toplevelName modn con) (C.TyAbbBind tyT knK) ctx
                         put (ctx', knenv')
                         return (unLoc con, C.TyAbbBind tyT knK)
                 T.VarD var ty -> do
                         ty' <- checkKindStar knenv sp ty
                         tyT <- transType ctx ty'
-                        let ctx' = addName (externalName modn var) ctx
+                        let ctx' = addName (toplevelName modn var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.VarBind tyT)
                 T.ConD (T.FuncD var exp ty) -> do
                         ty' <- checkKindStar knenv sp ty
                         t <- transExpr knenv ctx exp
                         tyT <- transType ctx ty'
-                        let ctx' = addName (externalName modn var) ctx
+                        let ctx' = addName (toplevelName modn var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.TmAbbBind t tyT)
 
-transTopFuncD :: (MonadThrow m, MonadIO m) => Context -> T.KnEnv -> T.FuncD -> m ((Name, C.Binding), Context)
-transTopFuncD ctx knenv (T.FuncD x e ty) = do
+transTopFuncD :: (MonadThrow m, MonadIO m) => ModuleName -> Context -> T.KnEnv -> T.FuncD -> m ((Name, C.Binding), Context)
+transTopFuncD modn ctx knenv (T.FuncD x e ty) = do
         ty' <- checkKindStar knenv NoSpan ty
         t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
         tyT <- transType ctx ty'
-        let ctx' = addName (localName x) ctx -- tmp
+        let ctx' = addName (toplevelName modn x) ctx --tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 
 transEval :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context -> (Located T.Expr, T.Type) -> m C.Term
@@ -192,7 +192,7 @@ typ2core (T.Program modn binds fundecs exps) = do
         ctx <- gets plt_glbContext
         knenv <- gets plt_knEnv
         (binds', (ctx', knenv')) <- mapM (transDecl modn) binds `runStateT` (ctx, knenv)
-        (funbind, ctx'') <- transTopFuncD ctx' knenv' fundec
+        (funbind, ctx'') <- transTopFuncD modn ctx' knenv' fundec
         evals <- mapM (transEval knenv' ctx'') exps
-        modify $ \s -> s{plt_knEnv = updateKnEnv knenv'}
+        modify $ \s -> s{plt_knEnv = knenv'}
         return (C.Module modn (binds' ++ [funbind]) evals)

@@ -9,7 +9,6 @@ import Plato.Types.Name.Global
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import qualified Data.Vector as V
 import System.FilePath
 
 ----------------------------------------------------------------
@@ -86,12 +85,3 @@ getModPath :: Monad m => ModuleName -> Plato m FilePath
 getModPath modn = do
         base_path <- asks plt_basePath
         return (base_path </> mod2path modn)
-
-updateTyEnv :: TyEnv -> TyEnv
-updateTyEnv = M.mapKeys updateGlbName
-
-updateKnEnv :: KnEnv -> KnEnv
-updateKnEnv = M.mapKeys updateGlbName
-
-updateContext :: Context -> Context
-updateContext = V.map (\(glbn, bind) -> (updateGlbName glbn, bind))

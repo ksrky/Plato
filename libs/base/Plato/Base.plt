@@ -1,9 +1,5 @@
 module Plato.Base
 
-data Unit = Unit
-
-data Void
-
 ($) : {a b} (a -> b) -> a -> b
 f $ x = f x
 
@@ -22,3 +18,8 @@ const x y = x
 
 flip : {a b c}  (a -> b -> c) -> b -> a -> c
 flip f x y = f y x
+
+
+data Unit = Unit
+
+data Void

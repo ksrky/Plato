@@ -61,5 +61,5 @@ test (fname, iscorrect) = it fname $
 processModule' :: MonadThrow m => Module -> Plato m [Doc ann]
 processModule' mod = do
         ctx <- gets plt_glbContext
-        let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (externalName (moduleName mod) (noLoc n), b)) (moduleBind mod))
+        let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (toplevelName (moduleName mod) (noLoc n), b)) (moduleBind mod))
         return $ map (ppr ctx' . eval ctx') (moduleEval mod)

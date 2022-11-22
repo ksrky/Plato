@@ -23,13 +23,15 @@ class Rename f where
         rename :: MonadThrow m => f RdrName -> ReaderT (GlbNameEnv, Level) m (f GlbName)
 
 instance Rename Located where
-        rename (L sp (Unqual n)) = asks $ \(env, _) -> L sp $ lookupGlbNameEnv env (L sp n)
+        rename (L sp (Unqual n)) = do
+                env <- asks fst
+                L sp <$> lookupGlbNameEnv env (L sp n)
         rename (L sp (Qual modn n)) = do
                 env <- asks fst
                 unless (n `M.member` env) $
                         throwLocErr sp $
                                 hsep ["No module named", squotes $ pretty n, "is imported"]
-                return $ L sp $ externalName modn (L sp n)
+                return $ L sp $ toplevelName modn (L sp n)
 
 instance Rename Expr where
         rename (VarE var) = VarE <$> rename var
@@ -107,7 +109,7 @@ renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
                 Nothing -> noLoc mainModname
             glbenv' = extendEnvListExt (unLoc modn) (concat names) glbenv
         topds' <- mapM (rename `traverse`) topds `runReaderT` (glbenv', 0)
-        return (Program (Just modn) imp_modns topds', updateGlbNameEnv glbenv')
+        return (Program (Just modn) imp_modns topds', glbenv')
 
 renameFixityEnv :: GlbNameEnv -> FixityEnv Name -> FixityEnv GlbName
 renameFixityEnv glbenv = M.mapKeys $ \n -> case M.lookup n glbenv of

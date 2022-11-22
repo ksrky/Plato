@@ -138,7 +138,7 @@ tcRho (CaseE match _ alts) (Infer ref) = do
                 [(_, ty1), (_, ty2)] -> do
                         _ <- subsCheck ty1 ty2
                         subsCheck ty2 ty1
-                _ -> unreachable ""
+                _ -> unreachable "tcRho"
         case body_tys of
                 [] -> writeTcRef ref (SumT [])
                 (_, ty) : _ -> writeTcRef ref ty

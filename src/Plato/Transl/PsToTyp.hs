@@ -117,7 +117,7 @@ transTopDecl modn (L sp (P.DataD name params fields)) = do
             bodyty = T.RecT name kn (foldr (`T.AbsT` Nothing) fieldty params)
         tell ([L sp (T.TypeD name bodyty)], [], [])
         forM_ fields' $ \(l, field) -> do
-                let res_ty = foldl T.AppT (T.ConT $ externalName modn name) (map (T.VarT . T.BoundTv) params)
+                let res_ty = foldl T.AppT (T.ConT $ toplevelName modn name) (map (T.VarT . T.BoundTv) params)
                     rho_ty = foldr T.ArrT res_ty field
                     sigma_ty =
                         if null params
@@ -152,8 +152,8 @@ ps2typ (P.Program (Just modn) _ topds) = do
         env <- gets plt_tyEnv
         let env' =
                 M.fromList
-                        ( [(externalName (unLoc modn) var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
-                          ++ [(externalName (unLoc modn) var, ty) | L _ (T.VarD var ty) <- vardecs]
+                        ( [(toplevelName (unLoc modn) var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
+                          ++ [(toplevelName (unLoc modn) var, ty) | L _ (T.VarD var ty) <- vardecs]
                         )
                         `M.union` env
         fundecs' <- mapM (typeCheck env') fundecs
@@ -161,7 +161,7 @@ ps2typ (P.Program (Just modn) _ topds) = do
                 (e', ty) <- typeInfer env' e
                 unless (isBasicType ty) $ throwLocErr sp $ hsep ["Invalid type for evaluation expression:", pretty ty]
                 return (L sp e', ty)
-        modify $ \s -> s{plt_tyEnv = updateTyEnv env'}
+        modify $ \s -> s{plt_tyEnv = env'}
         return $
                 T.Program
                         { T.typ_modn = unLoc modn

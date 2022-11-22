@@ -173,7 +173,7 @@ btype       :: { LType RdrName }
 atype       :: { LType RdrName }
             : '(' type ')'                          { $2 }
             {-| qtycon                                { cL $1 (ConT $1) -}
-            | conid                                 { cL $1 (ConT (mkLRdrName tyconName $1))} -- tmp: ?
+            | conid                                 { cL $1 (ConT (mkLRdrName tyconName $1))} --tmp: ?
             | tyvar                                 { cL $1 (VarT $1) }
 
 tyvars      :: { [LName] }
@@ -352,7 +352,7 @@ mkLName f (L sp t) = L sp (f t)
 
 mkLRdrName :: (T.Text -> Name) -> Located T.Text -> Located RdrName
 mkLRdrName f (L sp t) = case reverse (splitOnDot t) of
-    [] -> unreachable ""
+    [] -> unreachable "mkLRdrName"
     [x] -> L sp $ Unqual (f x)
     x : xs -> L sp $ Qual (ModuleName (reverse xs)) (f x)
 }

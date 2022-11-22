@@ -24,10 +24,10 @@ import Prettyprinter.Render.Text
 processModule :: (MonadThrow m, MonadIO m) => Module -> Plato m ()
 processModule mod = do
         ctx <- gets plt_glbContext
-        let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (externalName (moduleName mod) (noLoc n), b)) (moduleBind mod))
+        let ctx' = foldl (flip $ uncurry addBinding) ctx (map (\(n, b) -> (toplevelName (moduleName mod) (noLoc n), b)) (moduleBind mod))
         opt <- asks plt_isEntry
         when opt $ mapM_ (printResult ctx') (moduleEval mod)
-        modify $ \s -> s{plt_glbContext = updateContext ctx'}
+        modify $ \s -> s{plt_glbContext = ctx'}
 
 printResult :: MonadIO m => Context -> Term -> m ()
 printResult ctx t = liftIO $ putDoc $ ppr ctx $ eval ctx t

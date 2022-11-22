@@ -41,7 +41,7 @@ processFile src = do
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do
         (fixenv, ps) <- src2ps input
-        (imp_modns, _) <- listen $ mapM processImport (importModules ps)
+        imp_modns <- mapM processImport (importModules ps)
         ps' <- psCanon imp_modns fixenv ps
         typ <- ps2typ ps'
         mod <- typ2core typ

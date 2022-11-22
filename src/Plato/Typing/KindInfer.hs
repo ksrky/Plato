@@ -174,7 +174,7 @@ zonkType (RecordT fields) = do
 zonkType (SumT fields) = do
         fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM zonkType tys
         return $ SumT fields'
-zonkType MetaT{} = unreachable ""
+zonkType MetaT{} = unreachable "zonkType"
 
 -- | Unification
 unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Ki m ()
@@ -257,4 +257,4 @@ infer t = case t of
                                 return ty1'
                         return (x, tys')
                 return (SumT fields', StarK)
-        MetaT{} -> unreachable ""
+        MetaT{} -> unreachable "infer"

@@ -203,7 +203,7 @@ zonkType (MetaT tv) = do
                         ty' <- zonkType ty
                         writeTv tv ty'
                         return ty'
-zonkType _ = unreachable ""
+zonkType _ = unreachable "zonkType"
 
 zonkExpr :: MonadIO m => Expr -> Tc m Expr
 zonkExpr (AbsE var mty expr) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr expr

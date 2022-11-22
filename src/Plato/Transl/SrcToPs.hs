@@ -32,7 +32,7 @@ psCanon imp_modns fixenv prg = do
         glbenv <- filterGlbNameEnv imp_modns <$> gets plt_glbNameEnv
         (prg', glbenv') <- renameTopDecls prg glbenv
         fixenv' <- M.union (renameFixityEnv glbenv' fixenv) <$> gets plt_fixityEnv
-        modify $ \s -> s{plt_fixityEnv = fixenv', plt_glbNameEnv = glbenv'}
+        modify $ \s -> s{plt_fixityEnv = fixenv', plt_glbNameEnv = plt_glbNameEnv s `M.union` glbenv'}
         resolveFixity fixenv' prg'
 
 exp2ps :: MonadThrow m => T.Text -> Plato m (Program GlbName)
@@ -47,7 +47,7 @@ exp2ps inp = do
 getModuleName :: Program GlbName -> ModuleName
 getModuleName prg = case ps_moduleDecl prg of
         Just (L _ modn) -> modn
-        Nothing -> unreachable ""
+        Nothing -> unreachable "getModuleName"
 
 importModules :: Program RdrName -> [Located ModuleName]
 importModules = ps_importDecls

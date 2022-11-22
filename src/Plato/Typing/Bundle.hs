@@ -11,27 +11,33 @@ import Plato.Types.Name.Global
 import Control.Exception.Safe
 import Control.Monad.Reader
 
-mkValue :: MonadThrow m => GlbName -> ReaderT Level m Expr
+--tmp: (ModuleName, Level)
+
+mkValue :: MonadThrow m => GlbName -> ReaderT (ModuleName, Level) m Expr
 mkValue glbn = case g_sort glbn of
-        External modn -> return $ ProjE (VarE $ newGlbName Local $ modn2name modn) glbn --tmp: Local
-        Internal lev -> return $ ProjE (VarE $ newGlbName Local $ str2conName (":l" ++ show lev)) glbn --tmp: Local
+        TopLevel modn -> do
+                modn' <- asks fst
+                if modn == modn'
+                        then return $ ProjE (VarE $ newGlbName Local $ modn2name modn) glbn
+                        else return $ ProjE (VarE $ newGlbName (TopLevel modn) $ modn2name modn) glbn
+        LocalTop lev -> return $ ProjE (VarE $ newGlbName Local $ str2conName (":l" ++ show lev)) glbn --tmp: Local
         Local -> return $ VarE glbn
 
 -- | Renaming
 class Bundle a where
-        bundle :: MonadThrow m => a -> ReaderT Level m a
+        bundle :: MonadThrow m => a -> ReaderT (ModuleName, Level) m a
 
 instance Bundle Expr where
         bundle (VarE x) = case nameSpace (g_name x) of
                 VarName -> mkValue x
                 ConName -> return $ VarE x
-                _ -> unreachable ""
+                _ -> unreachable "bundle"
         bundle (AbsE x mty e) = AbsE x mty <$> bundle e
         bundle (AppE e1 e2) = AppE <$> bundle e1 <*> bundle e2
         bundle (TAbsE xs e) = TAbsE xs <$> bundle e
         bundle (TAppE e tys) = TAppE <$> bundle e <*> pure tys
         bundle (LetE decs body) = do
-                dec <- local (+ 1) $ bundleFuncDs decs
+                dec <- local (\(modn, lev) -> (modn, lev + 1)) $ bundleFuncDs decs
                 body' <- bundle body
                 return $ LetE [dec] body'
         bundle (CaseE e mty alts) = do
@@ -56,26 +62,26 @@ instance Bundle Type where
         bundle ty = return ty
 
 renameRecT :: MonadThrow m => Type -> m Type
-renameRecT = (`runReaderT` 0) . bundle
+renameRecT = (`runReaderT` (ModuleName [], 0)) . bundle
 
-bundleFuncDs :: MonadThrow m => [FuncD] -> ReaderT Level m FuncD
+bundleFuncDs :: MonadThrow m => [FuncD] -> ReaderT (ModuleName, Level) m FuncD
 bundleFuncDs decs = do
-        lev <- ask
+        lev <- asks snd
         let r = str2conName (":l" ++ show lev)
         fields <- forM decs $ \(FuncD var body _) -> do
                 body' <- bundle body
-                return (internalName lev var, body')
-        let fieldtys = [(internalName lev var, ty) | FuncD var _ ty <- decs]
+                return (localtopName lev var, body')
+        let fieldtys = [(localtopName lev var, ty) | FuncD var _ ty <- decs]
         return $ FuncD (noLoc r) (RecordE fields) (RecordT fieldtys)
 
 bundleEval :: MonadThrow m => Expr -> m Expr
-bundleEval = (`runReaderT` 0) . bundle
+bundleEval = (`runReaderT` (ModuleName [], 0)) . bundle
 
 bundleTopFuncDs :: MonadThrow m => ModuleName -> [FuncD] -> m FuncD
 bundleTopFuncDs modn decs = do
         let r = noLoc $ modn2name modn
         fields <- forM decs $ \(FuncD var body _) -> do
-                body' <- runReaderT (bundle body) 0
-                return (externalName modn var, body')
-        let fieldtys = [(externalName modn var, ty) | FuncD var _ ty <- decs]
+                body' <- runReaderT (bundle body) (modn, 0)
+                return (toplevelName modn var, body')
+        let fieldtys = [(toplevelName modn var, ty) | FuncD var _ ty <- decs]
         return $ FuncD r (RecordE fields) (RecordT fieldtys)
