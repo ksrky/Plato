@@ -13,7 +13,7 @@ instance Eq Name where
         n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
 
 instance Ord Name where
-        compare n1 n2 = compare (nameText n1) (nameText n2)
+        compare n1 n2 = compare (nameText n1) (nameText n2) <> compare (nameSpace n1) (nameSpace n2)
 
 instance Show Name where
         show (Name _ t) = T.unpack t
@@ -28,7 +28,7 @@ data NameSpace
         | TyvarName
         | TyconName
         | ModName
-        deriving (Eq, Show)
+        deriving (Eq, Ord, Show)
 
 varName :: T.Text -> Name
 varName = Name VarName

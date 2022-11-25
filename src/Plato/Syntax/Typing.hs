@@ -201,7 +201,7 @@ instance Pretty Type where
                                         fields
                                 )
                         <> rangle
-        pretty (MetaT m) = viaShow (show m)
+        pretty (MetaT tv) = viaShow tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
 

@@ -69,3 +69,11 @@ filter : {a} (a -> Bool) -> List a -> List a
 filter f l = case l of
     Nil -> Nil
     x :: xs -> if (f x) (x :: filter f xs) (filter f xs)
+
+foldr : {a b} (a -> b -> b) -> b -> List a -> b
+foldr k z = 
+    let
+        go l = case l of
+            Nil ->  z
+            y : ys = k y (go ys)
+     in go

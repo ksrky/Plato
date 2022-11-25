@@ -63,4 +63,4 @@ getKind ctx i = case getBinding ctx i of
 getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
 getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
-        Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'" <+> viaShow (g_loc x) <+> viaShow (g_sort x)
+        Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"

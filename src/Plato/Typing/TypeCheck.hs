@@ -18,6 +18,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List (subsequences, (\\))
+import Prettyprinter
 
 typeCheck :: (MonadIO m, MonadThrow m) => TyEnv -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
@@ -184,7 +185,7 @@ subsCheck sigma1 sigma2 = do
         co2 <- subsCheckRho sigma1 rho2
         esc_tvs <- getFreeTyVars [sigma1, sigma2]
         let bad_tvs = filter (`elem` esc_tvs) skol_tvs
-        unless (null bad_tvs) $ lift $ throwUnexpErr "Subsumption check failed"
+        unless (null bad_tvs) $ lift $ throwUnexpErr $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         if null skol_tvs
                 then return id
                 else return $ \e -> co1 (TAbsE (map tyVarLName skol_tvs) (co2 e))

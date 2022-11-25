@@ -172,8 +172,9 @@ btype       :: { LType RdrName }
 
 atype       :: { LType RdrName }
             : '(' type ')'                          { $2 }
-            {-| qtycon                                { cL $1 (ConT $1) -}
-            | conid                                 { cL $1 (ConT (mkLRdrName tyconName $1))} --tmp: ?
+            {-| qtycon                                { cL $1 (ConT $1) -}   --tmp: ?
+            | conid                                 { cL $1 (ConT (mkLRdrName tyconName $1)) }
+            | qconid                                { cL $1 (ConT (mkLRdrName tyconName $1)) }
             | tyvar                                 { cL $1 (VarT $1) }
 
 tyvars      :: { [LName] }

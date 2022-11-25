@@ -4,8 +4,7 @@ import Plato.List
 data ChurchList a = ChurchList ({r} (a -> r -> r) -> r -> r)
 
 runList : {a} ChurchList a -> ({r} (a -> r -> r) -> r -> r)
-runList cl = case cl of
-        ChurchList xs -> xs
+runList cl = case cl of ChurchList xs -> xs
 
 fromList : {a} List a -> ChurchList a
 fromList xs = ChurchList $ \k z -> foldr k z xs
