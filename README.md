@@ -2,7 +2,7 @@
 
 [![Haskell CI](https://github.com/ksrky/Plato/actions/workflows/haskell.yml/badge.svg)](https://github.com/ksrky/Plato/actions/workflows/haskell.yml)
 
-Plato is a purely functional programming language without runtime.
+Plato is a purely functional programming language based on higher-order polymorphic lambda calculus.
 
 ## Language Features
 
