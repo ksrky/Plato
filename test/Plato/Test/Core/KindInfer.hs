@@ -32,6 +32,14 @@ testcases =
                 ( "data Either a b = Left a | Right b"
                 , (`shouldReturn` [ArrK StarK (ArrK StarK StarK)])
                 )
+        ,
+                ( "data Monad m = Monad ({a} a -> m a) ({a b} m a -> (a -> m b) -> m b)"
+                , (`shouldReturn` [ArrK (ArrK StarK StarK) StarK])
+                )
+                {-,
+                        ( "data T g f x = T1 (f x) | T2 (g f)"
+                        , (`shouldReturn` [(StarK `ArrK` StarK `ArrK` StarK) `ArrK` (StarK `ArrK` StarK) `ArrK` StarK `ArrK` StarK])
+                        )-}
         ]
 
 test :: (MonadThrow m, MonadIO m) => (String, m [Kind] -> Expectation) -> SpecWith ()
