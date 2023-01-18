@@ -219,7 +219,6 @@ zonkExpr (CaseE e mty alts) =
                 <$> zonkExpr e
                 <*> zonkType `traverse` mty
                 <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr body)
-zonkExpr (AnnE e ty) = AnnE <$> zonkExpr e <*> zonkType ty
 zonkExpr expr = return expr
 
 ----------------------------------------------------------------

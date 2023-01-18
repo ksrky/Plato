@@ -185,14 +185,14 @@ transEval knenv ctx (L _ e, ty) = do
         _ <- transType ctx ty --tmp
         return t
 
-typ2core :: (MonadThrow m, MonadIO m) => T.Program -> Plato m C.Module
-typ2core (T.Program modn binds fundecs exps) = do
+typ2core :: (MonadThrow m, MonadIO m) => T.Module -> Plato m C.Module
+typ2core (T.Module modn binds fundecs _exps) = do
         fundec <- bundleTopFuncDs modn fundecs
         -- error $ show $ pretty fundec
         ctx <- gets plt_glbContext
         knenv <- gets plt_knEnv
         (binds', (ctx', knenv')) <- mapM (transDecl modn) binds `runStateT` (ctx, knenv)
         (funbind, ctx'') <- transTopFuncD modn ctx' knenv' fundec
-        evals <- mapM (transEval knenv' ctx'') exps
+        evals <- mapM (transEval knenv' ctx'') undefined -- exps
         modify $ \s -> s{plt_knEnv = knenv'}
         return (C.Module modn (binds' ++ [funbind]) evals)

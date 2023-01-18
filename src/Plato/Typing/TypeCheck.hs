@@ -145,10 +145,6 @@ tcRho (CaseE match _ alts) (Infer ref) = do
                 (_, ty) : _ -> writeTcRef ref ty
         let alts' = zipWith (\(p, _) (e, _) -> (p, e)) alts body_tys
         return $ CaseE match' (Just match_ty) alts'
-tcRho (AnnE body ann_ty) exp_ty = do
-        body' <- checkSigma body ann_ty
-        _ <- instSigma ann_ty exp_ty --tmp
-        return $ AnnE body' ann_ty
 tcRho e _ = return e
 
 ------------------------------------------

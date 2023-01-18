@@ -1,4 +1,8 @@
-module Plato.Syntax.Typing where
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE StarIsType #-}
+{-# LANGUAGE TypeFamilies #-}
+
+module Plato.Syntax.Typing2 where
 
 import Plato.Types.Location
 import Plato.Types.Name
@@ -10,64 +14,68 @@ import Prettyprinter
 ----------------------------------------------------------------
 -- Syntax
 ----------------------------------------------------------------
-type LName = Located Name
-type LExpr = Located Expr
-type LPat = Located Pat
-type LType = Located Type
-type LDecl = Located Decl
-type LArg = LName
+type family NoLoc a where
+        NoLoc Name = Name
+        NoLoc Arg = Arg
+        NoLoc (Expr f) = Expr f
+        NoLoc (Pat f) = Pat f
+        NoLoc (Type f) = Type f
+        NoLoc (TyVar f) = TyVar f
+        NoLoc (FuncD f) = FuncD f
+
+type Arg = Name
 
 -- | Expressions
-data Expr
-        = VarE LName
-        | AppE LExpr LExpr
-        | AbsE LArg (Maybe Type) LExpr
-        | TAppE LExpr [Type]
-        | TAbsE [(TyVar, Maybe Kind)] LExpr
-        | LetE [FuncD] LExpr
-        | ProjE LExpr LName
-        | RecordE [(LName, LExpr)]
-        | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
-        | TagE Name [LExpr] Type
-        | FoldE Type
-        | RefE Name LName
+data Expr (f :: * -> *)
+        = VarE (f Name)
+        | AppE (f (Expr f)) (f (Expr f))
+        | AbsE (f Arg) (Maybe (f (Type f))) (f (Expr f))
+        | TAppE (f (Expr f)) [f (Type f)]
+        | TAbsE [(TyVar f, Maybe Kind)] (f (Expr f))
+        | LetE [FuncD f] (f (Expr f))
+        | ProjE (f (Expr f)) (f Name)
+        | RecordE [(f Name, f (Expr f))]
+        | CaseE (f (Expr f)) (Maybe (f (Type f))) [(f (Pat f), f (Expr f))]
+        | TagE Name [f (Expr f)] (Type f)
+        | FoldE (Type f)
+        | RefE Name (f Name)
         deriving (Eq, Show)
 
 -- | Patterns
-data Pat
-        = ConP LName [LPat]
-        | VarP LArg
+data Pat (f :: * -> *)
+        = ConP (f Name) [f (Pat f)]
+        | VarP (f Arg)
         | WildP
         deriving (Eq, Show)
 
 -- | Types
-data Type
-        = VarT TyVar
-        | ConT LName
-        | ArrT LType LType
-        | AllT [(TyVar, Maybe Kind)] (Located Rho)
-        | AppT LType LType
-        | AbsT LArg (Maybe Kind) LType
-        | RecT LArg (Maybe Kind) LType
-        | RecordT [(LName, LType)]
-        | SumT [(LName, [LType])]
+data Type (f :: * -> *)
+        = VarT (TyVar f)
+        | ConT (f Name)
+        | ArrT (f (Type f)) (f (Type f))
+        | AllT [(TyVar f, Maybe Kind)] (f (Rho f))
+        | AppT (f (Type f)) (f (Type f))
+        | AbsT (f Arg) (Maybe Kind) (f (Type f))
+        | RecT (f Arg) Kind (f (Type f))
+        | RecordT [(f Name, f (Type f))]
+        | SumT [(f Name, [f (Type f)])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
-type Sigma = Type
-type Rho = Type
-type Tau = Type
+type Sigma f = Type f
+type Rho f = Type f
+type Tau f = Type f
 
-data TyVar
-        = BoundTv LName
-        | SkolemTv LName Uniq
+data TyVar (f :: * -> *)
+        = BoundTv (f Name)
+        | SkolemTv (f Name) Uniq
         deriving (Show, Ord)
 
-data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
+data MetaTv = MetaTv Uniq (IORef (Maybe (Tau NoLoc)))
 
 type Uniq = Int
 
-tyVarName :: TyVar -> LName
+tyVarName :: TyVar -> Located Name
 tyVarName (BoundTv x) = x
 tyVarName (SkolemTv x _) = x
 
@@ -81,19 +89,19 @@ data Kind
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 -- | Function decl
-data FuncD = FuncD LName LExpr Type deriving (Eq, Show)
+data FuncD f = FuncD (Located Name) (f (Expr f)) (Type f) deriving (Eq, Show)
 
 data Decl
-        = TypeD LName Type
-        | VarD LName Type
-        | ConD FuncD
+        = TypeD (Located Name) (Type NoLoc)
+        | VarD (Located Name) (Type NoLoc)
+        | ConD (FuncD NoLoc)
         deriving (Eq, Show)
 
 data Module = Module
         { typ_modn :: ModuleName
-        , typ_decls :: [LDecl]
+        , typ_decls :: [Located Decl]
         , typ_binds :: [FuncD]
-        , typ_body :: [(LExpr, LType)]
+        , typ_body :: [(Located Expr, Located Type)]
         }
         deriving (Eq, Show)
 
@@ -103,7 +111,7 @@ type KnEnv = M.Map Name Kind
 ----------------------------------------------------------------
 -- Set Eq and Show class
 ----------------------------------------------------------------
-instance Eq TyVar where
+instance Eq (TyVar f) where
         (BoundTv s1) == (BoundTv s2) = unLoc s1 == unLoc s2
         (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
         _ == _ = False
@@ -123,16 +131,13 @@ instance Eq MetaKv where
 instance Show MetaKv where
         show (MetaKv u _) = "$" ++ show u
 
-instance Ord MetaKv where
-        MetaKv u1 _ `compare` MetaKv u2 _ = u1 `compare` u2
-
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-instance Pretty Expr where
+instance Pretty (Expr f) where
         pretty (VarE var) = pretty var
         pretty (AppE (L _ (FoldE ty)) exp) = "fold" <+> lbracket <> pretty ty <> rbracket <+> pprexpr (unLoc exp)
         pretty exp@AppE{} = pprapp exp
@@ -168,7 +173,7 @@ pprapp e = walk e []
         walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
         walk e' es = pprexpr e' <+> sep (map pprexpr es)
 
-instance Pretty Pat where
+instance Pretty (Pat f) where
         pretty (ConP con pats) = pretty con <+> hsep (map (pprpat . unLoc) pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
@@ -179,7 +184,7 @@ pprpat pat@(ConP con pats)
         | otherwise = parens $ pretty pat
 pprpat pat = pretty pat
 
-instance Pretty TyVar where
+instance Pretty (TyVar f) where
         pretty (BoundTv n) = pretty n
         pretty (SkolemTv n _) = pretty n
 
@@ -229,7 +234,7 @@ pprkind :: Kind -> Doc ann
 pprkind StarK = pretty StarK
 pprkind kn = parens (pretty kn)
 
-instance Pretty FuncD where
+instance Pretty (FuncD f) where
         pretty (FuncD var body body_ty) = hsep [pretty var, equals, pretty body, colon, pretty body_ty]
 
 instance Pretty Decl where
