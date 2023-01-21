@@ -81,13 +81,8 @@ int                             { (mkLInt -> Just $$) }
 
 %%
 
-program     : ';' program_                          { $2 }
-
-program_    : 'module' modid ';' body               { Program (Just $2) (fst $4) (snd $4) }
-            | body                                  { Program Nothing (fst $1) (snd $1) }
-
-body        : impdecls ';' topdecls                 { ($1, reverse $3) }
-            | topdecls                              { ([], reverse $1) }
+program     :: { ([Located ModuleName], [LTopDecl RdrName]) }
+            : ';' impdecls ';' topdecls             { (reverse $2, reverse $4) }
 
 -- | Imports
 impdecls    :: { [Located ModuleName] }
@@ -109,7 +104,6 @@ topdecls    :: { [ LTopDecl RdrName ] }
 topdecl     :: { LTopDecl RdrName }
             : 'data' ltycon tyvars0 '=' constrs     { cSLn $1 (snd $ last $5) (DataD $2 $3 ($5)) }
             | 'data' ltycon tyvars0                 { cSLn $1 $3 (DataD $2 $3 []) }
-            | ltycon tyvars0 '=' type               { cLL $1 $4 (TypeD $1 $2 $4) }
             | decl                                  { cL $1 (Decl $1) }
             | expr                                  { cL $1 (Eval $1) }
 

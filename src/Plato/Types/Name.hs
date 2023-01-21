@@ -1,6 +1,8 @@
 module Plato.Types.Name where
 
-import Data.List (intercalate)
+import Plato.Types.Error
+
+import Control.Exception.Safe
 import qualified Data.Text as T
 import Prettyprinter
 
@@ -57,22 +59,24 @@ str2tyconName = tyconName . T.pack
 ----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------
-newtype ModuleName = ModuleName [T.Text] deriving (Eq)
+newtype ModuleName = ModuleName T.Text deriving (Eq)
 
 instance Ord ModuleName where
         compare (ModuleName ts1) (ModuleName ts2) = compare ts1 ts2
 
 instance Show ModuleName where
-        show (ModuleName modn) = intercalate "." (map T.unpack modn)
+        show (ModuleName modn) = T.unpack modn
 
 instance Pretty ModuleName where
-        pretty (ModuleName modn) = concatWith (surround dot) (map pretty modn)
+        pretty (ModuleName modn) = pretty modn
 
-mainModname :: ModuleName
-mainModname = ModuleName [T.pack "Main"]
+filePath2modName :: MonadThrow m => FilePath -> m ModuleName
+filePath2modName fname = case reverse fname of
+        't' : 'l' : 'p' : '.' : ndom -> return $ ModuleName (T.pack (reverse ndom))
+        _ -> throwFatal "file name must ends `.plt`"
 
 modn2name :: ModuleName -> Name
-modn2name (ModuleName modn) = Name ModName (T.intercalate (T.pack ".") modn)
+modn2name (ModuleName modn) = Name ModName modn
 
 mod2path :: ModuleName -> FilePath
-mod2path (ModuleName modn) = intercalate "/" (map T.unpack modn) ++ ".plt"
+mod2path (ModuleName modn) = T.unpack (T.replace "." "/" modn) ++ ".plt"

@@ -34,7 +34,6 @@ instance Pretty GlbName where
 ----------------------------------------------------------------
 data NameSort
         = TopLevel ModuleName
-        | LocalTop Level
         | Local
         deriving (Eq, Show)
 
@@ -43,50 +42,38 @@ type Level = Int
 toplevelName :: ModuleName -> Located Name -> GlbName
 toplevelName modn (L sp n) = GlbName{g_sort = TopLevel modn, g_name = n, g_loc = sp}
 
-localtopName :: Level -> Located Name -> GlbName
-localtopName lev (L sp n) = GlbName{g_sort = LocalTop lev, g_name = n, g_loc = sp}
-
 localName :: Located Name -> GlbName
 localName (L sp n) = GlbName{g_sort = Local, g_name = n, g_loc = sp}
 
 newGlbName :: NameSort -> Name -> GlbName
 newGlbName ns n = GlbName{g_sort = ns, g_name = n, g_loc = NoSpan}
 
-dummyGlbName :: GlbName
-dummyGlbName = GlbName{g_sort = Local, g_name = Name{nameText = "", nameSpace = VarName}, g_loc = NoSpan}
-
 ----------------------------------------------------------------
 -- GlbNameEnv
 ----------------------------------------------------------------
-type GlbNameEnv = M.Map Name GlbName -- stores defined global name
+type GlbEnv = M.Map Name GlbName -- stores defined global name
 
-extendEnvExt :: ModuleName -> Located Name -> GlbNameEnv -> GlbNameEnv
+extendEnvExt :: ModuleName -> Located Name -> GlbEnv -> GlbEnv
 extendEnvExt modn n = M.insert (unLoc n) (toplevelName modn n)
 
-extendEnvListExt :: ModuleName -> [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendEnvListExt :: ModuleName -> [Located Name] -> GlbEnv -> GlbEnv
 extendEnvListExt modn = flip $ foldl $ flip (extendEnvExt modn)
 
-extendEnvInt :: Level -> Located Name -> GlbNameEnv -> GlbNameEnv
-extendEnvInt lev n = M.insert (unLoc n) (localtopName lev n)
-
-extendEnvListInt :: Level -> [Located Name] -> GlbNameEnv -> GlbNameEnv
-extendEnvListInt lev = flip $ foldl $ flip (extendEnvInt lev)
-
-extendEnvLocal :: Located Name -> GlbNameEnv -> GlbNameEnv
+extendEnvLocal :: Located Name -> GlbEnv -> GlbEnv
 extendEnvLocal n = M.insert (unLoc n) (localName n)
 
-extendEnvListLocal :: [Located Name] -> GlbNameEnv -> GlbNameEnv
+extendEnvListLocal :: [Located Name] -> GlbEnv -> GlbEnv
 extendEnvListLocal = flip $ foldl $ flip extendEnvLocal
 
-lookupGlbNameEnv :: MonadThrow m => GlbNameEnv -> Located Name -> m GlbName
-lookupGlbNameEnv glbenv (L sp n) = case M.lookup n glbenv of
+lookupGlbEnv :: MonadThrow m => GlbEnv -> Located Name -> m GlbName
+lookupGlbEnv glbenv (L sp n) = case M.lookup n glbenv of
         Just glbn -> return glbn{g_loc = sp}
         Nothing -> throwLocErr sp $ hsep ["Not in scope:", pretty n]
 
-filterGlbNameEnv :: [ModuleName] -> GlbNameEnv -> GlbNameEnv
-filterGlbNameEnv imp_modns =
+pickGlbEnv :: [ModuleName] -> GlbEnv -> GlbEnv
+pickGlbEnv imp_modns =
         M.filter
                 ( \glbn -> case g_sort glbn of
                         TopLevel modn -> modn `elem` imp_modns
-                        _ -> unreachable "filterGlbNameEnv"
+                        _ -> unreachable "pickGlbEnv"
                 )

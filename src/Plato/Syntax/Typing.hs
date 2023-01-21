@@ -51,6 +51,7 @@ data Type
         | RecT LArg (Maybe Kind) LType
         | RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
+        | RefT Name LName
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -82,6 +83,8 @@ data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 -- | Function decl
 data FuncD = FuncD LName LExpr Type deriving (Eq, Show)
+
+data Binds = Binds [(LName, LExpr)] [(LName, LType)]
 
 data Decl
         = TypeD LName Type
@@ -206,6 +209,7 @@ instance Pretty Type where
                                         fields
                                 )
                         <> rangle
+        pretty (RefT modn var) = hcat [pretty modn, dot, pretty var]
         pretty (MetaT tv) = viaShow tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)

@@ -78,7 +78,7 @@ inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
         exp'' <- zonkExpr `traverse` exp' -- reduce TyMeta
-        return ((genTrans tvs @@) <$> exp'', sigma)
+        return ((genTrans undefined {-tvs-} @@) <$> exp'', sigma)
 
 checkSigma :: (MonadIO m, MonadThrow m) => LExpr -> Sigma -> Tc m LExpr
 checkSigma exp sigma = do

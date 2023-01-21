@@ -72,3 +72,13 @@ instance Exception PlainError
 
 throwError :: MonadThrow m => Doc ann -> m a
 throwError doc = throw $ PlainError (renderString $ layoutPretty defaultLayoutOptions doc)
+
+newtype FatalError = FatalError String
+
+instance Show FatalError where
+        show (FatalError msg) = "Fatal error: " ++ msg
+
+instance Exception FatalError
+
+throwFatal :: MonadThrow m => String -> m a
+throwFatal msg = throw $ FatalError msg

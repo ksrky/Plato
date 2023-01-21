@@ -49,7 +49,6 @@ library
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
-      Plato.Syntax.Typing2
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
@@ -129,7 +128,6 @@ executable plato
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
-      Plato.Syntax.Typing2
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs

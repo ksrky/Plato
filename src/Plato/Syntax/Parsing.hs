@@ -50,14 +50,13 @@ data Decl a
 
 data TopDecl a
         = DataD LName [LArg] [(LName, [LType a])]
-        | TypeD LName [LArg] (LType a)
         | Decl (LDecl a)
         | Eval (LExpr a)
         deriving (Eq, Show)
 
 data Program a = Program
-        { ps_moduleDecl :: Maybe (Located ModuleName)
-        , ps_importDecls :: [Located ModuleName]
+        { ps_moduleName :: ModuleName
+        , ps_imports :: [Located ModuleName]
         , ps_topDecls :: [LTopDecl a]
         }
         deriving (Show)
@@ -134,12 +133,12 @@ instance Pretty a => Pretty (TopDecl a) where
         pretty (DataD con args fields) =
                 pretty con <> hsep' (map pretty args) <+> equals
                         <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
-        pretty (TypeD con args body) = pretty con <> hsep' (map pretty args) <+> equals <+> pretty body
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp
 
 instance Pretty a => Pretty (Program a) where
         pretty (Program mod imps topdecs) =
-                maybe emptyDoc (\d -> pretty d <> line) mod
-                        <> vsep (map (\imp -> "import" <+> pretty imp) imps)
+                pretty mod <> line
+                        <> vsep (map pretty imps)
+                        <> line -- temp
                         <> vsep (map pretty topdecs)

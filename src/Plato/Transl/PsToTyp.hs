@@ -21,10 +21,10 @@ import Control.Monad.Writer as Writer
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
-transExpr :: MonadThrow m => P.LExpr GlbName -> m T.Expr
+transExpr :: MonadThrow m => P.LExpr RdrName -> m T.Expr
 transExpr = traexpr
     where
-        traexpr :: MonadThrow m => P.LExpr GlbName -> m T.Expr
+        traexpr :: MonadThrow m => P.LExpr RdrName -> m T.Expr
         traexpr (L _ (P.VarE x)) = return $ T.VarE $ unLoc x
         traexpr (L _ (P.AppE e1 e2)) = do
                 e1' <- traexpr e1
@@ -46,7 +46,7 @@ transExpr = traexpr
                 alts' <- execWriterT $ transAlts alts
                 return $ T.CaseE e' Nothing alts'
             where
-                transAlts :: MonadThrow m => [(P.LPat GlbName, P.LExpr GlbName)] -> WriterT [(T.Pat, T.Expr)] m ()
+                transAlts :: MonadThrow m => [(P.LPat RdrName, P.LExpr RdrName)] -> WriterT [(T.Pat, T.Expr)] m ()
                 transAlts [] = return ()
                 transAlts ((pi, ei) : alts) =
                         traexpr ei >>= \ei' -> case unLoc pi of
@@ -56,16 +56,16 @@ transExpr = traexpr
                                         transAlts alts
                                 P.VarP x -> tell [(T.VarP x, ei')]
                                 P.WildP -> tell [(T.WildP, ei')]
-        traexpr (L _ (P.FactorE e)) = unreachable $ "fixity resolution failed\n" ++ show e
+        traexpr (L _ (P.FactorE e)) = unreachable $ "fixity resolution failed"
 
-transPat :: MonadThrow m => P.LPat GlbName -> m T.Pat
+transPat :: MonadThrow m => P.LPat RdrName -> m T.Pat
 transPat (L _ (P.ConP c ps)) = do
         ps' <- mapM transPat ps
-        return $ T.ConP (unLoc c) ps'
+        return $ T.ConP c ps'
 transPat (L _ (P.VarP x)) = return $ T.VarP x
 transPat (L _ P.WildP) = return T.WildP
 
-transType :: MonadThrow m => P.LType GlbName -> m T.Type
+transType :: MonadThrow m => P.LType RdrName -> m T.Type
 transType (L _ (P.VarT x)) = return $ T.VarT $ T.BoundTv x
 transType (L _ (P.ConT x)) = return $ T.ConT $ unLoc x
 transType (L _ (P.AppT ty1 ty2)) = do
@@ -80,33 +80,19 @@ transType (L _ (P.AllT xs ty1)) = do
         ty1' <- transType ty1
         return $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) xs) ty1'
 
-transDecls :: MonadThrow m => [P.LDecl GlbName] -> m ([T.FuncD], [Located T.Decl])
+transDecls :: MonadThrow m => [P.LDecl RdrName] -> m T.Binds
 transDecls decs = do
-        let fns = [unLoc x | (unLoc -> P.FuncD x _ _) <- decs]
-            ftns = [unLoc x | (unLoc -> P.FuncTyD x _) <- decs]
-        (fieldtys, vardecls) <- execWriterT $
+        (binds, sigs) <- exeecWriterT $
                 forM decs $ \case
-                        L sp (P.FuncTyD x ty)
-                                | unLoc x `elem` fns -> do
-                                        ty' <- Writer.lift $ transType ty
-                                        tell ([(x, ty')], mempty)
-                                | otherwise -> do
-                                        ty' <- Writer.lift $ transType ty
-                                        tell (mempty, [L sp $ T.VarD x ty'])
-                        _ -> return ()
-        fields <- execWriterT $
-                forM decs $ \case
-                        L sp (P.FuncD x args e)
-                                | unLoc x `elem` ftns -> do
-                                        e' <- Writer.lift $ transExpr $ if null args then e else cLnL args e $ P.LamE args e
-                                        tell [(x, e')]
-                                | otherwise -> do
-                                        Writer.lift $ throwLocErr sp "lacks type signature"
-                        _ -> return ()
-        when (length fields /= length fieldtys) $ throwUnexpErr "number of function bodies and signatures are not match"
-        return ([T.FuncD var1 exp ty | (var1, exp) <- fields, (var2, ty) <- fieldtys, unLoc var1 == unLoc var2], vardecls)
+                        L sp (A.FuncD x args e) -> do
+                                e' <- Writer.lift $ transExpr $ if null args then e else cLnL args e $ P.LamE args e
+                                tell ([(x, e')], mempty)
+                        L sp (P.FuncTyD x ty) -> do
+                                ty' <- Writer.lift $ transType ty
+                                tell (mempty, [(x, ty')])
+        return $ T.Binds binds sigs
 
-transTopDecl :: MonadThrow m => ModuleName -> P.LTopDecl GlbName -> WriterT ([Located T.Decl], [Located T.FuncD], [Located T.Expr]) m ()
+transTopDecl :: MonadThrow m => ModuleName -> P.LTopDecl RdrName -> WriterT ([Located T.Decl], [Located T.FuncD], [Located T.Expr]) m ()
 transTopDecl modn (L sp (P.DataD name params fields)) = do
         fields' <- Writer.lift $
                 forM fields $ \(l, tys) -> do
@@ -138,13 +124,13 @@ transTopDecl _ (L sp (P.Eval exp)) = do
         tell ([], [], [L sp exp'])
 transTopDecl _ _ = return ()
 
-getDecls :: [P.LTopDecl GlbName] -> [P.LDecl GlbName]
+getDecls :: [P.LTopDecl RdrName] -> [P.LDecl RdrName]
 getDecls tds = execWriter $
         forM tds $ \case
                 L _ (P.Decl d) -> tell [d]
                 _ -> return ()
 
-ps2typ :: (MonadIO m, MonadThrow m) => P.Program GlbName -> Plato m T.Program
+ps2typ :: (MonadIO m, MonadThrow m) => P.Program RdrName -> Plato m T.Program
 ps2typ (P.Program Nothing _ _) = unreachable "Renaming failed"
 ps2typ (P.Program (Just modn) _ topds) = do
         (tydecs, condecs, exps) <- execWriterT $ mapM_ (transTopDecl $ unLoc modn) topds

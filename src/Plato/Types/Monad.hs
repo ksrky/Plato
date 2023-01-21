@@ -25,7 +25,7 @@ data PlatoInfo = PInfo
 data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
-        { plt_glbNameEnv :: GlbNameEnv
+        { plt_glbEnv :: GlbEnv
         , plt_fixityEnv :: FixityEnv GlbName
         , plt_tyEnv :: TyEnv
         , plt_knEnv :: KnEnv
@@ -62,7 +62,7 @@ instance Monoid PlatoStore where
 initPState :: PlatoState
 initPState =
         PState
-                { plt_glbNameEnv = M.empty
+                { plt_glbEnv = M.empty
                 , plt_fixityEnv = M.empty
                 , plt_tyEnv = M.empty
                 , plt_knEnv = M.empty
