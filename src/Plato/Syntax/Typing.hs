@@ -1,7 +1,7 @@
 module Plato.Syntax.Typing where
 
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Location
+import Plato.Common.Name
 
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -15,28 +15,27 @@ type LExpr = Located Expr
 type LPat = Located Pat
 type LType = Located Type
 type LDecl = Located Decl
-type LArg = LName
 
 -- | Expressions
 data Expr
         = VarE LName
         | AppE LExpr LExpr
-        | AbsE LArg (Maybe Type) LExpr
+        | AbsE LName (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [(TyVar, Maybe Kind)] LExpr
-        | LetE [FuncD] LExpr
+        | LetE Binds LExpr
         | ProjE LExpr LName
         | RecordE [(LName, LExpr)]
         | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
         | TagE Name [LExpr] Type
         | FoldE Type
-        | RefE Name LName
+        | RefE LName LName
         deriving (Eq, Show)
 
 -- | Patterns
 data Pat
         = ConP LName [LPat]
-        | VarP LArg
+        | VarP LName
         | WildP
         deriving (Eq, Show)
 
@@ -47,8 +46,8 @@ data Type
         | ArrT LType LType
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
-        | AbsT LArg (Maybe Kind) LType
-        | RecT LArg (Maybe Kind) LType
+        | AbsT LName (Maybe Kind) LType
+        | RecT LName (Maybe Kind) LType
         | RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
         | RefT Name LName
@@ -82,20 +81,20 @@ data Kind
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 -- | Function decl
-data FuncD = FuncD LName LExpr Type deriving (Eq, Show)
+data FuncD = FuncD deriving (Eq, Show)
 
-data Binds = Binds [(LName, LExpr)] [(LName, LType)]
+data Binds = Binds [(LName, LExpr)] [(LName, LType)] deriving (Eq, Show)
 
 data Decl
         = TypeD LName Type
         | VarD LName Type
-        | ConD FuncD
+        | ConD LName Expr Type
         deriving (Eq, Show)
 
 data Module = Module
         { typ_modn :: ModuleName
         , typ_decls :: [LDecl]
-        , typ_binds :: [FuncD]
+        , typ_binds :: Binds
         , typ_body :: [(LExpr, LType)]
         }
         deriving (Eq, Show)
@@ -104,7 +103,7 @@ type TyEnv = M.Map Name Sigma
 type KnEnv = M.Map Name Kind
 
 ----------------------------------------------------------------
--- Set Eq and Show class
+-- class
 ----------------------------------------------------------------
 instance Eq TyVar where
         (BoundTv s1) == (BoundTv s2) = unLoc s1 == unLoc s2
@@ -142,7 +141,7 @@ instance Pretty Expr where
         pretty (AbsE var mty body) = backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
         pretty (TAppE fun tyargs) = pretty fun <> hsep' (map pretty tyargs)
         pretty (TAbsE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
-        pretty (LetE decs body) = hsep ["let", lbrace <> line, indent 4 (vsep (map pretty decs)), line <> rbrace, "in", pretty body]
+        pretty (LetE binds body) = hsep ["let", lbrace <> line, indent 4 (pretty binds), line <> rbrace, "in", pretty body]
         pretty (ProjE exp lab) = surround "." (pretty exp) (pretty lab)
         pretty (RecordE fields) =
                 hsep
@@ -233,19 +232,19 @@ pprkind :: Kind -> Doc ann
 pprkind StarK = pretty StarK
 pprkind kn = parens (pretty kn)
 
-instance Pretty FuncD where
-        pretty (FuncD var body body_ty) = hsep [pretty var, equals, pretty body, colon, pretty body_ty]
+instance Pretty Binds where
+        pretty (Binds binds sigs) = undefined {-temp-}
 
 instance Pretty Decl where
         pretty (TypeD con body) = hsep [pretty con, equals, pretty body]
-        pretty (VarD var ty) = hsep [pretty var, colon, pretty ty]
-        pretty (ConD fund) = pretty fund
+        pretty (VarD var sig) = hsep [pretty var, colon, pretty sig]
+        pretty (ConD var body sig) = hsep [pretty var, equals, pretty body, colon, pretty sig]
 
 instance Pretty Module where
         pretty (Module mod decs binds body) =
                 pretty mod <> line
                         <> vsep (map pretty decs)
                         <> (if null decs then emptyDoc else line)
-                        <> vsep (map pretty binds)
-                        <> (if null binds then emptyDoc else line)
+                        <> pretty binds
+                        <> line
                         <> vsep (map (pretty . fst) body)

@@ -63,13 +63,10 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 (body', body_ty) <- extendEnv var var_ty (inferRho body)
                 writeTcRef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsE var (Just var_ty) body'
-        tcRho' (LetE decs body) exp_ty = do
-                let binds = [(var, ty) | FuncD var _ ty <- decs]
-                decs' <- forM decs $ \(FuncD var exp ann_ty) -> do
-                        exp' <- extendEnvList binds $ checkSigma exp ann_ty
-                        return $ FuncD var exp' ann_ty
-                body' <- extendEnvList binds (tcRho body exp_ty)
-                return $ LetE decs' body'
+        tcRho' (LetE binds@(Binds _ sigs) body) exp_ty = do
+                binds' <- tcBinds binds
+                body' <- extendEnvList sigs (tcRho body exp_ty)
+                return $ LetE binds' body'
         tcRho' _ _ = unreachable "TypeCheck.Tc.tcRho"
 
 -- | Type check of Sigma
@@ -89,6 +86,17 @@ checkSigma exp sigma = do
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ lift $ throwUnexpErr "Type not polymorphic enough"
         return $ (\e -> coercion @@ genTrans skol_tvs @@ e) <$> exp'
+
+-- | Type check of Binders
+tcBinds :: (MonadIO m, MonadThrow m) => Binds -> Tc m Binds
+tcBinds (Binds binds sigs) = do
+        binds' <- forM binds $ \(var, exp) -> do
+                ann_ty <- case lookup var sigs of
+                        Just ty -> return $ unLoc ty
+                        Nothing -> throwTc (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
+                exp' <- extendEnvList sigs $ checkSigma exp ann_ty
+                return (var, exp')
+        return $ Binds binds' sigs
 
 -- | Subsumption checking
 subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Tc m Coercion

@@ -34,10 +34,10 @@ zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `travers
 zonkExpr (AbsE var mty body) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr `traverse` body
 zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
-zonkExpr (LetE binds body) =
-        LetE
-                <$> mapM (\(FuncD v e ty) -> FuncD v <$> zonkExpr `traverse` e <*> zonkType ty) binds
-                        <*> zonkExpr `traverse` body
+zonkExpr (LetE (Binds binds sigs) body) = do
+        binds' <- mapM (\(x, e) -> (x,) <$> zonkExpr `traverse` e) binds
+        sigs' <- mapM (\(x, ty) -> (x,) <$> zonkType `traverse` ty) sigs
+        LetE (Binds binds' sigs') <$> zonkExpr `traverse` body
 zonkExpr (CaseE e mbty alts) =
         CaseE
                 <$> zonkExpr `traverse` e

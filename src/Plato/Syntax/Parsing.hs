@@ -1,8 +1,8 @@
 module Plato.Syntax.Parsing where
 
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Name
 
 import Prettyprinter
 
@@ -10,54 +10,63 @@ import Prettyprinter
 -- Syntax
 ----------------------------------------------------------------
 type LName = Located Name
-type LExpr a = Located (Expr a)
-type LPat a = Located (Pat a)
-type LType a = Located (Type a)
-type LDecl a = Located (Decl a)
-type LTopDecl a = Located (TopDecl a)
+type LPsName = Located PsName
+type LExpr = Located Expr
+type LPat = Located Pat
+type LType = Located Type
+type LDecl = Located Decl
+type LTopDecl = Located TopDecl
 
-type LArg = LName
+data PsName
+        = Unqual LName
+        | Qual (Located ModuleName) LName
+        deriving (Ord, Show)
 
-data Expr a
-        = VarE (Located a)
-        | AppE (LExpr a) (LExpr a)
-        | OpE (LExpr a) (Located a) (LExpr a)
-        | LamE [LArg] (LExpr a)
-        | LetE [LDecl a] (LExpr a)
-        | CaseE (LExpr a) [(LPat a, LExpr a)]
-        | FactorE (LExpr a) -- removed after fixity resolution
+instance Eq PsName where
+        Unqual (L _ n1) == Unqual (L _ n2) = n1 == n2
+        Qual (L _ modn1) (L _ n1) == Qual (L _ modn2) (L _ n2) = modn1 == modn2 && n1 == n2
+        _ == _ = False
+
+data Expr
+        = VarE LPsName
+        | AppE LExpr LExpr
+        | OpE LExpr LPsName LExpr
+        | LamE [LName] LExpr
+        | LetE [LDecl] LExpr
+        | CaseE LExpr [(LPat, LExpr)]
+        | FactorE LExpr -- removed after fixity resolution
         deriving (Eq, Show)
 
-data Pat a
-        = ConP (Located a) [LPat a]
-        | VarP LArg
+data Pat
+        = ConP LPsName [LPat]
+        | VarP LName
         | WildP
         deriving (Eq, Show)
 
-data Type a
-        = VarT LArg
-        | ConT (Located a)
-        | AppT (LType a) (LType a)
-        | ArrT (LType a) (LType a)
-        | AllT [LArg] (LType a)
+data Type
+        = VarT LName
+        | ConT LPsName
+        | AppT LType LType
+        | ArrT LType LType
+        | AllT [LName] LType
         deriving (Eq, Show)
 
-data Decl a
-        = FuncD LName [LArg] (LExpr a)
-        | FuncTyD LName (LType a)
+data Decl
+        = FuncD LName [LName] LExpr
+        | FuncTyD LName LType
         | FixityD FixDir FixPrec [LName]
         deriving (Eq, Show)
 
-data TopDecl a
-        = DataD LName [LArg] [(LName, [LType a])]
-        | Decl (LDecl a)
-        | Eval (LExpr a)
+data TopDecl
+        = DataD LName [LName] [(LName, [LType])]
+        | Decl LDecl
+        | Eval LExpr
         deriving (Eq, Show)
 
-data Program a = Program
+data Program = Program
         { ps_moduleName :: ModuleName
         , ps_imports :: [Located ModuleName]
-        , ps_topDecls :: [LTopDecl a]
+        , ps_topDecls :: [LTopDecl]
         }
         deriving (Show)
 
@@ -67,7 +76,11 @@ data Program a = Program
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-instance Pretty a => Pretty (Expr a) where
+instance Pretty PsName where
+        pretty (Unqual n) = pretty n
+        pretty (Qual modn n) = hcat [pretty modn, dot, pretty n]
+
+instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = pprapp exp
         pretty (OpE lhs op rhs) = pretty lhs <+> pretty op <+> pretty rhs
@@ -84,28 +97,28 @@ instance Pretty a => Pretty (Expr a) where
                         <> rbrace
         pretty (FactorE exp) = pretty exp
 
-pprapp :: Pretty a => Expr a -> Doc ann
+pprapp :: Expr -> Doc ann
 pprapp e = walk e []
     where
-        walk :: Pretty a => Expr a -> [Expr a] -> Doc ann
+        walk :: Expr -> [Expr] -> Doc ann
         walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
         walk e' es = pprParendExpr e' <+> sep (map pprParendExpr es)
-        pprParendExpr :: Pretty a => Expr a -> Doc ann
+        pprParendExpr :: Expr -> Doc ann
         pprParendExpr e@VarE{} = pretty e
         pprParendExpr e = parens (pretty e)
 
-instance Pretty a => Pretty (Pat a) where
+instance Pretty Pat where
         pretty (ConP con pats) = pretty con <> hsep' (map pprpat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
-pprpat :: Pretty a => LPat a -> Doc ann
+pprpat :: LPat -> Doc ann
 pprpat pat@(L _ (ConP con pats))
         | null pats = pretty con
         | otherwise = parens $ pretty pat
 pprpat pat = pretty pat
 
-instance Pretty a => Pretty (Type a) where
+instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
         pretty (AppT fun arg) = pretty fun <+> pprty AppPrec arg
@@ -114,29 +127,29 @@ instance Pretty a => Pretty (Type a) where
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
 
-precty :: Type a -> Prec
+precty :: Type -> Prec
 precty AllT{} = TopPrec
 precty ArrT{} = ArrPrec
 precty _ = AtomPrec
 
-pprty :: Pretty a => Prec -> LType a -> Doc ann
+pprty :: Prec -> LType -> Doc ann
 pprty p (L _ ty)
         | fromEnum p >= fromEnum (precty ty) = parens (pretty ty)
         | otherwise = pretty ty
 
-instance Pretty a => Pretty (Decl a) where
+instance Pretty Decl where
         pretty (FuncD var args body) = pretty var <> hsep' (map pretty args) <+> equals <+> pretty body
         pretty (FuncTyD var body_ty) = pretty var <+> colon <+> pretty body_ty
         pretty (FixityD dir prec ops) = hsep [pretty dir, pretty prec, concatWith (surround comma) (map pretty ops)]
 
-instance Pretty a => Pretty (TopDecl a) where
+instance Pretty TopDecl where
         pretty (DataD con args fields) =
                 pretty con <> hsep' (map pretty args) <+> equals
                         <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp
 
-instance Pretty a => Pretty (Program a) where
+instance Pretty Program where
         pretty (Program mod imps topdecs) =
                 pretty mod <> line
                         <> vsep (map pretty imps)

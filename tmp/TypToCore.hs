@@ -14,10 +14,6 @@ import Plato.Types.Monad
 import Plato.Types.Name
 import Plato.Types.Name.Global
 
-import Plato.Typing.Bundle
-import Plato.Typing.KindInfer
-import Plato.Typing.TcTypes
-
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.State

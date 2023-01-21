@@ -1,8 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Plato.Types.Error where
+module Plato.Common.Error where
 
-import Plato.Types.Location
+import Plato.Common.Location
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

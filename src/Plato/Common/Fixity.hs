@@ -1,4 +1,4 @@
-module Plato.Types.Fixity where
+module Plato.Common.Fixity where
 
 import Data.Map.Strict as M
 import Prettyprinter

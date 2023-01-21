@@ -1,10 +1,8 @@
-module Plato.Types.Monad where
+module Plato.Common.Monad where
 
-import Plato.Core.Context
-import Plato.Syntax.Typing
-import Plato.Types.Fixity
-import Plato.Types.Name
-import Plato.Types.Name.Global
+import Plato.Common.Fixity
+import Plato.Common.Name
+import Plato.Syntax.Parsing
 
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
@@ -25,11 +23,7 @@ data PlatoInfo = PInfo
 data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
-        { plt_glbEnv :: GlbEnv
-        , plt_fixityEnv :: FixityEnv GlbName
-        , plt_tyEnv :: TyEnv
-        , plt_knEnv :: KnEnv
-        , plt_glbContext :: Context
+        { plt_fixityEnv :: FixityEnv PsName
         , plt_importedList :: S.Set ModuleName
         }
         deriving (Show)
@@ -62,11 +56,7 @@ instance Monoid PlatoStore where
 initPState :: PlatoState
 initPState =
         PState
-                { plt_glbEnv = M.empty
-                , plt_fixityEnv = M.empty
-                , plt_tyEnv = M.empty
-                , plt_knEnv = M.empty
-                , plt_glbContext = emptyContext
+                { plt_fixityEnv = M.empty
                 , plt_importedList = S.empty
                 }
 

@@ -110,8 +110,8 @@ emptyEnv = do
 extendEnv :: Monad m => LName -> Sigma -> Tc m a -> Tc m a
 extendEnv x ty = local (M.insert (unLoc x) ty)
 
-extendEnvList :: Monad m => [(LName, Sigma)] -> Tc m a -> Tc m a
-extendEnvList binds m = foldl (\m (x, ty) -> extendEnv x ty m) m binds
+extendEnvList :: Monad m => [(LName, Located Sigma)] -> Tc m a -> Tc m a
+extendEnvList binds m = foldl (\m (x, ty) -> extendEnv x (unLoc ty) m) m binds
 
 lookupEnv :: MonadThrow m => LName -> Tc m Sigma
 lookupEnv (L sp x) = do

@@ -3,38 +3,33 @@ module Plato.Core.Context where
 import Plato.Core.Subst
 import Plato.Syntax.Core
 import Plato.Types.Error
-import Plato.Types.Name.Global
+import Plato.Types.Location
+import Plato.Types.Name
 
 import Control.Exception.Safe
 import qualified Data.Vector as V
 import Prettyprinter
 
-type Context = V.Vector (GlbName, Binding)
+type Context = V.Vector (Name, Binding)
 
 emptyContext :: Context
 emptyContext = V.empty
 
-lookupContext :: GlbName -> Context -> Maybe Binding
-lookupContext k ctx = do
-        ((x, y), tl) <- V.uncons ctx
-        if k == x then Just y else lookupContext k tl
+lookupContext :: Located Name -> Context -> Maybe Binding
+lookupContext k ctx = undefined {-do
+                                ((x, y), tl) <- V.uncons ctx
+                                if k == x then Just y else lookupContext k tl-}
 
-addBinding :: GlbName -> Binding -> Context -> Context
+addBinding :: Name -> Binding -> Context -> Context
 addBinding x bind = V.cons (x, bind)
 
-addName :: GlbName -> Context -> Context
+addName :: Name -> Context -> Context
 addName x = addBinding x NameBind
 
-addNameList :: [GlbName] -> Context -> Context
+addNameList :: [Name] -> Context -> Context
 addNameList = flip (foldl (flip addName))
 
-addSomething :: Context -> Context
-addSomething = addBinding dummyGlbName NameBind
-
-addSomeName :: Binding -> Context -> Context
-addSomeName = addBinding dummyGlbName
-
-index2name :: Context -> Int -> GlbName
+index2name :: Context -> Int -> Name
 index2name ctx x = fst (ctx V.! x)
 
 bindingShift :: Int -> Binding -> Binding
@@ -60,7 +55,7 @@ getKind ctx i = case getBinding ctx i of
         TyAbbBind _ knK -> return knK
         _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
 
-getVarIndex :: MonadThrow m => Context -> GlbName -> m Int
-getVarIndex ctx x = case V.elemIndex x (V.map fst ctx) of
+getVarIndex :: MonadThrow m => Context -> Located Name -> m Int
+getVarIndex ctx (L sp x) = case V.elemIndex x (V.map fst ctx) of
         Just i -> return i
-        Nothing -> throwLocErr (g_loc x) $ "Unbound variable name: '" <> pretty x <> "'"
+        Nothing -> throwLocErr sp $ "Unbound variable name: '" <> pretty x <> "'"

@@ -53,17 +53,17 @@ tyeqv ctx = tyeqv'
                         (TyArr tyS1 tyS2, TyArr tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
-                        (TyAll _ _ tyS2, TyAll _ _ tyT2) -> do
-                                let ctx' = addSomething ctx
+                        (TyAll tyX _ tyS2, TyAll _ _ tyT2) -> do
+                                let ctx' = addName tyX ctx
                                 tyeqv ctx' tyS2 tyT2
                         (TyAbs _ knKS1 tyS2, TyAbs _ knKT1 tyT2) | knKS1 == knKT1 -> do
-                                let ctx' = addSomething ctx
+                                let ctx' = addName tyX ctx
                                 tyeqv ctx' tyS2 tyT2
                         (TyApp tyS1 tyS2, TyApp tyT1 tyT2) -> do
                                 tyeqv' tyS1 tyT1
                                 tyeqv' tyS2 tyT2
                         (TyRec _ _ tyS2, TyRec _ _ tyT2) -> do
-                                let ctx' = addSomething ctx
+                                let ctx' = addName tyX ctx
                                 tyeqv ctx' tyS2 tyT2
                         (TyRecord fields1, TyRecord fields2) | length fields1 == length fields2 -> do
                                 forM_ fields1 $ \(li1, tyTi1) -> case lookup li1 fields2 of
@@ -93,8 +93,8 @@ kindof ctx tyT = case tyT of
                 checkKindStar ctx tyT2
                 return KnStar
         TyVar i _ -> getKind ctx i
-        TyAbs _ knK1 tyT2 -> do
-                let ctx' = addSomeName (TyVarBind knK1) ctx
+        TyAbs x knK1 tyT2 -> do
+                let ctx' = addBinding x (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
                 return $ KnArr knK1 knK2
         TyApp tyT1 tyT2 -> do
@@ -104,12 +104,12 @@ kindof ctx tyT = case tyT of
                         KnArr knK11 knK12 | knK2 == knK11 -> return knK12
                         KnArr{} -> throwError "parameter kind mismatch"
                         _ -> throwError "arrow kind expected"
-        TyAll _ knK1 tyT2 -> do
-                let ctx' = addSomeName (TyVarBind knK1) ctx
+        TyAll x knK1 tyT2 -> do
+                let ctx' = addBinding x (TyVarBind knK1) ctx
                 checkKindStar ctx' tyT2
                 return KnStar
-        TyRec _ knK1 tyT2 -> do
-                let ctx' = addSomeName (TyVarBind knK1) ctx
+        TyRec x knK1 tyT2 -> do
+                let ctx' = addBinding x (TyVarBind knK1) ctx
                 knK2 <- kindof ctx' tyT2
                 unless (knK1 == knK2) $ throwError $ hsep ["Kind", ppr ctx' knK1, "expected"]
                 return KnStar
@@ -131,9 +131,9 @@ checkKindStar ctx tyT = do
 typeof :: (MonadThrow m, MonadFail m) => Context -> Term -> m Ty
 typeof ctx t = case t of
         TmVar i _ -> getType ctx i
-        TmAbs _ tyT1 t2 -> do
+        TmAbs x tyT1 t2 -> do
                 checkKindStar ctx tyT1
-                let ctx' = addSomeName (VarBind tyT1) ctx
+                let ctx' = addBinding x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyArr tyT1 (typeShift (-1) tyT2)
         TmApp t1 t2 -> do
@@ -145,7 +145,7 @@ typeof ctx t = case t of
                                 return tyT12
                         _ -> throwError "arrow type expected"
         TmTAbs tyX t2 -> do
-                let ctx' = addSomeName (TyVarBind undefined) ctx
+                let ctx' = addBinding tyX (TyVarBind undefined) ctx
                 tyT2 <- typeof ctx' t2
                 return $ TyAll tyX undefined tyT2
         TmTApp t1 tyT2 -> do
@@ -156,9 +156,9 @@ typeof ctx t = case t of
                                 | knK11 == knKT2 -> return $ typeSubstTop tyT2 tyT12
                                 | otherwise -> throwError "Type argument has wrong kind"
                         _ -> throwError "universal type expected"
-        TmLet _ t1 t2 -> do
+        TmLet x t1 t2 -> do
                 tyT1 <- typeof ctx t1
-                let ctx' = addSomeName (VarBind tyT1) ctx
+                let ctx' = addBinding x (VarBind tyT1) ctx
                 tyT2 <- typeof ctx' t2
                 return $ typeShift (-1) tyT2
         TmFix t1 -> do
@@ -201,11 +201,11 @@ typeof ctx t = case t of
                         TyVariant fieldtys -> do
                                 (tyT1 : restTy) <- forM alts $ \(li, (ki, ti)) -> case lookup li fieldtys of
                                         Just tys -> do
-                                                let ctx' = foldl (flip $ addSomeName . VarBind) ctx tys
+                                                let ctx' = foldl (flip $ undefined . VarBind) ctx tys
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing | nameText li == "" -> do
-                                                let ctx' = addSomeName (VarBind $ TyVariant fieldtys) ctx
+                                                let ctx' = undefined (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
                                                 return $ typeShift (- ki) tyTi
                                         Nothing -> throwError $ hsep ["label", pretty li, "not found"]

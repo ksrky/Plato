@@ -2,8 +2,8 @@
 
 module Plato.Parsing.Monad where
 
-import Plato.Types.Fixity
-import Plato.Types.Name
+import Plato.Common.Fixity
+import Plato.Common.Name
 
 import Control.Exception.Safe
 import Control.Monad.State.Class

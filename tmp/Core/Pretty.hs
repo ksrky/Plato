@@ -6,7 +6,6 @@ module Plato.Core.Pretty where
 import Plato.Core.Context
 import Plato.Syntax.Core
 import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Prettyprinter
 

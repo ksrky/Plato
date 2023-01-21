@@ -1,6 +1,6 @@
-module Plato.Types.Name where
+module Plato.Common.Name where
 
-import Plato.Types.Error
+import Plato.Common.Error
 
 import Control.Exception.Safe
 import qualified Data.Text as T
