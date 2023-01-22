@@ -10,9 +10,9 @@ import Data.IORef
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
+import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
 
 -- | Kind environment
 data KiEnv = KiEnv
@@ -92,11 +92,11 @@ writeErrLoc sp = Ki $ \env -> do
         liftIO $ writeIORef ref sp
 
 -- | Environment management
-emptyEnv :: MonadIO m => m KiEnv
-emptyEnv = do
+initEnv :: MonadIO m => KnEnv -> m KiEnv
+initEnv knenv = do
         uniq_ref <- liftIO $ newIORef 0
         loc_ref <- liftIO $ newIORef NoSpan
-        return $ KiEnv M.empty uniq_ref loc_ref
+        return $ KiEnv knenv uniq_ref loc_ref
 
 extendEnv :: Monad m => LName -> Kind -> Ki m a -> Ki m a
 extendEnv x ty = local (M.insert (unLoc x) ty)

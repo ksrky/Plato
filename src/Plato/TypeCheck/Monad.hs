@@ -10,9 +10,9 @@ import Prettyprinter
 import Prettyprinter.Render.String
 
 import Control.Exception.Safe
+import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
 
 -- | TcEnv
 data TcEnv = TcEnv
@@ -101,11 +101,11 @@ writeErrLoc sp = Tc $ \env -> do
         liftIO $ writeIORef ref sp
 
 -- | Environment management
-emptyEnv :: MonadIO m => m TcEnv
-emptyEnv = do
+initEnv :: MonadIO m => TyEnv -> m TcEnv
+initEnv tyenv = do
         uniq_ref <- liftIO $ newIORef 0
         loc_ref <- liftIO $ newIORef NoSpan
-        return $ TcEnv M.empty uniq_ref loc_ref
+        return $ TcEnv tyenv uniq_ref loc_ref
 
 extendEnv :: Monad m => LName -> Sigma -> Tc m a -> Tc m a
 extendEnv x ty = local (M.insert (unLoc x) ty)

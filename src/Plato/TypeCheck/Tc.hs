@@ -10,20 +10,20 @@ import Data.IORef
 import Prettyprinter
 
 import Control.Exception.Safe
+import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.TypeCheck.InstGen
 import Plato.TypeCheck.Monad
 import Plato.TypeCheck.Translate
 import Plato.TypeCheck.Unify
 import Plato.TypeCheck.Utils
-import Plato.Types.Error
-import Plato.Types.Location
 
-checkType :: (MonadThrow m, MonadIO m) => LExpr -> Type -> m LExpr
-checkType e ty = runTc (checkSigma e ty) =<< emptyEnv
+checkType :: (MonadThrow m, MonadIO m) => TyEnv -> LExpr -> Type -> m LExpr
+checkType tyenv e ty = runTc (checkSigma e ty) =<< initEnv tyenv
 
-inferType :: (MonadThrow m, MonadIO m) => LExpr -> m (LExpr, Type)
-inferType e = runTc (inferSigma e) =<< emptyEnv
+inferType :: (MonadThrow m, MonadIO m) => TyEnv -> LExpr -> m (LExpr, Type)
+inferType tyenv e = runTc (inferSigma e) =<< initEnv tyenv
 
 data Expected a = Infer (IORef a) | Check a
 

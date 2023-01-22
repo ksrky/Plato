@@ -9,8 +9,8 @@ import qualified Data.Set as S
 
 import Plato.Syntax.Typing
 import Plato.TypeCheck.Monad
-import Plato.Types.Error
-import Plato.Types.Location
+import Plato.Common.Error
+import Plato.Common.Location
 
 zonkType :: MonadIO m => Type -> Tc m Type
 zonkType (VarT tv) = return (VarT tv)

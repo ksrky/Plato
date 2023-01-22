@@ -11,8 +11,8 @@ import Plato.TypeCheck.Monad
 import Plato.TypeCheck.Subst
 import Plato.TypeCheck.Translate
 import Plato.TypeCheck.Utils
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Location
+import Plato.Common.Name
 
 -- | Instantiation
 instantiate :: MonadIO m => Sigma -> Tc m (Coercion, Rho)

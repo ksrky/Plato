@@ -1,8 +1,8 @@
 module Plato.TypeCheck.Translate where
 
 import Plato.Syntax.Typing
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Location
+import Plato.Common.Name
 
 data Coercion = Id | Coer (Expr -> Expr)
 

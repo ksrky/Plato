@@ -20,7 +20,7 @@ unify (MetaK kv) kn = unifyVar kv kn
 unify kn (MetaK kv) = unifyVar kv kn
 unify kn1 kn2 = do
         sp <- readErrLoc
-        throwKi sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual type:" <+> pretty kn1)]
+        throwKi sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual kind:" <+> pretty kn1)]
 
 unifyVar :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Ki m ()
 unifyVar kv1 kn2@(MetaK kv2) = do

@@ -34,7 +34,7 @@ data Expr
 
 -- | Patterns
 data Pat
-        = ConP LName [LPat]
+        = ConP (Maybe (Located ModuleName)) LName [LPat]
         | VarP LName
         | WildP
         deriving (Eq, Show)
@@ -50,7 +50,7 @@ data Type
         | RecT LName (Maybe Kind) LType
         | RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
-        | RefT Name LName
+        | RefT LName LName
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -88,14 +88,14 @@ data Binds = Binds [(LName, LExpr)] [(LName, LType)] deriving (Eq, Show)
 data Decl
         = TypeD LName Type
         | VarD LName Type
-        | ConD LName Expr Type
+        | ConD LName Type
         deriving (Eq, Show)
 
 data Module = Module
         { typ_modn :: ModuleName
-        , typ_decls :: [LDecl]
+        , typ_decls :: [Decl]
         , typ_binds :: Binds
-        , typ_body :: [(LExpr, LType)]
+        , typ_body :: [(LExpr, Type)]
         }
         deriving (Eq, Show)
 
@@ -171,12 +171,12 @@ pprapp e = walk e []
         walk e' es = pprexpr e' <+> sep (map pprexpr es)
 
 instance Pretty Pat where
-        pretty (ConP con pats) = pretty con <+> hsep (map (pprpat . unLoc) pats)
+        pretty (ConP _ con pats) = pretty con <+> hsep (map (pprpat . unLoc) pats) -- temp
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
 pprpat :: Pat -> Doc ann
-pprpat pat@(ConP con pats)
+pprpat pat@(ConP _ con pats) -- temp
         | null pats = pretty con
         | otherwise = parens $ pretty pat
 pprpat pat = pretty pat
@@ -238,7 +238,7 @@ instance Pretty Binds where
 instance Pretty Decl where
         pretty (TypeD con body) = hsep [pretty con, equals, pretty body]
         pretty (VarD var sig) = hsep [pretty var, colon, pretty sig]
-        pretty (ConD var body sig) = hsep [pretty var, equals, pretty body, colon, pretty sig]
+        pretty (ConD var sig) = hsep [pretty var, colon, pretty sig]
 
 instance Pretty Module where
         pretty (Module mod decs binds body) =

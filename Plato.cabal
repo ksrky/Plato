@@ -33,6 +33,10 @@ library
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.KindInfer.Ki
+      Plato.KindInfer.Monad
+      Plato.KindInfer.Unify
+      Plato.KindInfer.Utils
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -44,6 +48,13 @@ library
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.TypeCheck.InstGen
+      Plato.TypeCheck.Monad
+      Plato.TypeCheck.Subst
+      Plato.TypeCheck.Tc
+      Plato.TypeCheck.Translate
+      Plato.TypeCheck.Unify
+      Plato.TypeCheck.Utils
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -84,6 +95,10 @@ executable plato
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.KindInfer.Ki
+      Plato.KindInfer.Monad
+      Plato.KindInfer.Unify
+      Plato.KindInfer.Utils
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -95,6 +110,13 @@ executable plato
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.TypeCheck.InstGen
+      Plato.TypeCheck.Monad
+      Plato.TypeCheck.Subst
+      Plato.TypeCheck.Tc
+      Plato.TypeCheck.Translate
+      Plato.TypeCheck.Unify
+      Plato.TypeCheck.Utils
       Paths_Plato
   hs-source-dirs:
       src

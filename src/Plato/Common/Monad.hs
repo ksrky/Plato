@@ -1,13 +1,14 @@
 module Plato.Common.Monad where
 
-import Plato.Common.Fixity
-import Plato.Common.Name
-import Plato.Syntax.Parsing
-
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import System.FilePath
+
+import Plato.Common.Fixity
+import Plato.Common.Name
+import Plato.Syntax.Parsing
+import Plato.Syntax.Typing
 
 ----------------------------------------------------------------
 -- Plato Monad
@@ -24,7 +25,8 @@ data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
         { plt_fixityEnv :: FixityEnv PsName
-        , plt_importedList :: S.Set ModuleName
+        , plt_tyEnv :: TyEnv
+        , plt_knEnv :: KnEnv
         }
         deriving (Show)
 
@@ -41,7 +43,7 @@ initPInfo' :: FilePath -> PlatoInfo
 initPInfo' src =
         initPInfo
                 { plt_basePath = takeDirectory src
-                , plt_fileName = src
+                , plt_fileName = src -- temp: file name or path
                 }
 
 initPStore :: PlatoStore
@@ -57,7 +59,8 @@ initPState :: PlatoState
 initPState =
         PState
                 { plt_fixityEnv = M.empty
-                , plt_importedList = S.empty
+                , plt_tyEnv = M.empty
+                , plt_knEnv = M.empty
                 }
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m

@@ -6,9 +6,9 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Set as S
 
+import Plato.Common.Error
 import Plato.KindInfer.Monad
 import Plato.Syntax.Typing
-import Plato.Types.Error
 
 zonkKind :: MonadIO m => Kind -> Ki m Kind
 zonkKind StarK = return StarK

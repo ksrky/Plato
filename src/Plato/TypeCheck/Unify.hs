@@ -11,7 +11,7 @@ import Control.Exception.Safe
 import Plato.Syntax.Typing
 import Plato.TypeCheck.Monad
 import Plato.TypeCheck.Utils
-import Plato.Types.Location
+import Plato.Common.Location
 
 unify :: (MonadThrow m, MonadIO m) => Tau -> Tau -> Tc m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = do
