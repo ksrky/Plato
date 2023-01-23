@@ -3,10 +3,12 @@ module Plato.Common.Monad where
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import qualified Data.Vector as V
 import System.FilePath
 
 import Plato.Common.Fixity
 import Plato.Common.Name
+import Plato.Syntax.Core
 import Plato.Syntax.Parsing
 import Plato.Syntax.Typing
 
@@ -27,8 +29,8 @@ data PlatoState = PState
         { plt_fixityEnv :: FixityEnv PsName
         , plt_tyEnv :: TyEnv
         , plt_knEnv :: KnEnv
+        , plt_context :: Context
         }
-        deriving (Show)
 
 initPInfo :: PlatoInfo
 initPInfo =
@@ -61,6 +63,7 @@ initPState =
                 { plt_fixityEnv = M.empty
                 , plt_tyEnv = M.empty
                 , plt_knEnv = M.empty
+                , plt_context = V.empty
                 }
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m
@@ -70,11 +73,3 @@ evalPlato = evalRWST
 
 returnPlato :: Monad m => Plato m a -> PlatoInfo -> PlatoState -> m a
 returnPlato x i s = fst <$> evalRWST x i s
-
-----------------------------------------------------------------
--- Utilities
-----------------------------------------------------------------
-getModPath :: Monad m => ModuleName -> Plato m FilePath
-getModPath modn = do
-        base_path <- asks plt_basePath
-        return (base_path </> mod2path modn)

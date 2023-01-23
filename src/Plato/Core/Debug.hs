@@ -10,3 +10,6 @@ mkInfo (L sp x) = Info sp (Just x)
 
 mkInfoFromSpan :: Span -> Info
 mkInfoFromSpan sp = Info sp Nothing
+
+dummyInfo :: Info
+dummyInfo = Info NoSpan Nothing

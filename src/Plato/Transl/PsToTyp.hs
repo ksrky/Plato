@@ -128,7 +128,7 @@ transTopDecl (L sp (P.DataD name params fields)) = do
         knenv <- gets plt_knEnv
         (body_ty', kn) <- inferKind knenv body_ty
         modify $ \ps -> ps{plt_knEnv = M.insert (unLoc name) kn knenv}
-        tell [T.TypeD name (unLoc body_ty')]
+        tell [T.TypeD name (unLoc body_ty') kn]
         con_sigs <- mapM transCon fields'
         tell (map (\(lab, sig) -> T.ConD lab (unLoc sig)) con_sigs)
     where

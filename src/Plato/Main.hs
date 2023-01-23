@@ -1,5 +1,6 @@
 module Plato.Main where
 
+{-
 import Plato.Transl.CoreToIO
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
@@ -57,4 +58,4 @@ processImport (L sp modn) = do
                         (\r -> r{plt_isEntry = False, plt_importingList = modn `S.insert` impng_set})
                         $ processFile =<< getModPath modn
                 modify $ \s -> s{plt_importedList = modn `S.insert` plt_importedList s}
-        return modn
+        return modn-}

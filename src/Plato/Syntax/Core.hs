@@ -11,12 +11,13 @@ data Term
         | TmAbs Info Type Term
         | TmTApp Term Type
         | TmTAbs Info Kind Term
+        | TmLet Info Term Term
         | TmFix Term
         | TmFold Type
         | TmUnfold Type
         | TmProj Term Name
         | TmRecord [(Name, Term)]
-        | TmTag Name Term Type
+        | TmTag Name [Term] Type
         | TmCase Term [(Term -> Maybe [Term], Term)]
 
 data Type
@@ -27,7 +28,7 @@ data Type
         | TyApp Type Type
         | TyRec Info Kind Type
         | TyRecord [(Name, Type)]
-        | TyVariant [(Name, Type)]
+        | TyVariant [(Name, [Type])]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)

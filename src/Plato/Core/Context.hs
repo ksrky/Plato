@@ -14,6 +14,13 @@ import Prettyprinter
 emptyContext :: Context
 emptyContext = V.empty
 
+lookupContext :: Name -> Context -> Maybe Binding
+lookupContext x ctx = case V.uncons ctx of
+        Just ((k, b), rest)
+                | x == k -> Just b
+                | otherwise -> lookupContext x rest
+        Nothing -> Nothing
+
 addBinding :: Name -> Binding -> Context -> Context
 addBinding x bind = V.cons (x, bind)
 

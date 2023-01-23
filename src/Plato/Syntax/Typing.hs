@@ -78,13 +78,10 @@ data Kind
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 -- | Function decl
-data FuncD = FuncD deriving (Eq, Show)
-
 data Binds = Binds [(LName, LExpr)] [(LName, LType)] deriving (Eq, Show)
 
 data Decl
-        = TypeD LName Type
-        | VarD LName Type
+        = TypeD LName Type Kind
         | ConD LName Type
         deriving (Eq, Show)
 
@@ -223,8 +220,7 @@ instance Pretty Binds where
         pretty (Binds _binds _sigs) = undefined {-temp-}
 
 instance Pretty Decl where
-        pretty (TypeD con body) = hsep [pretty con, equals, pretty body]
-        pretty (VarD var sig) = hsep [pretty var, colon, pretty sig]
+        pretty (TypeD con body kn) = hsep [pretty con, equals, pretty body, dot, pretty kn]
         pretty (ConD var sig) = hsep [pretty var, colon, pretty sig]
 
 instance Pretty Module where
