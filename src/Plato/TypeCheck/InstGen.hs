@@ -6,13 +6,13 @@ import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Set as S
 
+import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Syntax.Typing
 import Plato.TypeCheck.Monad
 import Plato.TypeCheck.Subst
 import Plato.TypeCheck.Translate
 import Plato.TypeCheck.Utils
-import Plato.Common.Location
-import Plato.Common.Name
 
 -- | Instantiation
 instantiate :: MonadIO m => Sigma -> Tc m (Coercion, Rho)
@@ -32,20 +32,20 @@ skolemise (ArrT arg_ty res_ty) = do
 skolemise ty = return (Id, [], ty)
 
 -- | Generalization
-generalize :: MonadIO m => Rho -> Tc m ([TyVar], Sigma)
+generalize :: MonadIO m => Rho -> Tc m ([(TyVar, Maybe Kind)], Sigma)
 generalize ty = do
         env_tvs <- mapM getMetaTvs =<< getEnvTypes
         res_tvs <- getMetaTvs ty
         let all_tvs = res_tvs `S.difference` mconcat env_tvs
         quantify (S.toList all_tvs) ty
 
-quantify :: MonadIO m => [MetaTv] -> Rho -> Tc m ([TyVar], Sigma)
+quantify :: MonadIO m => [MetaTv] -> Rho -> Tc m ([(TyVar, Maybe Kind)], Sigma)
 quantify [] ty = return ([], ty)
 quantify tvs ty = do
         let new_bndrs = take (length tvs) allBinders
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
         ty' <- zonkType ty
-        return (new_bndrs, AllT (map (,Nothing) new_bndrs) (noLoc ty'))
+        return (zip new_bndrs (repeat Nothing), AllT (map (,Nothing) new_bndrs) (noLoc ty'))
 
 allBinders :: [TyVar]
 allBinders =

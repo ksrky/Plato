@@ -1,24 +1,18 @@
 module Plato.Core.Context where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Core.Subst
+
 import Plato.Syntax.Core
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name
 
 import Control.Exception.Safe
 import qualified Data.Vector as V
 import Prettyprinter
 
-type Context = V.Vector (Name, Binding)
-
 emptyContext :: Context
 emptyContext = V.empty
-
-lookupContext :: Located Name -> Context -> Maybe Binding
-lookupContext k ctx = undefined {-do
-                                ((x, y), tl) <- V.uncons ctx
-                                if k == x then Just y else lookupContext k tl-}
 
 addBinding :: Name -> Binding -> Context -> Context
 addBinding x bind = V.cons (x, bind)
@@ -43,7 +37,7 @@ bindingShift d bind = case bind of
 getBinding :: Context -> Int -> Binding
 getBinding ctx i = bindingShift (i + 1) (snd $ ctx V.! i)
 
-getType :: MonadThrow m => Context -> Int -> m Ty
+getType :: MonadThrow m => Context -> Int -> m Type
 getType ctx i = case getBinding ctx i of
         VarBind tyT -> return tyT
         TmAbbBind _ tyT -> return tyT

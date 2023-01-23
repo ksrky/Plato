@@ -21,14 +21,11 @@ data Expr
         = VarE LName
         | AppE LExpr LExpr
         | AbsE LName (Maybe Type) LExpr
+        | PAbsE LPat (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [(TyVar, Maybe Kind)] LExpr
         | LetE Binds LExpr
-        | ProjE LExpr LName
-        | RecordE [(LName, LExpr)]
         | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
-        | TagE Name [LExpr] Type
-        | FoldE Type
         | RefE LName LName
         deriving (Eq, Show)
 
@@ -136,31 +133,21 @@ hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
 instance Pretty Expr where
         pretty (VarE var) = pretty var
-        pretty (AppE (L _ (FoldE ty)) exp) = "fold" <+> lbracket <> pretty ty <> rbracket <+> pprexpr (unLoc exp)
         pretty exp@AppE{} = pprapp exp
         pretty (AbsE var mty body) = backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
+        pretty (PAbsE pat mty body) = backslash <> pretty pat <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
         pretty (TAppE fun tyargs) = pretty fun <> hsep' (map pretty tyargs)
         pretty (TAbsE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
         pretty (LetE binds body) = hsep ["let", lbrace <> line, indent 4 (pretty binds), line <> rbrace, "in", pretty body]
-        pretty (ProjE exp lab) = surround "." (pretty exp) (pretty lab)
-        pretty (RecordE fields) =
-                hsep
-                        [ lbrace
-                        , concatWith (\d -> (<+> comma <+> d)) (map (\(var, exp) -> pretty var <+> equals <+> pretty exp) fields)
-                        , rbrace
-                        ]
         pretty (CaseE match mty alts) =
                 "case" <+> sep [pretty match, colon, maybe emptyDoc pretty mty] <+> "of" <+> lbrace <> line
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace
-        pretty (TagE con args _) = pretty con <> hsep' (map (pprexpr . unLoc) args)
-        pretty (FoldE ty) = sep [lbracket, pretty ty, rbracket]
         pretty (RefE modn var) = hcat [pretty modn, dot, pretty var]
 
 pprexpr :: Expr -> Doc ann
 pprexpr e@VarE{} = pretty e
-pprexpr e@(TagE _ as _) | null as = pretty e
 pprexpr e = parens (pretty e)
 
 pprapp :: Expr -> Doc ann
@@ -233,7 +220,7 @@ pprkind StarK = pretty StarK
 pprkind kn = parens (pretty kn)
 
 instance Pretty Binds where
-        pretty (Binds binds sigs) = undefined {-temp-}
+        pretty (Binds _binds _sigs) = undefined {-temp-}
 
 instance Pretty Decl where
         pretty (TypeD con body) = hsep [pretty con, equals, pretty body]

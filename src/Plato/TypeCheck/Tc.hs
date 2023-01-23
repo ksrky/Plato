@@ -27,6 +27,46 @@ inferType tyenv e = runTc (inferSigma e) =<< initEnv tyenv
 
 data Expected a = Infer (IORef a) | Check a
 
+-- | Type check of patterns
+checkPat :: (MonadThrow m, MonadIO m) => LPat -> Rho -> Tc m [(LName, Sigma)]
+checkPat pat ty = tcPat pat (Check ty)
+
+inferPat :: (MonadThrow m, MonadIO m) => LPat -> Tc m ([(LName, Sigma)], Sigma)
+inferPat pat = do
+        ref <- newTcRef (error "inferRho: empty result")
+        binds <- tcPat pat (Infer ref)
+        tc <- readTcRef ref
+        return (binds, tc)
+
+tcPat :: (MonadThrow m, MonadIO m) => LPat -> Expected Sigma -> Tc m [(LName, Sigma)]
+tcPat (L _ WildP) _ = return []
+tcPat (L _ (VarP var)) (Infer ref) = do
+        var_ty <- newTyVar
+        writeTcRef ref var_ty
+        return [(var, var_ty)]
+tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
+tcPat (L sp (ConP _ con pats)) exp_ty = do
+        (arg_tys, res_ty) <- instDataCon con
+        unless (length pats == length arg_tys) $
+                throwTc sp $ hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+        envs <- zipWithM checkPat pats arg_tys
+        _ <- instPatSigma res_ty exp_ty
+        return (concat envs)
+
+instPatSigma :: (MonadThrow m, MonadIO m) => Sigma -> Expected Sigma -> Tc m Coercion
+instPatSigma pat_ty (Infer ref) = writeTcRef ref pat_ty >> return Id
+instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
+
+instDataCon :: (MonadThrow m, MonadIO m) => LName -> Tc m ([Sigma], Tau)
+instDataCon con = do
+        sigma <- lookupEnv con --temp: ModuleName
+        (_, rho) <- instantiate sigma
+        return $ split [] rho
+    where
+        split :: [Sigma] -> Rho -> ([Sigma], Tau)
+        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
+        split acc tau = (acc, tau)
+
 -- | Type check of Rho
 checkRho :: (MonadIO m, MonadThrow m) => LExpr -> Rho -> Tc m LExpr
 checkRho exp ty = do
@@ -63,6 +103,16 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 (body', body_ty) <- extendEnv var var_ty (inferRho body)
                 writeTcRef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsE var (Just var_ty) body'
+        tcRho' (PAbsE pat _ body) (Infer ref) = do
+                (binds, pat_ty) <- inferPat pat
+                (body', body_ty) <- foldl (\m (var, var_ty) -> extendEnv var var_ty m) (inferRho body) binds
+                writeTcRef ref (ArrT (noLoc pat_ty) (noLoc body_ty))
+                return $ PAbsE pat (Just pat_ty) body'
+        tcRho' (PAbsE pat _ body) (Check exp_ty) = do
+                (arg_ty, res_ty) <- unifyFun exp_ty
+                binds <- checkPat pat arg_ty
+                body' <- foldl (\m (var, var_ty) -> extendEnv var var_ty m) (checkRho body res_ty) binds
+                return $ PAbsE pat (Just arg_ty) body'
         tcRho' (LetE binds@(Binds _ sigs) body) exp_ty = do
                 binds' <- tcBinds binds
                 body' <- extendEnvList sigs (tcRho body exp_ty)
@@ -74,8 +124,8 @@ inferSigma :: (MonadThrow m, MonadIO m) => LExpr -> Tc m (LExpr, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
-        exp'' <- zonkExpr `traverse` exp' -- reduce TyMeta
-        return ((genTrans undefined {-tvs-} @@) <$> exp'', sigma)
+        exp'' <- zonkExpr `traverse` exp'
+        return ((genTrans tvs @@) <$> exp'', sigma)
 
 checkSigma :: (MonadIO m, MonadThrow m) => LExpr -> Sigma -> Tc m LExpr
 checkSigma exp sigma = do

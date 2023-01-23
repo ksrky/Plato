@@ -1,4 +1,85 @@
 {-# LANGUAGE LambdaCase #-}
+
+module Plato.Transl.TypToCore where
+
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Core.Context
+import Plato.Core.Debug
+
+import qualified Plato.Syntax.Core as C
+import qualified Plato.Syntax.Typing as T
+
+import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.State
+import qualified Data.Map.Strict as M
+import Prettyprinter
+
+transExpr :: MonadThrow m => C.Context -> T.Expr -> m C.Term
+transExpr ctx = traexpr
+    where
+        traexpr :: MonadThrow m => T.Expr -> m C.Term
+        traexpr (T.VarE x) = do
+                i <- getVarIndex ctx x
+                return $ C.TmVar (mkInfo x) i
+        traexpr (T.AppE e1 e2) = do
+                t1 <- traexpr (unLoc e1)
+                t2 <- traexpr (unLoc e2)
+                return $ C.TmApp t1 t2
+        traexpr (T.AbsE x (Just ty1) e2) = do
+                tyT1 <- transType ctx ty1
+                let ctx' = addName (unLoc x) ctx
+                t2 <- transExpr ctx' (unLoc e2)
+                return $ C.TmAbs (mkInfo x) tyT1 t2
+        traexpr (T.PAbsE p (Just ty1) e2) = do
+                tyT1 <- transType ctx ty1
+                let ctx' = foldl (\ctx _ -> addName dummyVN ctx) ctx [1 .. pat2argnum (unLoc p)]
+                t2 <- transExpr ctx' (unLoc e2)
+                return $ C.TmAbs (mkInfoFromSpan (getLoc p)) tyT1 t2
+        traexpr (T.TAppE e1 tys) = do
+                t1 <- traexpr (unLoc e1)
+                tyTs' <- mapM (transType ctx) tys
+                return $ foldl C.TmTApp t1 tyTs'
+        traexpr (T.TAbsE tvs e1) = do
+                args <- forM tvs $ \case
+                        (tv, Just kn) -> do
+                                knK <- transKind kn
+                                return (T.tyVarName tv, knK)
+                        (_, Nothing) -> unreachable "Kind inference failed"
+
+                let ctx' = foldl (flip addName) ctx (map (unLoc . fst) args)
+                t1 <- transExpr ctx' (unLoc e1)
+                return $ foldr (\(x, kn) -> C.TmTAbs (mkInfo x) kn) t1 args
+        traexpr (T.LetE (T.Binds binds sigs) e2) = undefined {-do
+                                                             ty12' <- checkKindStar knenv NoSpan ty12
+                                                             tyT1 <- transType ctx ty12'
+                                                             let ctx' = addName (localName x) ctx
+                                                             t1 <- transExpr knenv ctx' e11
+                                                             let t1' = C.TmFix (C.TmAbs (unLoc x) tyT1 t1)
+                                                             t2 <- transExpr knenv ctx' e2
+                                                             return $ C.TmLet (unLoc x) t1' t2-}
+        traexpr _ = undefined
+
+pat2argnum :: T.Pat -> Int
+pat2argnum (T.ConP _ _ pats) = sum (map (pat2argnum . unLoc) pats)
+pat2argnum T.VarP{} = 1
+pat2argnum T.WildP = 0
+
+transType :: MonadThrow m => C.Context -> T.Type -> m C.Type
+transType ctx = tratype
+    where
+        tratype :: MonadThrow m => T.Type -> m C.Type
+        tratype = undefined
+
+transKind :: MonadThrow m => T.Kind -> m C.Kind
+transKind T.StarK = return C.KnStar
+transKind T.MetaK{} = throwUnexpErr "Kind inference failed"
+transKind (T.ArrK kn1 kn2) = C.KnArr <$> transKind kn1 <*> transKind kn2
+
+{-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Transl.TypToCore where
@@ -191,4 +272,4 @@ typ2core (T.Module modn binds fundecs _exps) = do
         (funbind, ctx'') <- transTopFuncD modn ctx' knenv' fundec
         evals <- mapM (transEval knenv' ctx'') undefined -- exps
         modify $ \s -> s{plt_knEnv = knenv'}
-        return (C.Module modn (binds' ++ [funbind]) evals)
+        return (C.Module modn (binds' ++ [funbind]) evals)-}

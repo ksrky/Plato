@@ -56,6 +56,9 @@ str2tyvarName = tyvarName . T.pack
 str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
 
+dummyVN :: Name
+dummyVN = str2varName "?"
+
 ----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------

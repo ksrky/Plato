@@ -33,6 +33,9 @@ library
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Core.Context
+      Plato.Core.Debug
+      Plato.Core.Subst
       Plato.KindInfer.Ki
       Plato.KindInfer.Monad
       Plato.KindInfer.Unify
@@ -44,10 +47,12 @@ library
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Monad
       Plato.TypeCheck.Subst
@@ -95,6 +100,9 @@ executable plato
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Core.Context
+      Plato.Core.Debug
+      Plato.Core.Subst
       Plato.KindInfer.Ki
       Plato.KindInfer.Monad
       Plato.KindInfer.Unify
@@ -106,10 +114,12 @@ executable plato
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
+      Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Monad
       Plato.TypeCheck.Subst
