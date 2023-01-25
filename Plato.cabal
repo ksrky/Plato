@@ -35,11 +35,14 @@ library
       Plato.Common.Name
       Plato.Core.Context
       Plato.Core.Debug
+      Plato.Core.Eval
+      Plato.Core.Monad
       Plato.Core.Subst
       Plato.KindInfer.Ki
       Plato.KindInfer.Monad
       Plato.KindInfer.Unify
       Plato.KindInfer.Utils
+      Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -50,6 +53,7 @@ library
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
@@ -60,6 +64,7 @@ library
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
+      Plato.Typing.Pattern
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -102,11 +107,14 @@ executable plato
       Plato.Common.Name
       Plato.Core.Context
       Plato.Core.Debug
+      Plato.Core.Eval
+      Plato.Core.Monad
       Plato.Core.Subst
       Plato.KindInfer.Ki
       Plato.KindInfer.Monad
       Plato.KindInfer.Unify
       Plato.KindInfer.Utils
+      Plato.Main
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
@@ -117,6 +125,7 @@ executable plato
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
@@ -127,6 +136,7 @@ executable plato
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
+      Plato.Typing.Pattern
       Paths_Plato
   hs-source-dirs:
       src

@@ -1,12 +1,15 @@
 module Plato.Syntax.Core where
 
 import qualified Data.Vector as V
+import Prettyprinter
 
 import Plato.Common.Name
 import Plato.Core.Debug
 
+newtype Unique = Unique Word deriving (Eq, Show)
+
 data Term
-        = TmVar Info Int
+        = TmVar Int Info
         | TmApp Term Term
         | TmAbs Info Type Term
         | TmTApp Term Type
@@ -15,20 +18,21 @@ data Term
         | TmFix Term
         | TmFold Type
         | TmUnfold Type
-        | TmProj Term Name
-        | TmRecord [(Name, Term)]
-        | TmTag Name [Term] Type
-        | TmCase Term [(Term -> Maybe [Term], Term)]
+        | TmProj Term Unique Info
+        | TmRecord [(Unique, (Info, Term))]
+        | TmTag Info Unique [Term] Type
+        | TmCase Term [(Unique, Term)]
+        deriving (Eq, Show)
 
 data Type
-        = TyVar Info Int
+        = TyVar Int Info
         | TyArr Type Type
         | TyAll Info Kind Type
         | TyAbs Info Kind Type
         | TyApp Type Type
         | TyRec Info Kind Type
-        | TyRecord [(Name, Type)]
-        | TyVariant [(Name, [Type])]
+        | TyRecord [(Unique, (Info, Type))]
+        | TyVariant [(Unique, (Info, [Type]))]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
@@ -47,3 +51,6 @@ data Module = Module
         }
 
 type Context = V.Vector (Name, Binding)
+
+instance Pretty Unique where
+        pretty (Unique i) = "$" <> viaShow i

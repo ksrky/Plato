@@ -23,7 +23,7 @@ transExpr ctx = trexpr
         trexpr :: MonadThrow m => T.Expr -> m C.Term
         trexpr (T.VarE x) = do
                 i <- getVarIndex ctx x
-                return $ C.TmVar (mkInfo x) i
+                return $ C.TmVar i (mkInfo x)
         trexpr (T.AppE e1 e2) = do
                 t1 <- trexpr (unLoc e1)
                 t2 <- trexpr (unLoc e2)
@@ -54,11 +54,11 @@ transExpr ctx = trexpr
         trexpr (T.LetE (T.Binds binds sigs) e2) = do
                 fieldtys <- forM sigs $ \(xi, tyi) -> do
                         tyTi <- transType ctx (unLoc tyi)
-                        return (unLoc xi, tyTi)
+                        return (unLoc xi, (mkInfo xi, tyTi))
                 let ctx' = addName dummyVN ctx
                 fields <- forM binds $ \(xi, ei) -> do
                         ti <- transExpr ctx' (unLoc ei) -- temp: renaming
-                        return (unLoc xi, ti)
+                        return (unLoc xi, (mkInfo xi, ti))
                 let t1 = C.TmFix $ C.TmAbs dummyInfo (C.TyRecord fieldtys) (C.TmRecord fields)
                 t2 <- transExpr ctx' (unLoc e2)
                 return $ C.TmLet dummyInfo t1 t2
@@ -77,7 +77,7 @@ transType ctx = trtype
         trtype :: MonadThrow m => T.Type -> m C.Type
         trtype (T.VarT tv) = do
                 i <- getVarIndex ctx (T.tyVarName tv)
-                return $ C.TyVar (mkInfo $ T.tyVarName tv) i
+                return $ C.TyVar i (mkInfo $ T.tyVarName tv)
         trtype (T.ConT tc) = do
                 i <- getVarIndex ctx tc
                 return $ C.TyVar (mkInfo tc) i
