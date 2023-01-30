@@ -80,7 +80,7 @@ transType ctx = trtype
                 return $ C.TyVar i (mkInfo $ T.tyVarName tv)
         trtype (T.ConT tc) = do
                 i <- getVarIndex ctx tc
-                return $ C.TyVar (mkInfo tc) i
+                return $ C.TyVar  i (mkInfo tc)
         trtype (T.ArrT ty1 ty2) = do
                 tyT1 <- trtype (unLoc ty1)
                 tyT2 <- trtype (unLoc ty2)

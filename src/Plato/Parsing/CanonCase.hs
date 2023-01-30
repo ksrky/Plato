@@ -1,11 +1,12 @@
-module Plato.Typing.Pattern where
+module Plato.Parsing.CanonCase where
 
-data Pat = VAR String | CON String [Pat]
+import Plato.Common.Name
+import Plato.Syntax.Parsing
 
-arity :: String -> Int
+arity :: Name -> Int
 arity = undefined
 
-constructors :: String -> [String]
+constructors :: Name -> [Name]
 constructors = undefined
 
 data Exp

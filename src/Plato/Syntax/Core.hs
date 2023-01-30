@@ -21,7 +21,7 @@ data Term
         | TmProj Term Unique Info
         | TmRecord [(Unique, (Info, Term))]
         | TmTag Info Unique [Term] Type
-        | TmCase Term [(Unique, Term)]
+        | TmCase Term Type [(Unique, Term)]
         deriving (Eq, Show)
 
 data Type

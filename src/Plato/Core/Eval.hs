@@ -74,10 +74,10 @@ eval ctx t = maybe t (eval ctx) (eval' t)
                 TmTag fi l ts tyT -> do
                         ts' <- mapM eval' ts
                         Just $ TmTag fi l ts' tyT
-                TmCase (TmTag _ li vs11 _) alts | all (isval ctx) vs11 -> case lookup li alts of
+                TmCase (TmTag _ li vs11 _) _ alts | all (isval ctx) vs11 -> case lookup li alts of
                         Just body -> Just $ foldr termSubstTop body vs11
                         Nothing -> unreachable "Plato.Core.Eval: non-exhaustive pattern match"
-                TmCase t1 alts -> do
+                TmCase t1 tyT2 alts -> do
                         t1' <- eval' t1
-                        Just $ TmCase t1' alts
+                        Just $ TmCase t1' tyT2 alts
                 _ -> Nothing
