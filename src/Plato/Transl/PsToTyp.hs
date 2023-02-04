@@ -21,15 +21,15 @@ import qualified Data.Map.Strict as M
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
 
-transVar :: P.PsName -> T.Expr
-transVar (P.Unqual x) = T.VarE x
-transVar (P.Qual modn x) = T.RefE (modn2name <$> modn) x
+transName :: P.LPsName -> T.LTypName
+transName (L sp (P.Unqual x)) = L sp (T.TypName [] x)
+transName (L sp1 (P.Qual (L sp2 modn) x)) = L sp1 (T.TypName (map (L sp2) (modn2names modn)) x)
 
 transExpr :: (MonadThrow m, MonadIO m) => P.LExpr -> Plato m T.LExpr
 transExpr (L sp exp) = L sp <$> traexpr exp
     where
         traexpr :: (MonadThrow m, MonadIO m) => P.Expr -> Plato m T.Expr
-        traexpr (P.VarE v) = return $ transVar (unLoc v)
+        traexpr (P.VarE v) = return $ T.VarE $ transName v
         traexpr (P.AppE e1 e2) = do
                 e1' <- transExpr e1
                 e2' <- transExpr e2
@@ -37,7 +37,7 @@ transExpr (L sp exp) = L sp <$> traexpr exp
         traexpr (P.OpE e1 op e2) = do
                 e1' <- transExpr e1
                 e2' <- transExpr e2
-                return $ T.AppE (cL e1 $ T.AppE (cL op $ transVar (unLoc op)) e1') e2'
+                return $ T.AppE (cL e1 $ T.AppE (cL op $ T.VarE $ transName op) e1') e2'
         traexpr (P.LamE xs e1) = do
                 e1' <- transExpr e1
                 return $ unLoc $ foldr (\x e -> cLL x e $ T.AbsE x Nothing e) e1' xs
@@ -51,24 +51,20 @@ transExpr (L sp exp) = L sp <$> traexpr exp
                 return $ T.CaseE e' Nothing alts'
         traexpr P.FactorE{} = unreachable "fixity resolution failed"
 
-transAlt :: (MonadThrow m, MonadIO m) => (P.LPat, P.LExpr) -> Plato m (T.LPat, T.LExpr)
+transAlt :: (MonadThrow m, MonadIO m) => (P.LPat, P.LExpr) -> Plato m ([T.LPat], T.LExpr)
 transAlt (L sp pi, ei) = do
         ei' <- transExpr ei
         case pi of
                 P.ConP con ps -> do
                         ps' <- mapM transPat ps
-                        return $ case unLoc con of
-                                P.Unqual c -> (L sp (T.ConP Nothing c ps'), ei')
-                                P.Qual modn c -> (L sp (T.ConP (Just modn) c ps'), ei')
-                P.VarP x -> return (L sp (T.VarP x), ei')
-                P.WildP -> return (L sp T.WildP, ei')
+                        return ([L sp (T.ConP (transName con) ps')], ei')
+                P.VarP x -> return ([L sp (T.VarP x)], ei')
+                P.WildP -> return ([L sp T.WildP], ei')
 
 transPat :: MonadThrow m => P.LPat -> m T.LPat
 transPat (L sp (P.ConP con ps)) = do
         ps' <- mapM transPat ps
-        return $ case unLoc con of
-                P.Unqual c -> L sp (T.ConP Nothing c ps')
-                P.Qual modn c -> L sp (T.ConP (Just modn) c ps')
+        return $ L sp (T.ConP (transName con) ps')
 transPat (L sp (P.VarP x)) = return $ L sp (T.VarP x)
 transPat (L sp P.WildP) = return $ L sp T.WildP
 
@@ -77,8 +73,7 @@ transType (L sp ty) = L sp <$> tratype ty
     where
         tratype :: MonadThrow m => P.Type -> m T.Type
         tratype (P.VarT x) = return $ T.VarT (T.BoundTv x)
-        tratype (P.ConT (L _ (P.Unqual c))) = return $ T.ConT c
-        tratype (P.ConT (L _ (P.Qual modn c))) = return $ T.RefT (modn2name <$> modn) c
+        tratype (P.ConT c) = return $ T.ConT (transName c)
         tratype (P.AppT ty1 ty2) = do
                 ty1' <- transType ty1
                 ty2' <- transType ty2
@@ -91,7 +86,7 @@ transType (L sp ty) = L sp <$> tratype ty
                 ty1' <- transType ty1
                 return $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) xs) ty1'
 
-transDecls :: (MonadThrow m, MonadIO m) => [P.LDecl] -> Plato m T.Binds
+transDecls :: (MonadThrow m, MonadIO m) => [P.LDecl] -> m T.Binds
 transDecls decs = do
         (binds, sigs) <- execWriterT $
                 forM decs $ \case
@@ -105,18 +100,17 @@ transDecls decs = do
                                 ty' <- Writer.lift $ transType ty
                                 tell (mempty, [(x, ty')])
                         _ -> return ()
-        tyenv <- gets plt_tyEnv
-        knenv <- gets plt_knEnv
         let tyenv' = tyenv `M.union` M.fromList (map (Bifunctor.bimap unLoc unLoc) sigs)
         modify $ \ps -> ps{plt_tyEnv = tyenv'}
-        binds' <- forM binds $ \(x, exp) ->
-                case lookup x sigs of
-                        Nothing -> throwLocErr (getLoc x) $ "no type signature for" <+> squotes (pretty x)
-                        Just ty -> do
-                                ty' <- lift $ checkKindStar knenv ty
-                                exp' <- checkType tyenv' exp (unLoc ty')
-                                return (x, exp')
-        return $ T.Binds binds' sigs
+        (binds', sigs') <- execWriterT $
+                forM binds $ \(x, exp) ->
+                        case lookup x sigs of
+                                Nothing -> throwLocErr (getLoc x) $ "no type signature for" <+> squotes (pretty x)
+                                Just ty -> do
+                                        ty' <- checkKindStar ty
+                                        exp' <- checkType exp (unLoc ty')
+                                        tell ([(x, exp')], [(x, ty')])
+        return $ T.Binds binds' sigs'
 
 transTopDecl :: (MonadThrow m, MonadIO m) => P.LTopDecl -> WriterT [T.Decl] (Plato m) ()
 transTopDecl (L sp (P.DataD name params fields)) = do

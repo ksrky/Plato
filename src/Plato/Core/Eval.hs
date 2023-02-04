@@ -1,11 +1,10 @@
 module Plato.Core.Eval where
 
-import Plato.Common.Error
+import Control.Monad (forM)
+
 import Plato.Core.Context
 import Plato.Core.Subst
 import Plato.Syntax.Core
-
-import Control.Monad (forM)
 
 ----------------------------------------------------------------
 -- Evaluation
@@ -17,8 +16,8 @@ isval ctx t = case t of
                 _ -> False
         TmAbs{} -> True
         TmTAbs{} -> True
-        TmRecord fields -> all (\(_, (_, vi)) -> isval ctx vi) fields
-        TmTag _ _ vs _ -> all (isval ctx) vs
+        TmRecord fields -> all (\(_, vi) -> isval ctx vi) fields
+        TmTag _ vs _ -> all (isval ctx) vs
         TmApp (TmFold _) t -> isval ctx t -- temp
         _ -> False
 
@@ -59,25 +58,25 @@ eval ctx t = maybe t (eval ctx) (eval' t)
                 TmFix t1 -> do
                         t1' <- eval' t1
                         Just $ TmFix t1'
-                TmProj (TmRecord fields) l _ -> snd <$> lookup l fields
-                TmProj t1 l fi -> do
+                TmProj (TmRecord fields) l -> lookup l fields
+                TmProj t1 l -> do
                         t1' <- eval' t1
-                        Just $ TmProj t1' l fi
+                        Just $ TmProj t1' l
                 TmRecord fields -> do
                         fields' <- forM fields $ \field -> case field of
-                                (li, (fi, vi)) | isval ctx vi -> Just (li, (fi, vi))
-                                (li, (fi, ti)) -> do
+                                (li, vi) | isval ctx vi -> Just (li, vi)
+                                (li, ti) -> do
                                         ti' <- eval' ti
-                                        Just (li, (fi, ti'))
+                                        Just (li, ti')
                         Just $ TmRecord fields'
-                TmTag _ _ vs _ | all (isval ctx) vs -> Nothing
-                TmTag fi l ts tyT -> do
+                TmTag _ vs _ | all (isval ctx) vs -> Nothing
+                TmTag l ts tyT -> do
                         ts' <- mapM eval' ts
-                        Just $ TmTag fi l ts' tyT
-                TmCase (TmTag _ li vs11 _) _ alts | all (isval ctx) vs11 -> case lookup li alts of
+                        Just $ TmTag l ts' tyT
+                TmCase t1@(TmTag li vs11 _) _ alts def | all (isval ctx) vs11 -> case lookup li alts of
                         Just body -> Just $ foldr termSubstTop body vs11
-                        Nothing -> unreachable "Plato.Core.Eval: non-exhaustive pattern match"
-                TmCase t1 tyT2 alts -> do
+                        Nothing -> Just $ termSubstTop def t1
+                TmCase t1 tyT2 alts def -> do
                         t1' <- eval' t1
-                        Just $ TmCase t1' tyT2 alts
+                        Just $ TmCase t1' tyT2 alts def
                 _ -> Nothing

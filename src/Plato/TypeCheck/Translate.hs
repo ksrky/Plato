@@ -1,8 +1,8 @@
 module Plato.TypeCheck.Translate where
 
-import Plato.Syntax.Typing
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Syntax.Typing
 
 data Coercion = Id | Coer (Expr -> Expr)
 
@@ -38,11 +38,12 @@ prfunTrans [] _ coercion = coercion
 prfunTrans sks _ Id = Coer $ \e -> TAbsE sks (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks))
 prfunTrans sks arg_ty coercion =
         let x = noLoc $ str2varName "$x"
+            qx = noLoc $ TypName [] x
          in Coer $ \e ->
                 AbsE
                         x
                         (Just arg_ty)
-                        (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE x)))
+                        (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE qx)))
 
 deepskolTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 >.> coer2
@@ -52,4 +53,5 @@ funTrans :: Sigma -> Coercion -> Coercion -> Coercion
 funTrans _ Id Id = Id
 funTrans a2 co_arg co_res =
         let x = noLoc $ str2varName "$x"
-         in Coer $ \f -> AbsE x (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE x))
+            qx = noLoc $ TypName [] x
+         in Coer $ \f -> AbsE x (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE qx))

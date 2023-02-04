@@ -59,6 +59,9 @@ str2tyconName = tyconName . T.pack
 dummyVN :: Name
 dummyVN = str2varName "?"
 
+wildcard :: Name
+wildcard = str2varName "_"
+
 ----------------------------------------------------------------
 -- Module Name
 ----------------------------------------------------------------
@@ -80,6 +83,9 @@ filePath2modName fname = case reverse fname of
 
 modn2name :: ModuleName -> Name
 modn2name (ModuleName modn) = Name ModName modn
+
+modn2names :: ModuleName -> [Name]
+modn2names (ModuleName modn) = map (Name ModName) (T.splitOn "." modn)
 
 mod2path :: ModuleName -> FilePath
 mod2path (ModuleName modn) = T.unpack (T.replace "." "/" modn) ++ ".plt"

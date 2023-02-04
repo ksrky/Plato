@@ -11,27 +11,30 @@ import Prettyprinter
 -- Syntax
 ----------------------------------------------------------------
 type LName = Located Name
+type LTypName = Located TypName
 type LExpr = Located Expr
 type LPat = Located Pat
 type LType = Located Type
 type LDecl = Located Decl
 
+data TypName = TypName [LName] LName deriving (Eq, Show)
+
 -- | Expressions
 data Expr
-        = VarE LName
+        = VarE LTypName
         | AppE LExpr LExpr
         | AbsE LName (Maybe Type) LExpr
         | PAbsE LPat (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [(TyVar, Maybe Kind)] LExpr
         | LetE Binds LExpr
-        | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
-        | RefE LName LName
+        | CaseE LExpr (Maybe Type) [([LPat], LExpr)]
+        | PBarE LExpr LExpr
         deriving (Eq, Show)
 
 -- | Patterns
 data Pat
-        = ConP (Maybe (Located ModuleName)) LName [LPat]
+        = ConP LTypName [LPat]
         | VarP LName
         | WildP
         deriving (Eq, Show)
@@ -39,7 +42,7 @@ data Pat
 -- | Types
 data Type
         = VarT TyVar
-        | ConT LName
+        | ConT LTypName
         | ArrT LType LType
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
@@ -47,7 +50,6 @@ data Type
         | RecT LName (Maybe Kind) LType
         | RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
-        | RefT LName LName
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -77,8 +79,13 @@ data Kind
 
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
+data Mod
+        = ModName LName
+        | ModPath Mod LName
+        deriving (Eq, Show)
+
 -- | Function decl
-data Binds = Binds [(LName, LExpr)] [(LName, LType)] deriving (Eq, Show)
+data Binds = Binds [(LName, LExpr)] [(LName, Type)] deriving (Eq, Show)
 
 data Decl
         = TypeD LName Type Kind
@@ -95,6 +102,8 @@ data Module = Module
 
 type TyEnv = M.Map Name Sigma
 type KnEnv = M.Map Name Kind
+type ModEnv = M.Map Name TypEnv
+data TypEnv = TypEnv TyEnv KnEnv ModEnv
 
 ----------------------------------------------------------------
 -- class
@@ -128,6 +137,9 @@ instance Ord MetaKv where
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
+instance Pretty TypName where
+        pretty (TypName quals name) = hcat [foldr (surround dot) (dot <> pretty name) (map pretty quals)]
+
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = pprapp exp
@@ -141,7 +153,7 @@ instance Pretty Expr where
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace
-        pretty (RefE modn var) = hcat [pretty modn, dot, pretty var]
+        pretty (PBarE lhs rhs) = hsep [pretty lhs, pipe, pretty rhs]
 
 pprexpr :: Expr -> Doc ann
 pprexpr e@VarE{} = pretty e
@@ -155,12 +167,12 @@ pprapp e = walk e []
         walk e' es = pprexpr e' <+> sep (map pprexpr es)
 
 instance Pretty Pat where
-        pretty (ConP _ con pats) = pretty con <+> hsep (map (pprpat . unLoc) pats) -- temp
+        pretty (ConP con pats) = pretty con <+> hsep (map (pprpat . unLoc) pats) -- temp
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
 pprpat :: Pat -> Doc ann
-pprpat pat@(ConP _ con pats) -- temp
+pprpat pat@(ConP con pats) -- temp
         | null pats = pretty con
         | otherwise = parens $ pretty pat
 pprpat pat = pretty pat
@@ -192,7 +204,6 @@ instance Pretty Type where
                                         fields
                                 )
                         <> rangle
-        pretty (RefT modn var) = hcat [pretty modn, dot, pretty var]
         pretty (MetaT tv) = viaShow tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)

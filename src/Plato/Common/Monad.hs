@@ -8,9 +8,11 @@ import System.FilePath
 
 import Plato.Common.Fixity
 import Plato.Common.Name
+import Plato.Core.Context
 import Plato.Syntax.Core
 import Plato.Syntax.Parsing
 import Plato.Syntax.Typing
+import Plato.Typing.Env
 
 ----------------------------------------------------------------
 -- Plato Monad
@@ -27,8 +29,7 @@ data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
         { plt_fixityEnv :: FixityEnv PsName
-        , plt_tyEnv :: TyEnv
-        , plt_knEnv :: KnEnv
+        , plt_typEnv :: TypEnv
         , plt_context :: Context
         }
 
@@ -61,9 +62,8 @@ initPState :: PlatoState
 initPState =
         PState
                 { plt_fixityEnv = M.empty
-                , plt_tyEnv = M.empty
-                , plt_knEnv = M.empty
-                , plt_context = V.empty
+                , plt_typEnv = emptyTypEnv
+                , plt_context = emptyContext
                 }
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m

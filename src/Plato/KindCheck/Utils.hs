@@ -1,16 +1,16 @@
 {-# LANGUAGE TupleSections #-}
 
-module Plato.KindInfer.Utils where
+module Plato.KindCheck.Utils where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Data.Set as S
 
 import Plato.Common.Error
-import Plato.KindInfer.Monad
 import Plato.Syntax.Typing
+import Plato.Typing.Monad
 
-zonkKind :: MonadIO m => Kind -> Ki m Kind
+zonkKind :: MonadIO m => Kind -> Typ m Kind
 zonkKind StarK = return StarK
 zonkKind (ArrK kn1 kn2) = do
         kn1' <- zonkKind kn1
@@ -25,7 +25,7 @@ zonkKind (MetaK kv) = do
                         writeMetaKv kv kn'
                         return kn'
 
-zonkType :: MonadIO m => Type -> Ki m Type
+zonkType :: MonadIO m => Type -> Typ m Type
 zonkType (VarT tv) = return $ VarT tv
 zonkType (ConT x) = return $ ConT x
 zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
@@ -43,7 +43,7 @@ zonkType (SumT fields) = do
         return $ SumT fields'
 zonkType MetaT{} = unreachable "Plato.KindInfer.zonkType"
 
-getMetaKvs :: MonadIO m => Kind -> Ki m (S.Set MetaKv)
+getMetaKvs :: MonadIO m => Kind -> Typ m (S.Set MetaKv)
 getMetaKvs kn = do
         kn' <- zonkKind kn
         return (metaKvs kn')

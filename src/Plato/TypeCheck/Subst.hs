@@ -19,5 +19,4 @@ apply s (AbsT var mbkn body) = AbsT var mbkn (apply s <$> body)
 apply s (RecT var kn body) = RecT var kn (apply s <$> body)
 apply s (RecordT fields) = RecordT (map (\(l, ty) -> (l, apply s <$> ty)) fields)
 apply s (SumT fields) = SumT (map (\(l, tys) -> (l, map (apply s <$>) tys)) fields)
-apply _ ty@RefT{} = ty
 apply _ ty@MetaT{} = ty

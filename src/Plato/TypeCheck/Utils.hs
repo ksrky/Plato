@@ -7,12 +7,12 @@ import Control.Monad.Reader
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
-import Plato.Syntax.Typing
-import Plato.TypeCheck.Monad
 import Plato.Common.Error
 import Plato.Common.Location
+import Plato.Syntax.Typing
+import Plato.Typing.Monad
 
-zonkType :: MonadIO m => Type -> Tc m Type
+zonkType :: MonadIO m => Type -> Typ m Type
 zonkType (VarT tv) = return (VarT tv)
 zonkType (ConT tc) = return (ConT tc)
 zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
@@ -28,7 +28,7 @@ zonkType (MetaT tv) = do
                         return ty'
 zonkType _ = unreachable "TypeCheck.Utils.zonkType"
 
-zonkExpr :: MonadIO m => Expr -> Tc m Expr
+zonkExpr :: MonadIO m => Expr -> Typ m Expr
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
 zonkExpr (AbsE var mty body) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr `traverse` body
@@ -36,7 +36,7 @@ zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
 zonkExpr (LetE (Binds binds sigs) body) = do
         binds' <- mapM (\(x, e) -> (x,) <$> zonkExpr `traverse` e) binds
-        sigs' <- mapM (\(x, ty) -> (x,) <$> zonkType `traverse` ty) sigs
+        sigs' <- mapM (\(x, ty) -> (x,) <$> zonkType ty) sigs
         LetE (Binds binds' sigs') <$> zonkExpr `traverse` body
 zonkExpr (CaseE e mbty alts) =
         CaseE
@@ -45,10 +45,10 @@ zonkExpr (CaseE e mbty alts) =
                 <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr `traverse` body)
 zonkExpr _ = unreachable "TypeCheck.Utils.zonkExpr"
 
-getEnvTypes :: Monad m => Tc m [Type]
-getEnvTypes = asks M.elems
+getEnvTypes :: Monad m => Typ m [Type]
+getEnvTypes = asks (\(TypEnv tyenv _ _) -> M.elems tyenv)
 
-getMetaTvs :: MonadIO m => Type -> Tc m (S.Set MetaTv)
+getMetaTvs :: MonadIO m => Type -> Typ m (S.Set MetaTv)
 getMetaTvs ty = do
         ty' <- zonkType ty
         return (metaTvs ty')
@@ -62,7 +62,7 @@ metaTvs (AppT fun arg) = metaTvs (unLoc fun) `S.union` metaTvs (unLoc arg)
 metaTvs (MetaT tv) = S.singleton tv
 metaTvs _ = unreachable "TypeCheck.Utils.metaTvs"
 
-getFreeTvs :: MonadIO m => Type -> Tc m (S.Set TyVar)
+getFreeTvs :: MonadIO m => Type -> Typ m (S.Set TyVar)
 getFreeTvs ty = do
         ty' <- zonkType ty
         return (freeTvs ty')

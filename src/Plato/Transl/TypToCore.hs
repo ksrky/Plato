@@ -63,11 +63,10 @@ transExpr ctx = trexpr
                 t2 <- transExpr ctx' (unLoc e2)
                 return $ C.TmLet dummyInfo t1 t2
         trexpr (T.CaseE e1 (Just ty2) alts) = undefined
-        trexpr T.RefE{} = undefined
         trexpr _ = unreachable "Plato.Transl.TypToCore.transExpr"
 
 pat2argnum :: T.Pat -> Int
-pat2argnum (T.ConP _ _ pats) = sum (map (pat2argnum . unLoc) pats)
+pat2argnum (T.ConP _ pats) = sum (map (pat2argnum . unLoc) pats)
 pat2argnum T.VarP{} = 1
 pat2argnum T.WildP = 0
 
@@ -80,7 +79,7 @@ transType ctx = trtype
                 return $ C.TyVar i (mkInfo $ T.tyVarName tv)
         trtype (T.ConT tc) = do
                 i <- getVarIndex ctx tc
-                return $ C.TyVar  i (mkInfo tc)
+                return $ C.TyVar i (mkInfo tc)
         trtype (T.ArrT ty1 ty2) = do
                 tyT1 <- trtype (unLoc ty1)
                 tyT2 <- trtype (unLoc ty2)
@@ -111,7 +110,6 @@ transType ctx = trtype
         trtype (T.SumT fields) = do
                 fields' <- forM fields $ \(l, tys) -> (unLoc l,) <$> mapM (trtype . unLoc) tys
                 return $ C.TyVariant fields'
-        trtype T.RefT{} = undefined
         trtype T.MetaT{} = unreachable "Zonking failed"
         trtype _ = unreachable "Plato.Transl.TypToCore.transType"
 

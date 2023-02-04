@@ -1,4 +1,4 @@
-module Plato.KindInfer.Unify where
+module Plato.KindCheck.Unify where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -6,11 +6,11 @@ import Control.Monad.IO.Class
 import qualified Data.Set as S
 import Prettyprinter
 
-import Plato.KindInfer.Monad
-import Plato.KindInfer.Utils
+import Plato.KindCheck.Utils
 import Plato.Syntax.Typing
+import Plato.Typing.Monad
 
-unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Ki m ()
+unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Typ m ()
 unify StarK StarK = return ()
 unify (ArrK l r) (ArrK l' r') = do
         unify l l'
@@ -20,9 +20,9 @@ unify (MetaK kv) kn = unifyVar kv kn
 unify kn (MetaK kv) = unifyVar kv kn
 unify kn1 kn2 = do
         sp <- readErrLoc
-        throwKi sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual kind:" <+> pretty kn1)]
+        throwTyp sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual kind:" <+> pretty kn1)]
 
-unifyVar :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Ki m ()
+unifyVar :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Typ m ()
 unifyVar kv1 kn2@(MetaK kv2) = do
         mb_kn1 <- readMetaKv kv1
         mb_kn2 <- readMetaKv kv2
@@ -34,7 +34,7 @@ unifyVar kv1 kn2 = do
         occursCheck kv1 kn2
         writeMetaKv kv1 kn2
 
-unifyFun :: (MonadIO m, MonadThrow m) => Kind -> Ki m (Kind, Kind)
+unifyFun :: (MonadIO m, MonadThrow m) => Kind -> Typ m (Kind, Kind)
 unifyFun (ArrK kn1 kn2) = return (kn1, kn2)
 unifyFun kn = do
         arg_kn <- newKnVar
@@ -42,9 +42,9 @@ unifyFun kn = do
         unify kn (ArrK arg_kn res_kn)
         return (arg_kn, res_kn)
 
-occursCheck :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Ki m ()
+occursCheck :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Typ m ()
 occursCheck kv1 kn2 = do
         kvs2 <- getMetaKvs kn2
         when (kv1 `S.member` kvs2) $ do
                 sp <- readErrLoc
-                throwKi sp $ hsep ["Infinite kind:", squotes $ pretty kn2]
+                throwTyp sp $ hsep ["Infinite kind:", squotes $ pretty kn2]

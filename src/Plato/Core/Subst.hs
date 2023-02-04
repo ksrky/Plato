@@ -16,8 +16,8 @@ tymap onvar c tyT = walk c tyT
                 TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyRec tyX knK1 tyT2 -> TyRec tyX knK1 (walk (c + 1) tyT2)
-                TyRecord fieldtys -> TyRecord (map (\(li, (fi, tyTi)) -> (li, (fi, walk c tyTi))) fieldtys)
-                TyVariant fieldtys -> TyVariant (map (\(li, (fi, ftys)) -> (li, (fi, map (walk c) ftys))) fieldtys)
+                TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
+                TyVariant fieldtys -> TyVariant (map (\(li, ftys) -> (li, map (walk c) ftys)) fieldtys)
 
 typeShiftAbove :: Int -> Int -> Type -> Type
 typeShiftAbove d =
@@ -59,10 +59,10 @@ tmmap onvar ontype c t = walk c t
                 TmFix t1 -> TmFix (walk c t1)
                 TmFold tyT -> TmFold (ontype c tyT)
                 TmUnfold tyT -> TmUnfold (ontype c tyT)
-                TmProj t1 l fi -> TmProj (walk c t1) l fi
-                TmRecord fields -> TmRecord (map (\(li, (fi, ti)) -> (li, (fi, walk c ti))) fields)
-                TmTag fi l t1 tyT2 -> TmTag fi l (map (walk c) t1) (ontype c tyT2)
-                TmCase t1 tyT2 alts -> TmCase (walk c t1) (ontype c tyT2) (map (\(fi, ti) -> (fi, walk c ti)) alts)
+                TmProj t1 l -> TmProj (walk c t1) l
+                TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
+                TmTag l t1 tyT2 -> TmTag l (map (walk c) t1) (ontype c tyT2)
+                TmCase t1 tyT2 alts def -> TmCase (walk c t1) (ontype c tyT2) (map (\(fi, ti) -> (fi, walk c ti)) alts) def
 
 termShiftAbove :: Int -> Int -> Term -> Term
 termShiftAbove d =
