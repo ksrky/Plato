@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Transl.TypToCore where
-
+{-}
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.RWS
@@ -166,4 +166,4 @@ typ2core (T.Module modn decls binds exps) = do
         funbind <- transTopBinds modn ctx' binds
         let ctx'' = uncurry addBinding funbind ctx
         evals <- mapM (transEval ctx'') exps
-        return (C.Module modn (tybinds ++ [funbind]) evals)
+        return (C.Module modn (tybinds ++ [funbind]) evals)-}

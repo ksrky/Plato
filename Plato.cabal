@@ -66,7 +66,6 @@ library
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
-      Plato.Typing.Pattern
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -140,7 +139,6 @@ executable plato
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
-      Plato.Typing.Pattern
       Paths_Plato
   hs-source-dirs:
       src

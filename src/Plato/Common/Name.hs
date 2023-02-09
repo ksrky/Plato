@@ -9,7 +9,11 @@ import Prettyprinter
 ----------------------------------------------------------------
 -- Name
 ----------------------------------------------------------------
-data Name = Name {nameSpace :: NameSpace, nameText :: T.Text}
+data Name = Name
+        { nameSpace :: NameSpace
+        , -- , nameUnique :: Int
+          nameText :: T.Text
+        }
 
 instance Eq Name where
         n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2

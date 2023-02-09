@@ -81,11 +81,22 @@ data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 data Mod
         = ModName LName
+        | ModBin [Bind]
         | ModPath Mod LName
+        | ModApp Mod Mod
+        | ModFun LName Sig Mod
+        | ModSig Mod Sig
         deriving (Eq, Show)
 
--- | Function decl
 data Binds = Binds [(LName, LExpr)] [(LName, Type)] deriving (Eq, Show)
+
+data Bind
+        = TypBind LName LType
+        | ExpBind LName Expr
+        | ModBind LName Mod
+        deriving (Eq, Show)
+
+data Sig = Sig deriving (Eq, Show)
 
 data Decl
         = TypeD LName Type Kind

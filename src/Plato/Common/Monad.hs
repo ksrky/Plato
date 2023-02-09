@@ -3,7 +3,6 @@ module Plato.Common.Monad where
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import qualified Data.Vector as V
 import System.FilePath
 
 import Plato.Common.Fixity
@@ -65,6 +64,12 @@ initPState =
                 , plt_typEnv = emptyTypEnv
                 , plt_context = emptyContext
                 }
+
+modifyTypEnv :: Monad m => (TypEnv -> TypEnv) -> Plato m ()
+modifyTypEnv f = modify $ \ps@PState{plt_typEnv = typenv} -> ps{plt_typEnv = f typenv}
+
+class PlatoSub t where
+        liftPlato :: t m a -> Plato m a 
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m
 

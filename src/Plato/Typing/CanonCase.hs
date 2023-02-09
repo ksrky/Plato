@@ -1,5 +1,6 @@
 module Plato.Typing.CanonCase where
 
+{-}
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Name
@@ -72,4 +73,4 @@ choose :: LName -> [([LPat], LExpr)] -> [([LPat], LExpr)]
 choose c qs = [q | q <- qs, getCon q == unLoc c]
 
 canonCase :: LExpr -> [(LPat, LExpr)] -> LExpr
-canonCase test alts = match 0 [test] (map (\(p, e) -> ([p], e)) alts) undefined
+canonCase test alts = match 0 [test] (map (\(p, e) -> ([p], e)) alts) undefined-}

@@ -6,6 +6,7 @@ import Plato.Common.Fixity
 import Plato.Common.Name
 
 import Control.Exception.Safe
+import Control.Monad.IO.Class
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import qualified Data.ByteString.Internal as BS
@@ -96,6 +97,11 @@ instance Monad m => MonadState PsState (ParserT m) where
 
 instance MonadTrans ParserT where
         lift c = ParserT $ \s -> c >>= (\x -> return (x, s))
+
+instance MonadIO m => MonadIO (ParserT m) where
+        liftIO = \io -> ParserT $ \s -> do
+                a <- liftIO io
+                return (a, s)
 
 parse :: String -> T.Text -> ParserT m a -> m (a, PsState)
 parse file_name inp p =
