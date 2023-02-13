@@ -58,7 +58,7 @@ instPatSigma :: (MonadThrow m, MonadIO m) => Sigma -> Expected Sigma -> Typ m Co
 instPatSigma pat_ty (Infer ref) = writeTypRef ref pat_ty >> return Id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadThrow m, MonadIO m) => LTypName -> Typ m ([Sigma], Tau)
+instDataCon :: (MonadThrow m, MonadIO m) => LPath -> Typ m ([Sigma], Tau)
 instDataCon con = do
         sigma <- asksM $ lookupInEnv con
         (_, rho) <- instantiate sigma
@@ -114,10 +114,16 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 binds <- checkPat pat arg_ty
                 body' <- local (extendEnvList binds) (checkRho body res_ty)
                 return $ PAbsE pat (Just arg_ty) body'
-        tcRho' (LetE binds@(Binds _ sigs) body) exp_ty = do
-                binds' <- tcBinds binds
-                body' <- local (extendEnvList sigs) (tcRho body exp_ty)
-                return $ LetE binds' body'
+        tcRho' (LetE bnds decs body) exp_ty = do
+                local (extendEnvList decs) $ do
+                        bnds' <- forM bnds $ \(var, FunBind exp) -> do
+                                ann_ty <- case lookup var decs of
+                                        Just (ValDecl ty) -> return ty
+                                        _ -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
+                                exp' <- local (extendEnvList decs) $ checkSigma exp ann_ty
+                                return (var, FunBind exp')
+                        body' <- tcRho body exp_ty
+                        return $ LetE bnds' decs body'
         tcRho' _ _ = unreachable "TypeCheck.Typ.tcRho"
 
 -- | Type check of Sigma
@@ -139,7 +145,8 @@ checkSigma exp sigma = do
         return $ (\e -> coercion @@ genTrans skol_tvs @@ e) <$> exp'
 
 -- | Type check of Binders
-tcBinds :: (MonadIO m, MonadThrow m) => Binds -> Typ m Binds
+
+{-tcBinds :: (MonadIO m, MonadThrow m) => Bind -> Typ m Binds
 tcBinds (Binds binds sigs) = do
         binds' <- forM binds $ \(var, exp) -> do
                 ann_ty <- case lookup var sigs of
@@ -147,7 +154,7 @@ tcBinds (Binds binds sigs) = do
                         Nothing -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
                 exp' <- local (extendEnvList sigs) $ checkSigma exp ann_ty
                 return (var, exp')
-        return $ Binds binds' sigs
+        return $ Binds binds' sigs-}
 
 -- | Subsumption checking
 subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Typ m Coercion

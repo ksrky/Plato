@@ -7,6 +7,7 @@ import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Syntax.Typing
 
 outermost :: TypEnv
@@ -15,13 +16,25 @@ outermost = unreachable "Outermost of TypEnv"
 emptyTypEnv :: TypEnv
 emptyTypEnv = TypEnv M.empty M.empty M.empty
 
+newTypEnv :: ModuleName -> TypEnv -> TypEnv
+newTypEnv modn typenv =
+        foldr
+                ( \n env@(TypEnv _ _ modenv) -> case M.lookup n modenv of
+                        Just _ -> env
+                        Nothing -> extendEnv (noLoc n) env emptyTypEnv
+                )
+                typenv
+                names
+    where
+        names = modn2names modn
+
 class EnvManager a where
         extendEnv :: LName -> a -> TypEnv -> TypEnv
         extendEnvList :: [(LName, a)] -> TypEnv -> TypEnv
         lookupEnv :: MonadThrow m => LName -> TypEnv -> m a
-        lookupInEnv :: MonadThrow m => LTypName -> TypEnv -> m a
+        lookupInEnv :: MonadThrow m => LPath -> TypEnv -> m a
         extendEnvList binds m = foldl (\m (x, v) -> extendEnv x v m) m binds
-        lookupInEnv (L _ (TypName qs x)) env = lookupEnv x =<< foldM (flip lookupEnv) env qs
+        lookupInEnv (L _ (Path qs x)) env = lookupEnv x =<< foldM (flip lookupEnv) env qs
 
 instance EnvManager Type where
         extendEnv x ty (TypEnv tyenv knenv modenv) = TypEnv (M.insert (unLoc x) ty tyenv) knenv modenv

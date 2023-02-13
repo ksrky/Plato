@@ -9,8 +9,7 @@ import Prettyprinter
 import Prettyprinter.Render.String
 
 import Plato.Common.Error
-import Plato.Common.Location
-import Plato.Common.Monad
+import Plato.Common.Location 
 import Plato.Syntax.Typing
 
 data Context = Context

@@ -36,7 +36,6 @@ library
       Plato.Core.Context
       Plato.Core.Debug
       Plato.Core.Eval
-      Plato.Core.Monad
       Plato.Core.Subst
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify
@@ -109,7 +108,6 @@ executable plato
       Plato.Core.Context
       Plato.Core.Debug
       Plato.Core.Eval
-      Plato.Core.Monad
       Plato.Core.Subst
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify

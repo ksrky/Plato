@@ -11,30 +11,30 @@ import Prettyprinter
 -- Syntax
 ----------------------------------------------------------------
 type LName = Located Name
-type LTypName = Located TypName
+type LPath = Located Path
 type LExpr = Located Expr
 type LPat = Located Pat
 type LType = Located Type
 type LDecl = Located Decl
 
-data TypName = TypName [LName] LName deriving (Eq, Show)
+data Path = Path [LName] LName deriving (Eq, Show)
 
 -- | Expressions
 data Expr
-        = VarE LTypName
+        = VarE LPath
         | AppE LExpr LExpr
         | AbsE LName (Maybe Type) LExpr
         | PAbsE LPat (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [(TyVar, Maybe Kind)] LExpr
-        | LetE Binds LExpr
+        | LetE Binds Decls LExpr
         | CaseE LExpr (Maybe Type) [([LPat], LExpr)]
         | PBarE LExpr LExpr
         deriving (Eq, Show)
 
 -- | Patterns
 data Pat
-        = ConP LTypName [LPat]
+        = ConP LPath [LPat]
         | VarP LName
         | WildP
         deriving (Eq, Show)
@@ -42,7 +42,7 @@ data Pat
 -- | Types
 data Type
         = VarT TyVar
-        | ConT LTypName
+        | ConT LPath
         | ArrT LType LType
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
@@ -79,29 +79,68 @@ data Kind
 
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
+-- data Binds = Binds [(LName, LExpr)] [(LName, Type)] deriving (Eq, Show)
+
 data Mod
         = ModName LName
-        | ModBin [Bind]
+        | ModBinds Binds
+        deriving (Eq, Show)
+
+type Binds = [(LName, Bind)]
+
+data Bind
+        = FunBind LExpr
+        | TypBind Type
+        | ModBind Sig Mod
+        deriving (Eq, Show)
+
+data Sig
+        = SigName LName
+        | SigDecls Decls
+        deriving (Eq, Show)
+
+type Decls = [(LName, Decl)]
+
+data Decl
+        = ValDecl Type
+        | TypDecl Kind
+        deriving (Eq, Show)
+
+data Top = Top
+        { top_modn :: ModuleName
+        , top_bind :: Bind
+        , top_body :: [Expr]
+        }
+
+{-
+data Mod
+        = ModName LName
+        | ModBinds [Bind]
         | ModPath Mod LName
         | ModApp Mod Mod
         | ModFun LName Sig Mod
         | ModSig Mod Sig
         deriving (Eq, Show)
 
-data Binds = Binds [(LName, LExpr)] [(LName, Type)] deriving (Eq, Show)
-
 data Bind
-        = TypBind LName LType
-        | ExpBind LName Expr
+        = FunBind LName Expr
+        | TypBind LName LType
         | ModBind LName Mod
         deriving (Eq, Show)
 
-data Sig = Sig deriving (Eq, Show)
+data Sig
+        = SigName LName
+        | SigDecls [Decl]
+        | SigFun LName Sig Sig
+        deriving (Eq, Show)
 
 data Decl
         = TypeD LName Type Kind
         | ConD LName Type
-        deriving (Eq, Show)
+        | ValDecl LName Type
+        | TypDecl LName Kind
+        | SigDecl LName Sig
+        deriving (Eq, Show)-}
 
 data Module = Module
         { typ_modn :: ModuleName
@@ -148,8 +187,8 @@ instance Ord MetaKv where
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-instance Pretty TypName where
-        pretty (TypName quals name) = hcat [foldr (surround dot) (dot <> pretty name) (map pretty quals)]
+instance Pretty Path where
+        pretty (Path quals name) = hcat [foldr (surround dot) (dot <> pretty name) (map pretty quals)]
 
 instance Pretty Expr where
         pretty (VarE var) = pretty var
@@ -158,7 +197,7 @@ instance Pretty Expr where
         pretty (PAbsE pat mty body) = backslash <> pretty pat <> maybe emptyDoc ((colon <>) . pretty) mty <> dot <+> pretty body
         pretty (TAppE fun tyargs) = pretty fun <> hsep' (map pretty tyargs)
         pretty (TAbsE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
-        pretty (LetE binds body) = hsep ["let", lbrace <> line, indent 4 (pretty binds), line <> rbrace, "in", pretty body]
+        pretty (LetE binds sig body) = undefined -- hsep ["let", lbrace <> line, indent 4 (pretty binds), line <> rbrace, "in", pretty body]
         pretty (CaseE match mty alts) =
                 "case" <+> sep [pretty match, colon, maybe emptyDoc pretty mty] <+> "of" <+> lbrace <> line
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
@@ -238,18 +277,19 @@ pprkind :: Kind -> Doc ann
 pprkind StarK = pretty StarK
 pprkind kn = parens (pretty kn)
 
-instance Pretty Binds where
-        pretty (Binds _binds _sigs) = undefined {-temp-}
+{-instance Pretty Binds where
+        pretty (Binds _binds _sigs) = undefined {-temp-}-}
 
-instance Pretty Decl where
-        pretty (TypeD con body kn) = hsep [pretty con, equals, pretty body, dot, pretty kn]
-        pretty (ConD var sig) = hsep [pretty var, colon, pretty sig]
+instance Pretty Decl
+
+{-pretty (TypeD con body kn) = hsep [pretty con, equals, pretty body, dot, pretty kn]
+pretty (ConD var sig) = hsep [pretty var, colon, pretty sig]-}
 
 instance Pretty Module where
         pretty (Module mod decs binds body) =
                 pretty mod <> line
                         <> vsep (map pretty decs)
                         <> (if null decs then emptyDoc else line)
-                        <> pretty binds
+                        -- <> pretty binds
                         <> line
                         <> vsep (map (pretty . fst) body)

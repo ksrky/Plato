@@ -1,12 +1,9 @@
 module Plato.Syntax.Core where
 
 import qualified Data.Vector as V
-import Prettyprinter
 
 import Plato.Common.Name
 import Plato.Core.Debug
-
-newtype Id = Id Word deriving (Eq, Show)
 
 data Term
         = TmVar Int Info
@@ -18,10 +15,10 @@ data Term
         | TmFix Term
         | TmFold Type
         | TmUnfold Type
-        | TmProj Term Id
-        | TmRecord [(Id, Term)]
-        | TmTag Id [Term] Type
-        | TmCase Term Type [(Id, Term)] Term
+        | TmProj Term Name
+        | TmRecord [(Name, Term)]
+        | TmTag Name [Term] Type
+        | TmCase Term Type [(Name, Term)] Term
         deriving (Eq, Show)
 
 data Type
@@ -31,8 +28,8 @@ data Type
         | TyAbs Info Kind Type
         | TyApp Type Type
         | TyRec Info Kind Type
-        | TyRecord [(Id, Type)]
-        | TyVariant [(Id, [Type])]
+        | TyRecord [(Name, Type)]
+        | TyVariant [(Name, [Type])]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)
@@ -51,6 +48,3 @@ data Module = Module
         }
 
 type Context = V.Vector (Name, Binding)
-
-instance Pretty Id where
-        pretty (Id i) = "$" <> viaShow i

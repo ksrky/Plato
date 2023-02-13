@@ -21,14 +21,15 @@ import Plato.Typing.Monad
 import qualified Data.Bifunctor as Bifunctor
 import qualified Data.Map.Strict as M
 import qualified Plato.Syntax.Parsing as P
+import Plato.Syntax.Typing (Bind (ModBind))
 import qualified Plato.Syntax.Typing as T
 
-transName :: P.LPsName -> T.LTypName
-transName (L sp (P.Unqual x)) = L sp (T.TypName [] x)
-transName (L sp1 (P.Qual (L sp2 modn) x)) = L sp1 (T.TypName (map (L sp2) (modn2names modn)) x)
+transName :: P.LPsName -> T.LPath
+transName (L sp (P.Unqual x)) = L sp (T.Path [] x)
+transName (L sp1 (P.Qual (L sp2 modn) x)) = L sp1 (T.Path (map (L sp2) (modn2names modn)) x)
 
-typName :: P.LName -> Located T.TypName
-typName x@(L sp _) = L sp (T.TypName (map (L sp) []) x)
+name2path :: P.LName -> Located T.Path
+name2path x@(L sp _) = L sp (T.Path (map (L sp) []) x)
 
 transExpr :: (MonadThrow m, MonadIO m) => P.LExpr -> Typ m T.LExpr
 transExpr (L sp exp) = L sp <$> traexpr exp
@@ -47,10 +48,10 @@ transExpr (L sp exp) = L sp <$> traexpr exp
                 e1' <- transExpr e1
                 return $ unLoc $ foldr (\x e -> cLL x e $ T.AbsE x Nothing e) e1' xs
         traexpr (P.LetE ds e) = do
-                binds <- transDecls ds
+                (bnds, decs) <- transDecls ds
                 -- temp: extend env
                 e' <- transExpr e
-                return $ T.LetE binds e'
+                return $ T.LetE bnds decs e'
         traexpr (P.CaseE e alts) = do
                 e' <- transExpr e
                 alts' <- mapM transAlt alts
@@ -62,7 +63,7 @@ transAlt (L sp pi, ei) = do
         ei' <- transExpr ei
         case pi of
                 P.ConP con ps -> do
-                        ps' <- mapM transPat ps
+                        ps' <- mapM (lift . transPat) ps
                         return ([L sp (T.ConP (transName con) ps')], ei')
                 P.VarP x -> return ([L sp (T.VarP x)], ei')
                 P.WildP -> return ([L sp T.WildP], ei')
@@ -92,18 +93,18 @@ transType (L sp ty) = L sp <$> tratype ty
                 ty1' <- transType ty1
                 return $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) xs) ty1'
 
-transDecls :: (MonadThrow m, MonadIO m) => [P.LDecl] -> Typ m T.Binds
+transDecls :: (MonadThrow m, MonadIO m) => [P.LDecl] -> Typ m (T.Binds, T.Decls)
 transDecls decs = do
         (binds, sigs) <- execWriterT $
                 forM decs $ \case
                         L _ (P.FuncD x args exp) -> do
                                 -- fixenv <- gets plt_fixityEnv --temp
                                 -- exp_r <- resolveFixity fixenv exp
-                                let exp_c = if null args then exp_r else cLnL args exp_r $ P.LamE args exp_r
-                                exp' <- Writer.lift $ transExpr exp_c
-                                tell ([(x, exp')], mempty)
+                                let exp' = if null args then exp else cLnL args exp $ P.LamE args exp
+                                exp'' <- lift $ transExpr exp'
+                                tell ([(x, exp'')], mempty)
                         L _ (P.FuncTyD x ty) -> do
-                                ty' <- Writer.lift $ transType ty
+                                ty' <- lift $ lift $ transType ty
                                 tell (mempty, [(x, ty')])
                         _ -> return ()
         let extend = extendEnvList (map (Bifunctor.second unLoc) sigs)
@@ -112,30 +113,30 @@ transDecls decs = do
                 execWriterT $
                         forM binds $ \(x, exp) ->
                                 case lookup x sigs of
-                                        Nothing -> throwLocErr (getLoc x) $ "no type signature for" <+> squotes (pretty x)
+                                        Nothing -> lift $ lift $ throwLocErr (getLoc x) $ "no type signature for" <+> squotes (pretty x)
                                         Just ty -> do
-                                                ty' <- undefined $ checkKindStar ty
-                                                exp' <- undefined $ checkType exp (unLoc ty')
-                                                tell ([(x, exp')], [(x, unLoc ty')])
-        return $ T.Binds binds' sigs'
+                                                ty' <- lift $ checkKindStar ty
+                                                exp' <- lift $ checkType exp (unLoc ty')
+                                                tell ([(x, T.FunBind exp')], [(x, T.ValDecl (unLoc ty'))])
+        return (binds', sigs')
 
-transTopDecl :: (MonadThrow m, MonadIO m) => P.LTopDecl -> WriterT [T.Decl] (Plato m) ()
+transTopDecl :: (MonadThrow m, MonadIO m) => P.LTopDecl -> WriterT (T.Binds, T.Decls) (Typ m) ()
 transTopDecl (L sp (P.DataD name params fields)) = do
         fields' <- forM fields $ \(l, tys) -> do
-                tys' <- mapM transType tys
+                tys' <- mapM (lift . lift . transType) tys
                 return (l, tys')
         let sum_ty = L sp $ T.SumT fields'
-        let body_ty = L sp $ T.RecT name Nothing (foldr (\x ty -> L sp $ T.AbsT x Nothing ty) sum_ty params)
-        (body_ty', kn) <- undefined $ inferKind body_ty
-        lift $ modifyTypEnv $ extendEnv name kn
-        tell [T.TypeD name (unLoc body_ty') kn]
+        let body_ty = foldr (\x ty -> L sp $ T.AbsT x Nothing ty) sum_ty params
+        (body_ty', kn) <- lift $ inferKind body_ty
+        -- lift $ modifyTypEnv $ extendEnv name kn
+        tell ([(name, T.TypBind (unLoc body_ty'))], [(name, T.TypDecl kn)])
         con_sigs <- mapM transCon fields'
-        tell (map (\(lab, sig) -> T.ConD lab (unLoc sig)) con_sigs)
+        tell (mempty, map (\(lab, sig) -> (lab, T.ValDecl (unLoc sig))) con_sigs)
     where
         res_ty =
                 foldl
                         (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2)
-                        (cL name $ T.ConT $ typName name)
+                        (cL name $ T.ConT $ name2path name)
                         (map (\p -> cL p $ T.VarT $ T.BoundTv p) params)
         quantify :: T.LType -> T.LType
         quantify ty | null params = ty
@@ -146,28 +147,42 @@ transTopDecl (L sp (P.DataD name params fields)) = do
                 return (lab, quantify rho_ty)
 transTopDecl _ = return ()
 
-transEvals :: (MonadThrow m, MonadIO m) => [Located P.TopDecl] -> Plato m [(T.LExpr, T.Type)]
+transEvals :: (MonadThrow m, MonadIO m) => [Located P.TopDecl] -> Typ m [T.Expr]
 transEvals topds = do
         let exps = [exp | L _ (P.Eval exp) <- topds]
-        T.TypEnv tyenv _ _ <- gets plt_typEnv
-        forM exps $ \exp -> do
+        res <- forM exps $ \exp -> do
                 exp' <- transExpr exp
-                inferType tyenv exp'
+                inferType exp'
+        return $ map (unLoc . fst) res
 
-ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> Plato m T.Module
+ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> Plato m T.Top
 ps2typ (P.Program modn _ topds) = do
-        decls <- execWriterT $ mapM_ transTopDecl topds
-        (binds, body) <- ps2typ'
-        return $
-                T.Module
-                        { T.typ_modn = modn
-                        , T.typ_decls = decls
-                        , T.typ_binds = binds
-                        , T.typ_body = body
-                        }
-    where
-        ps2typ' :: (MonadIO m, MonadThrow m) => Typ m (T.Binds, [(T.LExpr, T.Type)])
-        ps2typ' = do
-                binds <- transDecls [d | L _ (P.Decl d) <- topds]
+        fixenv <- gets plt_fixityEnv
+        let resolveDecls :: MonadThrow m => [P.LDecl] -> m [P.LDecl]
+            resolveDecls decs = do
+                concat
+                        <$> forM
+                                decs
+                                ( \case
+                                        L sp (P.FuncD x args exp) -> do
+                                                exp' <- resolveFixity fixenv exp
+                                                return [L sp (P.FuncD x args exp')]
+                                        _ -> return []
+                                )
+            ps2typ' :: (MonadIO m, MonadThrow m) => Typ m (T.Binds, T.Decls, [T.Expr])
+            ps2typ' = do
+                (bnds1, decs1) <- execWriterT $ mapM_ transTopDecl topds
+                (bnds2, decs2) <- (lift . resolveDecls >=> transDecls) [d | L _ (P.Decl d) <- topds]
                 body <- transEvals topds
-                return (binds, body)
+                return (bnds1 ++ bnds2, decs1 ++ decs2, body)
+        typenv <- gets plt_typEnv
+        (bnds, decs, body) <- runTyp ps2typ' =<< initContext typenv
+        let modbnd = T.ModBind (T.SigDecls decs) (T.ModBinds bnds)
+        let typenv' = newTypEnv modn typenv -- temp: updating typenv
+        modify $ \ps -> ps{plt_typEnv = typenv'}
+        return $
+                T.Top
+                        { T.top_modn = modn
+                        , T.top_bind = modbnd
+                        , T.top_body = body
+                        }
