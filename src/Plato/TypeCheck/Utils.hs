@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.TypeCheck.Utils where
@@ -35,8 +36,20 @@ zonkExpr (AbsE var mty body) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr
 zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
 zonkExpr (LetE bnds decs body) = do
-        bnds' <- mapM (\(x, FunBind e) -> (x,) <$> FunBind <$> zonkExpr e) bnds
-        decs' <- mapM (\(x, ValDecl ty) -> (x,) <$> ValDecl <$> zonkType ty) decs
+        bnds' <-
+                mapM
+                        ( \case
+                                (x, FunBind e) -> (x,) . FunBind <$> (zonkExpr `traverse` e)
+                                bnd -> return bnd
+                        )
+                        bnds
+        decs' <-
+                mapM
+                        ( \case
+                                (x, ValDecl ty) -> (x,) . ValDecl <$> zonkType ty
+                                dec -> return dec
+                        )
+                        decs
         LetE bnds' decs' <$> zonkExpr `traverse` body
 zonkExpr (CaseE e mbty alts) =
         CaseE

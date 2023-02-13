@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -116,12 +117,14 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 return $ PAbsE pat (Just arg_ty) body'
         tcRho' (LetE bnds decs body) exp_ty = do
                 local (extendEnvList decs) $ do
-                        bnds' <- forM bnds $ \(var, FunBind exp) -> do
-                                ann_ty <- case lookup var decs of
-                                        Just (ValDecl ty) -> return ty
-                                        _ -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
-                                exp' <- local (extendEnvList decs) $ checkSigma exp ann_ty
-                                return (var, FunBind exp')
+                        bnds' <- forM bnds $ \case
+                                (var, FunBind exp) -> do
+                                        ann_ty <- case lookup var decs of
+                                                Just (ValDecl ty) -> return ty
+                                                _ -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
+                                        exp' <- local (extendEnvList decs) $ checkSigma exp ann_ty
+                                        return (var, FunBind exp')
+                                bnd -> return bnd
                         body' <- tcRho body exp_ty
                         return $ LetE bnds' decs body'
         tcRho' _ _ = unreachable "TypeCheck.Typ.tcRho"
