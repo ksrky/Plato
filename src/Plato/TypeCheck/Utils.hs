@@ -32,24 +32,12 @@ zonkType _ = unreachable "TypeCheck.Utils.zonkType"
 zonkExpr :: MonadIO m => Expr -> Typ m Expr
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
-zonkExpr (AbsE var mty body) = AbsE var <$> zonkType `traverse` mty <*> zonkExpr `traverse` body
+zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkExpr `traverse` body
 zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
 zonkExpr (LetE bnds decs body) = do
-        bnds' <-
-                mapM
-                        ( \case
-                                (x, FunBind e) -> (x,) . FunBind <$> (zonkExpr `traverse` e)
-                                bnd -> return bnd
-                        )
-                        bnds
-        decs' <-
-                mapM
-                        ( \case
-                                (x, ValDecl ty) -> (x,) . ValDecl <$> zonkType ty
-                                dec -> return dec
-                        )
-                        decs
+        bnds' <- mapM (\(x, e) -> (x,) <$> (zonkExpr `traverse` e)) bnds
+        decs' <- mapM (\(x, ty) -> (x,) <$> zonkType ty) decs
         LetE bnds' decs' <$> zonkExpr `traverse` body
 zonkExpr (CaseE e mbty alts) =
         CaseE

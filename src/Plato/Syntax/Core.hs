@@ -41,6 +41,11 @@ data Binding
         | TmAbbBind Term Type
         | TyAbbBind Type Kind
 
+data Command
+        = Bind Name Binding
+        | SomeBind Name Name Term Type
+        | Eval Term
+
 data Module = Module
         { moduleName :: ModuleName
         , moduleBind :: [(Name, Binding)]

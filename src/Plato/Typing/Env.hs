@@ -47,7 +47,7 @@ instance EnvManager Kind where
         lookupEnv (L sp x) (TypEnv _ knenv _) = case M.lookup x knenv of
                 Just kn -> return kn
                 Nothing -> throwLocErr sp $ hsep ["Not in scope ", squotes $ pretty x]
-
+{-
 instance EnvManager Decl where
         extendEnv x (ValDecl ty) (TypEnv tyenv knenv modenv) = TypEnv (M.insert (unLoc x) ty tyenv) knenv modenv
         extendEnv x (TypDecl kn) (TypEnv tyenv knenv modenv) = TypEnv tyenv (M.insert (unLoc x) kn knenv) modenv
@@ -55,7 +55,7 @@ instance EnvManager Decl where
                 Just ty -> return $ ValDecl ty
                 Nothing -> case M.lookup x knenv of
                         Just kn -> return $ TypDecl kn
-                        Nothing -> throwLocErr sp $ hsep ["Not in scope ", squotes $ pretty x]
+                        Nothing -> throwLocErr sp $ hsep ["Not in scope ", squotes $ pretty x]-}
 
 instance EnvManager TypEnv where
         extendEnv x typenv (TypEnv tyenv knenv modenv) = TypEnv tyenv knenv (M.insert (unLoc x) typenv modenv)

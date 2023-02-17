@@ -15,7 +15,6 @@ type LPath = Located Path
 type LExpr = Located Expr
 type LPat = Located Pat
 type LType = Located Type
-type LDecl = Located Decl
 
 data Path = Path [LName] LName deriving (Eq, Show)
 
@@ -28,7 +27,7 @@ data Expr
         | TAppE LExpr [Type]
         | TAbsE [(TyVar, Maybe Kind)] LExpr
         | LetE Binds Decls LExpr
-        | CaseE LExpr (Maybe Type) [([LPat], LExpr)]
+        | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
         | PBarE LExpr LExpr
         deriving (Eq, Show)
 
@@ -79,8 +78,11 @@ data Kind
 
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
--- data Binds = Binds [(LName, LExpr)] [(LName, Type)] deriving (Eq, Show)
+type Binds = [(LName, LExpr)]
+type Decls = [(LName, LType)]
+type TypDecls = [(LName, Kind)]
 
+{-
 data Mod
         = ModName LName
         | ModBinds Binds
@@ -105,50 +107,15 @@ data Decl
         = ValDecl Type
         | TypDecl Kind
         deriving (Eq, Show)
-
-data Top = Top
-        { top_modn :: ModuleName
-        , top_bind :: Bind
-        , top_body :: [Expr]
-        }
-
-{-
-data Mod
-        = ModName LName
-        | ModBinds [Bind]
-        | ModPath Mod LName
-        | ModApp Mod Mod
-        | ModFun LName Sig Mod
-        | ModSig Mod Sig
-        deriving (Eq, Show)
-
-data Bind
-        = FunBind LName Expr
-        | TypBind LName LType
-        | ModBind LName Mod
-        deriving (Eq, Show)
-
-data Sig
-        = SigName LName
-        | SigDecls [Decl]
-        | SigFun LName Sig Sig
-        deriving (Eq, Show)
-
-data Decl
-        = TypeD LName Type Kind
-        | ConD LName Type
-        | ValDecl LName Type
-        | TypDecl LName Kind
-        | SigDecl LName Sig
-        deriving (Eq, Show)-}
+-}
 
 data Module = Module
         { typ_modn :: ModuleName
-        , typ_decls :: [Decl]
         , typ_binds :: Binds
-        , typ_body :: [(LExpr, Type)]
+        , typ_decls :: Decls
+        , typ_typdecs :: TypDecls
+        , typ_body :: [Expr]
         }
-        deriving (Eq, Show)
 
 type TyEnv = M.Map Name Sigma
 type KnEnv = M.Map Name Kind
@@ -280,16 +247,8 @@ pprkind kn = parens (pretty kn)
 {-instance Pretty Binds where
         pretty (Binds _binds _sigs) = undefined {-temp-}-}
 
-instance Pretty Decl
-
 {-pretty (TypeD con body kn) = hsep [pretty con, equals, pretty body, dot, pretty kn]
 pretty (ConD var sig) = hsep [pretty var, colon, pretty sig]-}
 
 instance Pretty Module where
-        pretty (Module mod decs binds body) =
-                pretty mod <> line
-                        <> vsep (map pretty decs)
-                        <> (if null decs then emptyDoc else line)
-                        -- <> pretty binds
-                        <> line
-                        <> vsep (map (pretty . fst) body)
+        pretty _ = undefined
