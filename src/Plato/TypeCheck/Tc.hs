@@ -59,9 +59,9 @@ instPatSigma :: (MonadThrow m, MonadIO m) => Sigma -> Expected Sigma -> Typ m Co
 instPatSigma pat_ty (Infer ref) = writeTypRef ref pat_ty >> return Id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadThrow m, MonadIO m) => LPath -> Typ m ([Sigma], Tau)
+instDataCon :: (MonadThrow m, MonadIO m) => LName -> Typ m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- asksM $ lookupInEnv con
+        sigma <- asksM $ lookupEnv con
         (_, rho) <- instantiate sigma
         return $ split [] rho
     where
@@ -87,7 +87,7 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Typ m Expr
         tcRho' (VarE var) exp_ty = do
-                sigma <- asksM $ lookupInEnv var
+                sigma <- asksM $ lookupEnv var
                 coercion <- instSigma sigma exp_ty
                 return $ coercion @@ VarE var
         tcRho' (AppE fun arg) exp_ty = do

@@ -57,8 +57,6 @@ tmmap onvar ontype c t = walk c t
                 TmTApp t1 tyT2 -> TmTApp (walk c t1) (ontype c tyT2)
                 TmLet fi t1 t2 -> TmLet fi (walk c t1) (walk (c + 1) t2)
                 TmFix t1 -> TmFix (walk c t1)
-                TmFold tyT -> TmFold (ontype c tyT)
-                TmUnfold tyT -> TmUnfold (ontype c tyT)
                 TmProj t1 l -> TmProj (walk c t1) l
                 TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmTag l t1 tyT2 -> TmTag l (map (walk c) t1) (ontype c tyT2)

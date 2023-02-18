@@ -23,12 +23,14 @@ import qualified Data.Bifunctor as Bifunctor
 import qualified Plato.Syntax.Parsing as P
 import qualified Plato.Syntax.Typing as T
 
+{-
 transName :: P.LPsName -> T.LPath
 transName (L sp (P.Unqual x)) = L sp (T.Path [] x)
-transName (L sp1 (P.Qual (L sp2 modn) x)) = L sp1 (T.Path (map (L sp2) (modn2names modn)) x)
+transName (L sp1 (P.Qual (L sp2 modn) x)) = L sp1 (T.Path (map (L sp2) (modn2names modn)) x)-}
 
-name2path :: P.LName -> Located T.Path
-name2path x@(L sp _) = L sp (T.Path (map (L sp) []) x)
+transName :: P.LPsName -> T.LName
+transName (L _ (P.Unqual x)) = x
+transName (L _ (P.Qual (L _ _) x)) = x
 
 transExpr :: (MonadThrow m, MonadIO m) => P.LExpr -> Typ m T.LExpr
 transExpr (L sp exp) = L sp <$> traexpr exp

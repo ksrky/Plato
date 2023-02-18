@@ -18,18 +18,13 @@ import Plato.Core.Debug
 import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
 
-transPathTm :: C.Context -> T.LPath -> m C.Term
-transPathTm ctx (L _ (T.Path modns x)) = case modns ++ [x] of
-        [] -> unreachable "Plato.Transl.TypToCore.transPathTm"
-        var : labs -> do
-                i <- getVarIndex ctx var
-                return $ foldl C.TmProj (C.TmVar i (mkInfo var)) (map unLoc labs)
-
 transExpr :: MonadThrow m => C.Context -> T.Expr -> m C.Term
 transExpr ctx = trexpr
     where
         trexpr :: MonadThrow m => T.Expr -> m C.Term
-        trexpr (T.VarE p) = transPathTm ctx p
+        trexpr (T.VarE x) = do
+                i <- getVarIndex ctx x
+                return $ C.TmVar i (mkInfo x)
         trexpr (T.AppE e1 e2) = do
                 t1 <- trexpr (unLoc e1)
                 t2 <- trexpr (unLoc e2)
@@ -86,7 +81,7 @@ transExpr ctx = trexpr
                         let ctx' = addNameList (map unLoc xs) ctx
                         ti <- transExpr ctx' (unLoc body)
                         let ti' = foldl (\e x -> C.TmAbs (mkInfo x) undefined e) ti xs --tmp
-                        transAlts ((con, ti') : acc) rest
+                        transAlts ((unLoc con, ti') : acc) rest
                 transAlts acc ((L _ (T.VarP x), body) : _) = do
                         let ctx' = addName (unLoc x) ctx
                         ti <- transExpr ctx' (unLoc body)
@@ -103,13 +98,6 @@ pat2argnum :: T.Pat -> Int
 pat2argnum (T.ConP _ pats) = sum (map (pat2argnum . unLoc) pats)
 pat2argnum T.VarP{} = 1
 pat2argnum T.WildP = 0
-
-transPathTy :: C.Context -> T.LPath -> m C.Term
-transPathTy ctx (L _ (T.Path modns x)) = case modns ++ [x] of
-        [] -> unreachable "Plato.Transl.TypToCore.transPath"
-        var : labs -> do
-                i <- getVarIndex ctx var
-                return $ foldl C.TyProj (C.TyVar i (mkInfo var)) (map unLoc labs)
 
 transType :: MonadThrow m => C.Context -> T.Type -> m C.Type
 transType ctx = trtype
@@ -189,7 +177,7 @@ transTypDecls ctx decs = undefined
 transBinds :: MonadThrow m => C.Context -> T.LName -> T.Binds -> T.Decls -> m [(Name, C.Term)]
 transBinds ctx name bnds decs = do
         fieldtys <- forM decs $ \(xi, tyi) -> do
-                tyTi <- transType ctx (unLoc tyi)
+                tyTi <- transType ctx tyi
                 return (unLoc xi, tyTi)
         let ctx' = addName dummyVN ctx
         fields <- forM bnds $ \(xi, ei) -> do
@@ -199,32 +187,6 @@ transBinds ctx name bnds decs = do
         idx <- getVarIndex ctx name
         let ts = map (\(x, ty) -> (x, C.TmProj (C.TmVar idx (mkInfo name)) x, ty)) fieldtys
         return [(unLoc name, fix)]
-
-{-
-transMod :: C.Context -> T.Mod -> T.Binds
-transMod ctx (T.ModName x) = undefined
-transMod ctx (T.ModBinds bnds) = bnds
-
-transBind :: MonadThrow m => C.Context -> T.Bind -> m C.Binding
-transBind ctx (T.FunBind e) = do
-        t <- transExpr ctx (unLoc e)
-        undefined
-transBind ctx (T.TypBind ty) = undefined
-transBind ctx (T.ModBind sig mod) = undefined
-
-transSig :: C.Context -> T.Sig -> T.Decls
-transSig ctx (T.SigName x) = undefined
-transSig ctx (T.SigDecls decs) = undefined
-
-transEval :: MonadThrow m => C.Context -> (Located T.Expr, T.Type) -> m C.Term
-transEval ctx (e, ty) = do
-        t <- transExpr ctx (unLoc e) -- temp: renaming
-        _ <- transType ctx ty
-        return t
-
-transDecl :: MonadThrow m => C.Context -> T.Decl -> m C.Binding
-transDecl ctx (T.ValDecl e) = undefined
-transDecl ctx (T.TypDecl e) = undefined-}
 
 typ2core :: MonadThrow m => T.Module -> Plato m C.Module
 typ2core (T.Module modn bnds decs tydecs body) = do

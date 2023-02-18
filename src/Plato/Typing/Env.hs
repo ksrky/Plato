@@ -31,10 +31,8 @@ newTypEnv modn typenv =
 class EnvManager a where
         extendEnv :: LName -> a -> TypEnv -> TypEnv
         extendEnvList :: [(LName, a)] -> TypEnv -> TypEnv
-        lookupEnv :: MonadThrow m => LName -> TypEnv -> m a
-        lookupInEnv :: MonadThrow m => LPath -> TypEnv -> m a
-        extendEnvList binds m = foldl (\m (x, v) -> extendEnv x v m) m binds
-        lookupInEnv (L _ (Path qs x)) env = lookupEnv x =<< foldM (flip lookupEnv) env qs
+        lookupEnv :: MonadThrow m => LName -> TypEnv -> m a 
+        extendEnvList binds m = foldl (\m (x, v) -> extendEnv x v m) m binds 
 
 instance EnvManager Type where
         extendEnv x ty (TypEnv tyenv knenv modenv) = TypEnv (M.insert (unLoc x) ty tyenv) knenv modenv

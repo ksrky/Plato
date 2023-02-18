@@ -11,16 +11,13 @@ import Prettyprinter
 -- Syntax
 ----------------------------------------------------------------
 type LName = Located Name
-type LPath = Located Path
 type LExpr = Located Expr
 type LPat = Located Pat
 type LType = Located Type
 
-data Path = Path [LName] LName deriving (Eq, Show)
-
 -- | Expressions
 data Expr
-        = VarE LPath
+        = VarE LName
         | AppE LExpr LExpr
         | AbsE LName (Maybe Type) LExpr
         | PAbsE LPat (Maybe Type) LExpr
@@ -33,7 +30,7 @@ data Expr
 
 -- | Patterns
 data Pat
-        = ConP LPath [LPat]
+        = ConP LName [LPat]
         | VarP LName
         | WildP
         deriving (Eq, Show)
@@ -41,7 +38,7 @@ data Pat
 -- | Types
 data Type
         = VarT TyVar
-        | ConT LPath
+        | ConT LName
         | ArrT LType LType
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
@@ -154,8 +151,8 @@ instance Ord MetaKv where
 hsep' :: [Doc ann] -> Doc ann
 hsep' docs = if null docs then emptyDoc else emptyDoc <+> hsep docs
 
-instance Pretty Path where
-        pretty (Path quals name) = hcat [foldr (surround dot) (dot <> pretty name) (map pretty quals)]
+-- instance Pretty Path where
+--        pretty (Path quals name) = hcat [foldr (surround dot) (dot <> pretty name) (map pretty quals)]
 
 instance Pretty Expr where
         pretty (VarE var) = pretty var

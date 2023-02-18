@@ -38,12 +38,11 @@ prfunTrans [] _ coercion = coercion
 prfunTrans sks _ Id = Coer $ \e -> TAbsE sks (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks))
 prfunTrans sks arg_ty coercion =
         let x = noLoc $ str2varName "$x"
-            qx = noLoc $ Path [] x
          in Coer $ \e ->
                 AbsE
                         x
                         (Just arg_ty)
-                        (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE qx)))
+                        (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE x)))
 
 deepskolTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 >.> coer2
@@ -53,5 +52,4 @@ funTrans :: Sigma -> Coercion -> Coercion -> Coercion
 funTrans _ Id Id = Id
 funTrans a2 co_arg co_res =
         let x = noLoc $ str2varName "$x"
-            qx = noLoc $ Path [] x
-         in Coer $ \f -> AbsE x (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE qx))
+         in Coer $ \f -> AbsE x (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE x))

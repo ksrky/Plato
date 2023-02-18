@@ -58,7 +58,7 @@ checkKind (L sp ty) exp_kn =
                         unify kn exp_kn
                         return $ VarT tv
                 ConT tc -> do
-                        kn <- asksM $ lookupInEnv tc
+                        kn <- asksM $ lookupEnv tc
                         unify kn exp_kn
                         return $ ConT tc
                 ArrT arg res -> do

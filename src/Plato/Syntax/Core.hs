@@ -13,8 +13,8 @@ data Term
         | TmTAbs Info Kind Term
         | TmLet Info Term Term
         | TmFix Term
-        | TmFold Type
-        | TmUnfold Type
+        | TmPack
+        | TmUnpack
         | TmProj Term Name
         | TmRecord [(Name, Term)]
         | TmTag Name [Term] Type
@@ -25,6 +25,7 @@ data Type
         = TyVar Int Info
         | TyArr Type Type
         | TyAll Info Kind Type
+        | TySome Info Kind Type
         | TyAbs Info Kind Type
         | TyApp Type Type
         | TyRec Info Kind Type
