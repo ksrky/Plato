@@ -34,7 +34,7 @@ zonkType (AllT tvs ty) = do
         AllT tvs' <$> zonkType `traverse` ty
 zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
 zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (RecT x kn ty) = RecT x kn <$> zonkType `traverse` ty
+-- zonkType (RecT x kn ty) = RecT x kn <$> zonkType `traverse` ty
 zonkType (RecordT fields) = do
         fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
         return $ RecordT fields'

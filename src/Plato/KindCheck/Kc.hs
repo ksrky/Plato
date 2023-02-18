@@ -1,3 +1,6 @@
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Plato.KindCheck.Kc where
 
 import Control.Exception.Safe
@@ -13,6 +16,26 @@ import Plato.KindCheck.Utils
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Monad
+
+newDataCon :: MonadIO m => [LName] -> Typ m [(LName, Kind)]
+newDataCon = mapM (\con -> (con,) <$> newKnVar)
+
+getDataCon :: (MonadThrow m, MonadIO m) => LName -> Typ m Kind
+getDataCon = asksM . (lookupEnv @Kind) >=> zonkKind
+
+inferDataKind :: (MonadThrow m, MonadIO m) => [LName] -> [(LName, LType)] -> Typ m [(LName, Type)]
+inferDataKind params constrs = do
+        bnds <- forM params $ \x -> do
+                kv <- newKnVar
+                return (x, kv)
+        constrs' <- local (extendEnvList bnds) $
+                forM constrs $ \(con, body) -> do
+                        body' <- checkKindStar body
+                        return (con, body')
+        bnds' <- mapM (\(x, kn) -> (x,) <$> zonkKind kn) bnds
+        let tvs = map (Bifunctor.bimap BoundTv Just) bnds'
+        let constrs'' = map (\(con, body) -> (con, AllT tvs body)) constrs'
+        return constrs''
 
 checkKindStar :: (MonadThrow m, MonadIO m) => LType -> Typ m LType
 checkKindStar ty = do
@@ -59,11 +82,11 @@ checkKind (L sp ty) exp_kn =
                         arg' <- checkKind arg arg_kn
                         unify res_kn exp_kn
                         return (AppT fun' arg')
-                RecT x _ body -> do
+                {-RecT x _ body -> do
                         kv <- newKnVar
                         body' <- local (extendEnv x kv) $ checkKind body exp_kn
                         -- unify exp_kn StarK -- temp: mutual recursive?
-                        return $ RecT x (Just kv) body'
+                        return $ RecT x (Just kv) body'-}
                 SumT fields -> do
                         fields' <- forM fields $ \(con, tys) -> do
                                 tys' <- forM tys $ \ty -> checkKind ty StarK

@@ -18,13 +18,18 @@ import Plato.Core.Debug
 import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
 
+transPathTm :: C.Context -> T.LPath -> m C.Term
+transPathTm ctx (L _ (T.Path modns x)) = case modns ++ [x] of
+        [] -> unreachable "Plato.Transl.TypToCore.transPathTm"
+        var : labs -> do
+                i <- getVarIndex ctx var
+                return $ foldl C.TmProj (C.TmVar i (mkInfo var)) (map unLoc labs)
+
 transExpr :: MonadThrow m => C.Context -> T.Expr -> m C.Term
 transExpr ctx = trexpr
     where
         trexpr :: MonadThrow m => T.Expr -> m C.Term
-        trexpr (T.VarE x) = do
-                i <- getVarIndex ctx x
-                return $ C.TmVar i (mkInfo x)
+        trexpr (T.VarE p) = transPathTm ctx p
         trexpr (T.AppE e1 e2) = do
                 t1 <- trexpr (unLoc e1)
                 t2 <- trexpr (unLoc e2)
@@ -99,6 +104,13 @@ pat2argnum (T.ConP _ pats) = sum (map (pat2argnum . unLoc) pats)
 pat2argnum T.VarP{} = 1
 pat2argnum T.WildP = 0
 
+transPathTy :: C.Context -> T.LPath -> m C.Term
+transPathTy ctx (L _ (T.Path modns x)) = case modns ++ [x] of
+        [] -> unreachable "Plato.Transl.TypToCore.transPath"
+        var : labs -> do
+                i <- getVarIndex ctx var
+                return $ foldl C.TyProj (C.TyVar i (mkInfo var)) (map unLoc labs)
+
 transType :: MonadThrow m => C.Context -> T.Type -> m C.Type
 transType ctx = trtype
     where
@@ -131,11 +143,11 @@ transType ctx = trtype
                 let ctx' = addName (unLoc x) ctx
                 tyT2 <- transType ctx' (unLoc ty)
                 return $ C.TyAbs (mkInfo x) knK1 tyT2
-        trtype (T.RecT x (Just kn) ty) = do
+        {-trtype (T.RecT x (Just kn) ty) = do
                 knK1 <- transKind kn
                 let ctx' = addName (unLoc x) ctx
                 tyT2 <- transType ctx' (unLoc ty)
-                return $ C.TyRec (mkInfo x) knK1 tyT2
+                return $ C.TyRec (mkInfo x) knK1 tyT2-}
         trtype (T.SumT fields) = do
                 fields' <- forM fields $ \(l, tys) -> (unLoc l,) <$> mapM (trtype . unLoc) tys
                 return $ C.TyVariant fields'

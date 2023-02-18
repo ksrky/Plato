@@ -58,7 +58,7 @@ data Decl
         deriving (Eq, Show)
 
 data TopDecl
-        = DataD LName [LName] [(LName, [LType])]
+        = DataD LName [LName] [(LName, LType)]
         | Decl LDecl
         | Eval LExpr
         deriving (Eq, Show)
@@ -145,7 +145,7 @@ instance Pretty Decl where
 instance Pretty TopDecl where
         pretty (DataD con args fields) =
                 pretty con <> hsep' (map pretty args) <+> equals
-                        <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
+                        <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, ty) -> pretty c <> colon <+> pretty ty) fields)
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp
 

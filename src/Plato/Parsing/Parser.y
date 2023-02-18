@@ -101,16 +101,28 @@ topdecls    :: { [ LTopDecl ] }
             | topdecl                               { [$1] }
 
 topdecl     :: { LTopDecl }
-            : 'data' ltycon tyvars0 '=' constrs     { cSLn $1 (snd $ last $5) (DataD $2 $3 ($5)) }
+            : 'data' ltycon tyvars0 '=' constrs1    { cSLn $1 (snd $ last $5) (DataD $2 $3 $5) }
             | 'data' ltycon tyvars0                 { cSLn $1 $3 (DataD $2 $3 []) }
+            | 'data' ltycon tyvars0 'where' '{' constrs '}'
+                                                    { cSLn $1 (snd $ last $5) (DataD $2 $3 $5) }
+            | 'data' ltycon tyvars0 'where' 'v{' constrs close
+                                                    { cSLn $1 (snd $ last $5) (DataD $2 $3 $5) }
             | decl                                  { cL $1 (Decl $1) }
             | expr                                  { cL $1 (Eval $1) }
 
-constrs     :: { [(LName, [LType])] }
+constrs     :: { [(LName, LType)] }
+            : constr ';' constrs                    { $1 : $3 }
+            | constr                                { [$1] }
+            | {- empty -}                           { [] }
+
+constr      :: { (LName, LType) }
+            : lcon ':' type                         { ($1, $3) } -- tmp: syntax restriction: last type of 'type' must be data type 
+
+constrs1    :: { [(LName, [LType])] }
             : constr '|' constrs                    { $1 : $3 }
             | constr                                { [$1] }
 
-constr      :: { (LName, [LType]) }
+constr1     :: { (LName, [LType]) }
             : lcon types                            { ($1, $2) }
             | '(' lconop ')' types                  { ($2, $4) }
             | type lconop type                      { ($2, [$1, $3])}

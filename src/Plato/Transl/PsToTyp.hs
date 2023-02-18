@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 
 module Plato.Transl.PsToTyp where
 
@@ -118,63 +119,28 @@ transDecls decs = do
                                                 tell ([(x, exp')], [(x, unLoc ty')])
         return (binds', sigs')
 
-transTopDecl :: (MonadThrow m, MonadIO m) => P.LTopDecl -> WriterT (T.TypDecls, T.Binds, T.Decls) (Typ m) ()
-transTopDecl (L sp (P.DataD name params fields)) = do
-        fields' <- forM fields $ \(l, tys) -> do
-                tys' <- mapM (lift . lift . transType) tys
-                return (l, tys')
-        let sum_ty = L sp $ T.SumT fields'
-        let body_ty = foldr (\x ty -> L sp $ T.AbsT x Nothing ty) sum_ty params
-        (_, kn) <- lift $ inferKind body_ty
-        -- lift $ modifyTypEnv $ extendEnv name kn
-        tell ([(name, kn)], [], [])
-        con_sigs <- mapM transCon fields'
-        tell ([], [], map (\(lab, sig) -> (lab, unLoc sig)) con_sigs)
-    where
-        res_ty =
-                foldl
-                        (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2)
-                        (cL name $ T.ConT $ name2path name)
-                        (map (\p -> cL p $ T.VarT $ T.BoundTv p) params)
-        quantify :: T.LType -> T.LType
-        quantify ty | null params = ty
-        quantify ty = cL ty $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) ty
-        transCon :: Monad m => (T.LName, [T.LType]) -> m (T.LName, T.LType)
-        transCon (lab, tys) = do
-                let rho_ty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrT ty1 ty2) res_ty tys
-                return (lab, quantify rho_ty)
-transTopDecl _ = return ()
-
-transTopDecls :: (MonadThrow m, MonadIO m) => [P.LTopDecl] -> WriterT (T.TypDecls, T.Binds, T.Decls) (Typ m) ()
+transTopDecls :: (MonadThrow m, MonadIO m) => [P.LTopDecl] -> Typ m (T.TypDecls, T.Binds, T.Decls)
 transTopDecls decs = do
-        (fields, tybnds) <- lift $ mconcat <$> mapM transData decs
-        tell (tybnds, [], [])
-        local (extendEnvList tybnds) $ do
-                let res_ty =
-                        foldl
-                                (\ty1 ty2 -> cLL ty1 ty2 $ T.AppT ty1 ty2)
-                                (cL name $ T.ConT $ name2path name)
-                                (map (\p -> cL p $ T.VarT $ T.BoundTv p) params)
-                    quantify :: T.LType -> T.LType
-                    quantify ty | null params = ty
-                    quantify ty = cL ty $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) ty
-                    transCon :: Monad m => (T.LName, [T.LType]) -> m (T.LName, T.LType)
-                    transCon (lab, tys) = do
-                        let rho_ty = foldr (\ty1 ty2 -> cLL ty1 ty2 $ T.ArrT ty1 ty2) res_ty tys
-                        return (lab, quantify rho_ty)
-                con_tys <- mapM transCon fields
-                tell ([], [], con_tys)
-    where
-        transData :: (MonadThrow m, MonadIO m) => P.LTopDecl -> Typ m ([(T.LName, [T.LType])], [(T.LName, T.Kind)])
-        transData (L sp (P.DataD name params fields)) = do
-                fields' <- forM fields $ \(l, tys) -> do
-                        tys' <- mapM (lift . transType) tys
-                        return (l, tys')
-                let sum_ty = L sp $ T.SumT fields'
-                let body_ty = foldr (\x ty -> L sp $ T.AbsT x Nothing ty) sum_ty params
-                (_, kn) <- inferKind body_ty
-                return (fields', [(name, kn)])
-        transData _ = return ([], [])
+        let cons = [con | L _ (P.DataD con _ _) <- decs]
+        bnds <- newDataCon cons
+        res <- local (extendEnvList bnds) $ do
+                forM decs $ \case
+                        L _ (P.DataD con params fields) -> do
+                                fields' <- mapM (\(x, ty) -> lift $ (x,) <$> transType ty) fields
+                                decs <- inferDataKind params fields'
+                                kn <- getDataCon con
+                                return ([(con, kn)], decs)
+                        _ -> return mempty
+        let (tydecs, decs) = mconcat res
+        undefined
+
+{-where
+    decl2bind :: T.Type -> T.LExpr
+    decl2bind (T.AllT tvs body) = T.TAbsE tvs (decl2bind i body)
+    decl2bind _ = walk
+    walk :: Int -> T.Type -> T.Expr
+    walk i (T.ArrT arg res) = T.AbsE (noLoc $ str2varName i) (Just arg) (walk (i + 1) res)
+    walk i _ = T.TagE dcon [T.VarE $ str2varName $ show x | x <- [0 .. i]]-}
 
 transEvals :: (MonadThrow m, MonadIO m) => [Located P.TopDecl] -> Typ m [T.Expr]
 transEvals topds = do
@@ -200,7 +166,7 @@ ps2typ (P.Program modn _ topds) = do
                                 )
             ps2typ' :: (MonadIO m, MonadThrow m) => Typ m (T.TypDecls, T.Binds, T.Decls, [T.Expr])
             ps2typ' = do
-                (tydecs, bnds1, decs1) <- execWriterT $ mapM_ transTopDecl topds
+                (tydecs, bnds1, decs1) <- transTopDecls topds
                 (bnds2, decs2) <- (lift . resolveDecls >=> transDecls) [d | L _ (P.Decl d) <- topds]
                 body <- transEvals topds
                 return (tydecs, bnds1 ++ bnds2, decs1 ++ decs2, body)

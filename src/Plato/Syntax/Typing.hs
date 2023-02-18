@@ -46,8 +46,8 @@ data Type
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
         | AbsT LName (Maybe Kind) LType
-        | RecT LName (Maybe Kind) LType
-        | RecordT [(LName, LType)]
+        | -- | RecT LName (Maybe Kind) LType
+          RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
         | MetaT MetaTv
         deriving (Eq, Show)
@@ -79,7 +79,7 @@ data Kind
 data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 
 type Binds = [(LName, LExpr)]
-type Decls = [(LName, LType)]
+type Decls = [(LName, Type)]
 type TypDecls = [(LName, Kind)]
 
 {-
@@ -205,7 +205,7 @@ instance Pretty Type where
         pretty (ArrT arg res) = pprty ArrPrec (unLoc arg) <+> "->" <+> pprty TopPrec (unLoc res)
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
         pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
-        pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
+        -- pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
         pretty (RecordT fields) =
                 hsep
                         [ lbrace
