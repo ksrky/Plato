@@ -2,7 +2,7 @@ module Plato.TypeCheck.Subst where
 
 import qualified Data.Map.Strict as M
 
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Type
 
 type Subst = M.Map TyVar Tau
 

@@ -5,6 +5,7 @@ import Plato.Common.Name
 
 import Data.IORef
 import qualified Data.Map.Strict as M
+import Plato.Typing.Subst
 import Prettyprinter
 
 ----------------------------------------------------------------
@@ -43,8 +44,7 @@ data Type
         | AllT [(TyVar, Maybe Kind)] (Located Rho)
         | AppT LType LType
         | AbsT LName (Maybe Kind) LType
-        | -- | RecT LName (Maybe Kind) LType
-          RecordT [(LName, LType)]
+        | RecordT [(LName, LType)]
         | SumT [(LName, [LType])]
         | MetaT MetaTv
         deriving (Eq, Show)
@@ -78,6 +78,12 @@ data MetaKv = MetaKv Uniq (IORef (Maybe Kind))
 type Binds = [(LName, LExpr)]
 type Decls = [(LName, Type)]
 type TypDecls = [(LName, Kind)]
+
+instance Substitutable Type where
+        subst _ _ = undefined
+
+instance Substitutable Kind where
+        subst _ = id
 
 {-
 data Mod
@@ -202,7 +208,6 @@ instance Pretty Type where
         pretty (ArrT arg res) = pprty ArrPrec (unLoc arg) <+> "->" <+> pprty TopPrec (unLoc res)
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
         pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
-        -- pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
         pretty (RecordT fields) =
                 hsep
                         [ lbrace

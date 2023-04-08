@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.TypeCheck.Utils where
@@ -10,7 +9,9 @@ import qualified Data.Set as S
 
 import Plato.Common.Error
 import Plato.Common.Location
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Expr
+import Plato.Syntax.Typing.Type
+import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 
 zonkType :: MonadIO m => Type -> Typ m Type
@@ -47,7 +48,7 @@ zonkExpr (CaseE e mbty alts) =
 zonkExpr _ = unreachable "TypeCheck.Utils.zonkExpr"
 
 getEnvTypes :: Monad m => Typ m [Type]
-getEnvTypes = asks (\(TypEnv tyenv _ _) -> M.elems tyenv)
+getEnvTypes = asks (concat . M.elems . M.map (\bndng -> case bndng of Env.Value ty -> [ty]; _ -> []))
 
 getMetaTvs :: MonadIO m => Type -> Typ m (S.Set MetaTv)
 getMetaTvs ty = do

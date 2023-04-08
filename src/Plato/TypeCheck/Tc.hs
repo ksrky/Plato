@@ -12,35 +12,41 @@ import Prettyprinter
 
 import Control.Exception.Safe
 import Plato.Common.Error
+import Plato.Common.Global
 import Plato.Common.Location
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Expr
+import Plato.Syntax.Typing.Ident as Ident
+import Plato.Syntax.Typing.Module
+import Plato.Syntax.Typing.Pat
+import Plato.Syntax.Typing.Path as Path
+import Plato.Syntax.Typing.Type
 import Plato.TypeCheck.InstGen
 import Plato.TypeCheck.Translate
 import Plato.TypeCheck.Unify
 import Plato.TypeCheck.Utils
-import Plato.Typing.Env
+import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 
-checkType :: (MonadThrow m, MonadIO m) => LExpr -> Type -> Typ m LExpr
+checkType :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Type -> Typ m LExpr
 checkType = checkSigma
 
-inferType :: (MonadThrow m, MonadIO m) => LExpr -> Typ m (LExpr, Type)
+inferType :: (MonadThrow m, MonadReader glb m, HasUnique glb, MonadIO m) => LExpr -> Typ m (LExpr, Type)
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
 
 -- | Type check of patterns
-checkPat :: (MonadThrow m, MonadIO m) => LPat -> Rho -> Typ m [(LName, Sigma)]
+checkPat :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LPat -> Rho -> Typ m [(Ident, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
-inferPat :: (MonadThrow m, MonadIO m) => LPat -> Typ m ([(LName, Sigma)], Sigma)
+inferPat :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LPat -> Typ m ([(Ident, Sigma)], Sigma)
 inferPat pat = do
         ref <- newTypRef (error "inferRho: empty result")
         binds <- tcPat pat (Infer ref)
         tc <- readTypRef ref
         return (binds, tc)
 
-tcPat :: (MonadThrow m, MonadIO m) => LPat -> Expected Sigma -> Typ m [(LName, Sigma)]
+tcPat :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LPat -> Expected Sigma -> Typ m [(Ident, Sigma)]
 tcPat (L _ WildP) _ = return []
 tcPat (L _ (VarP var)) (Infer ref) = do
         var_ty <- newTyVar
@@ -55,13 +61,13 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         _ <- instPatSigma res_ty exp_ty
         return (concat envs)
 
-instPatSigma :: (MonadThrow m, MonadIO m) => Sigma -> Expected Sigma -> Typ m Coercion
+instPatSigma :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Sigma -> Expected Sigma -> Typ m Coercion
 instPatSigma pat_ty (Infer ref) = writeTypRef ref pat_ty >> return Id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
-instDataCon :: (MonadThrow m, MonadIO m) => LName -> Typ m ([Sigma], Tau)
+instDataCon :: (MonadThrow m, MonadIO m) => Path -> Typ m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- asksM $ lookupEnv con
+        sigma <- asksM $ Env.find con
         (_, rho) <- instantiate sigma
         return $ split [] rho
     where
@@ -70,24 +76,24 @@ instDataCon con = do
         split acc tau = (acc, tau)
 
 -- | Type check of Rho
-checkRho :: (MonadIO m, MonadThrow m) => LExpr -> Rho -> Typ m LExpr
+checkRho :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Rho -> Typ m LExpr
 checkRho exp ty = do
         exp' <- tcRho exp (Check ty)
         zonkExpr `traverse` exp'
 
-inferRho :: (MonadIO m, MonadThrow m) => LExpr -> Typ m (LExpr, Rho)
+inferRho :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Typ m (LExpr, Rho)
 inferRho exp = do
         ref <- newTypRef (error "inferRho: empty result")
         exp' <- tcRho exp (Infer ref)
         exp'' <- zonkExpr `traverse` exp'
         (exp'',) <$> readTypRef ref
 
-tcRho :: (MonadIO m, MonadThrow m) => LExpr -> Expected Rho -> Typ m LExpr
+tcRho :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Expected Rho -> Typ m LExpr
 tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
     where
-        tcRho' :: (MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Typ m Expr
+        tcRho' :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Expr -> Expected Rho -> Typ m Expr
         tcRho' (VarE var) exp_ty = do
-                sigma <- asksM $ lookupEnv var
+                sigma <- asksM $ Env.find var
                 coercion <- instSigma sigma exp_ty
                 return $ coercion @@ VarE var
         tcRho' (AppE fun arg) exp_ty = do
@@ -98,44 +104,46 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 return $ coercion @@ AppE fun' arg'
         tcRho' (AbsE var _ body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun exp_ty
-                body' <- local (extendEnv var var_ty) (checkRho body body_ty)
+                body' <- local (Env.extend var var_ty) (checkRho body body_ty)
                 return $ AbsE var (Just var_ty) body'
         tcRho' (AbsE var _ body) (Infer ref) = do
                 var_ty <- newTyVar
-                (body', body_ty) <- local (extendEnv var var_ty) (inferRho body)
+                (body', body_ty) <- local (Env.extend var var_ty) (inferRho body)
                 writeTypRef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsE var (Just var_ty) body'
         tcRho' (PAbsE pat _ body) (Infer ref) = do
                 (binds, pat_ty) <- inferPat pat
-                (body', body_ty) <- local (extendEnvList binds) (inferRho body)
+                (body', body_ty) <- local (Env.extendList binds) (inferRho body)
                 writeTypRef ref (ArrT (noLoc pat_ty) (noLoc body_ty))
                 return $ PAbsE pat (Just pat_ty) body'
         tcRho' (PAbsE pat _ body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- unifyFun exp_ty
                 binds <- checkPat pat arg_ty
-                body' <- local (extendEnvList binds) (checkRho body res_ty)
+                body' <- local (Env.extendList binds) (checkRho body res_ty)
                 return $ PAbsE pat (Just arg_ty) body'
         tcRho' (LetE bnds decs body) exp_ty = do
-                local (extendEnvList decs) $ do
-                        bnds' <- forM bnds $ \(var, exp) -> do
-                                ann_ty <- case lookup var decs of
-                                        Just ty -> return ty
-                                        _ -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
-                                exp' <- local (extendEnvList decs) $ checkSigma exp ann_ty
-                                return (var, exp')
+                local (Env.extendDecls decs) $ do
+                        bnds' <- forM bnds $ \case
+                                ValueBind var exp -> do
+                                        ann_ty <- case Env.findField var decs of
+                                                Just (Value ty) -> return ty
+                                                _ -> throwTyp (Ident.span var) $ hsep [squotes $ pretty var, "lacks type signature"]
+                                        exp' <- checkSigma exp ann_ty
+                                        return $ ValueBind var exp'
+                                bnd -> return bnd
                         body' <- tcRho body exp_ty
                         return $ LetE bnds' decs body'
         tcRho' _ _ = unreachable "TypeCheck.Typ.tcRho"
 
 -- | Type check of Sigma
-inferSigma :: (MonadThrow m, MonadIO m) => LExpr -> Typ m (LExpr, Sigma)
+inferSigma :: (MonadThrow m, MonadReader glb m, HasUnique glb, MonadIO m) => LExpr -> Typ m (LExpr, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
         exp'' <- zonkExpr `traverse` exp'
         return ((genTrans tvs @@) <$> exp'', sigma)
 
-checkSigma :: (MonadIO m, MonadThrow m) => LExpr -> Sigma -> Typ m LExpr
+checkSigma :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Sigma -> Typ m LExpr
 checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         exp' <- checkRho exp rho
@@ -153,12 +161,12 @@ tcBinds (Binds binds sigs) = do
                 ann_ty <- case lookup var sigs of
                         Just ty -> return ty
                         Nothing -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
-                exp' <- local (extendEnvList sigs) $ checkSigma exp ann_ty
+                exp' <- local (Env.extendList sigs) $ checkSigma exp ann_ty
                 return (var, exp')
         return $ Binds binds' sigs-}
 
 -- | Subsumption checking
-subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Typ m Coercion
+subsCheck :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Sigma -> Sigma -> Typ m Coercion
 subsCheck sigma1 sigma2 = do
         (coercion1, skol_tvs, rho2) <- skolemise sigma2
         coercion2 <- subsCheckRho sigma1 rho2
@@ -167,7 +175,7 @@ subsCheck sigma1 sigma2 = do
         unless (null bad_tvs) $ lift $ throwUnexpErr $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
-subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Typ m Coercion
+subsCheckRho :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Sigma -> Rho -> Typ m Coercion
 subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
@@ -182,14 +190,14 @@ subsCheckRho tau1 tau2 = do
         unify tau1 tau2
         return Id
 
-subsCheckFun :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Sigma -> Rho -> Typ m Coercion
+subsCheckFun :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Sigma -> Rho -> Sigma -> Rho -> Typ m Coercion
 subsCheckFun a1 r1 a2 r2 = do
         co_arg <- subsCheck a2 a1
         co_res <- subsCheckRho r1 r2
-        return $ funTrans a2 co_arg co_res
+        lift $ funTrans a2 co_arg co_res
 
 -- | Instantiation of Sigma
-instSigma :: (MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Typ m Coercion
+instSigma :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> Typ m Coercion
 instSigma sigma (Check rho) = subsCheckRho sigma rho
 instSigma sigma (Infer r) = do
         (coercion, rho) <- instantiate sigma

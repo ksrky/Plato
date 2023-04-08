@@ -7,7 +7,8 @@ import Control.Monad.IO.Class
 import qualified Data.Set as S
 
 import Plato.Common.Error
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Kind
+import Plato.Syntax.Typing.Type
 import Plato.Typing.Monad
 
 zonkKind :: MonadIO m => Kind -> Typ m Kind

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Plato.Typing.Monad where
@@ -9,13 +10,17 @@ import Prettyprinter
 import Prettyprinter.Render.String
 
 import Plato.Common.Error
+import Plato.Common.Global
 import Plato.Common.Location
 import Plato.Common.Name (str2conName)
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Ident
+import Plato.Syntax.Typing.Kind
+import Plato.Syntax.Typing.Type
+import Plato.Typing.Env
 
 data Context = Context
-        { typenv :: TypEnv
-        , uniq :: IORef Uniq
+        { typenv :: Env
+        , uniq :: IORef Unique
         , errloc :: IORef Span -- error location
         }
 
@@ -43,11 +48,11 @@ instance MonadFail m => MonadFail (Typ m) where
 instance MonadTrans Typ where
         lift m = Typ (const m)
 
-instance Monad m => MonadReader TypEnv (Typ m) where
+instance Monad m => MonadReader Env (Typ m) where
         ask = Typ (return . typenv)
         local f (Typ m) = Typ (\ctx -> m ctx{typenv = f (typenv ctx)})
 
-asksM :: (TypEnv -> m a) -> Typ m a
+asksM :: (Env -> m a) -> Typ m a
 asksM f = Typ (f . typenv)
 
 failTyp :: MonadFail m => Doc ann -> Typ m a
@@ -67,7 +72,7 @@ writeTypRef :: MonadIO m => IORef a -> a -> Typ m ()
 writeTypRef r v = lift (liftIO $ writeIORef r v)
 
 -- creating and rewriting Uniq
-newUniq :: MonadIO m => Typ m Uniq
+newUniq :: MonadIO m => Typ m Unique
 newUniq = Typ $ \ctx -> do
         let ref = uniq ctx
         u <- liftIO $ readIORef ref
@@ -115,7 +120,7 @@ writeErrLoc sp = Typ $ \env -> do
         liftIO $ writeIORef ref sp
 
 -- | Context management
-initContext :: MonadIO m => TypEnv -> m Context
+initContext :: MonadIO m => Env -> m Context
 initContext typenv = do
         uniq <- liftIO $ newIORef 0
         errloc <- liftIO $ newIORef NoSpan

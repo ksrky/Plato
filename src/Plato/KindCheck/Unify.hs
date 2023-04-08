@@ -7,7 +7,7 @@ import qualified Data.Set as S
 import Prettyprinter
 
 import Plato.KindCheck.Utils
-import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Kind
 import Plato.Typing.Monad
 
 unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Typ m ()

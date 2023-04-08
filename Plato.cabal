@@ -30,6 +30,7 @@ library
       Main
       Plato.Common.Error
       Plato.Common.Fixity
+      Plato.Common.Global
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
@@ -51,12 +52,18 @@ library
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Ident
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Module
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Path
+      Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
-      Plato.TypeCheck.Monad
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
       Plato.TypeCheck.Translate
@@ -65,6 +72,7 @@ library
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
+      Plato.Typing.Subst
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -102,6 +110,7 @@ executable plato
       CLI.Options
       Plato.Common.Error
       Plato.Common.Fixity
+      Plato.Common.Global
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
@@ -123,12 +132,18 @@ executable plato
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Ident
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Module
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Path
+      Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
-      Plato.TypeCheck.Monad
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
       Plato.TypeCheck.Translate
@@ -137,6 +152,7 @@ executable plato
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
+      Plato.Typing.Subst
       Paths_Plato
   hs-source-dirs:
       src

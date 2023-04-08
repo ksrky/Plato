@@ -8,10 +8,10 @@ import qualified Data.Set as S
 import Prettyprinter
 
 import Control.Exception.Safe
-import Plato.Syntax.Typing
-import Plato.Typing.Monad
-import Plato.TypeCheck.Utils
 import Plato.Common.Location
+import Plato.Syntax.Typing.Type
+import Plato.TypeCheck.Utils
+import Plato.Typing.Monad
 
 unify :: (MonadThrow m, MonadIO m) => Tau -> Tau -> Typ m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = do

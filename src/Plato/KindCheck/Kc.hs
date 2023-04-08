@@ -13,22 +13,25 @@ import Plato.Common.Error
 import Plato.Common.Location
 import Plato.KindCheck.Unify
 import Plato.KindCheck.Utils
-import Plato.Syntax.Typing
-import Plato.Typing.Env
+import Plato.Syntax.Typing.Ident
+import Plato.Syntax.Typing.Kind
+import Plato.Syntax.Typing.Path as Path
+import Plato.Syntax.Typing.Type
+import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 
-newDataCon :: MonadIO m => [LName] -> Typ m [(LName, Kind)]
+newDataCon :: MonadIO m => [Ident] -> Typ m [(Ident, Kind)]
 newDataCon = mapM (\con -> (con,) <$> newKnVar)
 
-getDataCon :: (MonadThrow m, MonadIO m) => LName -> Typ m Kind
-getDataCon = asksM . (lookupEnv @Kind) >=> zonkKind
+getDataCon :: (MonadThrow m, MonadIO m) => Path -> Typ m Kind
+getDataCon = asksM . (Env.find @Kind) >=> zonkKind
 
-inferDataKind :: (MonadThrow m, MonadIO m) => [LName] -> [(LName, LType)] -> Typ m [(LName, Type)]
+inferDataKind :: (MonadThrow m, MonadIO m) => [Ident] -> [(Ident, LType)] -> Typ m [(Ident, Type)]
 inferDataKind params constrs = do
         bnds <- forM params $ \x -> do
                 kv <- newKnVar
                 return (x, kv)
-        constrs' <- local (extendEnvList bnds) $
+        constrs' <- local (Env.extendList bnds) $
                 forM constrs $ \(con, body) -> do
                         body' <- checkKindStar body
                         return (con, body')
@@ -54,11 +57,11 @@ checkKind :: (MonadThrow m, MonadIO m) => LType -> Kind -> Typ m LType
 checkKind (L sp ty) exp_kn =
         writeErrLoc sp >> L sp <$> case ty of
                 VarT tv -> do
-                        kn <- asksM $ lookupEnv (tyVarName tv)
+                        kn <- asksM $ Env.find $ Path.PIdent (tyVarName tv)
                         unify kn exp_kn
                         return $ VarT tv
                 ConT tc -> do
-                        kn <- asksM $ lookupEnv tc
+                        kn <- asksM $ Env.find tc
                         unify kn exp_kn
                         return $ ConT tc
                 ArrT arg res -> do
@@ -70,11 +73,11 @@ checkKind (L sp ty) exp_kn =
                         binds <- forM tvs $ \tv -> do
                                 kv <- newKnVar
                                 return (fst tv, kv)
-                        body' <- local (extendEnvList (map (Bifunctor.first tyVarName) binds)) $ checkKind body exp_kn
+                        body' <- local (Env.extendList (map (Bifunctor.first tyVarName) binds)) $ checkKind body exp_kn
                         return $ AllT tvs body'
                 AbsT x _ body -> do
                         (arg_kn, res_kn) <- unifyFun exp_kn
-                        body' <- local (extendEnv x arg_kn) $ checkKind body res_kn
+                        body' <- local (Env.extend x arg_kn) $ checkKind body res_kn
                         return $ AbsT x (Just arg_kn) body'
                 AppT fun arg -> do
                         (fun', fun_kn) <- inferKind fun
@@ -84,7 +87,7 @@ checkKind (L sp ty) exp_kn =
                         return (AppT fun' arg')
                 {-RecT x _ body -> do
                         kv <- newKnVar
-                        body' <- local (extendEnv x kv) $ checkKind body exp_kn
+                        body' <- local (Env.extend x kv) $ checkKind body exp_kn
                         -- unify exp_kn StarK -- temp: mutual recursive?
                         return $ RecT x (Just kv) body'-}
                 SumT fields -> do
