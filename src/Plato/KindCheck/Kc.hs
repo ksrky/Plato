@@ -19,6 +19,7 @@ import Plato.Syntax.Typing.Path as Path
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env as Env
 import Plato.Typing.Monad
+import Plato.Typing.Zonking
 
 newDataCon :: MonadIO m => [Ident] -> Typ m [(Ident, Kind)]
 newDataCon = mapM (\con -> (con,) <$> newKnVar)
@@ -56,10 +57,11 @@ inferKind ty = do
 checkKind :: (MonadThrow m, MonadIO m) => LType -> Kind -> Typ m LType
 checkKind (L sp ty) exp_kn =
         writeErrLoc sp >> L sp <$> case ty of
-                VarT tv -> do
-                        kn <- asksM $ Env.find $ Path.PIdent (tyVarName tv)
+                VarT tv@(BoundTv id) -> do
+                        kn <- asksM $ Env.find $ Path.PIdent id
                         unify kn exp_kn
                         return $ VarT tv
+                VarT _ -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
                 ConT tc -> do
                         kn <- asksM $ Env.find tc
                         unify kn exp_kn
@@ -70,10 +72,10 @@ checkKind (L sp ty) exp_kn =
                         unify exp_kn StarK
                         return $ ArrT arg' res'
                 AllT tvs body -> do
-                        binds <- forM tvs $ \tv -> do
+                        quals <- forM tvs $ \tv -> do
                                 kv <- newKnVar
                                 return (fst tv, kv)
-                        body' <- local (Env.extendList (map (Bifunctor.first tyVarName) binds)) $ checkKind body exp_kn
+                        body' <- local (Env.extendList (map (Bifunctor.first unTyVar) quals)) $ checkKind body exp_kn
                         return $ AllT tvs body'
                 AbsT x _ body -> do
                         (arg_kn, res_kn) <- unifyFun exp_kn

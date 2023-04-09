@@ -66,6 +66,7 @@ library
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
+      Plato.TypeCheck.TcMod
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
@@ -73,6 +74,7 @@ library
       Plato.Typing.Env
       Plato.Typing.Monad
       Plato.Typing.Subst
+      Plato.Typing.Zonking
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -146,6 +148,7 @@ executable plato
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
+      Plato.TypeCheck.TcMod
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
@@ -153,6 +156,7 @@ executable plato
       Plato.Typing.Env
       Plato.Typing.Monad
       Plato.Typing.Subst
+      Plato.Typing.Zonking
       Paths_Plato
   hs-source-dirs:
       src

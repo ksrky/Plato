@@ -18,6 +18,7 @@ import Plato.TypeCheck.Subst
 import Plato.TypeCheck.Translate
 import Plato.TypeCheck.Utils
 import Plato.Typing.Monad
+import Plato.Typing.Zonking
 
 -- | Instantiation
 instantiate :: MonadIO m => Sigma -> Typ m (Coercion, Rho)
@@ -26,6 +27,7 @@ instantiate (AllT tvs tau) = do
         return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
 instantiate ty = return (Id, ty)
 
+-- | Soklemisation
 skolemise :: (MonadReader glb m, HasUnique glb, MonadIO m) => Sigma -> Typ m (Coercion, [(TyVar, Maybe Kind)], Rho)
 skolemise (AllT tvs rho) = do
         sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) tvs

@@ -9,43 +9,10 @@ import qualified Data.Set as S
 
 import Plato.Common.Error
 import Plato.Common.Location
-import Plato.Syntax.Typing.Expr
+import Plato.Typing.Zonking
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env as Env
 import Plato.Typing.Monad
-
-zonkType :: MonadIO m => Type -> Typ m Type
-zonkType (VarT tv) = return (VarT tv)
-zonkType (ConT tc) = return (ConT tc)
-zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
-zonkType (AllT tvs ty) = AllT tvs <$> zonkType `traverse` ty
-zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (MetaT tv) = do
-        mb_ty <- readMetaTv tv
-        case mb_ty of
-                Nothing -> return (MetaT tv)
-                Just ty -> do
-                        ty' <- zonkType ty
-                        writeMetaTv tv ty'
-                        return ty'
-zonkType _ = unreachable "TypeCheck.Utils.zonkType"
-
-zonkExpr :: MonadIO m => Expr -> Typ m Expr
-zonkExpr (VarE n) = return (VarE n)
-zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
-zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkExpr `traverse` body
-zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
-zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
-zonkExpr (LetE bnds decs body) = do
-        bnds' <- mapM (\(x, e) -> (x,) <$> (zonkExpr `traverse` e)) bnds
-        decs' <- mapM (\(x, ty) -> (x,) <$> zonkType ty) decs
-        LetE bnds' decs' <$> zonkExpr `traverse` body
-zonkExpr (CaseE e mbty alts) =
-        CaseE
-                <$> zonkExpr `traverse` e
-                <*> zonkType `traverse` mbty
-                <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr `traverse` body)
-zonkExpr _ = unreachable "TypeCheck.Utils.zonkExpr"
 
 getEnvTypes :: Monad m => Typ m [Type]
 getEnvTypes = asks (concat . M.elems . M.map (\bndng -> case bndng of Env.Value ty -> [ty]; _ -> []))

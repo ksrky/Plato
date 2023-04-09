@@ -6,14 +6,10 @@ module Plato.Typing.Monad where
 import Control.Exception.Safe
 import Control.Monad.Reader
 import Data.IORef
-import Prettyprinter
-import Prettyprinter.Render.String
 
-import Plato.Common.Error
 import Plato.Common.Global
 import Plato.Common.Location
-import Plato.Common.Name (str2conName)
-import Plato.Syntax.Typing.Ident
+import Plato.Syntax.Typing.Ident as Ident
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env
@@ -21,7 +17,7 @@ import Plato.Typing.Env
 data Context = Context
         { typenv :: Env
         , uniq :: IORef Unique
-        , errloc :: IORef Span -- error location
+        , errloc :: IORef Span
         }
 
 newtype Typ m a = Typ {runTyp :: Context -> m a}
@@ -42,8 +38,7 @@ instance Monad m => Monad (Typ m) where
                 v <- runTyp m ctx
                 runTyp (k v) ctx
 
-instance MonadFail m => MonadFail (Typ m) where
-        fail s = Typ $ \_ -> fail s
+instance MonadThrow m => MonadThrow (Typ m)
 
 instance MonadTrans Typ where
         lift m = Typ (const m)
@@ -54,12 +49,6 @@ instance Monad m => MonadReader Env (Typ m) where
 
 asksM :: (Env -> m a) -> Typ m a
 asksM f = Typ (f . typenv)
-
-failTyp :: MonadFail m => Doc ann -> Typ m a
-failTyp doc = fail $ renderString $ layoutPretty defaultLayoutOptions doc
-
-throwTyp :: MonadThrow m => Span -> Doc ann -> Typ m a
-throwTyp sp doc = lift $ throwLocErr sp doc
 
 -- | creating, reading and writing IORef
 newTypRef :: MonadIO m => a -> Typ m (IORef a)
@@ -84,7 +73,9 @@ newTyVar :: MonadIO m => Typ m Type
 newTyVar = MetaT <$> newMetaTv
 
 newSkolemTyVar :: MonadIO m => TyVar -> Typ m TyVar
-newSkolemTyVar tv = SkolemTv (tyVarName tv) <$> newUniq
+newSkolemTyVar tv = do
+        u <- newUniq
+        return $ SkolemTv (unTyVar tv){stamp = u}
 
 newMetaTv :: MonadIO m => Typ m MetaTv
 newMetaTv = MetaTv <$> newUniq <*> newTypRef Nothing

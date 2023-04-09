@@ -4,13 +4,15 @@
 
 module Plato.TypeCheck.Tc where
 
-import Control.Monad.Reader
-import qualified Data.Set as S
-
+import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Reader.Class
+import Control.Monad.Trans.Class
 import Data.IORef
+import qualified Data.Set as S
 import Prettyprinter
 
-import Control.Exception.Safe
 import Plato.Common.Error
 import Plato.Common.Global
 import Plato.Common.Location
@@ -26,6 +28,7 @@ import Plato.TypeCheck.Unify
 import Plato.TypeCheck.Utils
 import Plato.Typing.Env as Env
 import Plato.Typing.Monad
+import Plato.Typing.Zonking
 
 checkType :: (MonadReader glb m, HasUnique glb, MonadIO m, MonadThrow m) => LExpr -> Type -> Typ m LExpr
 checkType = checkSigma
@@ -56,7 +59,7 @@ tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         unless (length pats == length arg_tys) $
-                throwTyp sp $ hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+                throwLocErr sp $ hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
         envs <- zipWithM checkPat pats arg_tys
         _ <- instPatSigma res_ty exp_ty
         return (concat envs)
@@ -127,7 +130,7 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                                 ValueBind var exp -> do
                                         ann_ty <- case Env.findField var decs of
                                                 Just (Value ty) -> return ty
-                                                _ -> throwTyp (Ident.span var) $ hsep [squotes $ pretty var, "lacks type signature"]
+                                                _ -> throwLocErr (Ident.span var) $ hsep [squotes $ pretty var, "lacks type signature"]
                                         exp' <- checkSigma exp ann_ty
                                         return $ ValueBind var exp'
                                 bnd -> return bnd

@@ -5,8 +5,7 @@ import Plato.Typing.Subst
 import Prettyprinter
 
 import Plato.Common.Global
-import Plato.Common.Location
-import Plato.Common.Name
+import Plato.Common.Location 
 import Plato.Syntax.Typing.Ident as Ident
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Path
@@ -30,19 +29,15 @@ type Rho = Type
 type Tau = Type
 
 data TyVar
-        = BoundTv Ident
-        | SkolemTv Name Unique
+        = BoundTv {unTyVar :: Ident}
+        | SkolemTv {unTyVar :: Ident}
         deriving (Show, Ord)
 
 data MetaTv = MetaTv Unique (IORef (Maybe Tau))
 
-tyVarName :: TyVar -> Name
-tyVarName (BoundTv id) = Ident.name id
-tyVarName (SkolemTv x _) = x
-
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
-        (SkolemTv _ u1) == (SkolemTv _ u2) = u1 == u2
+        (SkolemTv id1) == (SkolemTv id2) = id1 == id2
         _ == _ = False
 
 instance Eq MetaTv where
@@ -58,8 +53,8 @@ instance Substitutable Type where
         subst _ _ = undefined
 
 instance Pretty TyVar where
-        pretty (BoundTv n) = pretty n
-        pretty (SkolemTv n _) = pretty n
+        pretty (BoundTv id) = pretty id
+        pretty (SkolemTv id) = pretty id
 
 instance Pretty Type where
         pretty (VarT var) = pretty var

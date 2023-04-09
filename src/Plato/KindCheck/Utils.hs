@@ -10,39 +10,7 @@ import Plato.Common.Error
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Monad
-
-zonkKind :: MonadIO m => Kind -> Typ m Kind
-zonkKind StarK = return StarK
-zonkKind (ArrK kn1 kn2) = do
-        kn1' <- zonkKind kn1
-        kn2' <- zonkKind kn2
-        return (ArrK kn1' kn2')
-zonkKind (MetaK kv) = do
-        mb_kn <- readMetaKv kv
-        case mb_kn of
-                Nothing -> return (MetaK kv)
-                Just kn -> do
-                        kn' <- zonkKind kn
-                        writeMetaKv kv kn'
-                        return kn'
-
-zonkType :: MonadIO m => Type -> Typ m Type
-zonkType (VarT tv) = return $ VarT tv
-zonkType (ConT x) = return $ ConT x
-zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
-zonkType (AllT tvs ty) = do
-        tvs' <- forM tvs $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
-        AllT tvs' <$> zonkType `traverse` ty
-zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
-zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
--- zonkType (RecT x kn ty) = RecT x kn <$> zonkType `traverse` ty
-zonkType (RecordT fields) = do
-        fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
-        return $ RecordT fields'
-zonkType (SumT fields) = do
-        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM (zonkType `traverse`) tys
-        return $ SumT fields'
-zonkType MetaT{} = unreachable "Plato.KindInfer.zonkType"
+import Plato.Typing.Zonking
 
 getMetaKvs :: MonadIO m => Kind -> Typ m (S.Set MetaKv)
 getMetaKvs kn = do
