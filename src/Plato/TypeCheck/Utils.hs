@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Plato.TypeCheck.Utils where
 
 import Control.Monad.IO.Class
@@ -9,13 +7,13 @@ import qualified Data.Set as S
 
 import Plato.Common.Error
 import Plato.Common.Location
-import Plato.Typing.Zonking
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env as Env
 import Plato.Typing.Monad
+import Plato.Typing.Zonking
 
 getEnvTypes :: Monad m => Typ m [Type]
-getEnvTypes = asks (concat . M.elems . M.map (\bndng -> case bndng of Env.Value ty -> [ty]; _ -> []))
+getEnvTypes = asks (concat . M.elems . M.map (\bndng -> case bndng of Env.ValueBinding ty -> [ty]; _ -> []))
 
 getMetaTvs :: MonadIO m => Type -> Typ m (S.Set MetaTv)
 getMetaTvs ty = do

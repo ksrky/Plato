@@ -8,31 +8,31 @@ import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Subst
 
-newtype Sig
-        = SigDecls [Decl]
-        --  | SigFunctor Ident Sig Sig
-        deriving (Eq, Show)
-
-data Decl
-        = ValueDecl Ident Type
-        | TypeDecl Ident Kind
-        | ModuleDecl Ident Sig
-        deriving (Eq, Show)
-
-data Mod
-        = ModIdent Ident
-        | ModBinds [Bind]
-        | --  | ModFun Ident Sig Mod
-          --  | ModApp Mod Mod
-          ModConst Mod Sig
-        deriving (Eq, Show)
-
 data Bind
         = ValueBind Ident (Maybe Type) LExpr
         | TypeBind Ident (Maybe Kind) LType
-        | ModuleBind Ident (Maybe Sig) Mod
+        | ModuleBind Ident Module
         deriving (Eq, Show)
 
+data Spec
+        = ValueSpec Ident Type
+        | TypeSpec Ident Kind
+        deriving (Eq, Show)
+
+data Decl
+        = OpenDecl
+        | FixityDecl
+        | BindDecl Bind
+        | SpecDecl Spec
+        deriving (Eq, Show)
+
+newtype Module = Module [Decl] deriving (Eq, Show)
+
+newtype Signature = Signature [Spec] deriving (Eq, Show)
+
+instance Pretty Decl
+
+{-}
 instance Substitutable Sig where
         subst sub (SigDecls decs) = SigDecls (map (subst sub) decs)
 
@@ -63,4 +63,4 @@ instance Pretty Mod where
 instance Pretty Bind where
         pretty (ValueBind id _mty exp) = hsep [pretty id, equals, pretty exp]
         pretty (TypeBind id _mkn ty) = hsep [pretty id, equals, pretty ty]
-        pretty (ModuleBind id _msig mod) = hsep [pretty id, equals, pretty mod]
+        pretty (ModuleBind id _msig mod) = hsep [pretty id, equals, pretty mod]-}

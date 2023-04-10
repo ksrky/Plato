@@ -34,6 +34,7 @@ library
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Common.Utils
       Plato.Core.Context
       Plato.Core.Debug
       Plato.Core.Eval
@@ -116,6 +117,7 @@ executable plato
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Common.Utils
       Plato.Core.Context
       Plato.Core.Debug
       Plato.Core.Eval

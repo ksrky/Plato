@@ -16,6 +16,7 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Global
 import Plato.Common.Location
+import Plato.Common.Utils
 import Plato.Syntax.Typing.Expr
 import Plato.Syntax.Typing.Ident as Ident
 import Plato.Syntax.Typing.Module
@@ -124,18 +125,19 @@ tcRho (L sp exp) exp_ty = writeErrLoc sp >> L sp <$> tcRho' exp exp_ty
                 binds <- checkPat pat arg_ty
                 body' <- local (Env.extendList binds) (checkRho body res_ty)
                 return $ PAbsE pat (Just arg_ty) body'
-        tcRho' (LetE bnds decs body) exp_ty = do
-                local (Env.extendDecls decs) $ do
-                        bnds' <- forM bnds $ \case
-                                ValueBind var exp -> do
-                                        ann_ty <- case Env.findField var decs of
-                                                Just (Value ty) -> return ty
-                                                _ -> throwLocErr (Ident.span var) $ hsep [squotes $ pretty var, "lacks type signature"]
-                                        exp' <- checkSigma exp ann_ty
-                                        return $ ValueBind var exp'
-                                bnd -> return bnd
-                        body' <- tcRho body exp_ty
-                        return $ LetE bnds' decs body'
+        tcRho' (LetE decs body) exp_ty = do
+                env <- ask
+                (decs', env') <-
+                        forAccumM env decs $ \env -> \case
+                                BindDecl (ValueBind id (Just ty) exp) -> do
+                                        exp' <- checkSigma exp ty
+                                        return (BindDecl (ValueBind id (Just ty) exp'), env)
+                                dec@(SpecDecl spec) -> do
+                                        return (dec, extendSpec spec env)
+                                dec -> return (dec, env)
+
+                body' <- local (const env') $ tcRho body exp_ty
+                return $ LetE decs' body'
         tcRho' _ _ = unreachable "TypeCheck.Typ.tcRho"
 
 -- | Type check of Sigma

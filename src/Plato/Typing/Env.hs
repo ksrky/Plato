@@ -1,11 +1,9 @@
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env where
 
 import Control.Exception.Safe
 import qualified Data.Map.Strict as M
-import qualified Data.Maybe
 import Prettyprinter
 
 import Plato.Common.Error
@@ -16,9 +14,9 @@ import Plato.Syntax.Typing.Path as Path
 import Plato.Syntax.Typing.Type
 
 data Binding
-        = Value Type
-        | Type Kind
-        | Module Sig
+        = ValueBinding Type
+        | TypeBinding Kind
+        | ModuleBinding Signature
         deriving (Eq, Show)
 
 type Env = IdentMap Binding
@@ -33,46 +31,43 @@ findBinding :: MonadThrow m => Path -> Env -> m Binding
 findBinding (Path.PIdent id) env = Ident.lookup id env
 findBinding (Path.PDot root field) env = do
         find root env >>= \case
-                SigDecls decs -> case findField field decs of
+                Signature specs -> case findField field specs of
                         Just bndng -> return bndng
                         Nothing -> throwLocErr (Ident.span field) $ hsep [squotes $ pretty field, "is not in module", squotes $ pretty root]
-                _ -> throwLocErr (Ident.span field) $ hsep [squotes $ pretty root, "is not a proper module"]
 
-findField :: Ident -> [Decl] -> Maybe Binding
+findField :: Ident -> [Spec] -> Maybe Binding
 findField _ [] = Nothing
-findField id1 (ValueDecl id2 ty : _) | id1 == id2 = Just $ Value ty
-findField id1 (TypeDecl id2 kn : _) | id1 == id2 = Just $ Type kn
-findField id1 (ModuleDecl id2 sig : _) | id1 == id2 = Just $ Module sig
+findField id1 (ValueSpec id2 ty : _) | id1 == id2 = Just $ ValueBinding ty
+findField id1 (TypeSpec id2 kn : _) | id1 == id2 = Just $ TypeBinding kn
 findField id (_ : rest) = findField id rest
 
 instance EnvManager Type where
-        extend id ty = M.insert id (Value ty)
+        extend id ty = M.insert id (ValueBinding ty)
         find p env =
                 findBinding p env >>= \case
-                        Value ty -> return ty
+                        ValueBinding ty -> return ty
                         _ -> throwLocErr (Path.getLoc p) $ hsep ["Not in scope ", squotes $ pretty p]
 
 instance EnvManager Kind where
-        extend id kn = M.insert id (Type kn)
+        extend id kn = M.insert id (TypeBinding kn)
         find p env =
                 findBinding p env >>= \case
-                        Type ty -> return ty
+                        TypeBinding ty -> return ty
                         _ -> throwLocErr (Path.getLoc p) $ hsep ["Not in scope ", squotes $ pretty p]
 
-instance EnvManager Sig where
-        extend id sig = M.insert id (Module sig)
+instance EnvManager Signature where
+        extend id sig = M.insert id (ModuleBinding sig)
         find p env =
                 findBinding p env >>= \case
-                        Module ty -> return ty
+                        ModuleBinding ty -> return ty
                         _ -> throwLocErr (Path.getLoc p) $ hsep ["Not in scope ", squotes $ pretty p]
 
-extendDecl :: Decl -> Env -> Env
-extendDecl (ValueDecl id ty) = extend id ty
-extendDecl (TypeDecl id kn) = extend id kn
-extendDecl (ModuleDecl id sig) = extend id sig
+extendSpec :: Spec -> Env -> Env
+extendSpec (ValueSpec id ty) = extend id ty
+extendSpec (TypeSpec id kn) = extend id kn
 
-extendDecls :: [Decl] -> Env -> Env
-extendDecls l env = foldl (flip extendDecl) env l
+extendSpecs :: [Spec] -> Env -> Env
+extendSpecs = flip $ foldr extendSpec
 
 {-}
 outermost :: TypEnv

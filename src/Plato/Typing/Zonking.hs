@@ -5,16 +5,12 @@ module Plato.Typing.Zonking where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import qualified Data.Map.Strict as M
-import qualified Data.Set as S
 
 import Plato.Common.Error
-import Plato.Common.Location
 import Plato.Syntax.Typing.Expr
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Module
 import Plato.Syntax.Typing.Type
-import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 
 zonkExpr :: MonadIO m => Expr -> Typ m Expr
@@ -23,24 +19,19 @@ zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `travers
 zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkExpr `traverse` body
 zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
-zonkExpr (LetE bnds body) = do
-        bnds' <-
-                mapM
-                        ( \case
-                                ValueBind x e -> ValueBind x <$> (zonkExpr `traverse` e)
-                                TypeBind x kn ty -> TypeBind x kn <$> zonkType `traverse` ty
-                                ModuleBind x mod -> ModuleBind x <$> zonkMod mod
-                        )
-                        bnds
+zonkExpr (LetE decs body) = do
         decs' <-
                 mapM
                         ( \case
-                                ValueDecl x ty -> ValueDecl x <$> zonkType ty
-                                TypeDecl x kn -> TypeDecl x <$> zonkKind kn
-                                ModuleDecl x sig -> ModuleDecl x <$> zonkSig sig
+                                BindDecl (ValueBind id mty exp) -> BindDecl <$> (ValueBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp)
+                                BindDecl (TypeBind id mkn ty) -> BindDecl <$> (TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty)
+                                BindDecl (ModuleBind id mod) -> BindDecl <$> (ModuleBind id <$> zonkModule mod)
+                                SpecDecl (ValueSpec id ty) -> SpecDecl <$> (ValueSpec id <$> zonkType ty)
+                                SpecDecl (TypeSpec id kn) -> SpecDecl <$> (TypeSpec id <$> zonkKind kn)
+                                dec -> return dec
                         )
                         decs
-        LetE bnds' decs' <$> zonkExpr `traverse` body
+        LetE decs' <$> zonkExpr `traverse` body
 zonkExpr (CaseE e mbty alts) =
         CaseE
                 <$> zonkExpr `traverse` e
@@ -87,11 +78,5 @@ zonkKind (MetaK kv) = do
                         writeMetaKv kv kn'
                         return kn'
 
-zonkMod :: MonadIO m => Mod -> Typ m Mod
-zonkMod = undefined
-
-zonkBind :: MonadIO m => Bind -> Typ m Bind
-zonkBind = undefined
-
-zonkSig :: MonadIO m => Sig -> Typ m Sig
-zonkSig = undefined
+zonkModule :: MonadIO m => Module -> Typ m Module
+zonkModule = undefined
