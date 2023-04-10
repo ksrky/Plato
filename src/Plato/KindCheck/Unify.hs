@@ -6,6 +6,7 @@ import Control.Monad.IO.Class
 import qualified Data.Set as S
 import Prettyprinter
 
+import Plato.Common.Error
 import Plato.KindCheck.Utils
 import Plato.Syntax.Typing.Kind
 import Plato.Typing.Monad
@@ -20,7 +21,7 @@ unify (MetaK kv) kn = unifyVar kv kn
 unify kn (MetaK kv) = unifyVar kv kn
 unify kn1 kn2 = do
         sp <- readErrLoc
-        throwTyp sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual kind:" <+> pretty kn1)]
+        throwLocErr sp $ vsep ["Couldn't match kind.", "Expected kind:" <+> pretty kn2, indent 2 ("Actual kind:" <+> pretty kn1)]
 
 unifyVar :: (MonadThrow m, MonadIO m) => MetaKv -> Kind -> Typ m ()
 unifyVar kv1 kn2@(MetaK kv2) = do
@@ -47,4 +48,4 @@ occursCheck kv1 kn2 = do
         kvs2 <- getMetaKvs kn2
         when (kv1 `S.member` kvs2) $ do
                 sp <- readErrLoc
-                throwTyp sp $ hsep ["Infinite kind:", squotes $ pretty kn2]
+                throwLocErr sp $ hsep ["Infinite kind:", squotes $ pretty kn2]

@@ -31,9 +31,11 @@ library
       Plato.Common.Error
       Plato.Common.Fixity
       Plato.Common.Global
+      Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Common.Path
       Plato.Common.Utils
       Plato.Core.Context
       Plato.Core.Debug
@@ -50,6 +52,13 @@ library
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Abstract
+      Plato.Syntax.Abstract.Classes
+      Plato.Syntax.Abstract.Expr
+      Plato.Syntax.Abstract.Kind
+      Plato.Syntax.Abstract.Module
+      Plato.Syntax.Abstract.Pat
+      Plato.Syntax.Abstract.Type
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
@@ -67,7 +76,6 @@ library
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
-      Plato.TypeCheck.TcMod
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
@@ -114,9 +122,11 @@ executable plato
       Plato.Common.Error
       Plato.Common.Fixity
       Plato.Common.Global
+      Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Monad
       Plato.Common.Name
+      Plato.Common.Path
       Plato.Common.Utils
       Plato.Core.Context
       Plato.Core.Debug
@@ -133,6 +143,13 @@ executable plato
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Syntax.Abstract
+      Plato.Syntax.Abstract.Classes
+      Plato.Syntax.Abstract.Expr
+      Plato.Syntax.Abstract.Kind
+      Plato.Syntax.Abstract.Module
+      Plato.Syntax.Abstract.Pat
+      Plato.Syntax.Abstract.Type
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
@@ -150,7 +167,6 @@ executable plato
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
-      Plato.TypeCheck.TcMod
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
