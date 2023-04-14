@@ -1,8 +1,8 @@
 module Plato.Test.Parsing.Pretty where
 
+import Plato.Common.Monad
 import Plato.Syntax.Parsing
 import Plato.Transl.SrcToPs
-import Plato.Types.Monad
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

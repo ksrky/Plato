@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Plato.Common.Path where
 
 import Prettyprinter
@@ -5,6 +7,7 @@ import Prettyprinter
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 
+import Control.Monad.Reader.Class
 import Plato.Common.Ident as Ident
 import Plato.Common.Location (Span, combineSpans)
 
@@ -29,9 +32,17 @@ instance Pretty Path where
 ------------------
 type Subst = M.Map Ident Path
 
+class HasSubst a where
+        getSubst :: a -> Subst
+
+instance HasSubst Subst where
+        getSubst = id
+
 class Substitutable a where
-        subst :: Subst -> a -> a
+        substPath :: (MonadReader ctx m, HasSubst ctx) => a -> m a
 
 instance Substitutable Path where
-        subst sub p@(PIdent id) = fromMaybe p (M.lookup id sub)
-        subst sub (PDot root field) = PDot (subst sub root) field
+        substPath p@(PIdent id) = do
+                sub <- asks getSubst
+                return $ fromMaybe p (M.lookup id sub)
+        substPath (PDot root field) = (PDot <$> substPath root) <*> return field

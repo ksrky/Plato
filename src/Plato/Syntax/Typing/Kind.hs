@@ -3,9 +3,12 @@ module Plato.Syntax.Typing.Kind where
 import Data.IORef (IORef)
 import Prettyprinter
 
-import Plato.Typing.Subst
 import Plato.Common.Global
+import Plato.Common.Path
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 data Kind
         = StarK
         | ArrK Kind Kind
@@ -14,6 +17,9 @@ data Kind
 
 data MetaKv = MetaKv Unique (IORef (Maybe Kind))
 
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
 instance Eq MetaKv where
         (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
 
@@ -24,8 +30,11 @@ instance Ord MetaKv where
         MetaKv u1 _ `compare` MetaKv u2 _ = u1 `compare` u2
 
 instance Substitutable Kind where
-        subst _ = id
+        substPath = return
 
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 instance Pretty Kind where
         pretty StarK = "*"
         pretty (ArrK k1 k2) = pprkind k1 <+> pretty k2

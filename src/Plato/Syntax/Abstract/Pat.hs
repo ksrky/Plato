@@ -2,10 +2,13 @@ module Plato.Syntax.Abstract.Pat where
 
 import Prettyprinter
 
-import Plato.Common.Location
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Path
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 type LPat = Located Pat
 
 data Pat
@@ -14,6 +17,9 @@ data Pat
         | WildP
         deriving (Eq, Show)
 
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 instance Pretty Pat where
         pretty (ConP con pats) = pretty con <+> hsep (map (pprAtomPat . unLoc) pats)
         pretty (VarP var) = pretty var

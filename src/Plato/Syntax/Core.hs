@@ -28,9 +28,7 @@ data Type
         | TySome Info Kind Type
         | TyAbs Info Kind Type
         | TyApp Type Type
-        | TyRec Info Kind Type
         | TyRecord [(Name, Type)]
-        | TyVariant [(Name, [Type])]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnArr Kind Kind deriving (Eq, Show)

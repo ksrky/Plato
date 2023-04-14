@@ -75,7 +75,7 @@ data Expr :: Data.Kind.Type -> Data.Kind.Type where
                 Expr a
 
 ----------------------------------------------------------------
--- Class instances
+-- Basic instances
 ----------------------------------------------------------------
 instance Eq (Expr a)
 instance Show (Expr a)

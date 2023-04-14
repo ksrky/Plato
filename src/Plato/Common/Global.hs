@@ -16,28 +16,34 @@ initGlobal = do
 type Unique = Int
 
 class HasUnique a where
-        getUnique :: MonadIO m => a -> m Unique
+        getUnique :: MonadIO m => a -> m (IORef Unique)
+        pickUnique :: MonadIO m => a -> m Unique
+        pickUnique env = do
+                ref <- getUnique env
+                u <- liftIO $ readIORef ref
+                liftIO $ writeIORef ref (u + 1)
+                return u
 
 instance HasUnique (IORef Unique) where
-        getUnique ref = liftIO $ readIORef ref
+        getUnique = return
 
 instance HasUnique Global where
-        getUnique = liftIO . readIORef . glbUnique
+        getUnique = return . glbUnique
 
-initUnique :: IO (IORef Unique)
-initUnique = newIORef 0
+initUnique :: MonadIO m => m (IORef Unique)
+initUnique = liftIO $ newIORef 0
 
 newUniqueScope :: Global -> IO Global
-newUniqueScope glb = do
+newUniqueScope env = do
         ref <- initUnique
-        u <- readIORef $ glbUnique glb
-        return glb{glbUnique = ref, glbUniqueStack = u : glbUniqueStack glb}
+        u <- readIORef $ glbUnique env
+        return env{glbUnique = ref, glbUniqueStack = u : glbUniqueStack env}
 
 endUniqueScope :: Global -> IO Global
-endUniqueScope glb = case glbUniqueStack glb of
+endUniqueScope env = case glbUniqueStack env of
         [] -> do
                 u <- initUnique
-                return glb{glbUnique = u}
+                return env{glbUnique = u}
         hd : tl -> do
                 ref <- newIORef hd
-                return glb{glbUnique = ref, glbUniqueStack = tl}
+                return env{glbUnique = ref, glbUniqueStack = tl}

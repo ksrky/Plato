@@ -1,4 +1,10 @@
-module Plato.TypeCheck.Utils where
+{-# LANGUAGE LambdaCase #-}
+
+module Plato.TypeCheck.Utils (
+        getEnvTypes,
+        getMetaTvs,
+        getFreeTvs,
+) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -12,10 +18,12 @@ import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
-getEnvTypes :: Monad m => Typ m [Type]
-getEnvTypes = asks (concat . M.elems . M.map (\bndng -> case bndng of Env.ValueBinding ty -> [ty]; _ -> []))
+getEnvTypes :: (MonadReader ctx m, HasEnv ctx) => m [Type]
+getEnvTypes = do
+        env <- getEnv =<< ask
+        return $ concat $ M.elems $ M.map (\case Env.ValueBinding ty -> [ty]; _ -> []) env
 
-getMetaTvs :: MonadIO m => Type -> Typ m (S.Set MetaTv)
+getMetaTvs :: MonadIO m => Type -> m (S.Set MetaTv)
 getMetaTvs ty = do
         ty' <- zonkType ty
         return (metaTvs ty')
@@ -29,7 +37,7 @@ metaTvs (AppT fun arg) = metaTvs (unLoc fun) `S.union` metaTvs (unLoc arg)
 metaTvs (MetaT tv) = S.singleton tv
 metaTvs _ = unreachable "TypeCheck.Utils.metaTvs"
 
-getFreeTvs :: MonadIO m => Type -> Typ m (S.Set TyVar)
+getFreeTvs :: MonadIO m => Type -> m (S.Set TyVar)
 getFreeTvs ty = do
         ty' <- zonkType ty
         return (freeTvs ty')

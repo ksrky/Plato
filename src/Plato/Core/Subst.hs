@@ -15,9 +15,7 @@ tymap onvar c tyT = walk c tyT
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
                 TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
-                TyRec tyX knK1 tyT2 -> TyRec tyX knK1 (walk (c + 1) tyT2)
                 TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
-                TyVariant fieldtys -> TyVariant (map (\(li, ftys) -> (li, map (walk c) ftys)) fieldtys)
 
 typeShiftAbove :: Int -> Int -> Type -> Type
 typeShiftAbove d =

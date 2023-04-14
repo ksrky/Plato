@@ -6,10 +6,10 @@ import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
 
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
 
 import Control.Exception.Safe
 import Control.Monad.RWS

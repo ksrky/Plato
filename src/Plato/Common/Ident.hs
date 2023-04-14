@@ -25,11 +25,10 @@ instance Pretty Ident where
 ident :: Located Name -> Int -> Ident
 ident (L sp x) i = Ident{name = x, span = sp, stamp = i}
 
-fresh :: (MonadReader glb m, HasUnique glb, MonadIO m) => Name -> m Ident
+fresh :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Name -> m Ident
 fresh x = do
-        glb <- ask
-        i <- Global.getUnique glb
-        return Ident{name = x, span = NoSpan, stamp = i}
+        u <- Global.pickUnique =<< ask
+        return Ident{name = x, span = NoSpan, stamp = u}
 
 -- | Identifier Map
 type IdentMap a = M.Map Ident a

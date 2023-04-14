@@ -63,11 +63,9 @@ library
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Syntax.Typing.Expr
-      Plato.Syntax.Typing.Ident
       Plato.Syntax.Typing.Kind
       Plato.Syntax.Typing.Module
       Plato.Syntax.Typing.Pat
-      Plato.Syntax.Typing.Path
       Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
@@ -82,7 +80,6 @@ library
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
-      Plato.Typing.Subst
       Plato.Typing.Zonking
   other-modules:
       Paths_Plato
@@ -154,11 +151,9 @@ executable plato
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
       Plato.Syntax.Typing.Expr
-      Plato.Syntax.Typing.Ident
       Plato.Syntax.Typing.Kind
       Plato.Syntax.Typing.Module
       Plato.Syntax.Typing.Pat
-      Plato.Syntax.Typing.Path
       Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
@@ -173,7 +168,6 @@ executable plato
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
-      Plato.Typing.Subst
       Plato.Typing.Zonking
       Paths_Plato
   hs-source-dirs:

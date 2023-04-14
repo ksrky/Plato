@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Plato.Syntax.Abstract.Type where
 
@@ -8,11 +9,11 @@ import qualified Data.Kind
 import Prettyprinter
 
 import Plato.Common.Global
-import Plato.Common.Location
 import Plato.Common.Ident as Ident
-import Plato.Syntax.Abstract.Kind
+import Plato.Common.Location
 import Plato.Common.Path
 import Plato.Syntax.Abstract.Classes
+import Plato.Syntax.Abstract.Kind
 
 ----------------------------------------------------------------
 -- Datas and types
@@ -50,21 +51,18 @@ data Type :: Data.Kind.Type -> Data.Kind.Type where
                 LType a ->
                 Type a
         RecordT ::
-                (CTyping a, CTyped a) =>
+                (CTyped a) =>
                 [(Ident, LType a)] ->
                 Type a
         SumT ::
-                (CParsing a, CResolved a, CTyping a, CTyped a) =>
+                (CTyped a) =>
                 [(Ident, [LType a])] ->
                 Type a
         MetaT ::
-                CTyping a =>
+                (CTyping a) =>
                 MetaTv a ->
                 Type a
 
--- type Sigma = Type Typing
--- type Rho = Type Typing
--- type Tau = Type Typing
 
 data TyVar :: Data.Kind.Type -> Data.Kind.Type where
         BoundTv ::
@@ -84,7 +82,43 @@ data MetaTv :: Data.Kind.Type -> Data.Kind.Type where
                 MetaTv a
 
 ----------------------------------------------------------------
--- Class instances
+-- Type relations
+----------------------------------------------------------------
+{-data Sigma
+data Rho
+data Tau
+
+class CSigma a
+class CRho a
+class CTau a
+
+instance CSigma Sigma
+instance CSigma Rho
+instance CSigma Tau
+
+instance CRho Rho
+instance CRho Tau
+
+instance CTau Tau
+
+instance CParsing Sigma
+instance CParsing Rho
+instance CParsing Tau
+
+instance CResolved Sigma
+instance CResolved Rho
+instance CResolved Tau
+
+instance CTyping Sigma
+instance CTyping Rho
+instance CTyping Tau
+
+instance CTyped Sigma
+instance CTyped Rho
+instance CTyped Tau-}
+
+----------------------------------------------------------------
+-- Basic instances
 ----------------------------------------------------------------
 instance Eq (TyVar a) where
         (BoundTv id1) == (BoundTv id2) = id1 == id2

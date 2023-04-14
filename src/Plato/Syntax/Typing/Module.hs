@@ -2,12 +2,15 @@ module Plato.Syntax.Typing.Module where
 
 import Prettyprinter
 
+import Plato.Common.Ident
+import Plato.Common.Path
 import Plato.Syntax.Typing.Expr
-import Plato.Syntax.Typing.Ident
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
-import Plato.Typing.Subst
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 data Bind
         = ValueBind Ident (Maybe Type) LExpr
         | TypeBind Ident (Maybe Kind) LType
@@ -20,7 +23,7 @@ data Spec
         deriving (Eq, Show)
 
 data Decl
-        = OpenDecl
+        = OpenDecl Path
         | FixityDecl
         | BindDecl Bind
         | SpecDecl Spec
@@ -30,37 +33,44 @@ newtype Module = Module [Decl] deriving (Eq, Show)
 
 newtype Signature = Signature [Spec] deriving (Eq, Show)
 
-instance Pretty Decl
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
+instance Substitutable Bind where
+        substPath (ValueBind id mty exp) = ValueBind id <$> substPath `traverse` mty <*> substPath `traverse` exp
+        substPath (TypeBind id mkn ty) = TypeBind id <$> substPath `traverse` mkn <*> substPath `traverse` ty
+        substPath (ModuleBind id mod) = ModuleBind id <$> substPath mod
 
-{-}
-instance Substitutable Sig where
-        subst sub (SigDecls decs) = SigDecls (map (subst sub) decs)
-
--- subst sub (SigFunctor id sig1 sig2) = SigFunctor id (subst sub sig1) (subst sub sig2)
+instance Substitutable Spec where
+        substPath (ValueSpec id ty) = ValueSpec id <$> substPath ty
+        substPath (TypeSpec id kn) = TypeSpec id <$> substPath kn
 
 instance Substitutable Decl where
-        subst sub (ValueDecl id ty) = ValueDecl id (subst sub ty)
-        subst sub (TypeDecl id kn) = TypeDecl id (subst sub kn)
-        subst sub (ModuleDecl id mod) = ModuleDecl id (subst sub mod)
+        substPath dec@OpenDecl{} = return dec
+        substPath dec@FixityDecl{} = return dec
+        substPath (BindDecl bnd) = BindDecl <$> substPath bnd
+        substPath (SpecDecl spc) = SpecDecl <$> substPath spc
 
-instance Pretty Sig where
-        pretty (SigDecls decs) = vsep (map pretty decs)
+instance Substitutable Module where
+        substPath (Module decs) = Module <$> mapM substPath decs
 
--- pretty (SigFunctor id sig1 sig2) = hsep [parens (hsep [pretty id, colon, indent 4 (pretty sig1)]), "->", line, indent 4 (pretty sig2)]
-
-instance Pretty Decl where
-        pretty (ValueDecl id ty) = hsep [pretty id, colon, pretty ty]
-        pretty (TypeDecl id kn) = hsep [pretty id, colon, pretty kn]
-        pretty (ModuleDecl id sig) = hsep [pretty id, colon, line, indent 4 (pretty sig)]
-
-instance Pretty Mod where
-        pretty (ModIdent id) = pretty id
-        pretty (ModBinds bnds) = vsep (map pretty bnds)
-        -- pretty (ModFun id sig1 mod2) = hsep [parens (hsep [pretty id, colon, indent 4 (pretty sig1)]), "->", line, indent 4 (pretty mod2)]
-        -- pretty (ModApp mod1 mod2) = hsep [parens (pretty mod1), parens (pretty mod2)]
-        pretty (ModConst mod1 sig2) = hsep [pretty mod1, colon, pretty sig2]
-
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 instance Pretty Bind where
         pretty (ValueBind id _mty exp) = hsep [pretty id, equals, pretty exp]
         pretty (TypeBind id _mkn ty) = hsep [pretty id, equals, pretty ty]
-        pretty (ModuleBind id _msig mod) = hsep [pretty id, equals, pretty mod]-}
+        pretty (ModuleBind id mod) = hsep [pretty id, equals, pretty mod]
+
+instance Pretty Spec where
+        pretty (ValueSpec id ty) = hsep [pretty id, colon, pretty ty]
+        pretty (TypeSpec id kn) = hsep [pretty id, colon, pretty kn]
+
+instance Pretty Decl where
+        pretty (OpenDecl path) = hsep ["open", pretty path]
+        pretty FixityDecl = "infix" -- tmp
+        pretty (BindDecl bnd) = pretty bnd
+        pretty (SpecDecl spc) = pretty spc
+
+instance Pretty Module where
+        pretty (Module decs) = vsep (map pretty decs)

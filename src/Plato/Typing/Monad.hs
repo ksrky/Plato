@@ -3,13 +3,13 @@
 
 module Plato.Typing.Monad where
 
-import Control.Exception.Safe
-import Control.Monad.Reader
-import Data.IORef
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Reader (MonadReader (ask))
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Global
+import Plato.Common.Ident as Ident
 import Plato.Common.Location
-import Plato.Syntax.Typing.Ident as Ident
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env
@@ -20,95 +20,61 @@ data Context = Context
         , errloc :: IORef Span
         }
 
-newtype Typ m a = Typ {runTyp :: Context -> m a}
+class HasEnv a where
+        getEnv :: Monad m => a -> m Env
+        modifyEnv :: (Env -> Env) -> a -> a
 
-instance Monad m => Functor (Typ m) where
-        fmap f (Typ m) = Typ $ \ctx -> do
-                x <- m ctx
-                return (f x)
+instance HasEnv Env where
+        getEnv = return
+        modifyEnv = id
+instance HasEnv Context where
+        getEnv = getEnv . typenv
+        modifyEnv f ctx = ctx{typenv = f (typenv ctx)}
 
-instance Monad m => Applicative (Typ m) where
-        pure x = Typ (\_ -> return x)
-        f <*> x = Typ $ \ctx -> do
-                f' <- runTyp f ctx
-                runTyp (fmap f' x) ctx
+-- Creating, reading and writing IORef
+newMIORef :: MonadIO m => a -> m (IORef a)
+newMIORef = liftIO . newIORef
 
-instance Monad m => Monad (Typ m) where
-        m >>= k = Typ $ \ctx -> do
-                v <- runTyp m ctx
-                runTyp (k v) ctx
+readMIORef :: MonadIO m => IORef a -> m a
+readMIORef = liftIO . readIORef
 
-instance MonadThrow m => MonadThrow (Typ m)
+writeMIORef :: MonadIO m => IORef a -> a -> m ()
+writeMIORef = (liftIO .) . writeIORef
 
-instance MonadTrans Typ where
-        lift m = Typ (const m)
+-- | Creating and rewriting Uniq
+newUniq :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Unique
+newUniq = pickUnique =<< ask
 
-instance Monad m => MonadReader Env (Typ m) where
-        ask = Typ (return . typenv)
-        local f (Typ m) = Typ (\ctx -> m ctx{typenv = f (typenv ctx)})
-
-asksM :: (Env -> m a) -> Typ m a
-asksM f = Typ (f . typenv)
-
--- | creating, reading and writing IORef
-newTypRef :: MonadIO m => a -> Typ m (IORef a)
-newTypRef v = lift (liftIO $ newIORef v)
-
-readTypRef :: MonadIO m => IORef a -> Typ m a
-readTypRef r = lift (liftIO $ readIORef r)
-
-writeTypRef :: MonadIO m => IORef a -> a -> Typ m ()
-writeTypRef r v = lift (liftIO $ writeIORef r v)
-
--- creating and rewriting Uniq
-newUniq :: MonadIO m => Typ m Unique
-newUniq = Typ $ \ctx -> do
-        let ref = uniq ctx
-        u <- liftIO $ readIORef ref
-        liftIO $ writeIORef ref (u + 1)
-        return u
-
--- | type variable generation
-newTyVar :: MonadIO m => Typ m Type
+-- | Type variable generation
+newTyVar :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Type
 newTyVar = MetaT <$> newMetaTv
 
-newSkolemTyVar :: MonadIO m => TyVar -> Typ m TyVar
+newSkolemTyVar :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => TyVar -> m TyVar
 newSkolemTyVar tv = do
         u <- newUniq
         return $ SkolemTv (unTyVar tv){stamp = u}
 
-newMetaTv :: MonadIO m => Typ m MetaTv
-newMetaTv = MetaTv <$> newUniq <*> newTypRef Nothing
+newMetaTv :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m MetaTv
+newMetaTv = MetaTv <$> newUniq <*> liftIO (newIORef Nothing)
 
-readMetaTv :: MonadIO m => MetaTv -> Typ m (Maybe Tau)
-readMetaTv (MetaTv _ ref) = readTypRef ref
+readMetaTv :: MonadIO m => MetaTv -> m (Maybe Tau)
+readMetaTv (MetaTv _ ref) = liftIO $ readIORef ref
 
-writeMetaTv :: MonadIO m => MetaTv -> Tau -> Typ m ()
-writeMetaTv (MetaTv _ ref) ty = writeTypRef ref (Just ty)
+writeMetaTv :: MonadIO m => MetaTv -> Tau -> m ()
+writeMetaTv (MetaTv _ ref) ty = liftIO $ writeIORef ref (Just ty)
 
--- | kind variable generation
-newKnVar :: MonadIO m => Typ m Kind
+-- | Kind variable generation
+newKnVar :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Kind
 newKnVar = MetaK <$> newMetaKv
 
-newMetaKv :: MonadIO m => Typ m MetaKv
-newMetaKv = MetaKv <$> newUniq <*> newTypRef Nothing
+newMetaKv :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m MetaKv
+newMetaKv = MetaKv <$> newUniq <*> liftIO (newIORef Nothing)
 
-readMetaKv :: MonadIO m => MetaKv -> Typ m (Maybe Kind)
-readMetaKv (MetaKv _ ref) = readTypRef ref
+readMetaKv :: MonadIO m => MetaKv -> m (Maybe Kind)
+readMetaKv (MetaKv _ ref) = liftIO $ readIORef ref
 
-writeMetaKv :: MonadIO m => MetaKv -> Kind -> Typ m ()
-writeMetaKv (MetaKv _ ref) ty = writeTypRef ref (Just ty)
-
--- | writeing error location
-readErrLoc :: MonadIO m => Typ m Span
-readErrLoc = Typ $ \env -> do
-        let ref = errloc env
-        liftIO $ readIORef ref
-
-writeErrLoc :: MonadIO m => Span -> Typ m ()
-writeErrLoc sp = Typ $ \env -> do
-        let ref = errloc env
-        liftIO $ writeIORef ref sp
+writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
+writeMetaKv (MetaKv _ ref) ty = liftIO $ writeIORef ref (Just ty)
 
 -- | Context management
 initContext :: MonadIO m => Env -> m Context

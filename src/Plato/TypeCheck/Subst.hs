@@ -1,4 +1,4 @@
-module Plato.TypeCheck.Subst where
+module Plato.TypeCheck.Subst (subst, apply) where
 
 import qualified Data.Map.Strict as M
 
@@ -17,6 +17,6 @@ apply s (AllT tvs body) = AllT tvs $ apply (foldr (\(tv, _) -> M.delete tv) s tv
 apply s (AppT fun arg) = AppT (apply s <$> fun) (apply s <$> arg)
 apply s (AbsT var mbkn body) = AbsT var mbkn (apply s <$> body)
 -- apply s (RecT var kn body) = RecT var kn (apply s <$> body)
-apply s (RecordT fields) = RecordT (map (\(l, ty) -> (l, apply s <$> ty)) fields)
-apply s (SumT fields) = SumT (map (\(l, tys) -> (l, map (apply s <$>) tys)) fields)
+-- apply s (RecordT fields) = RecordT (map (\(l, ty) -> (l, apply s <$> ty)) fields)
+-- apply s (SumT fields) = SumT (map (\(l, tys) -> (l, map (apply s <$>) tys)) fields)
 apply _ ty@MetaT{} = ty

@@ -12,6 +12,9 @@ import Plato.Syntax.Abstract.Expr
 import Plato.Syntax.Abstract.Kind
 import Plato.Syntax.Abstract.Type
 
+----------------------------------------------------------------
+-- Datas
+----------------------------------------------------------------
 data Bind :: Data.Kind.Type -> Data.Kind.Type where
         ValueBind :: Ident -> Maybe (Type a) -> LExpr a -> Bind a
         TypeBind :: Ident -> Maybe (Kind a) -> LType a -> Bind a
@@ -33,6 +36,9 @@ newtype Module :: Data.Kind.Type -> Data.Kind.Type where
 newtype Signature :: Data.Kind.Type -> Data.Kind.Type where
         Signature :: [Spec a] -> Signature a
 
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
 instance Substitutable (Spec a) where
         subst sub (ValueSpec id ty) = ValueSpec id (subst sub ty)
         subst sub (TypeSpec id kn) = TypeSpec id (subst sub kn)
@@ -41,6 +47,9 @@ instance Eq (Decl a)
 instance Show (Decl a)
 instance Pretty (Decl a)
 
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 {-}
 instance Substitutable Sig where
         subst sub (SigDecls decs) = SigDecls (map (subst sub) decs)

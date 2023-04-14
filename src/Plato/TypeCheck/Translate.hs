@@ -4,12 +4,12 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
 import Plato.Common.Global
+import Plato.Common.Ident as Ident
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Common.Path as Path
 import Plato.Syntax.Typing.Expr
-import Plato.Syntax.Typing.Ident as Ident
 import Plato.Syntax.Typing.Kind
-import Plato.Syntax.Typing.Path as Path
 import Plato.Syntax.Typing.Type
 
 data Coercion = Id | Coer (Expr -> Expr)
@@ -41,7 +41,7 @@ prpolyTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion
 prpolyTrans [] coercion = coercion
 prpolyTrans sks1 coercion = Coer $ \e -> TAbsE sks1 (noLoc $ coercion @@ TAppE (noLoc e) (map (VarT . fst) sks1))
 
-prfunTrans :: (MonadReader glb m, HasUnique glb, MonadIO m) => [(TyVar, Maybe Kind)] -> Sigma -> Coercion -> m Coercion
+prfunTrans :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => [(TyVar, Maybe Kind)] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coercion = return coercion
 prfunTrans sks _ Id = return $ Coer $ \e -> TAbsE sks (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks))
 prfunTrans sks arg_ty coercion = do
@@ -57,7 +57,7 @@ deepskolTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 >.> coer2
 deepskolTrans skol_tvs coer1 coer2 = coer1 >.> Coer (TAbsE skol_tvs . noLoc) >.> coer2
 
-funTrans :: (MonadReader glb m, HasUnique glb, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
+funTrans :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- Ident.fresh $ str2varName "$x"

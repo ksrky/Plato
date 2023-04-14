@@ -13,7 +13,7 @@ import Plato.Syntax.Typing.Module
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Monad
 
-zonkExpr :: MonadIO m => Expr -> Typ m Expr
+zonkExpr :: MonadIO m => Expr -> m Expr
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
 zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkExpr `traverse` body
@@ -39,7 +39,7 @@ zonkExpr (CaseE e mbty alts) =
                 <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr `traverse` body)
 zonkExpr _ = unreachable "TypeCheck.Utils.zonkExpr"
 
-zonkType :: MonadIO m => Type -> Typ m Type
+zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)
 zonkType (ConT tc) = return (ConT tc)
 zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
@@ -48,12 +48,12 @@ zonkType (AllT tvs ty) = do
         AllT tvs' <$> zonkType `traverse` ty
 zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
 zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
-zonkType (RecordT fields) = do
+{-zonkType (RecordT fields) = do
         fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType `traverse` ty
         return $ RecordT fields'
 zonkType (SumT fields) = do
         fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM (zonkType `traverse`) tys
-        return $ SumT fields'
+        return $ SumT fields'-}
 zonkType (MetaT tv) = do
         mb_ty <- readMetaTv tv
         case mb_ty of
@@ -63,7 +63,7 @@ zonkType (MetaT tv) = do
                         writeMetaTv tv ty'
                         return ty'
 
-zonkKind :: MonadIO m => Kind -> Typ m Kind
+zonkKind :: MonadIO m => Kind -> m Kind
 zonkKind StarK = return StarK
 zonkKind (ArrK kn1 kn2) = do
         kn1' <- zonkKind kn1
@@ -78,5 +78,19 @@ zonkKind (MetaK kv) = do
                         writeMetaKv kv kn'
                         return kn'
 
-zonkModule :: MonadIO m => Module -> Typ m Module
-zonkModule = undefined
+zonkBind :: MonadIO m => Bind -> m Bind
+zonkBind (ValueBind id mty exp) = ValueBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp
+zonkBind (TypeBind id mkn ty) = TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkBind (ModuleBind id mod) = ModuleBind id <$> zonkModule mod
+
+zonkSpec :: MonadIO m => Spec -> m Spec
+zonkSpec (ValueSpec id ty) = ValueSpec id <$> zonkType ty
+zonkSpec (TypeSpec id kn) = TypeSpec id <$> zonkKind kn
+
+zonkDecl :: MonadIO m => Decl -> m Decl
+zonkDecl (BindDecl bnd) = BindDecl <$> zonkBind bnd
+zonkDecl (SpecDecl spc) = SpecDecl <$> zonkSpec spc
+zonkDecl dec = return dec
+
+zonkModule :: MonadIO m => Module -> m Module
+zonkModule (Module decs) = Module <$> mapM zonkDecl decs

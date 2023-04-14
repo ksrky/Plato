@@ -2,14 +2,16 @@ module Plato.Syntax.Typing.Expr where
 
 import Prettyprinter
 
+import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Syntax.Typing.Ident
-import Plato.Syntax.Typing.Kind
+import Plato.Common.Path
 import {-# SOURCE #-} Plato.Syntax.Typing.Module
 import Plato.Syntax.Typing.Pat
-import Plato.Syntax.Typing.Path
 import Plato.Syntax.Typing.Type
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 type LExpr = Located Expr
 
 data Expr
@@ -18,12 +20,29 @@ data Expr
         | AbsE Ident (Maybe Type) LExpr
         | PAbsE LPat (Maybe Type) LExpr
         | TAppE LExpr [Type]
-        | TAbsE [(TyVar, Maybe Kind)] LExpr
+        | TAbsE [Quant] LExpr
         | LetE [Decl] LExpr
         | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
-        | PBarE LExpr LExpr
         deriving (Eq, Show)
 
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
+instance Substitutable Expr where
+        substPath (VarE path) = VarE <$> substPath path
+        substPath (AppE fun arg) = AppE <$> substPath `traverse` fun <*> substPath `traverse` arg
+        substPath (AbsE var mty body) = AbsE var <$> substPath `traverse` mty <*> substPath `traverse` body
+        substPath (PAbsE pat mty body) = PAbsE pat <$> substPath `traverse` mty <*> substPath `traverse` body
+        substPath (TAppE fun tyargs) = TAppE <$> substPath `traverse` fun <*> mapM substPath tyargs
+        substPath (TAbsE qnts body) = TAbsE qnts <$> substPath `traverse` body
+        substPath (LetE decs body) = LetE <$> substPath `traverse` decs <*> substPath `traverse` body
+        substPath (CaseE match mty alts) = do
+                alts' <- mapM (\(pat, exp) -> (,) <$> substPath `traverse` pat <*> substPath `traverse` exp) alts
+                CaseE <$> substPath `traverse` match <*> substPath `traverse` mty <*> return alts'
+
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = pprapp exp
@@ -37,7 +56,8 @@ instance Pretty Expr where
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace
-        pretty (PBarE lhs rhs) = hsep [pretty lhs, pipe, pretty rhs]
+
+-- pretty (PBarE lhs rhs) = hsep [pretty lhs, pipe, pretty rhs]
 
 pprexpr :: Expr -> Doc ann
 pprexpr e@VarE{} = pretty e

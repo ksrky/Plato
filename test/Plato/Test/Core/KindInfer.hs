@@ -2,12 +2,12 @@
 
 module Plato.Test.Core.KindInfer where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Monad
 import Plato.Syntax.Typing
 import qualified Plato.Transl.PsToTyp as T
 import qualified Plato.Transl.SrcToPs as P
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Monad
 import Plato.Typing.KindInfer
 
 import Control.Exception.Safe

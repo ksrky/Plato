@@ -3,14 +3,14 @@
 
 module Plato.Test.Parsing.FixResol where
 
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Syntax.Parsing
 import qualified Plato.Syntax.Parsing as Parsing
 import Plato.Transl.SrcToPs
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Plato.Test.Parsing.Utils
 import Plato.Test.Utils

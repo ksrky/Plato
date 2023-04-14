@@ -36,7 +36,7 @@ data MetaKv :: Data.Kind.Type -> Data.Kind.Type where
                 MetaKv a
 
 ----------------------------------------------------------------
--- Class instances
+-- Basic instances
 ----------------------------------------------------------------
 instance Eq (MetaKv a) where
         (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2

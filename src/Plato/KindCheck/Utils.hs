@@ -1,18 +1,12 @@
-{-# LANGUAGE TupleSections #-}
+module Plato.KindCheck.Utils (getMetaKvs) where
 
-module Plato.KindCheck.Utils where
-
-import Control.Monad
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class (MonadIO)
 import qualified Data.Set as S
 
-import Plato.Common.Error
-import Plato.Syntax.Typing.Kind
-import Plato.Syntax.Typing.Type
-import Plato.Typing.Monad
+import Plato.Syntax.Typing
 import Plato.Typing.Zonking
 
-getMetaKvs :: MonadIO m => Kind -> Typ m (S.Set MetaKv)
+getMetaKvs :: MonadIO m => Kind -> m (S.Set MetaKv)
 getMetaKvs kn = do
         kn' <- zonkKind kn
         return (metaKvs kn')

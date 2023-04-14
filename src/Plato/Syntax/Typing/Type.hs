@@ -1,27 +1,31 @@
 module Plato.Syntax.Typing.Type where
 
 import Data.IORef (IORef)
-import Plato.Typing.Subst
 import Prettyprinter
 
 import Plato.Common.Global
-import Plato.Common.Location 
-import Plato.Syntax.Typing.Ident as Ident
+import Plato.Common.Ident as Ident
+import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Syntax.Typing.Kind
-import Plato.Syntax.Typing.Path
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 type LType = Located Type
+
+type Quant = (TyVar, Maybe Kind)
 
 data Type
         = VarT TyVar
         | ConT Path
         | ArrT LType LType
-        | AllT [(TyVar, Maybe Kind)] (Located Rho)
+        | AllT [Quant] (Located Rho)
         | AppT LType LType
         | AbsT Ident (Maybe Kind) LType
-        | RecordT [(Ident, LType)]
-        | SumT [(Ident, [LType])]
-        | MetaT MetaTv
+        | --  | RecordT [(Ident, LType)]
+          --  | SumT [(Ident, [LType])]
+          MetaT MetaTv
         deriving (Eq, Show)
 
 type Sigma = Type
@@ -35,6 +39,9 @@ data TyVar
 
 data MetaTv = MetaTv Unique (IORef (Maybe Tau))
 
+----------------------------------------------------------------
+-- Basic interfaces
+----------------------------------------------------------------
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
         (SkolemTv id1) == (SkolemTv id2) = id1 == id2
@@ -50,8 +57,17 @@ instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
 
 instance Substitutable Type where
-        subst _ _ = undefined
+        substPath (VarT tv) = return $ VarT tv
+        substPath (ConT tc) = ConT <$> substPath tc
+        substPath (ArrT arg res) = ArrT <$> substPath `traverse` arg <*> substPath `traverse` res
+        substPath (AllT qnts body) = AllT qnts <$> substPath `traverse` body
+        substPath (AppT fun arg) = AppT <$> substPath `traverse` fun <*> substPath `traverse` arg
+        substPath (AbsT var mkn body) = AbsT var <$> substPath `traverse` mkn <*> substPath `traverse` body
+        substPath (MetaT mtv) = return $ MetaT mtv
 
+----------------------------------------------------------------
+-- Pretty printing
+----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
         pretty (SkolemTv id) = pretty id
@@ -59,12 +75,12 @@ instance Pretty TyVar where
 instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
-        pretty (AppT fun arg) = pretty fun <+> pprty AppPrec (unLoc arg)
         pretty (ArrT arg res) = pprty ArrPrec (unLoc arg) <+> "->" <+> pprty TopPrec (unLoc res)
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
+        pretty (AppT fun arg) = pretty fun <+> pprty AppPrec (unLoc arg)
         pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
         -- pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
-        pretty (RecordT fields) =
+        {-pretty (RecordT fields) =
                 hsep
                         [ lbrace
                         , concatWith (\d -> (<+> comma <+> d)) (map (\(var, exp) -> pretty var <+> colon <+> pretty exp) fields)
@@ -78,7 +94,7 @@ instance Pretty Type where
                                         (\(c, tys) -> pretty c <> hsep (map (pprty AppPrec . unLoc) tys))
                                         fields
                                 )
-                        <> rangle
+                        <> rangle-}
         pretty (MetaT tv) = viaShow tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
