@@ -48,6 +48,9 @@ tyvarName = Name TyvarName
 tyconName :: T.Text -> Name
 tyconName = Name TyconName
 
+modName :: T.Text -> Name
+modName = Name ModName
+
 str2varName :: String -> Name
 str2varName = varName . T.pack
 

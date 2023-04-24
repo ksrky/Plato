@@ -1,6 +1,9 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Plato.Common.Fixity where
 
-import Data.Map.Strict as M
+import Plato.Common.Ident
+
 import Prettyprinter
 
 ----------------------------------------------------------------
@@ -29,4 +32,10 @@ data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 ----------------------------------------------------------------
 -- FixityEnv
 ----------------------------------------------------------------
-type FixityEnv a = M.Map a Fixity
+type FixityEnv = IdentMap Fixity
+
+class HasFixityEnv a where
+        getFixityEnv :: a -> FixityEnv
+
+instance HasFixityEnv FixityEnv where
+        getFixityEnv = id

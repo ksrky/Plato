@@ -8,8 +8,8 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 
 import Control.Monad.Reader.Class
-import Plato.Common.Ident as Ident
-import Plato.Common.Location (Span, combineSpans)
+import Plato.Common.Ident
+import Plato.Common.Location
 
 ------------------
 --     Path     --
@@ -19,9 +19,9 @@ data Path
         | PDot Path Ident
         deriving (Eq, Ord, Show)
 
-getLoc :: Path -> Span
-getLoc (PIdent id) = Ident.span id
-getLoc (PDot root field) = combineSpans (getLoc root) (Ident.span field)
+instance GetLoc Path where
+        getLoc (PIdent id) = spanIdent id
+        getLoc (PDot root field) = combineSpans (getLoc root) (spanIdent field)
 
 instance Pretty Path where
         pretty (PIdent id) = pretty id

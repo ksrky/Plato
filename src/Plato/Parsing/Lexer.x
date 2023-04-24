@@ -35,18 +35,20 @@ $symbol = $common
 @varsym = ($symbol # \:) $symbol*
 @consym = \: $symbol+
 
-@qual = (@conid \.)+
-@qvarid = @qual @varid
-@qconid = @qual @conid
-@qvarsym = @qual @varsym
-@qconsym = @qual @consym
+@qual = @conid \.
+@qvarid = @qual+ @varid
+@qconid = @qual+ @conid
+@qvarsym = @qual+ @varsym
+@qconsym = @qual+ @consym
 
 @decimal = $digit+
 
 tokens :-
--- start code: code = 1
---             comment = 2
---             layout = 3
+--  start code is alphabetic order:
+--    code = 1
+--    comment = 2
+--    layout = 3
+--    qual = 4
 
 <0> $nl+                        ;
 <0> $white_nonl+                { spaces }
@@ -56,7 +58,8 @@ tokens :-
 <layout> $white_nonl*           { layoutSpaces }
 
 -- | line comment
-<0, code> "--" \-* ~$symbol .*  ;
+<0, code, layout>
+        "--" \-* ~$symbol .*    ;
 
 -- | block comment
 <0, code, comment> "{-"         { beginComment }
@@ -74,6 +77,7 @@ tokens :-
 <0, code> infixr                { keyword KwInfixR }
 <code> in                       { keyword KwIn }
 <code> of                       { layoutKeyword KwOf }
+<0, code> open                  { keyword KwOpen }
 <code> let                      { layoutKeyword KwLet }
 <0, code> module                { keyword KwModule }
 <code> where                    { layoutKeyword KwWhere }
@@ -99,14 +103,20 @@ tokens :-
 <code> \=                       { symbol SymEqual }       
 <code> \|                       { symbol SymVBar }
 
-<0, code> @varid                { varid }
-<0, code> @conid                { conid }
-<code> @consym                  { consym }
+-- <0, code> @varid                { varid }
+-- <0, code> @conid                { conid }
+-- <code> @consym                  { consym }
 
-<code> @qvarid                  { qvarid }
-<code> @qconid                  { qconid }
-<code> @qvarsym                 { qvarsym }
-<code> @qconsym                 { qconsym }
+-- <code> @qvarid                  { qvarid }
+-- <code> @qconid                  { qconid }
+-- <code> @qvarsym                 { qvarsym }
+-- <code> @qconsym                 { qconsym }
+
+<code, qual> @qual              { qualifier }
+<0, code, qual> varid           { varid }
+<0, code, qual> conid           { conid }
+<code, qual> varsym             { varsym }
+<code, qual> consym             { consym }
 
 <code> @decimal                 { integer }
 

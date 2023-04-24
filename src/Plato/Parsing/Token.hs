@@ -10,6 +10,7 @@ data Token
         | TokConId T.Text
         | TokVarSym T.Text
         | TokConSym T.Text
+        | TokQual T.Text
         | TokQVarId T.Text
         | TokQConId T.Text
         | TokQVarSym T.Text
@@ -27,6 +28,7 @@ data Keyword
         | KwInfixR
         | KwIn
         | KwOf
+        | KwOpen
         | KwLet
         | KwModule
         | KwWhere
@@ -66,6 +68,7 @@ instance Pretty Token where
         pretty (TokVarId t) = pretty t
         pretty (TokQVarId t) = pretty t
         pretty (TokConId t) = pretty t
+        pretty (TokQual t) = pretty t <> dot
         pretty (TokQConId t) = pretty t
         pretty (TokVarSym t) = pretty t
         pretty (TokQVarSym t) = pretty t
@@ -83,6 +86,7 @@ instance Pretty Keyword where
         pretty KwInfixR = "infixr"
         pretty KwIn = "in"
         pretty KwOf = "of"
+        pretty KwOpen = "open"
         pretty KwLet = "let"
         pretty KwModule = "module"
         pretty KwWhere = "where"

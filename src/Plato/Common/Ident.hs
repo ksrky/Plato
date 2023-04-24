@@ -8,32 +8,35 @@ import Prettyprinter
 import Prelude hiding (span)
 
 import Plato.Common.Error
-import Plato.Common.Global as Global
+import Plato.Common.Global
 import Plato.Common.Location
 import Plato.Common.Name
 
 -- | Identifier
-data Ident = Ident {name :: Name, span :: Span, stamp :: Unique}
+data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Unique}
         deriving (Ord, Show)
 
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2
 
+instance GetLoc Ident where
+        getLoc = spanIdent
+
 instance Pretty Ident where
-        pretty id = pretty (name id)
+        pretty id = pretty (nameIdent id)
 
-ident :: Located Name -> Int -> Ident
-ident (L sp x) i = Ident{name = x, span = sp, stamp = i}
+ident :: Located Name -> Unique -> Ident
+ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
 
-fresh :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Name -> m Ident
-fresh x = do
-        u <- Global.pickUnique =<< ask
-        return Ident{name = x, span = NoSpan, stamp = u}
+freshIdent :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Name -> m Ident
+freshIdent x = do
+        u <- pickUnique =<< ask
+        return Ident{nameIdent = x, spanIdent = NoSpan, stamp = u}
 
 -- | Identifier Map
 type IdentMap a = M.Map Ident a
 
-lookup :: MonadThrow m => Ident -> M.Map Ident a -> m a
-lookup id idmap = case M.lookup id idmap of
+lookupIdent :: MonadThrow m => Ident -> M.Map Ident a -> m a
+lookupIdent id idmap = case M.lookup id idmap of
         Just val -> return val
-        Nothing -> throwLocErr (span id) $ hsep ["Not in scope ", squotes $ pretty id]
+        Nothing -> throwLocErr (spanIdent id) $ hsep ["Not in scope ", squotes $ pretty id]

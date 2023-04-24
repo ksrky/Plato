@@ -35,7 +35,7 @@ mkLoc f (PsPosn _ l c) = Loc f l c
 mkSpan :: PsPosn -> T.Text -> Int -> Parser Span
 mkSpan pos inp len = do
         f <- gets parser_file
-        return $ Span (mkLoc f pos) (mkLoc f $ movePosn pos inp len)
+        return $ Span (mkLoc f pos) (mkLoc f $ movePosn pos (T.take len inp))
 
 ----------------------------------------------------------------
 -- Token
@@ -44,29 +44,30 @@ token :: (T.Text -> Token) -> Action
 token f ainp@(pos, _, _, inp) len = do
         let t = T.take len inp
         sp <- mkSpan pos inp len
+        sp0 <- mkSpan pos inp 0
         lev <- getIndentLevels
         scd <- getStartCode
         case lev of
-                _ | scd == code -> return $ L sp (f t)
+                _ | scd /= 0 -> return $ L sp (f t)
                 m : ms
                         | m == 0 -> do
                                 -- note: Layout rule
                                 -- L (< 0 >: ts) (m : ms)  = ;  :  (L ts (m : ms))             if m = 0
                                 setStartCode code
                                 setInput ainp
-                                return $ L sp (TokSymbol SymSemicolon)
+                                return $ L sp0 (TokSymbol SymSemicolon)
                         | m > 0 -> do
                                 -- note: Layout rule
                                 -- L (< 0 >: ts) (m : ms)  = }  :  (L (< 0 >: ts) ms)          if m > 0
                                 setIndentLevels ms
                                 setInput ainp
-                                return $ L sp (TokSymbol SymVRBrace)
+                                return $ L sp0 (TokSymbol SymVRBrace)
                 [] -> do
                         ---------- note: Layout rule
                         ---------- L (< 0 >: ts) []        = L ts []
                         setStartCode code
                         setInput ainp
-                        return $ L sp (TokSymbol SymSemicolon)
+                        return $ L sp0 (TokSymbol SymSemicolon)
                 _ -> error "unreachable: negative indent level"
 
 keyword :: Keyword -> Action
@@ -91,6 +92,9 @@ varsym (pos, _, _, inp) len = do
 
 consym :: Action
 consym = token TokConSym
+
+qualifier :: Action
+qualifier = begin qual >> token TokQual
 
 qvarid :: Action
 qvarid = token TokQVarId
@@ -121,7 +125,7 @@ endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth
         sp <- mkSpan pos inp len
-        when (depth <= 0) $ lift $ throwLocErr sp "block comment terminated without starting"
+        when (depth <= 0) $ lift $ throwPsErr sp "block comment terminated without starting"
         setCommentDepth (depth - 1)
         when (depth == 1) $ setStartCode code
         alexMonadScan

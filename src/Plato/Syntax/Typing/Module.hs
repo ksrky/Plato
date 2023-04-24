@@ -46,7 +46,7 @@ instance Substitutable Spec where
         substPath (TypeSpec id kn) = TypeSpec id <$> substPath kn
 
 instance Substitutable Decl where
-        substPath dec@OpenDecl{} = return dec
+        substPath (OpenDecl path) = OpenDecl <$> substPath path
         substPath dec@FixityDecl{} = return dec
         substPath (BindDecl bnd) = BindDecl <$> substPath bnd
         substPath (SpecDecl spc) = SpecDecl <$> substPath spc

@@ -90,7 +90,7 @@ rightBrace (pos, _, _, inp) len = do
                 _ -> do
                         -- note: Layout rule
                         -- L (} : ts) ms           = parse-error
-                        lift $ throwLocErr sp "missing an opening brace before closing"
+                        lift $ throwPsErr sp "missing an opening brace before closing"
 
 leftBrace :: Action
 leftBrace (pos, _, _, inp) len = do
@@ -110,5 +110,5 @@ popLayoutLevel (L sp _) = do
                         -- note: Layout rule
                         -- L (t : ts) (m : ms)     = }  :  (L (t : ts) ms)             if m≠0 and parse-error(t)
                         setIndentLevels ms
-                        return sp
-                _ -> lift $ throwLocErr sp "parse error"
+                        return sp -- tmp: sp0
+                _ -> lift $ throwPsErr sp "parse error"

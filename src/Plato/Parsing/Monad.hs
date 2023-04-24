@@ -2,19 +2,17 @@
 
 module Plato.Parsing.Monad where
 
-import Plato.Common.Fixity
-import Plato.Common.Name
+import Plato.Common.Global
 
-import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import qualified Data.ByteString.Internal as BS
-import qualified Data.Map.Strict as M
+import Data.IORef
 import qualified Data.Text as T
 import Data.Word
 
-type Parser a = ParserT (Either SomeException) a
+type Parser a = ParserT IO a
 
 ----------------------------------------------------------------
 -- Basic interface
@@ -53,11 +51,11 @@ advancePosn (PsPosn a l c) '\t' = PsPosn (a + 1) l (c + tabsize - ((c - 1) `mod`
 advancePosn (PsPosn a l _) '\n' = PsPosn (a + 1) (l + 1) 1
 advancePosn (PsPosn a l c) _ = PsPosn (a + 1) l (c + 1)
 
-movePosn :: PsPosn -> T.Text -> Int -> PsPosn
-movePosn pos _ 0 = pos
-movePosn pos inp len = case T.uncons inp of
+movePosn :: PsPosn -> T.Text -> PsPosn
+movePosn pos inp = case T.uncons inp of
         Nothing -> pos
-        Just (c, inp') -> movePosn (advancePosn pos c) inp' (len -1)
+        Just (c, "") -> advancePosn pos c
+        Just (c, inp') -> movePosn (advancePosn pos c) inp'
 
 ----------------------------------------------------------------
 -- Parser monad
@@ -103,21 +101,22 @@ instance MonadIO m => MonadIO (ParserT m) where
                 a <- liftIO io
                 return (a, s)
 
-parse :: String -> T.Text -> ParserT m a -> m (a, PsState)
-parse file_name inp p =
+parse :: MonadIO m => String -> T.Text -> ParserT m a -> m (a, PsState)
+parse filename inp p = do
+        ref <- initUnique
         runParserT
                 p
                 PsState
-                        { parser_file = file_name
+                        { parser_file = filename
                         , parser_pos = startPos
                         , parser_inp = inp
                         , parser_chr = '\n'
                         , parser_bytes = []
                         , parser_scd = 0
-                        , parser_ust = initUserState
+                        , parser_ust = initUserState ref
                         }
 
-parseLine :: T.Text -> ParserT m a -> m (a, PsState)
+parseLine :: MonadIO m => T.Text -> ParserT m a -> m (a, PsState)
 parseLine inp p = parse "<interactive>" inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
 
 startPos :: PsPosn
@@ -156,8 +155,9 @@ setStartCode scd = modify $ \s -> s{parser_scd = scd}
 ----------------------------------------------------------------
 data PsUserState = PsUserState
         { ust_commentDepth :: Int
-        , ust_fixityEnv :: FixityEnv Name
-        , ust_indentLevels :: [Int]
+        , -- , ust_fixityEnv :: FixityEnv Name
+          ust_indentLevels :: [Int]
+        , ust_unique :: IORef Unique
         }
 
 getUserState :: Monad m => ParserT m PsUserState
@@ -166,14 +166,16 @@ getUserState = gets parser_ust
 setUserState :: Monad m => PsUserState -> ParserT m ()
 setUserState ust = modify $ \s -> s{parser_ust = ust}
 
-initUserState :: PsUserState
-initUserState =
+initUserState :: IORef Unique -> PsUserState
+initUserState ref =
         PsUserState
                 { ust_commentDepth = 0
-                , ust_fixityEnv = M.empty
-                , ust_indentLevels = []
+                , -- , ust_fixityEnv = M.empty
+                  ust_indentLevels = []
+                , ust_unique = ref
                 }
 
+-- comment depth ------------------------------------------
 getCommentDepth :: Monad m => ParserT m Int
 getCommentDepth = ust_commentDepth <$> getUserState
 
@@ -182,14 +184,15 @@ setCommentDepth cd = do
         ust <- getUserState
         setUserState ust{ust_commentDepth = cd}
 
-getFixityEnv :: Monad m => ParserT m (FixityEnv Name)
+{-getFixityEnv :: Monad m => ParserT m (FixityEnv Name)
 getFixityEnv = ust_fixityEnv <$> getUserState
 
 setFixityEnv :: Monad m => FixityEnv Name -> ParserT m ()
 setFixityEnv fixenv = do
         ust <- getUserState
-        setUserState ust{ust_fixityEnv = fixenv}
+        setUserState ust{ust_fixityEnv = fixenv-}
 
+-- indent levels ------------------------------------------
 getIndentLevels :: Monad m => ParserT m [Int]
 getIndentLevels = ust_indentLevels <$> getUserState
 
@@ -197,3 +200,15 @@ setIndentLevels :: Monad m => [Int] -> ParserT m ()
 setIndentLevels lev = do
         ust <- getUserState
         setUserState ust{ust_indentLevels = lev}
+
+-- unique ------------------------------------------
+instance HasUnique PsUserState where
+        getUnique = getUnique . ust_unique
+
+instance HasUnique PsState where
+        getUnique = getUnique . parser_ust
+
+freshUniq :: MonadIO m => ParserT m Unique
+freshUniq = do
+        st <- get
+        pickUnique st

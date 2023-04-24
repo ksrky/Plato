@@ -12,6 +12,7 @@ import Plato.Syntax.Core
 import Plato.Syntax.Parsing
 import Plato.Syntax.Typing
 import Plato.Typing.Env
+import Plato.Common.Path
 
 ----------------------------------------------------------------
 -- Plato Monad
@@ -27,8 +28,7 @@ data PlatoInfo = PInfo
 data PlatoStore = PStore {} deriving (Show)
 
 data PlatoState = PState
-        { plt_fixityEnv :: FixityEnv PsName
-        , plt_typEnv :: TypEnv
+        { plt_fixityEnv :: FixityEnv Path
         , plt_context :: Context
         }
 
@@ -61,15 +61,11 @@ initPState :: PlatoState
 initPState =
         PState
                 { plt_fixityEnv = M.empty
-                , plt_typEnv = emptyTypEnv
                 , plt_context = emptyContext
                 }
 
-modifyTypEnv :: Monad m => (TypEnv -> TypEnv) -> Plato m ()
-modifyTypEnv f = modify $ \ps@PState{plt_typEnv = typenv} -> ps{plt_typEnv = f typenv}
-
 class PlatoSub t where
-        liftPlato :: t m a -> Plato m a 
+        liftPlato :: t m a -> Plato m a
 
 type Plato m = RWST PlatoInfo PlatoStore PlatoState m
 

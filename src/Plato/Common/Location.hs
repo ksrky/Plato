@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Plato.Common.Location where
 
@@ -40,18 +41,28 @@ concatSpans (sp : sps) = combineSpans sp (concatSpans sps)
 data Located a = L Span a
         deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-instance Pretty a => Pretty (Located a) where
-        pretty (L _ x) = pretty x
-
-getLoc :: Located a -> Span
-getLoc (L sp _) = sp
-
 unLoc :: Located a -> a
 unLoc (L _ x) = x
 
 noLoc :: a -> Located a
 noLoc = L NoSpan
 
+class GetLoc a where
+        getLoc :: a -> Span
+
+instance GetLoc Span where
+        getLoc = id
+
+instance GetLoc (Located a) where
+        getLoc (L sp _) = sp
+
+instance GetLoc [Located a] where
+        getLoc locs = concatSpans (map getLoc locs)
+
+sL :: (GetLoc a, GetLoc b) => a -> b -> c -> Located c
+sL x y = L (combineSpans (getLoc x) (getLoc y))
+
+{-
 cL :: Located a -> b -> Located b
 cL loc = L (getLoc loc)
 
@@ -68,4 +79,7 @@ cLnL :: [Located a] -> Located b -> c -> Located c
 cLnL locs loc = L (concatSpans (map getLoc locs ++ [getLoc loc]))
 
 cLLn :: Located a -> [Located b] -> c -> Located c
-cLLn loc locs = L (concatSpans (getLoc loc : map getLoc locs))
+cLLn loc locs = L (concatSpans (getLoc loc : map getLoc locs))-}
+
+instance Pretty a => Pretty (Located a) where
+        pretty (L _ x) = pretty x

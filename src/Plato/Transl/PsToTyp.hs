@@ -152,6 +152,8 @@ transEvals topds = do
                 inferType exp'
         return $ map (unLoc . fst) res
 
+transModule :: (MonadThrow )
+
 ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> Plato m T.Module
 ps2typ (P.Program modn _ topds) = do
         fixenv <- gets plt_fixityEnv

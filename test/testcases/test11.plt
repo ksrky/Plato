@@ -1,7 +1,11 @@
-data Either a b = Left a | Right b
+data Either a b where
+	Left : a -> Either a b
+	Right : b -> Either a b
 
-data T = T1 | T2
+data T where
+	T1 : T
+	T2 : T
 
 case Left T1 of
-        Left x -> x
-        Right y -> y
+    Left x -> x
+    Right y -> y

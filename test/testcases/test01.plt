@@ -1,3 +1,5 @@
 -- | data type declaration
 
-data Bool = True | False
+data Bool where
+    True : Bool
+    False : Bool
