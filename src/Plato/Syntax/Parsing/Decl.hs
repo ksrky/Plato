@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Syntax.Parsing.Decl where
 
+import qualified Data.List
 import Prettyprinter
 
 import Plato.Common.Fixity
@@ -12,6 +14,9 @@ import Plato.Syntax.Parsing.Expr
 import Plato.Syntax.Parsing.Pat
 import Plato.Syntax.Parsing.Type
 
+----------------------------------------------------------------
+-- Datas and types
+----------------------------------------------------------------
 type LDecl = Located Decl
 type LModule = Located Module
 
@@ -25,6 +30,17 @@ data Decl
         deriving (Eq, Show)
 
 newtype Module = Module [LDecl] deriving (Eq, Show)
+
+-- | Ordering Decls
+orderDecls :: [Decl] -> [Decl]
+orderDecls =
+        Data.List.sortOn $ \case
+                OpenD{} -> (0 :: Int)
+                FixityD{} -> 1
+                ModuleD{} -> 2
+                DataD{} -> 3
+                FuncSigD{} -> 4
+                FuncD{} -> 5
 
 ----------------------------------------------------------------
 -- Basic instances

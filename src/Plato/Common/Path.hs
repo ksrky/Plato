@@ -10,18 +10,19 @@ import Data.Maybe (fromMaybe)
 import Control.Monad.Reader.Class
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 
 ------------------
 --     Path     --
 ------------------
 data Path
         = PIdent Ident
-        | PDot Path Ident
+        | PDot Path (Located Name)
         deriving (Eq, Ord, Show)
 
 instance GetLoc Path where
         getLoc (PIdent id) = spanIdent id
-        getLoc (PDot root field) = combineSpans (getLoc root) (spanIdent field)
+        getLoc (PDot root field) = combineSpans (getLoc root) (getLoc field)
 
 instance Pretty Path where
         pretty (PIdent id) = pretty id

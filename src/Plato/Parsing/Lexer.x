@@ -36,10 +36,6 @@ $symbol = $common
 @consym = \: $symbol+
 
 @qual = @conid \.
-@qvarid = @qual+ @varid
-@qconid = @qual+ @conid
-@qvarsym = @qual+ @varsym
-@qconsym = @qual+ @consym
 
 @decimal = $digit+
 
@@ -102,15 +98,6 @@ tokens :-
 <code> \:                       { symbol SymColon }
 <code> \=                       { symbol SymEqual }       
 <code> \|                       { symbol SymVBar }
-
--- <0, code> @varid                { varid }
--- <0, code> @conid                { conid }
--- <code> @consym                  { consym }
-
--- <code> @qvarid                  { qvarid }
--- <code> @qconid                  { qconid }
--- <code> @qvarsym                 { qvarsym }
--- <code> @qconsym                 { qconsym }
 
 <code, qual> @qual              { qualifier }
 <0, code, qual> varid           { varid }

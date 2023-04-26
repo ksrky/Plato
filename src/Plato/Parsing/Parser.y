@@ -75,11 +75,6 @@ consym                          { (mkLConSym -> Just $$) }
 
 qual                            { (mkLQual -> Just $$) }
 
-qvarid                          { (mkLQVarId -> Just $$) }
-qconid                          { (mkLQConId -> Just $$) }
-qvarsym                         { (mkLQVarSym -> Just $$) }
-qconsym                         { (mkLQConSym -> Just $$) }
-
 int                             { (mkLInt -> Just $$) }
 
 %%
@@ -96,8 +91,8 @@ impdecls    :: { [LTopDecl] }
             | {- empty -}                           { [] }
 
 impdecl     :: { LTopDecl }
-            : 'import' qmodcon                      { sL $1 $2 (Import $2 False) }
-            | 'open' 'import' qmodcon               { sL $1 $3 (Import $3 True) }
+            : 'import' qmodcon                      { sL $1 $2 (Import False $2) }
+            | 'open' 'import' qmodcon               { sL $1 $3 (Import True $3) }
 
 -----------------------------------------------------------
 -- Evaluation expressions
@@ -109,7 +104,10 @@ evals       :: { [LTopDecl] }
 -- Declarations
 -----------------------------------------------------------
 decls       :: { [LDecl] }
-            : decl ';' decls                        { $1 : $3 }
+            : decls_                                { orderDecls $1 }
+
+decls_      :: { [LDecl] }
+            : decl ';' decls_                       { $1 : $3 }
             | decl                                  { [$1] }
             | {- empty -}                           { [] }
 
@@ -372,6 +370,10 @@ mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
 
+mkPath :: [Ident] -> Name -> Path
+mkPath quals field = foldl PDot field  quals
+
 mkPath :: [Ident] -> Ident -> Path
-mkPath quals id = foldl PDot (PIdent id) quals
+mkPath [] id = PIdent id
+mkPath (q : quals) id = foldl (\p id -> PDot p (fromIdent id)) (PIdent q) (quals ++ [id])
 }

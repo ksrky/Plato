@@ -11,10 +11,6 @@ data Token
         | TokVarSym T.Text
         | TokConSym T.Text
         | TokQual T.Text
-        | TokQVarId T.Text
-        | TokQConId T.Text
-        | TokQVarSym T.Text
-        | TokQConSym T.Text
         | TokInt Int
         | TokEOF
         deriving (Eq, Show)
@@ -66,14 +62,10 @@ instance Pretty Token where
         pretty (TokKeyword k) = pretty k
         pretty (TokSymbol t) = pretty t
         pretty (TokVarId t) = pretty t
-        pretty (TokQVarId t) = pretty t
         pretty (TokConId t) = pretty t
-        pretty (TokQual t) = pretty t <> dot
-        pretty (TokQConId t) = pretty t
         pretty (TokVarSym t) = pretty t
-        pretty (TokQVarSym t) = pretty t
         pretty (TokConSym t) = pretty t
-        pretty (TokQConSym t) = pretty t
+        pretty (TokQual t) = pretty t <> dot
         pretty (TokInt n) = pretty n
         pretty TokEOF = "<eof>"
 

@@ -96,18 +96,6 @@ consym = token TokConSym
 qualifier :: Action
 qualifier = begin qual >> token TokQual
 
-qvarid :: Action
-qvarid = token TokQVarId
-
-qconid :: Action
-qconid = token TokQConId
-
-qvarsym :: Action
-qvarsym = token TokQVarSym
-
-qconsym :: Action
-qconsym = token TokQConSym
-
 integer :: Action
 integer = token (TokInt . read . T.unpack)
 

@@ -27,6 +27,7 @@ class HasEnv a where
 instance HasEnv Env where
         getEnv = return
         modifyEnv = id
+
 instance HasEnv Context where
         getEnv = getEnv . typenv
         modifyEnv f ctx = ctx{typenv = f (typenv ctx)}

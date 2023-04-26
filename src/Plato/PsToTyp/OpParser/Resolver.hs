@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Plato.Parsing.OpParser.Resolver where
+module Plato.PsToTyp.OpParser.Resolver where
 
 import Control.Exception.Safe
 import Control.Monad

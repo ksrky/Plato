@@ -28,6 +28,9 @@ instance Pretty Ident where
 ident :: Located Name -> Unique -> Ident
 ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
 
+fromIdent :: Ident -> Located Name
+fromIdent id = L (getLoc id) (nameIdent id)
+
 freshIdent :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Name -> m Ident
 freshIdent x = do
         u <- pickUnique =<< ask

@@ -9,6 +9,7 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Common.Path
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Module
@@ -34,13 +35,19 @@ findBinding (PDot root field) env = do
         find root env >>= \case
                 Signature specs -> case findField field specs of
                         Just bndng -> return bndng
-                        Nothing -> throwLocErr (spanIdent field) $ hsep [squotes $ pretty field, "is not in module", squotes $ pretty root]
+                        Nothing ->
+                                throwLocErr (getLoc field) $
+                                        hsep
+                                                [ squotes $ pretty field
+                                                , "is not in module"
+                                                , squotes $ pretty root
+                                                ]
 
-findField :: Ident -> [Spec] -> Maybe Binding
+findField :: Located Name -> [Spec] -> Maybe Binding
 findField _ [] = Nothing
-findField id1 (ValueSpec id2 ty : _) | id1 == id2 = Just $ ValueBinding ty
-findField id1 (TypeSpec id2 kn : _) | id1 == id2 = Just $ TypeBinding kn
-findField id (_ : rest) = findField id rest
+findField x1 (ValueSpec id2 ty : _) | unLoc x1 == nameIdent id2 = Just $ ValueBinding ty
+findField x1 (TypeSpec id2 kn : _) | unLoc x1 == nameIdent id2 = Just $ TypeBinding kn
+findField x (_ : rest) = findField x rest
 
 instance EnvManager Type where
         extend id ty = M.insert id (ValueBinding ty)

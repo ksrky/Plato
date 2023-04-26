@@ -45,17 +45,19 @@ library
       Plato.KindCheck.Unify
       Plato.KindCheck.Utils
       Plato.Main
+      Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
-      Plato.Parsing.OpParser
-      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
-      Plato.Parsing.Scoping
-      Plato.Parsing.Scoping.Restrictions
       Plato.Parsing.Token
+      Plato.PsToTyp
+      Plato.PsToTyp.OpParser
+      Plato.PsToTyp.OpParser.Resolver
+      Plato.Scoping
+      Plato.Scoping.Restrictions
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
@@ -137,17 +139,19 @@ executable plato
       Plato.KindCheck.Unify
       Plato.KindCheck.Utils
       Plato.Main
+      Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
-      Plato.Parsing.OpParser
-      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
-      Plato.Parsing.Scoping
-      Plato.Parsing.Scoping.Restrictions
       Plato.Parsing.Token
+      Plato.PsToTyp
+      Plato.PsToTyp.OpParser
+      Plato.PsToTyp.OpParser.Resolver
+      Plato.Scoping
+      Plato.Scoping.Restrictions
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl

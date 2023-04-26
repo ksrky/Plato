@@ -1,7 +1,7 @@
-module Plato.Parsing.Scoping.Restrictions where
+module Plato.Scoping.Restrictions where
 
 import Control.Exception.Safe
-import qualified Data.List as List
+import qualified Data.List
 import Prettyprinter
 
 import Plato.Common.Error
@@ -10,30 +10,35 @@ import Plato.Common.Location
 import Plato.Common.Path
 import Plato.Syntax.Parsing
 
-defNamesCheck :: MonadThrow m => [Ident] -> m ()
-defNamesCheck = loop
+-----------------------------------------------------------
+-- Syntax restrictions
+-----------------------------------------------------------
+
+-- | RULE 1: Declared name uniqueness
+defNamesUnique :: MonadThrow m => [Ident] -> m ()
+defNamesUnique = loop
     where
         loop :: MonadThrow m => [Ident] -> m ()
         loop [] = return ()
-        loop (id1 : ids) = case List.find (id1 ==) ids of
+        loop (id1 : ids) = case Data.List.find (id1 ==) ids of
                 Just id2 ->
                         throwLocErr (getLoc id2) $
-                                hsep
-                                        ["Multiple declarations for", squotes $ pretty id2]
+                                hsep ["Multiple declarations for", squotes $ pretty id2]
                 Nothing -> loop ids
 
-paramPatsCheck :: MonadThrow m => [LPat] -> m ()
-paramPatsCheck pats = do
+-- | RULE 2: Paramter name uniqueness
+paramPatsUnique :: MonadThrow m => [LPat] -> m ()
+paramPatsUnique pats = do
         let ids = concatMap allIdents pats
-        paramNamesCheck ids
+        paramNamesUnique ids
     where
         allIdents :: LPat -> [Ident]
         allIdents (L _ (ConP _ pats)) = concatMap allIdents pats
         allIdents (L _ (VarP id)) = [id]
         allIdents (L _ WildP) = []
 
-paramNamesCheck :: MonadThrow m => [Ident] -> m ()
-paramNamesCheck ids = do
+paramNamesUnique :: MonadThrow m => [Ident] -> m ()
+paramNamesUnique ids = do
         let dup = [(id1, id2) | id1 <- ids, id2 <- ids, nameIdent id1 == nameIdent id2]
         case dup of
                 [] -> return ()
@@ -41,8 +46,13 @@ paramNamesCheck ids = do
                         throwLocErr (combineSpans (getLoc id1) (getLoc id2)) $
                                 hsep ["Conflicting definitions for", squotes $ pretty id2]
 
--- before scoping
+-- | RULE 3: Data constructor name uniqueness
+dataConUnique :: MonadThrow m => [[Ident]] -> m ()
+dataConUnique = defNamesUnique . concat
+
+-- | RULE 4: Constructor signature rule
 dataConType :: MonadThrow m => Ident -> (Ident, LType) -> m ()
+-- before scoping
 dataConType id (con, ty) = loop1 ty
     where
         loop1 :: MonadThrow m => LType -> m ()

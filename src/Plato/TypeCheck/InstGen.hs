@@ -11,8 +11,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import qualified Data.Set as S
 
-import Plato.Common.Global as Global
-import Plato.Common.Ident as Ident
+import Plato.Common.Global
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Syntax.Typing
@@ -62,7 +62,7 @@ quantify ::
         m ([(TyVar, Maybe Kind)], Sigma)
 quantify [] ty = return ([], ty)
 quantify tvs ty = do
-        new_bndrs <- mapM ((BoundTv <$>) . Ident.fresh . str2tyvarName) $ take (length tvs) allBinders
+        new_bndrs <- mapM ((BoundTv <$>) . freshIdent . str2tyvarName) $ take (length tvs) allBinders
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
         ty' <- zonkType ty
         return (zip new_bndrs (repeat Nothing), AllT (map (,Nothing) new_bndrs) (noLoc ty'))

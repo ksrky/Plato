@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Parsing.OpParser where
+module Plato.PsToTyp.OpParser where
 
 import Control.Exception.Safe
 import Control.Monad.Reader.Class
@@ -10,8 +10,7 @@ import qualified Data.Map.Strict as M
 import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Parsing.OpParser.Resolver
-import Plato.Parsing.Scoping.Restrictions
+import Plato.PsToTyp.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 -- Operator parser
@@ -33,9 +32,7 @@ instance OpParser Expr where
                         LamE alts -> do
                                 LamE
                                         <$> mapM
-                                                ( \(pats, body) -> do
-                                                        paramPatsCheck pats
-                                                        (pats,) <$> opParser body
+                                                ( \(pats, body) -> (pats,) <$> opParser body
                                                 )
                                                 alts
                         LetE ds e -> do
@@ -45,9 +42,7 @@ instance OpParser Expr where
                         CaseE e alts ->
                                 CaseE <$> opParser e
                                         <*> mapM
-                                                ( \(pi, ei) -> do
-                                                        paramPatsCheck [pi]
-                                                        (pi,) <$> opParser ei
+                                                ( \(pi, ei) -> (pi,) <$> opParser ei
                                                 )
                                                 alts
                         FactorE e -> unLoc <$> opParser e
