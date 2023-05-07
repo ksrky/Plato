@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Scoping (scoping) where
+module Plato.Scoping (scopingProgram) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader.Class
+import Control.Monad.State
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
@@ -21,6 +22,8 @@ type Scope = M.Map Name Ident
 class HasScope a where
         getScope :: a -> Scope
         modifyScope :: (Scope -> Scope) -> a -> a
+        extendScope :: Ident -> a -> a
+        extendScope id = modifyScope (M.insert (nameIdent id) id)
 
 instance HasScope Scope where
         getScope = id
@@ -61,10 +64,13 @@ instance Scoping Expr where
                         <$> mapM
                                 ( \(pats, body) -> do
                                         paramPatsUnique pats
-                                        (pats,) <$> scoping body
+                                        (,) <$> scoping pats <*> scoping body
                                 )
                                 alts
-        scoping (LetE decs body) = LetE <$> mapM scoping decs <*> scoping body
+        scoping (LetE decs body) = do
+                (decs', env') <- runStateT (checkDecls decs) =<< ask
+                body' <- local (const env') (scoping body)
+                return $ LetE decs' body'
         scoping (CaseE match alts) =
                 CaseE <$> scoping match
                         <*> mapM (\(pat, body) -> (pat,) <$> scoping body) alts
@@ -72,7 +78,7 @@ instance Scoping Expr where
 
 instance Scoping Pat where
         scoping (ConP con pats) = ConP <$> scoping con <*> mapM scoping pats
-        scoping (VarP var) = VarP <$> scoping var
+        scoping (VarP var) = return $ VarP var
         scoping WildP = return WildP
 
 instance Scoping Type where
@@ -82,12 +88,14 @@ instance Scoping Type where
         scoping (ArrT arg res) = ArrT <$> scoping arg <*> scoping res
         scoping (AllT qnts body) = do
                 paramNamesUnique qnts
-                AllT qnts <$> scoping body
+                AllT qnts <$> local (\env -> foldr extendScope env qnts) (scoping body)
 
 instance Scoping Decl where
         scoping (OpenD path) = OpenD <$> scoping path
-        scoping (FixityD fix id) = FixityD fix <$> scoping id
-        scoping (ModuleD id mod) = ModuleD id <$> scoping mod
+        scoping (FixityD fix x) = return $ FixityD fix x
+        scoping (ModuleD id mod) = do
+                -- modify $ extendScope id
+                ModuleD id <$> scoping mod
         scoping (DataD id params fields) = do
                 paramNamesUnique params
                 DataD id params <$> mapM (\(con, body) -> (con,) <$> scoping body) fields
@@ -96,20 +104,11 @@ instance Scoping Decl where
                 paramPatsUnique params
                 FuncD <$> scoping id <*> mapM scoping params <*> scoping exp
 
-instance Scoping [Decl] where
-        scoping decs = do
-                let modids = [id | ModuleD id _ <- decs]
-                let dataids = [id | DataD id _ _ <- decs]
-                let funids = [id | FuncSigD id _ <- decs]
-                defNamesUnique [id | ModuleD id _ <- decs]
-                defNamesUnique [id | DataD id _ _ <- decs]
-                defNamesUnique [id | FuncSigD id _ <- decs]
-                dataConUnique $ [map fst fields | DataD _ _ fields <- decs]
-                let extend = \sc -> foldr (\id -> M.insert (nameIdent id) id) sc (modids ++ dataids ++ funids)
-                local (modifyScope extend) $ mapM scoping decs
-
-scopingDecls :: (MonadReader env m, MonadThrow m, HasScope env) => [LDecl] -> m ([LDecl], Scope)
-scopingDecls decs = do
+checkDecls ::
+        (MonadState env m, MonadReader env m, MonadThrow m, HasScope env) =>
+        [LDecl] ->
+        m [LDecl]
+checkDecls decs = do
         let modids = [id | L _ (ModuleD id _) <- decs]
         let dataids = [id | L _ (DataD id _ _) <- decs]
         let funids = [id | L _ (FuncSigD id _) <- decs]
@@ -118,15 +117,46 @@ scopingDecls decs = do
         defNamesUnique funids
         dataConUnique $ [map fst fields | L _ (DataD _ _ fields) <- decs]
         sc <- asks getScope
-        let sc' = foldr (\id -> M.insert (nameIdent id) id) sc (modids ++ dataids ++ funids)
-        (,sc') <$> local (modifyScope $ const sc') (mapM scoping decs)
+        let sc' = foldr extendScope sc (modids ++ dataids ++ funids)
+        modify $ modifyScope $ const sc'
+        local (modifyScope $ const sc') (scopingDecls decs)
+
+scopingDecls :: (MonadReader env m, HasScope env, MonadThrow m) => [LDecl] -> m [LDecl]
+scopingDecls [] = return []
+scopingDecls (dec : decs) = case unLoc dec of
+        OpenD path -> do
+                path' <- scoping path
+                return (dec{unLoc = OpenD path'} : decs)
+        FixityD{} -> (dec :) <$> scopingDecls decs
+        ModuleD id mod -> do
+                local (extendScope id) $ do
+                        mod' <- scoping mod
+                        decs' <- local (extendScope id) (scopingDecls decs)
+                        return $ dec{unLoc = ModuleD id mod'} : decs'
+        DataD id params constrs -> do
+                paramNamesUnique params
+                local (extendScope id) $ do
+                        constrs' <-
+                                local (\env -> foldr extendScope env params) $
+                                        mapM (\(con, ty) -> (con,) <$> scoping ty) constrs
+                        (dec{unLoc = DataD id params constrs'} :) <$> scopingDecls decs
+        FuncSigD id ty -> local (extendScope id) $ do
+                ty' <- scoping ty
+                (dec{unLoc = FuncSigD id ty'} :) <$> scopingDecls decs
+        FuncD id pats body -> do
+                paramPatsUnique pats
+                d <- FuncD <$> scoping id <*> mapM scoping pats <*> scoping body
+                (dec{unLoc = d} :) <$> scopingDecls decs
 
 instance Scoping Module where
-        scoping (Module decs) = Module <$> scoping decs
+        scoping (Module decs) = do
+                decs' <- evalStateT (checkDecls decs) =<< ask
+                return $ Module decs'
 
-scopingTopDecls :: (MonadReader env m, MonadThrow m, HasScope env) => [LTopDecl] -> m [LTopDecl]
-scopingTopDecls tdecs = do
-        imps <- sequence [L sp <$> (Import isopen <$> scoping path) | L sp (Import isopen path) <- tdecs]
-        (decs, _) <- scopingDecls [d | L _ (Decl d) <- tdecs]
-        evls <- sequence [L sp <$> (Eval <$> scoping e) | L sp (Eval e) <- tdecs]
-        return $ imps {- ++ decs-} ++ evls
+scopingProgram :: (MonadState env m, MonadReader env m, MonadThrow m, HasScope env) => [LTopDecl] -> m [LTopDecl]
+scopingProgram tdecs = do
+        imps <- sequence [L sp <$> (Import <$> scoping path) | L sp (Import path) <- tdecs]
+        let (fs, decs) = unzip [(L sp . Decl, d) | L sp (Decl d) <- tdecs]
+        (decs', env) <- runStateT (checkDecls decs) =<< ask
+        evls <- local (const env) $ sequence [L sp <$> (Eval <$> scoping e) | L sp (Eval e) <- tdecs]
+        return (imps ++ zipWith id fs decs' ++ evls)

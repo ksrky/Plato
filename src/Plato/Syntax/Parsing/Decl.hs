@@ -9,6 +9,7 @@ import Prettyprinter
 import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Common.Path
 import Plato.Syntax.Parsing.Expr
 import Plato.Syntax.Parsing.Pat
@@ -22,7 +23,7 @@ type LModule = Located Module
 
 data Decl
         = OpenD Path
-        | FixityD Fixity Ident
+        | FixityD Fixity (Located Name)
         | ModuleD Ident LModule
         | DataD Ident [Ident] [(Ident, LType)]
         | FuncSigD Ident LType

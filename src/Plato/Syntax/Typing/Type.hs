@@ -25,6 +25,10 @@ data Type
         | AbsT Ident (Maybe Kind) LType
         | --  | RecordT [(Ident, LType)]
           --  | SumT [(Ident, [LType])]
+
+          -- | RecT Ident (Maybe Kind) LType
+          --        | SumT [LType]
+          --        | ProductT [LType]
           MetaT MetaTv
         deriving (Eq, Show)
 

@@ -1,8 +1,6 @@
 module Plato.Common.Name where
 
-import Plato.Common.Error
-
-import Control.Exception.Safe
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Prettyprinter
 
@@ -70,29 +68,6 @@ wildcard :: Name
 wildcard = str2varName "_"
 
 ----------------------------------------------------------------
--- Module Name
+-- Name Env
 ----------------------------------------------------------------
-newtype ModuleName = ModuleName T.Text deriving (Eq)
-
-instance Ord ModuleName where
-        compare (ModuleName ts1) (ModuleName ts2) = compare ts1 ts2
-
-instance Show ModuleName where
-        show (ModuleName modn) = T.unpack modn
-
-instance Pretty ModuleName where
-        pretty (ModuleName modn) = pretty modn
-
-filePath2modName :: MonadThrow m => FilePath -> m ModuleName
-filePath2modName fname = case reverse fname of
-        't' : 'l' : 'p' : '.' : ndom -> return $ ModuleName (T.pack (reverse ndom))
-        _ -> throwFatal "file name must ends `.plt`"
-
-modn2name :: ModuleName -> Name
-modn2name (ModuleName modn) = Name ModName modn
-
-modn2names :: ModuleName -> [Name]
-modn2names (ModuleName modn) = map (Name ModName) (T.splitOn "." modn)
-
-mod2path :: ModuleName -> FilePath
-mod2path (ModuleName modn) = T.unpack (T.replace "." "/" modn) ++ ".plt"
+type NameMap a = M.Map Name a

@@ -20,22 +20,19 @@ zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkEx
 zonkExpr (TAppE body ty_args) = TAppE body <$> mapM zonkType ty_args
 zonkExpr (TAbsE ty_vars body) = TAbsE ty_vars <$> zonkExpr `traverse` body
 zonkExpr (LetE decs body) = do
-        decs' <-
-                mapM
-                        ( \case
-                                BindDecl (ValueBind id mty exp) -> BindDecl <$> (ValueBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp)
-                                BindDecl (TypeBind id mkn ty) -> BindDecl <$> (TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty)
-                                BindDecl (ModuleBind id mod) -> BindDecl <$> (ModuleBind id <$> zonkModule mod)
-                                SpecDecl (ValueSpec id ty) -> SpecDecl <$> (ValueSpec id <$> zonkType ty)
-                                SpecDecl (TypeSpec id kn) -> SpecDecl <$> (TypeSpec id <$> zonkKind kn)
-                                dec -> return dec
-                        )
-                        decs
+        decs' <- forM decs $ \case
+                BindDecl (ValueBind id mty exp) -> BindDecl <$> (ValueBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp)
+                -- BindDecl (TypeBind id mkn ty) -> BindDecl <$> (TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty)
+                BindDecl (DataBind id fields) -> BindDecl <$> (DataBind id <$> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) fields)
+                BindDecl (ModuleBind id mod) -> BindDecl <$> (ModuleBind id <$> zonkModule `traverse` mod)
+                SpecDecl (ValueSpec id ty) -> SpecDecl <$> (ValueSpec id <$> zonkType `traverse` ty)
+                SpecDecl (TypeSpec id kn) -> SpecDecl <$> (TypeSpec id <$> zonkKind kn)
+                dec -> return dec
+
         LetE decs' <$> zonkExpr `traverse` body
-zonkExpr (CaseE e mbty alts) =
-        CaseE
-                <$> zonkExpr `traverse` e
-                <*> zonkType `traverse` mbty
+zonkExpr (MatchE matches alts) =
+        MatchE
+                <$> mapM (\(e, mty) -> (,) <$> zonkExpr `traverse` e <*> zonkType `traverse` mty) matches
                 <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr `traverse` body)
 zonkExpr _ = unreachable "TypeCheck.Utils.zonkExpr"
 
@@ -80,11 +77,12 @@ zonkKind (MetaK kv) = do
 
 zonkBind :: MonadIO m => Bind -> m Bind
 zonkBind (ValueBind id mty exp) = ValueBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp
-zonkBind (TypeBind id mkn ty) = TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
-zonkBind (ModuleBind id mod) = ModuleBind id <$> zonkModule mod
+-- zonkBind (TypeBind id mkn ty) = TypeBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkBind (DataBind id fields) = DataBind id <$> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) fields
+zonkBind (ModuleBind id mod) = ModuleBind id <$> zonkModule `traverse` mod
 
 zonkSpec :: MonadIO m => Spec -> m Spec
-zonkSpec (ValueSpec id ty) = ValueSpec id <$> zonkType ty
+zonkSpec (ValueSpec id ty) = ValueSpec id <$> zonkType `traverse` ty
 zonkSpec (TypeSpec id kn) = TypeSpec id <$> zonkKind kn
 
 zonkDecl :: MonadIO m => Decl -> m Decl

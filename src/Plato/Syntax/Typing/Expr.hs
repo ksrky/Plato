@@ -1,5 +1,6 @@
 module Plato.Syntax.Typing.Expr where
 
+import Data.List.NonEmpty (NonEmpty)
 import Prettyprinter
 
 import Plato.Common.Ident
@@ -21,8 +22,9 @@ data Expr
         | PAbsE LPat (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [Quant] LExpr
-        | LetE [Decl] LExpr
-        | CaseE LExpr (Maybe Type) [(LPat, LExpr)]
+        | -- | `Decl` does not include data & module declaration because of the avoidance problem
+          LetE [Decl] LExpr
+        | MatchE (NonEmpty (LExpr, Maybe Type)) [(NonEmpty LPat, LExpr)]
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -36,9 +38,10 @@ instance Substitutable Expr where
         substPath (TAppE fun tyargs) = TAppE <$> substPath `traverse` fun <*> mapM substPath tyargs
         substPath (TAbsE qnts body) = TAbsE qnts <$> substPath `traverse` body
         substPath (LetE decs body) = LetE <$> substPath `traverse` decs <*> substPath `traverse` body
-        substPath (CaseE match mty alts) = do
-                alts' <- mapM (\(pat, exp) -> (,) <$> substPath `traverse` pat <*> substPath `traverse` exp) alts
-                CaseE <$> substPath `traverse` match <*> substPath `traverse` mty <*> return alts'
+        substPath (MatchE matches alts) = do
+                alts' <- mapM (\(pats, exp) -> (,) <$> mapM (substPath `traverse`) pats <*> substPath `traverse` exp) alts
+                MatchE <$> mapM (\(e, mty) -> (,) <$> substPath `traverse` e <*> substPath `traverse` mty) matches
+                        <*> return alts'
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -51,8 +54,8 @@ instance Pretty Expr where
         pretty (TAppE fun tyargs) = pretty fun <> hsep (map pretty tyargs)
         pretty (TAbsE vars body) = backslash <> hsep (map pretty vars) <> dot <+> pretty body
         pretty (LetE decs body) = hsep ["let", lbrace <> line, indent 4 (pretty decs), line <> rbrace, "in", pretty body] -- pretty binds
-        pretty (CaseE match mty alts) =
-                "case" <+> sep [pretty match, colon, maybe emptyDoc pretty mty] <+> "of" <+> lbrace <> line
+        pretty (MatchE matches alts) =
+                "case" <+> sep [pretty matches, colon] <+> "of" <+> lbrace <> line
                         <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
                         <> line
                         <> rbrace

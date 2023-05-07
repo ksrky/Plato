@@ -10,15 +10,12 @@ import Plato.Syntax.Parsing.Expr
 type LTopDecl = Located TopDecl
 
 data TopDecl
-        = Import Bool Path
+        = Import Path
         | Decl LDecl
         | Eval LExpr
         deriving (Eq, Show)
 
 instance Pretty TopDecl where
-        pretty (Import isopen path) =
-                if isopen
-                        then hsep ["open import", pretty path]
-                        else hsep ["import", pretty path]
+        pretty (Import path) = hsep ["import", pretty path]
         pretty (Decl dec) = pretty dec
         pretty (Eval exp) = pretty exp

@@ -10,6 +10,7 @@ import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Plato.Common.Global
 import Plato.Common.Ident as Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 import Plato.Typing.Env
@@ -45,6 +46,10 @@ writeMIORef = (liftIO .) . writeIORef
 -- | Creating and rewriting Uniq
 newUniq :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Unique
 newUniq = pickUnique =<< ask
+
+-- | Variable generation
+newVarIdent :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Ident
+newVarIdent = freshIdent dummyVN
 
 -- | Type variable generation
 newTyVar :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => m Type

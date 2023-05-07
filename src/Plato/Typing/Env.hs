@@ -27,27 +27,26 @@ class EnvManager a where
         extend :: Ident -> a -> Env -> Env
         extendList :: [(Ident, a)] -> Env -> Env
         find :: MonadThrow m => Path -> Env -> m a
-        extendList l env = foldl (\env (x, v) -> extend x v env) env l
+        findId :: MonadThrow m => Ident -> Env -> m a
+        extendList l env = foldr (uncurry extend) env l
+        findId = find . PIdent
+
+instance EnvManager a => EnvManager (Located a) where
+        extend id x = extend id (unLoc x)
+        find = ((noLoc <$>) .) . find
 
 findBinding :: MonadThrow m => Path -> Env -> m Binding
 findBinding (PIdent id) env = lookupIdent id env
-findBinding (PDot root field) env = do
-        find root env >>= \case
-                Signature specs -> case findField field specs of
-                        Just bndng -> return bndng
-                        Nothing ->
-                                throwLocErr (getLoc field) $
-                                        hsep
-                                                [ squotes $ pretty field
-                                                , "is not in module"
-                                                , squotes $ pretty root
-                                                ]
-
-findField :: Located Name -> [Spec] -> Maybe Binding
-findField _ [] = Nothing
-findField x1 (ValueSpec id2 ty : _) | unLoc x1 == nameIdent id2 = Just $ ValueBinding ty
-findField x1 (TypeSpec id2 kn : _) | unLoc x1 == nameIdent id2 = Just $ TypeBinding kn
-findField x (_ : rest) = findField x rest
+findBinding (PDot root field) env =
+        find root env >>= \(Signature specs) -> lookupSpecs (unLoc field) specs
+    where
+        lookupSpecs :: MonadThrow m => Name -> [Spec] -> m Binding
+        lookupSpecs _ [] =
+                throwLocErr (getLoc field) $
+                        hsep [squotes $ pretty field, "is not in module", squotes $ pretty root]
+        lookupSpecs x1 (ValueSpec id2 ty : _) | x1 == nameIdent id2 = return $ ValueBinding (unLoc ty)
+        lookupSpecs x1 (TypeSpec id2 kn : _) | x1 == nameIdent id2 = return $ TypeBinding kn
+        lookupSpecs x (_ : rest) = lookupSpecs x rest
 
 instance EnvManager Type where
         extend id ty = M.insert id (ValueBinding ty)

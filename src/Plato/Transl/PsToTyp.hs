@@ -14,7 +14,6 @@ import Plato.Common.Location
 import Plato.Common.Monad
 import Plato.Common.Name
 import Plato.KindCheck.Kc
-import Plato.Parsing.FixResol
 import Plato.TypeCheck.Tc
 import Plato.Typing.Env
 import Plato.Typing.Monad
@@ -151,8 +150,6 @@ transEvals topds = do
                 exp' <- transExpr exp
                 inferType exp'
         return $ map (unLoc . fst) res
-
-transModule :: (MonadThrow )
 
 ps2typ :: (MonadIO m, MonadThrow m) => P.Program -> Plato m T.Module
 ps2typ (P.Program modn _ topds) = do

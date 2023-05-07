@@ -14,14 +14,14 @@ import qualified Data.Set as S
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Syntax.Typing.Type
-import Plato.Typing.Env as Env
+import Plato.Typing.Env
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
 getEnvTypes :: (MonadReader ctx m, HasEnv ctx) => m [Type]
 getEnvTypes = do
         env <- getEnv =<< ask
-        return $ concat $ M.elems $ M.map (\case Env.ValueBinding ty -> [ty]; _ -> []) env
+        return $ concat $ M.elems $ M.map (\case ValueBinding ty -> [ty]; _ -> []) env
 
 getMetaTvs :: MonadIO m => Type -> m (S.Set MetaTv)
 getMetaTvs ty = do

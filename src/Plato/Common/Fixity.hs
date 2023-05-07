@@ -1,10 +1,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Plato.Common.Fixity where
+module Plato.Common.Fixity (
+        FixDir (..),
+        maxPrec,
+        minPrec,
+        Fixity (..),
+        FixEnv,
+        FixBind (..),
+        FixEnvManager (..),
+        HasFixEnv (..),
+) where
+
+import qualified Data.Map.Strict as M
+import Prettyprinter
 
 import Plato.Common.Ident
-
-import Prettyprinter
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Path
 
 ----------------------------------------------------------------
 -- Precedence
@@ -29,13 +42,40 @@ instance Pretty FixDir where
 
 data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 
+defaultFixity :: Fixity
+defaultFixity = Fixity maxPrec Leftfix
+
 ----------------------------------------------------------------
 -- FixityEnv
 ----------------------------------------------------------------
-type FixityEnv = IdentMap Fixity
+type FixEnv = NameMap FixBind
 
-class HasFixityEnv a where
-        getFixityEnv :: a -> FixityEnv
+data FixBind = FixEnv FixEnv | FixBind Fixity
 
-instance HasFixityEnv FixityEnv where
-        getFixityEnv = id
+class FixEnvManager a where
+        extend :: Name -> a -> FixEnv -> FixEnv
+        access :: Path -> FixEnv -> a
+
+access' :: Path -> FixEnv -> Maybe FixBind
+access' (PIdent id) env = M.lookup (nameIdent id) env
+access' (PDot root field) env = M.lookup (unLoc field) (access root env)
+
+instance FixEnvManager Fixity where
+        extend x fix = M.insert x (FixBind fix)
+        access path env = case access' path env of
+                Just (FixBind fix) -> fix
+                _ -> defaultFixity
+
+instance FixEnvManager FixEnv where
+        extend x env = M.insert x (FixEnv env)
+        access path env = case access' path env of
+                Just (FixEnv env') -> env'
+                _ -> M.empty
+
+class HasFixEnv a where
+        getFixEnv :: a -> FixEnv
+        modifyFixEnv :: (FixEnv -> FixEnv) -> a -> a
+
+instance HasFixEnv FixEnv where
+        getFixEnv = id
+        modifyFixEnv = id

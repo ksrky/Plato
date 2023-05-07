@@ -1,6 +1,12 @@
 {-# LANGUAGE TupleSections #-}
 
-module Plato.KindCheck.Kc where
+module Plato.KindCheck.Kc (
+        newDataType,
+        getDataType,
+        checkKindStar,
+        inferDataKind,
+        inferKind,
+) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -19,14 +25,14 @@ import Plato.Typing.Env as Env
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
-newDataCon :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => [Ident] -> m [(Ident, Kind)]
-newDataCon = mapM (\con -> (con,) <$> newKnVar)
+newDataType :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Ident -> m (Ident, Kind)
+newDataType id = (id,) <$> newKnVar
 
-getDataCon ::
+getDataType ::
         (MonadReader ctx m, HasEnv ctx, MonadThrow m, MonadIO m) =>
-        Path ->
+        Ident ->
         m Kind
-getDataCon p = zonkKind =<< Env.find p =<< getEnv =<< ask
+getDataType id = zonkKind =<< Env.find (PIdent id) =<< getEnv =<< ask
 
 -- asks . (Env.find @Kind) >=> zonkKind
 
@@ -52,10 +58,7 @@ checkKindStar ::
         (MonadReader ctx m, HasEnv ctx, HasUnique ctx, MonadThrow m, MonadIO m) =>
         LType ->
         m LType
-checkKindStar ty = do
-        (ty', kn) <- inferKind ty
-        unify NoSpan kn StarK
-        return ty'
+checkKindStar ty = checkKind ty StarK
 
 inferKind ::
         (MonadReader ctx m, HasEnv ctx, HasUnique ctx, MonadThrow m, MonadIO m) =>
@@ -78,7 +81,7 @@ checkKind (L sp ty) exp_kn =
                         kn <- Env.find (Path.PIdent id) =<< getEnv =<< ask
                         unify sp kn exp_kn
                         return $ VarT tv
-                VarT _ -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
+                VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
                 ConT tc -> do
                         kn <- Env.find tc =<< getEnv =<< ask
                         unify sp kn exp_kn

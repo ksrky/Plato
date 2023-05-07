@@ -91,8 +91,7 @@ impdecls    :: { [LTopDecl] }
             | {- empty -}                           { [] }
 
 impdecl     :: { LTopDecl }
-            : 'import' qmodcon                      { sL $1 $2 (Import False $2) }
-            | 'open' 'import' qmodcon               { sL $1 $3 (Import True $3) }
+            : 'import' qmodcon                      { sL $1 $2 (Import $2) }
 
 -----------------------------------------------------------
 -- Evaluation expressions
@@ -123,13 +122,7 @@ decl        :: { LDecl }
                                                     { sL $1 $7 (DataD $2 $3 $6) }
             | 'data' tycon tyvarrow 'where' 'v{' constrs close
                                                     { sL $1 $7 (DataD $2 $3 $6) }
-            -- Function signature
-            | var ':' type                        	{ sL $1 $3 (FuncSigD $1 $3) }
-            | '(' varop ')' ':' type                { sL $1 $5 (FuncSigD $2 $5) }
-            -- Function declaration 
-            | var patrow '=' expr               	{ sL $1 $4 (FuncD $1 $2 $4) }
-            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FuncD $2 $4 $6) }
-            | apat varop apat patrow '=' expr		{ sL $1 $6 (FuncD $2 ($1 : $3 : $4) $6) }
+            | fundecl                               { $1 }
 
 -- | Fixity declaration
 fixdecl     :: { LDecl }
@@ -153,6 +146,16 @@ constr      :: { (LName, LType) }
             : con ':' type                          { ($1, $3) }
             -- tmp: syntax restriction: last type of 'type' must be its data type
             | '(' conop ')' ':' type                { ($2, $5) }
+
+-- | Function/signature declaration
+fundecl     :: { LDecl }
+            -- Function signature
+            : var ':' type                        	{ sL $1 $3 (FuncSigD $1 $3) }
+            | '(' varop ')' ':' type                { sL $1 $5 (FuncSigD $2 $5) }
+            -- Function definition
+            | var patrow '=' expr               	{ sL $1 $4 (FuncD $1 $2 $4) }
+            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FuncD $2 $4 $6) }
+            | apat varop apat patrow '=' expr		{ sL $1 $6 (FuncD $2 ($1 : $3 : $4) $6) }
 
 -----------------------------------------------------------
 -- Types
@@ -184,8 +187,8 @@ lexpr       :: { LExpr }
             | '\\' 'where' '{' alts_ '}'            { sL $1 $5 (LamE $4) }
             | '\\' 'where' 'v{' alts_ close         { sL $1 $5 (LamE $4) }
             -- | Let expression
-            | 'let' '{' decls '}' 'in' expr         { sL $1 $6 (LetE $3 $6) }
-            | 'let' 'v{' decls close 'in' expr      { sL $1 $6 (LetE $3 $6) }
+            | 'let' '{' decls '}' 'in' expr         { sL $1 $6 (LetE $3 $6) } -- tmp: decls
+            | 'let' 'v{' decls close 'in' expr      { sL $1 $6 (LetE $3 $6) } -- tmp: decls
             -- | Case expression
             | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
             | 'case' expr 'of' 'v{' alts close      { sL $1 $6 (CaseE $2 $5) }
@@ -317,9 +320,9 @@ qmodcon     :: { Path }
             : quals modcon                          { mkPath $1 $2 }
 
 -- | Operator
-op          :: { Ident }
-            : varop                                 { $1 }
-            | conop                                 { $1 }
+op          :: { Located Name }
+            : varsym                                { mkLName VarName $1 }
+            | consym                                { mkLName ConName $1 }
 
 qop         :: { Path }
             : qvarop                                { $1 }

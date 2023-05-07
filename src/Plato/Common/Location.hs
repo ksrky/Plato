@@ -18,8 +18,8 @@ instance Pretty Loc where
 
 data Span
         = Span
-                Loc -- start loc
-                Loc -- end loc
+                !Loc -- start loc
+                !Loc -- end loc
         | NoSpan
         deriving (Eq, Ord, Show)
 
@@ -38,11 +38,8 @@ concatSpans [] = NoSpan
 concatSpans [sp] = sp
 concatSpans (sp : sps) = combineSpans sp (concatSpans sps)
 
-data Located a = L Span a
+data Located a = L {_span :: !Span, unLoc :: a}
         deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
-unLoc :: Located a -> a
-unLoc (L _ x) = x
 
 noLoc :: a -> Located a
 noLoc = L NoSpan

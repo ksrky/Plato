@@ -47,7 +47,6 @@ library
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
-      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
@@ -83,6 +82,7 @@ library
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
+      Plato.Typing
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad
@@ -141,7 +141,6 @@ executable plato
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
-      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
@@ -177,6 +176,7 @@ executable plato
       Plato.TypeCheck.Translate
       Plato.TypeCheck.Unify
       Plato.TypeCheck.Utils
+      Plato.Typing
       Plato.Typing.CanonCase
       Plato.Typing.Env
       Plato.Typing.Monad

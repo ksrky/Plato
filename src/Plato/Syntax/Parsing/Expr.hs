@@ -22,6 +22,8 @@ data Expr
         | FactorE LExpr -- removed after fixity resolution
         deriving (Eq, Show)
 
+newtype Op = Op Path deriving (Eq, Show)
+
 ----------------------------------------------------------------
 -- Basic instances
 ----------------------------------------------------------------

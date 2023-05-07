@@ -8,10 +8,11 @@ module Plato.TypeCheck.Tc (
 ) where
 
 import Control.Exception.Safe (MonadThrow)
-import Control.Monad (unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import Prettyprinter
 
@@ -168,16 +169,23 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 env <- getEnv =<< ask
                 (decs', env') <-
                         forAccumM env decs $ \env -> \case
+                                dec@(SpecDecl spec) -> do
+                                        return (dec, extendSpec spec env)
                                 BindDecl (ValueBind id (Just ty) exp) -> do
                                         exp' <- checkSigma exp ty
                                         return (BindDecl (ValueBind id (Just ty) exp'), env)
-                                dec@(SpecDecl spec) -> do
-                                        return (dec, extendSpec spec env)
                                 dec -> return (dec, env)
-
                 body' <- local (modifyEnv $ const env') $ tcRho body exp_ty
                 return $ LetE decs' body'
-        tcRho' _ _ = unreachable "TypeCheck.Typ.tcRho"
+        tcRho' (MatchE matches alts) exp_ty = do
+                matches' <- mapM (inferRho . fst) matches
+                alts' <- forM alts $ \(pats, body) -> do
+                        binds <- concat <$> mapM (uncurry checkPat) (NE.zip pats (NE.map snd matches'))
+                        body' <- local (modifyEnv $ extendList binds) $ tcRho body exp_ty
+                        return (pats, body')
+                return $ MatchE (NE.map (\(e, ty) -> (e, Just ty)) matches') alts'
+        tcRho' TAppE{} _ = unreachable "TypeCheck.Typ.tcRho"
+        tcRho' TAbsE{} _ = unreachable "TypeCheck.Typ.tcRho"
 
 -- | Type check of Sigma
 inferSigma ::
@@ -203,18 +211,6 @@ checkSigma exp sigma = do
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ throwUnexpErr "Type not polymorphic enough"
         return $ (\e -> coercion @@ genTrans skol_tvs @@ e) <$> exp'
-
--- | Type check of Binders
-
-{-tcBinds :: (MonadIO m, MonadThrow m) => Bind -> Typ m Binds
-tcBinds (Binds binds sigs) = do
-        binds' <- forM binds $ \(var, exp) -> do
-                ann_ty <- case lookup var sigs of
-                        Just ty -> return ty
-                        Nothing -> throwTyp (getLoc var) $ hsep ["function", squotes $ pretty var, "lacks signature"]
-                exp' <- local (Env.extendList sigs) $ checkSigma exp ann_ty
-                return (var, exp')
-        return $ Binds binds' sigs-}
 
 -- | Subsumption checking
 subsCheck :: (MonadReader ctx m, HasUnique ctx, MonadIO m, MonadThrow m) => Sigma -> Sigma -> m Coercion
