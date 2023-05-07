@@ -80,7 +80,7 @@ int                             { (mkLInt -> Just $$) }
 %%
 
 program     :: { [LTopDecl] }
-            : ';' impdecls ';' decls ';' evals      { $2 ++ $4 ++ $6 }
+            : ';' impdecls ';' topdecls ';' evals   { $2 ++ $4 ++ $6 }
 
 -----------------------------------------------------------
 -- Import declarations
@@ -94,6 +94,12 @@ impdecl     :: { LTopDecl }
             : 'import' qmodcon                      { sL $1 $2 (Import $2) }
 
 -----------------------------------------------------------
+-- Top declarations
+-----------------------------------------------------------
+topdecls    :: { [LTopDecl] }
+            : decls                                 { map (\d -> L (getLoc d) (Decl d)) $1 }
+
+-----------------------------------------------------------
 -- Evaluation expressions
 -----------------------------------------------------------
 evals       :: { [LTopDecl] }
@@ -103,10 +109,7 @@ evals       :: { [LTopDecl] }
 -- Declarations
 -----------------------------------------------------------
 decls       :: { [LDecl] }
-            : decls_                                { orderDecls $1 }
-
-decls_      :: { [LDecl] }
-            : decl ';' decls_                       { $1 : $3 }
+            : decl ';' decls                        { $1 : $3 }
             | decl                                  { [$1] }
             | {- empty -}                           { [] }
 
@@ -126,23 +129,23 @@ decl        :: { LDecl }
 
 -- | Fixity declaration
 fixdecl     :: { LDecl }
-            : 'infix' int op                       { sL $1 $3 (FixityD (Fixity $2 Nonfix) $3) }
-            | 'infixl' int op                      { sL $1 $3 (FixityD (Fixity $2 Leftfix) $3) }
-            | 'infixr' int op                      { sL $1 $3 (FixityD (Fixity $2 Rightfix) $3) }
+            : 'infix' int op                        { sL $1 $3 (FixityD (Fixity (unLoc $2) Nonfix) $3) }
+            | 'infixl' int op                       { sL $1 $3 (FixityD (Fixity (unLoc $2) Leftfix) $3) }
+            | 'infixr' int op                       { sL $1 $3 (FixityD (Fixity (unLoc $2) Rightfix) $3) }
 
 -- | Module declaration
 modrhs      :: { LModule }
-            : 'where' '{' decls '}'                 { sL $1 $4 $3 }
-            | 'where' 'v{' decls close              { sL $1 $4 $3 }
+            : 'where' '{' decls '}'                 { sL $1 $4 (Module $3) }
+            | 'where' 'v{' decls close              { sL $1 $4 (Module $3) }
          -- | '=' qmodcon                           {}
 
 -- | Data declaration
-constrs     :: { [(LName, LType)] }
+constrs     :: { [(Ident, LType)] }
             : constr ';' constrs                    { $1 : $3 }
             | constr                                { [$1] }
             | {- empty -}                           { [] }
 
-constr      :: { (LName, LType) }
+constr      :: { (Ident, LType) }
             : con ':' type                          { ($1, $3) }
             -- tmp: syntax restriction: last type of 'type' must be its data type
             | '(' conop ')' ':' type                { ($2, $5) }
@@ -171,8 +174,8 @@ btype       :: { LType }
 
 atype       :: { LType }
             : '(' type ')'                          { $2 }
-            | qtycon                                { sL $1 (ConT $1) }  --tmp: ? something wrong
-            | tyvar                                 { sL $1 (VarT $1) }
+            | qtycon                                { L (getLoc $1) (ConT $1) }  --tmp: ? something wrong
+            | tyvar                                 { L (getLoc $1) (VarT $1) }
 
 -----------------------------------------------------------
 -- Expressions
@@ -232,7 +235,7 @@ pat         :: { LPat }
             -- tmp: infix pattern resolution 
 
 lpat 		:: { LPat }
-			: qcon apats                            { sn $1 $2 (ConP $1 $2) }
+			: qcon apats                            { sL $1 $2 (ConP $1 $2) }
             | apat									{ $1 }	
 
 apats       :: { [LPat] }
@@ -285,7 +288,7 @@ con         :: { Ident }
             : conid                                 {% mkIdent conName $1 }
 
 qcon        :: { Path }
-            : quals qcon                            { mkPath $1 $2 }
+            : quals con                             { mkPath $1 $2 }
 
 -- TyVar
 tyvar       :: { Ident }
@@ -296,21 +299,21 @@ tycon       :: { Ident }
             : conid                                 {% mkIdent tyconName $1 }
 
 qtycon      :: { Path }
-            : quals qtycon                          { mkPath $1 $2 }
+            : quals tycon                           { mkPath $1 $2 }
 
 -- | VarOp
 varop       :: { Ident }
             : varsym                                {% mkIdent varName $1 }
 
 qvarop      :: { Path }
-            : quals qvarop                          { mkPath $1 $2 }
+            : quals varop                           { mkPath $1 $2 }
 
 -- | ConOp
 conop       :: { Ident }
             : consym                                {% mkIdent conName $1 }
 
 qconop      :: { Path }
-            : quals qconop                          { mkPath $1 $2 }
+            : quals conop                           { mkPath $1 $2 }
 
 -- | ModCon
 modcon      :: { Ident }
@@ -321,8 +324,8 @@ qmodcon     :: { Path }
 
 -- | Operator
 op          :: { Located Name }
-            : varsym                                { mkLName VarName $1 }
-            | consym                                { mkLName ConName $1 }
+            : varsym                                { mkLName varName $1 }
+            | consym                                { mkLName conName $1 }
 
 qop         :: { Path }
             : qvarop                                { $1 }
@@ -372,9 +375,6 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
-
-mkPath :: [Ident] -> Name -> Path
-mkPath quals field = foldl PDot field  quals
 
 mkPath :: [Ident] -> Ident -> Path
 mkPath [] id = PIdent id

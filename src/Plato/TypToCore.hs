@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Transl.TypToCore where
+module Plato.TypToCore where
 
 import Control.Exception.Safe
 import Control.Monad

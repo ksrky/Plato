@@ -1,4 +1,4 @@
-module Plato.Transl.CoreToIO where
+module Plato.CoreToIO where
 
 {-
 import Plato.Core.Context

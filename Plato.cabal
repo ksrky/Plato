@@ -87,6 +87,7 @@ library
       Plato.Typing.Env
       Plato.Typing.Monad
       Plato.Typing.Zonking
+      Plato.TypToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -181,6 +182,7 @@ executable plato
       Plato.Typing.Env
       Plato.Typing.Monad
       Plato.Typing.Zonking
+      Plato.TypToCore
       Paths_Plato
   hs-source-dirs:
       src

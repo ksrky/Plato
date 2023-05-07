@@ -46,8 +46,7 @@ data Command
         | Eval Term
 
 data Module = Module
-        { moduleName :: ModuleName
-        , moduleBind :: [(Name, Binding)]
+        { moduleBind :: [(Name, Binding)]
         , moduleEval :: [Term]
         }
 

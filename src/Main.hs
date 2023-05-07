@@ -1,8 +1,5 @@
 module Main where
 
-import CLI.Constant (version)
-import CLI.Options (Options (..), runWithOptions)
-
 -- import Plato.Main (repl, runPlato)
 
 main :: IO ()
