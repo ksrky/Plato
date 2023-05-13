@@ -10,15 +10,14 @@ import Plato.Common.Name
 import Plato.Common.Name.Global
 import Plato.Syntax.Typing
 import Plato.Typing.TcMonad
-import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import Data.IORef
-import Data.List (subsequences, (\\))
-import qualified Data.Set as S
+import Data.List (subsequences)
+import Data.Set qualified as S
 import Prettyprinter
 
 typeCheck :: (MonadIO m, MonadThrow m) => TyEnv -> FuncD -> m FuncD
@@ -189,7 +188,7 @@ subsCheck sigma1 sigma2 = do
         unless (null bad_tvs) $ lift $ throwUnexpErr $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (TAbsE (map (\(tv, mkn) -> unTyVar tv) skol_tvs) (co2 e))
+                else return $ \e -> co1 (TAbsE (map (unTyVar . fst) skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckRho sigma1@AllT{} rho2 = do

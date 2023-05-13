@@ -34,6 +34,7 @@ library
       Plato.Common.Monad
       Plato.Common.Name
       Plato.Common.Name.Global
+      Plato.Common.Uniq
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
@@ -63,10 +64,17 @@ library
       Plato.Transl.TypToCore
       Plato.TypeCheck.Subst
       Plato.Typing.Bundle
+      Plato.Typing.Env
       Plato.Typing.KindInfer
+      Plato.Typing.Monad
+      Plato.Typing.Tc.Subst
+      Plato.Typing.Tc.Translate
+      Plato.Typing.Tc.Unify
+      Plato.Typing.Tc.Utils
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
+      Plato.Typing.Zonking
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -109,6 +117,7 @@ executable plato
       Plato.Common.Monad
       Plato.Common.Name
       Plato.Common.Name.Global
+      Plato.Common.Uniq
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
@@ -138,10 +147,17 @@ executable plato
       Plato.Transl.TypToCore
       Plato.TypeCheck.Subst
       Plato.Typing.Bundle
+      Plato.Typing.Env
       Plato.Typing.KindInfer
+      Plato.Typing.Monad
+      Plato.Typing.Tc.Subst
+      Plato.Typing.Tc.Translate
+      Plato.Typing.Tc.Unify
+      Plato.Typing.Tc.Utils
       Plato.Typing.TcMonad
       Plato.Typing.TcTypes
       Plato.Typing.TypeCheck
+      Plato.Typing.Zonking
       Paths_Plato
   hs-source-dirs:
       src

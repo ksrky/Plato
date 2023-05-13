@@ -15,9 +15,10 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Data.IORef
 import Data.List ((\\))
-import qualified Data.Map.Strict as M
-import qualified Data.Set as S
+import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Prettyprinter
+import Plato.Common.Uniq
 
 data TcEnv = TcEnv
         { tc_uniq :: IORef Uniq
@@ -91,19 +92,19 @@ newTyVar :: MonadIO m => Tc m Tau
 newTyVar = MetaT <$> newMetaTv
 
 newSkolemTyVar :: MonadIO m => TyVar -> Tc m TyVar
-newSkolemTyVar tv = SkolemTv (tyVarLName tv) <$> newUnique
+newSkolemTyVar tv = SkolemTv (tyVarLName tv) <$> newUniq
 
 newMetaTv :: MonadIO m => Tc m MetaTv
-newMetaTv = Meta <$> newUnique <*> newTcRef Nothing
+newMetaTv = MetaTv <$> newUniq <*> newTcRef Nothing
 
 readMetaTv :: MonadIO m => MetaTv -> Tc m (Maybe Tau)
-readMetaTv (Meta _ ref) = readTcRef ref
+readMetaTv (MetaTv _ ref) = readTcRef ref
 
 writeMetaTv :: MonadIO m => MetaTv -> Tau -> Tc m ()
-writeMetaTv (Meta _ ref) ty = writeTcRef ref (Just ty)
+writeMetaTv (MetaTv _ ref) ty = writeTcRef ref (Just ty)
 
-newUnique :: MonadIO m => Tc m Uniq
-newUnique =
+newUniq :: MonadIO m => Tc m Uniq
+newUniq =
         Tc
                 ( \TcEnv{tc_uniq = ref} -> liftIO $ do
                         uniq <- readIORef ref

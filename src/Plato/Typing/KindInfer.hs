@@ -14,7 +14,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Data.Bifunctor (Bifunctor (first, second))
 import Data.IORef
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
+import Plato.Common.Uniq
 import Prettyprinter
 
 inferKind :: (MonadThrow m, MonadIO m) => KnEnv -> LType -> m (LType, Kind)

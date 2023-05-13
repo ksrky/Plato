@@ -3,7 +3,7 @@ module Plato.Syntax.Typing.Kind where
 import Data.IORef
 import Prettyprinter
 
-import Plato.Syntax.Typing.Base
+import Plato.Common.Uniq 
 
 -----------------------------------------------------------
 -- Data and types

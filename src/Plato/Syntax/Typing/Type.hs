@@ -5,6 +5,7 @@ import Prettyprinter
 
 import Plato.Common.Location
 import Plato.Common.Name.Global
+import Plato.Common.Uniq
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Kind
 
@@ -41,7 +42,7 @@ unTyVar :: TyVar -> LName
 unTyVar (BoundTv x) = x
 unTyVar (SkolemTv x _) = x
 
-data MetaTv = Meta Uniq TyRef
+data MetaTv = MetaTv Uniq TyRef
 
 type TyRef = IORef (Maybe Tau)
 
@@ -54,13 +55,13 @@ instance Eq TyVar where
         _ == _ = False
 
 instance Eq MetaTv where
-        (Meta u1 _) == (Meta u2 _) = u1 == u2
+        (MetaTv u1 _) == (MetaTv u2 _) = u1 == u2
 
 instance Show MetaTv where
-        show (Meta u _) = "$" ++ show u
+        show (MetaTv u _) = "$" ++ show u
 
 instance Ord MetaTv where
-        Meta u1 _ `compare` Meta u2 _ = u1 `compare` u2
+        MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
 
 -----------------------------------------------------------
 -- Pretty printing

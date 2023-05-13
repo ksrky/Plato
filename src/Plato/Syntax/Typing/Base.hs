@@ -4,5 +4,3 @@ import Plato.Common.Location
 import Plato.Common.Name
 
 type LName = Located Name
-
-type Uniq = Int

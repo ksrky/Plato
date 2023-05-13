@@ -1,9 +1,8 @@
 module Plato.Typing.TcTypes where
 
 import Data.List (nub)
-import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe)
-import qualified Data.Set as S
+import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 
 import Plato.Common.Error
 import Plato.Common.Location
