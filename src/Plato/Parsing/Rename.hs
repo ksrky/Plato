@@ -7,25 +7,24 @@ import Plato.Common.Fixity
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Name.Global
-import Plato.Common.Name.Reader
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.Reader
 import Data.List (find)
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Prettyprinter
 
 ----------------------------------------------------------------
 -- Renaming
 ----------------------------------------------------------------
 class Rename f where
-        rename :: MonadThrow m => f RdrName -> ReaderT (GlbNameEnv, Level) m (f GlbName)
+        rename :: MonadThrow m => f Name -> ReaderT (GlbNameEnv, Level) m (f GlbName)
 
 instance Rename Located where
-        rename (L sp (Unqual n)) = do
+        rename (L sp x) = do
                 env <- asks fst
-                L sp <$> lookupGlbNameEnv env (L sp n)
+                L sp <$> lookupGlbNameEnv env (L sp x)
 
 {-rename (L sp (Qual modn n)) = do
         env <- asks fst
@@ -97,7 +96,7 @@ instance Rename TopDecl where
         rename (Decl d) = Decl <$> rename `traverse` d
         rename (Eval e) = Eval <$> rename `traverse` e
 
-renameTopDecls :: MonadThrow m => Program RdrName -> GlbNameEnv -> m (Program GlbName, GlbNameEnv)
+renameTopDecls :: MonadThrow m => Program Name -> GlbNameEnv -> m (Program GlbName, GlbNameEnv)
 renameTopDecls (Program mb_modn imp_modns topds) glbenv = do
         names <- forM topds $ \(L _ topd) -> case topd of
                 DataD con _ fields -> return $ con : map fst fields

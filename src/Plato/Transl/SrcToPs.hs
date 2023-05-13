@@ -6,7 +6,6 @@ import Plato.Common.Location
 import Plato.Common.Monad
 import Plato.Common.Name
 import Plato.Common.Name.Global
-import Plato.Common.Name.Reader
 
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad
@@ -21,13 +20,13 @@ import Control.Monad.Reader
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
-src2ps :: MonadThrow m => T.Text -> Plato m (FixityEnv Name, Program RdrName)
+src2ps :: MonadThrow m => T.Text -> Plato m (FixityEnv Name, Program Name)
 src2ps inp = do
         file <- asks plt_fileName
         (res, st) <- eitherToMonadThrow (parse file inp parser)
         return (ust_fixityEnv (parser_ust st), res)
 
-psCanon :: MonadThrow m => [ModuleName] -> FixityEnv Name -> Program RdrName -> Plato m (Program GlbName)
+psCanon :: MonadThrow m => [ModuleName] -> FixityEnv Name -> Program Name -> Plato m (Program GlbName)
 psCanon imp_modns fixenv prg = do
         glbenv <- filterGlbNameEnv imp_modns <$> gets plt_glbNameEnv
         (prg', glbenv') <- renameTopDecls prg glbenv
@@ -49,5 +48,5 @@ getModuleName prg = case ps_moduleDecl prg of
         Just (L _ modn) -> modn
         Nothing -> unreachable "getModuleName"
 
-importModules :: Program RdrName -> [Located ModuleName]
+importModules :: Program Name -> [Located ModuleName]
 importModules = ps_importDecls
