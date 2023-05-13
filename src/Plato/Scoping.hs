@@ -6,7 +6,7 @@ module Plato.Scoping (scopingProgram) where
 import Control.Exception.Safe
 import Control.Monad.Reader.Class
 import Control.Monad.State
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Prettyprinter
 
 import Plato.Common.Error
@@ -35,8 +35,8 @@ class Scoping a where
 instance Scoping a => Scoping (Located a) where
         scoping (L sp x) = L sp <$> scoping x
 
-instance Scoping a => Scoping [Located a] where
-        scoping xs = mapM scoping xs
+instance Scoping a => Scoping [a] where
+        scoping = mapM scoping
 
 instance Scoping Ident where
         scoping id = do
@@ -72,7 +72,8 @@ instance Scoping Expr where
                 body' <- local (const env') (scoping body)
                 return $ LetE decs' body'
         scoping (CaseE match alts) =
-                CaseE <$> scoping match
+                CaseE
+                        <$> scoping match
                         <*> mapM (\(pat, body) -> (pat,) <$> scoping body) alts
         scoping (FactorE exp) = FactorE <$> scoping exp
 
@@ -124,9 +125,10 @@ checkDecls decs = do
 scopingDecls :: (MonadReader env m, HasScope env, MonadThrow m) => [LDecl] -> m [LDecl]
 scopingDecls [] = return []
 scopingDecls (dec : decs) = case unLoc dec of
-        OpenD path -> do
-                path' <- scoping path
-                return (dec{unLoc = OpenD path'} : decs)
+        OpenD path -> undefined {-do
+                                path' <- scoping path
+                                sc <- asks getScope
+                                return $ local (extendScope) $ (dec{unLoc = OpenD path'} : decs) -}
         FixityD{} -> (dec :) <$> scopingDecls decs
         ModuleD id mod -> do
                 local (extendScope id) $ do
@@ -153,7 +155,7 @@ instance Scoping Module where
                 decs' <- evalStateT (checkDecls decs) =<< ask
                 return $ Module decs'
 
-scopingProgram :: (MonadState env m, MonadReader env m, MonadThrow m, HasScope env) => [LTopDecl] -> m [LTopDecl]
+scopingProgram :: (MonadState env m, MonadReader env m, MonadThrow m, HasScope env) => Program -> m Program
 scopingProgram tdecs = do
         imps <- sequence [L sp <$> (Import <$> scoping path) | L sp (Import path) <- tdecs]
         let (fs, decs) = unzip [(L sp . Decl, d) | L sp (Decl d) <- tdecs]

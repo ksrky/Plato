@@ -4,6 +4,7 @@ module Plato.Syntax.Typing (
         module Plato.Syntax.Typing.Module,
         module Plato.Syntax.Typing.Pat,
         module Plato.Syntax.Typing.Type,
+        Program,
 ) where
 
 import Plato.Syntax.Typing.Expr
@@ -11,3 +12,5 @@ import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Module
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
+
+type Program = ([Decl], [LExpr])

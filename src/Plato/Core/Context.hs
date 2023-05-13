@@ -1,15 +1,19 @@
 module Plato.Core.Context where
 
 import Plato.Common.Error
+import Plato.Common.Global
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Core.Subst
-
 import Plato.Syntax.Core
 
 import Control.Exception.Safe
-import qualified Data.Vector as V
+import Control.Monad.Reader
+import Data.Vector qualified as V
+import Plato.Common.Ident
 import Prettyprinter
+
+type Context = V.Vector (Unique, Binding)
 
 emptyContext :: Context
 emptyContext = V.empty
@@ -21,14 +25,14 @@ lookupContext x ctx = case V.uncons ctx of
                 | otherwise -> lookupContext x rest
         Nothing -> Nothing
 
-addBinding :: Name -> Binding -> Context -> Context
-addBinding x bind = V.cons (x, bind)
+addBinding :: Ident -> Binding -> Context -> Context
+addBinding id bind = V.cons (stamp id, bind)
 
-addName :: Name -> Context -> Context
-addName x = addBinding x NameBind
+addName :: Ident -> Context -> Context
+addName id = addBinding id NameBind
 
 addNameList :: [Name] -> Context -> Context
-addNameList = flip (foldl (flip addName))
+addNameList = flip (foldr addName)
 
 index2name :: Context -> Int -> Name
 index2name ctx x = fst (ctx V.! x)
@@ -56,7 +60,9 @@ getKind ctx i = case getBinding ctx i of
         TyAbbBind _ knK -> return knK
         _ -> throwError $ hsep ["getkind: Wrong kind of binding for variable", pretty (index2name ctx i)]
 
-getVarIndex :: MonadThrow m => Context -> Located Name -> m Int
-getVarIndex ctx (L sp x) = case V.elemIndex x (V.map fst ctx) of
-        Just i -> return i
-        Nothing -> throwLocErr sp $ "Unbound variable name: '" <> pretty x <> "'"
+getVarIndex :: Ident -> Reader Context Int
+getVarIndex id = do
+        ctx <- ask
+        case V.elemIndex (stamp id) (V.map fst ctx) of
+                Just i -> return i
+                Nothing -> unreachable "Unbound variable name"

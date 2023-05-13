@@ -1,13 +1,14 @@
 module Plato.Core.Debug where
 
 import Plato.Common.Error
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 
 data Info = Info {info_loc :: Span, actual_name :: Maybe Name} deriving (Eq, Show)
 
-mkInfo :: Located Name -> Info
-mkInfo (L sp x) = Info sp (Just x)
+mkInfo :: Ident -> Info
+mkInfo id = Info (getLoc id) (Just (nameIdent id))
 
 mkInfoFromSpan :: Span -> Info
 mkInfoFromSpan sp = Info sp Nothing

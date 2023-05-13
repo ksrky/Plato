@@ -1,23 +1,33 @@
 module Plato.Main where
 
-{-
-import Plato.Transl.CoreToIO
-import Plato.Transl.PsToTyp
-import Plato.Transl.SrcToPs
-import Plato.Transl.TypToCore
-
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Monad
 import Plato.Common.Name
+import Plato.CoreToIO
+import Plato.Parsing
+import Plato.PsToTyp
+import Plato.Scoping
+import Plato.TypToCore
+import Plato.Typing
 
 import Control.Exception.Safe
 import Control.Monad.RWS
-import qualified Data.Set as S
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Set qualified as S
+import Data.Text qualified as T
+import Data.Text.IO qualified as T
 import System.Console.Haskeline
 
+process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
+process input = do
+        pssyn <- parseProgram input
+        pssyn' <- scopingProgram pssyn
+        (decs, evals) <- ps2typ pssyn'
+        decs' <- typing decs
+        coresyn <- typ2core (decs', evals)
+        undefined
+
+{-
 runPlato :: FilePath -> IO ()
 runPlato src = catchError $ fst <$> evalRWST (processFile src) (initPInfo' src) initPState
 

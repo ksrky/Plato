@@ -25,8 +25,6 @@ source-repository head
 
 library
   exposed-modules:
-      CLI.Constant
-      CLI.Options
       Main
       Plato.Common.Error
       Plato.Common.Fixity
@@ -41,6 +39,7 @@ library
       Plato.Core.Debug
       Plato.Core.Eval
       Plato.Core.Subst
+      Plato.CoreToIO
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify
       Plato.KindCheck.Utils
@@ -70,12 +69,6 @@ library
       Plato.Syntax.Typing.Module
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.PsToTyp.Module
-      Plato.Transl.PsToTyp.Type
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc
@@ -121,8 +114,6 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      CLI.Constant
-      CLI.Options
       Plato.Common.Error
       Plato.Common.Fixity
       Plato.Common.Global
@@ -136,6 +127,7 @@ executable plato
       Plato.Core.Debug
       Plato.Core.Eval
       Plato.Core.Subst
+      Plato.CoreToIO
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify
       Plato.KindCheck.Utils
@@ -165,12 +157,6 @@ executable plato
       Plato.Syntax.Typing.Module
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.PsToTyp.Module
-      Plato.Transl.PsToTyp.Type
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
       Plato.TypeCheck.InstGen
       Plato.TypeCheck.Subst
       Plato.TypeCheck.Tc

@@ -1,19 +1,19 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TupleSections #-}
 
-module Plato.PsToTyp where
+module Plato.PsToTyp (ps2typ) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 
 import Plato.Common.Error
 import Plato.Common.Global
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Path
-import qualified Plato.Syntax.Parsing as P
-import qualified Plato.Syntax.Typing as T
+import Plato.Syntax.Parsing qualified as P
+import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
 
 elabExpr ::
@@ -102,3 +102,9 @@ elabModule (L sp (P.Module decs)) = L sp <$> (T.Module . concat <$> mapM elabDec
 
 elabTopDecl :: P.TopDecl -> T.Decl
 elabTopDecl = undefined
+
+ps2typ ::
+        (MonadReader env m, HasUnique env, MonadThrow m, MonadIO m) =>
+        P.Program ->
+        m T.Program
+ps2typ = undefined
