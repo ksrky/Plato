@@ -62,7 +62,7 @@ instance Bundle Type where
         bundle ty = return ty
 
 renameRecT :: MonadThrow m => Type -> m Type
-renameRecT = (`runReaderT` (ModuleName [], 0)) . bundle
+renameRecT = (`runReaderT` (dummyModname, 0)) . bundle
 
 bundleFuncDs :: MonadThrow m => [FuncD] -> ReaderT (ModuleName, Level) m FuncD
 bundleFuncDs decs = do
@@ -75,7 +75,7 @@ bundleFuncDs decs = do
         return $ FuncD (noLoc r) (RecordE fields) (RecordT fieldtys)
 
 bundleEval :: MonadThrow m => Expr -> m Expr
-bundleEval = (`runReaderT` (ModuleName [], 0)) . bundle
+bundleEval = (`runReaderT` (dummyModname, 0)) . bundle
 
 bundleTopFuncDs :: MonadThrow m => ModuleName -> [FuncD] -> m FuncD
 bundleTopFuncDs modn decs = do

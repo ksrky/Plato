@@ -26,12 +26,13 @@ instance Rename Located where
         rename (L sp (Unqual n)) = do
                 env <- asks fst
                 L sp <$> lookupGlbNameEnv env (L sp n)
-        rename (L sp (Qual modn n)) = do
-                env <- asks fst
-                unless (n `M.member` env) $
-                        throwLocErr sp $
-                                hsep ["No module named", squotes $ pretty n, "is imported"]
-                return $ L sp $ toplevelName modn (L sp n)
+
+{-rename (L sp (Qual modn n)) = do
+        env <- asks fst
+        unless (n `M.member` env) $
+                throwLocErr sp $
+                        hsep ["No module named", squotes $ pretty n, "is imported"]
+        return $ L sp $ toplevelName modn (L sp n)-}
 
 instance Rename Expr where
         rename (VarE var) = VarE <$> rename var

@@ -98,8 +98,7 @@ impdecl     :: { Located ModuleName }
             : 'import' modid                        { $2 }
 
 modid       :: { Located ModuleName }
-            : qconid                                { cL $1 (ModuleName (splitOnDot $ unLoc $1)) }
-            | conid                                 { cL $1 (ModuleName (splitOnDot $ unLoc $1)) }
+            : conid                                 { cL $1 (ModuleName (unLoc $1)) }
 
 -- | Declarations
 topdecls    :: { [ LTopDecl RdrName ] }
@@ -299,16 +298,6 @@ setFixities ops (L sp prec) fix = do
         return op
     return $ FixityD fix prec ops'
 
-splitOnDot :: T.Text -> [T.Text]
-splitOnDot = (map T.pack) . (loop 0) . T.unpack
-  where
-    loop :: Int -> String -> [String]
-    loop cnt xs
-        | length xs == cnt = [xs]
-        | otherwise = if (xs !! cnt) == '.'
-            then take cnt xs : loop 0 (drop (cnt + 1) xs)
-            else loop (cnt + 1) xs
-
 ----------------------------------------------------------------
 -- mk Located
 ----------------------------------------------------------------
@@ -352,8 +341,5 @@ mkLName :: (T.Text -> Name) -> Located T.Text -> Located Name
 mkLName f (L sp t) = L sp (f t)
 
 mkLRdrName :: (T.Text -> Name) -> Located T.Text -> Located RdrName
-mkLRdrName f (L sp t) = case reverse (splitOnDot t) of
-    [] -> unreachable "mkLRdrName"
-    [x] -> L sp $ Unqual (f x)
-    x : xs -> L sp $ Qual (ModuleName (reverse xs)) (f x)
+mkLRdrName f (L sp t) = L sp $ Unqual (f t)
 }
