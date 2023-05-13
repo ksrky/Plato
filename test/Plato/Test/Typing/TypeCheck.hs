@@ -12,7 +12,7 @@ import Plato.Test.Utils
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
-import Data.Text qualified as T
+import qualified Data.Text as T
 import Test.Hspec
 
 testcases :: [(String, IO [FuncD] -> Expectation)]

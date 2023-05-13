@@ -8,7 +8,7 @@ import Plato.Common.Name.Global
 
 import Plato.Syntax.Typing
 
-import Data.Text qualified as T
+import qualified Data.Text as T
 
 pattern NL :: a -> Located a
 pattern NL x <- L _ x

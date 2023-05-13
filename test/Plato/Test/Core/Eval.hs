@@ -13,7 +13,7 @@ import Plato.Transl.TypToCore
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.RWS
-import Data.Text.IO qualified as T
+import qualified Data.Text.IO as T
 import Prettyprinter
 import Prettyprinter.Render.String
 

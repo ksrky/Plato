@@ -6,16 +6,16 @@ import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Monad
 import Plato.Syntax.Typing
-import Plato.Transl.PsToTyp qualified as T
-import Plato.Transl.SrcToPs qualified as P
+import qualified Plato.Transl.PsToTyp as T
+import qualified Plato.Transl.SrcToPs as P
 import Plato.Typing.KindInfer
 
 import Control.Exception.Safe
 import Control.Monad.State
 import Control.Monad.Writer
-import Data.Map.Strict qualified as M
-import Data.Text qualified as T
-import Plato.Syntax.Parsing qualified as P
+import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import qualified Plato.Syntax.Parsing as P
 import Test.Hspec
 
 testcases :: [(String, IO [Kind] -> Expectation)]
