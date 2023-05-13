@@ -52,6 +52,12 @@ library
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Syntax.Typing.Base
+      Plato.Syntax.Typing.Decl
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
@@ -67,6 +73,7 @@ library
       src
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
   build-tools:
       alex
@@ -120,6 +127,12 @@ executable plato
       Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Typing
+      Plato.Syntax.Typing.Base
+      Plato.Syntax.Typing.Decl
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Type
       Plato.Transl.CoreToIO
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
@@ -134,6 +147,7 @@ executable plato
       src
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -182,6 +196,7 @@ test-suite Plato-test
       test
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
