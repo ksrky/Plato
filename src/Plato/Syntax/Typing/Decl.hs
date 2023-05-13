@@ -10,8 +10,8 @@ import Plato.Syntax.Typing.Type
 type LDecl = Located Decl
 
 data Decl
-        = TypeD LName Type
-        | VarD LName Type
+        = TypeD LName LType
+        | VarD LName LType
         | ConD FuncD
         deriving (Eq, Show)
 

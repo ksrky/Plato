@@ -16,6 +16,7 @@ import Control.Monad.Trans.Class
 import Data.IORef
 import Data.List ((\\))
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import Prettyprinter
 
 data TcEnv = TcEnv
@@ -87,22 +88,19 @@ lookupVar x = do
 --      Creating, reading, writing MetaTvs      --
 --------------------------------------------------
 newTyVar :: MonadIO m => Tc m Tau
-newTyVar = MetaT <$> newMetaTyVar
-
-newMetaTyVar :: MonadIO m => Tc m MetaTv
-newMetaTyVar = do
-        uniq <- newUnique
-        tref <- newTcRef Nothing
-        return (Meta uniq tref)
+newTyVar = MetaT <$> newMetaTv
 
 newSkolemTyVar :: MonadIO m => TyVar -> Tc m TyVar
 newSkolemTyVar tv = SkolemTv (tyVarLName tv) <$> newUnique
 
-readTv :: MonadIO m => MetaTv -> Tc m (Maybe Tau)
-readTv (Meta _ ref) = readTcRef ref
+newMetaTv :: MonadIO m => Tc m MetaTv
+newMetaTv = Meta <$> newUnique <*> newTcRef Nothing
 
-writeTv :: MonadIO m => MetaTv -> Tau -> Tc m ()
-writeTv (Meta _ ref) ty = writeTcRef ref (Just ty)
+readMetaTv :: MonadIO m => MetaTv -> Tc m (Maybe Tau)
+readMetaTv (Meta _ ref) = readTcRef ref
+
+writeMetaTv :: MonadIO m => MetaTv -> Tau -> Tc m ()
+writeMetaTv (Meta _ ref) ty = writeTcRef ref (Just ty)
 
 newUnique :: MonadIO m => Tc m Uniq
 newUnique =
@@ -117,33 +115,33 @@ newUnique =
 -- Instantiation
 ----------------------------------------------------------------
 instantiate :: MonadIO m => Sigma -> Tc m (Expr -> Expr, Rho)
-instantiate (AllT tvs ty) = do
-        tvs' <- mapM (const newMetaTyVar) tvs
+instantiate (AllT tvs tau) = do
+        tvs' <- mapM (const newMetaTv) tvs
         let coercion = \e -> TAppE e (map MetaT tvs')
-        return (coercion, substTy (map fst tvs) (map MetaT tvs') ty)
+        return (coercion, subst (map fst tvs) (map MetaT tvs') (unLoc tau))
 instantiate ty = return (id, ty)
 
-skolemise :: MonadIO m => Sigma -> Tc m (Expr -> Expr, [TyVar], Rho)
-skolemise (AllT tvs ty) = do
-        sks1 <- mapM (newSkolemTyVar . fst) tvs
-        (coercion, sks2, ty') <- skolemise (substTy (map fst tvs) (map VarT sks1) ty)
+skolemise :: MonadIO m => Sigma -> Tc m (Expr -> Expr, [Quant], Rho)
+skolemise (AllT qnts rho) = do
+        sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) qnts
+        (coercion, sks2, ty') <- skolemise (subst (map fst qnts) (map (VarT . fst) sks1) (unLoc rho))
         let coercion' = \e ->
                 TAbsE
-                        (map tyVarLName sks1)
-                        (coercion $ TAppE e (map VarT sks1))
+                        (map (unTyVar . fst) sks1)
+                        (coercion $ TAppE e (map (VarT . fst) sks1))
         return (if null sks2 then id else coercion', sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
-        (coercion, sks, res_ty') <- skolemise res_ty
+        (coercion, sks, res_ty') <- skolemise (unLoc res_ty)
         let coercion' = \e ->
                 AbsE
                         (noLoc $ varName "?x")
-                        (Just arg_ty)
+                        (Just $ unLoc arg_ty)
                         ( coercion $
                                 TAbsE
-                                        (map tyVarLName sks)
-                                        (AppE (TAppE e (map VarT sks)) (VarE $ newGlbName Local (varName "?x")))
+                                        (map (unTyVar . fst) sks)
+                                        (AppE (TAppE e (map (VarT . fst) sks)) (VarE $ newGlbName Local (varName "?x")))
                         )
-        return (if null sks then coercion else coercion', sks, ArrT arg_ty res_ty')
+        return (if null sks then coercion else coercion', sks, ArrT arg_ty (L (getLoc res_ty) res_ty'))
 skolemise ty = return (id, [], ty)
 
 ----------------------------------------------------------------
@@ -153,11 +151,11 @@ quantify :: MonadIO m => [MetaTv] -> Rho -> Tc m Sigma
 quantify tvs ty = do
         mapM_ bind (tvs `zip` new_bndrs)
         ty' <- zonkType ty
-        return (AllT (map (,Nothing) new_bndrs) ty')
+        return (AllT (map (,Nothing) new_bndrs) (noLoc ty'))
     where
         used_bndrs = tyVarBndrs ty
         new_bndrs = take (length tvs) (allBinders \\ used_bndrs)
-        bind (tv, name) = writeTv tv (VarT name)
+        bind (tv, name) = writeMetaTv tv (VarT name)
 
 allBinders :: [TyVar]
 allBinders =
@@ -167,15 +165,15 @@ allBinders =
 getEnvTypes :: Monad m => Tc m [Type]
 getEnvTypes = M.elems <$> getEnv
 
-getMetaTvs :: MonadIO m => [Type] -> Tc m [MetaTv]
-getMetaTvs tys = do
-        tys' <- mapM zonkType tys
-        return (metaTvs tys')
+getMetaTvs :: MonadIO m => Type -> Tc m (S.Set MetaTv)
+getMetaTvs ty = do
+        ty' <- zonkType ty
+        return (metaTvs ty')
 
-getFreeTyVars :: MonadIO m => [Type] -> Tc m [TyVar]
-getFreeTyVars tys = do
-        tys' <- mapM zonkType tys
-        return (freeTyVars tys')
+getFreeTvs :: MonadIO m => Type -> Tc m (S.Set TyVar)
+getFreeTvs ty = do
+        ty' <- zonkType ty
+        return (freeTvs ty')
 
 ----------------------------------------------------------------
 -- Zonking
@@ -184,24 +182,24 @@ zonkType :: MonadIO m => Type -> Tc m Type
 zonkType (VarT x) = return (VarT x)
 zonkType (ConT x) = return (ConT x)
 zonkType (AllT ns ty) = do
-        ty' <- zonkType ty
+        ty' <- zonkType `traverse` ty
         return (AllT ns ty')
-zonkType (AbsT x mkn ty) = AbsT x mkn <$> zonkType ty
+zonkType (AbsT x mkn ty) = AbsT x mkn <$> zonkType `traverse` ty
 zonkType (AppT fun arg) = do
-        fun' <- zonkType fun
-        arg' <- zonkType arg
+        fun' <- zonkType `traverse` fun
+        arg' <- zonkType `traverse` arg
         return (AppT fun' arg')
 zonkType (ArrT arg res) = do
-        arg' <- zonkType arg
-        res' <- zonkType res
+        arg' <- zonkType `traverse` arg
+        res' <- zonkType `traverse` res
         return (ArrT arg' res')
 zonkType (MetaT tv) = do
-        mb_ty <- readTv tv
+        mb_ty <- readMetaTv tv
         case mb_ty of
                 Nothing -> return (MetaT tv)
                 Just ty -> do
                         ty' <- zonkType ty
-                        writeTv tv ty'
+                        writeMetaTv tv ty'
                         return ty'
 zonkType _ = unreachable "zonkType"
 
@@ -212,7 +210,7 @@ zonkExpr (TAbsE ns expr) = TAbsE ns <$> zonkExpr expr
 zonkExpr (TAppE e tys) = TAppE e <$> mapM zonkType tys
 zonkExpr (LetE decs body) =
         LetE
-                <$> forM decs (\(FuncD var e ty) -> FuncD var <$> zonkExpr e <*> zonkType ty)
+                <$> forM decs (\(FuncD var e ty) -> FuncD var <$> zonkExpr e <*> zonkType `traverse` ty)
                 <*> zonkExpr body
 zonkExpr (CaseE e mty alts) =
         CaseE
@@ -227,50 +225,65 @@ zonkExpr expr = return expr
 -- Unification
 ----------------------------------------------------------------
 unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] -- tmp: location
+unify ty1 ty2 | badType ty1 || badType ty2 = do
+        lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)]
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
+unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
+unify (ArrT arg1 res1) (ArrT arg2 res2) = do
+        unify (unLoc arg1) (unLoc arg2)
+        unify (unLoc res1) (unLoc res2)
+unify (AppT fun1 arg1) (AppT fun2 arg2) = do
+        unify (unLoc fun1) (unLoc fun2)
+        unify (unLoc arg1) (unLoc arg2)
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
 unify ty (MetaT tv) = unifyVar tv ty
-unify (ArrT arg1 res1) (ArrT arg2 res2) = do
-        unify arg1 arg2
-        unify res1 res2
-unify (AppT fun1 arg1) (AppT fun2 arg2) = do
-        unify fun1 fun2
-        unify arg1 arg2
-unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] -- tmp: location
+unify ty1 ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)]
+
+{-unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
+unifyVar tv1 ty2@(MetaT tv2) = do
+        mb_ty1 <- readMetaTv tv1
+        mb_ty2 <- readMetaTv tv2
+        case (mb_ty1, mb_ty2) of
+                (Just ty1, _) -> unify ty1 ty2
+                (Nothing, Just ty2) -> unify (MetaT tv1) ty2
+                (Nothing, Nothing) -> writeMetaTv tv1 ty2
+unifyVar tv1 ty2 = do
+        occursCheck tv1 ty2
+        writeMetaTv tv1 ty2-}
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do
-        mb_ty1 <- readTv tv1
+        mb_ty1 <- readMetaTv tv1
         case mb_ty1 of
                 Just ty1 -> unify ty1 ty2
                 Nothing -> unifyUnboundVar tv1 ty2
 
 unifyUnboundVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyUnboundVar tv1 ty2@(MetaT tv2) = do
-        mb_ty2 <- readTv tv2
+        mb_ty2 <- readMetaTv tv2
         case mb_ty2 of
                 Just ty2' -> unify (MetaT tv1) ty2'
-                Nothing -> writeTv tv1 ty2
+                Nothing -> writeMetaTv tv1 ty2
 unifyUnboundVar tv1 ty2 = do
-        tvs2 <- getMetaTvs [ty2]
+        tvs2 <- getMetaTvs ty2
         if tv1 `elem` tvs2
-                then occursCheckErr tv1 ty2
-                else writeTv tv1 ty2
+                then occursCheck tv1 ty2
+                else writeMetaTv tv1 ty2
 
-unifyFun :: (MonadIO m, MonadThrow m) => Rho -> Tc m (Sigma, Rho)
-unifyFun (ArrT arg res) = return (arg, res)
-unifyFun tau = do
-        arg_ty <- newTyVar
-        res_ty <- newTyVar
-        unify tau (ArrT arg_ty res_ty)
-        return (arg_ty, res_ty)
-
-occursCheckErr :: MonadThrow m => MetaTv -> Tau -> Tc m ()
-occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv, pretty ty]
+occursCheck :: (MonadThrow m, MonadIO m) => MetaTv -> Tau -> Tc m ()
+occursCheck tv1 ty2 = do
+        tvs2 <- getMetaTvs ty2
+        when (tv1 `S.member` tvs2) $ lift $ throwError $ hsep ["Infinite type:", squotes $ pretty ty2]
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True
 badType _ = False
+
+unifyFun :: (MonadIO m, MonadThrow m) => Rho -> Tc m (Sigma, Rho)
+unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
+unifyFun tau = do
+        arg_ty <- newTyVar
+        res_ty <- newTyVar
+        unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        return (arg_ty, res_ty)

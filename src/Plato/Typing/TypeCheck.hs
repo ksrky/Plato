@@ -18,11 +18,12 @@ import Control.Monad.IO.Class
 import Control.Monad.Writer as Writer
 import Data.IORef
 import Data.List (subsequences, (\\))
+import qualified Data.Set as S
 import Prettyprinter
 
 typeCheck :: (MonadIO m, MonadThrow m) => TyEnv -> FuncD -> m FuncD
 typeCheck env (FuncD var body ty) = runTc env $ do
-        body' <- checkSigma body ty
+        body' <- checkSigma body (unLoc ty)
         body'' <- zonkExpr body'
         return (FuncD var body'' ty)
 
@@ -35,7 +36,7 @@ typeInfer env e = runTc env $ do
 
 isBasicType :: Type -> Bool
 isBasicType ConT{} = True
-isBasicType (AppT fun res) = isBasicType fun && isBasicType res
+isBasicType (AppT fun res) = isBasicType (unLoc fun) && isBasicType (unLoc res)
 isBasicType _ = False
 
 data Expected a = Infer (IORef a) | Check a
@@ -75,13 +76,13 @@ instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
 instDataCon :: (MonadIO m, MonadThrow m) => GlbName -> Tc m ([Sigma], Tau)
 instDataCon con = do
-        con_ty <- lookupVar con
-        (_, con_ty') <- instantiate con_ty
-        return $ go con_ty' []
+        sigma <- lookupVar con
+        (_, rho) <- instantiate sigma
+        return $ split [] rho
     where
-        go :: Type -> [Type] -> ([Type], Type)
-        go (ArrT arg res) acc = go res (arg : acc)
-        go ty acc = (reverse acc, ty)
+        split :: [Sigma] -> Rho -> ([Sigma], Tau)
+        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
+        split acc tau = (acc, tau)
 
 ------------------------------------------
 -- tcRho, and its variants
@@ -113,12 +114,12 @@ tcRho (AbsE var Nothing body) (Check exp_ty) = do
 tcRho (AbsE var Nothing body) (Infer ref) = do
         var_ty <- newTyVar
         (body', body_ty) <- extendVarEnv var var_ty (inferRho body)
-        writeTcRef ref (ArrT var_ty body_ty)
+        writeTcRef ref (ArrT (noLoc var_ty) (noLoc body_ty))
         return $ AbsE var (Just var_ty) body'
 tcRho (LetE decs body) exp_ty = do
-        let binds = [(var, ty) | FuncD var _ ty <- decs]
+        let binds = [(var, unLoc ty) | FuncD var _ ty <- decs]
         decs' <- forM decs $ \(FuncD var exp ann_ty) -> do
-                exp' <- extendVarEnvList binds $ checkSigma exp ann_ty
+                exp' <- extendVarEnvList binds $ checkSigma exp (unLoc ann_ty)
                 return $ FuncD var exp' ann_ty
         body' <- extendVarEnvList binds (tcRho body exp_ty)
         return $ LetE decs' body'
@@ -157,10 +158,10 @@ tcRho e _ = return e
 inferSigma :: (MonadIO m, MonadThrow m) => Expr -> Tc m (Expr, Sigma)
 inferSigma e = do
         (expr, exp_ty) <- inferRho e
-        env_tys <- getEnvTypes
-        env_tvs <- getMetaTvs env_tys
-        res_tvs <- getMetaTvs [exp_ty]
-        let forall_tvs = res_tvs \\ env_tvs
+        -- env_tys <- getEnvTypes
+        -- env_tvs <- getMetaTvs env_tys
+        -- res_tvs <- getMetaTvs [exp_ty]
+        let forall_tvs = [] -- res_tvs \\ env_tvs
         if null forall_tvs
                 then return (expr, exp_ty)
                 else (expr,) <$> quantify forall_tvs exp_ty
@@ -170,10 +171,10 @@ checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         exp' <- checkRho exp rho
         env_tys <- getEnvTypes
-        esc_tvs <- getFreeTyVars (sigma : env_tys)
-        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+        esc_tvs <- mconcat <$> mapM getFreeTvs (sigma : env_tys)
+        let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ lift $ throwUnexpErr "Type not polymorphic enough"
-        return $ coercion $ if null skol_tvs then exp' else TAbsE (map tyVarLName skol_tvs) exp'
+        return $ coercion $ if null skol_tvs then exp' else TAbsE (map (unTyVar . fst) skol_tvs) exp'
 
 ------------------------------------------
 --        Subsumption checking          --
@@ -183,12 +184,12 @@ subsCheck :: (MonadIO m, MonadThrow m) => Sigma -> Sigma -> Tc m (Expr -> Expr)
 subsCheck sigma1 sigma2 = do
         (co1, skol_tvs, rho2) <- skolemise sigma2
         co2 <- subsCheckRho sigma1 rho2
-        esc_tvs <- getFreeTyVars [sigma1, sigma2]
-        let bad_tvs = filter (`elem` esc_tvs) skol_tvs
+        esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
+        let bad_tvs = S.fromList (map fst skol_tvs) `S.intersection` esc_tvs
         unless (null bad_tvs) $ lift $ throwUnexpErr $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         if null skol_tvs
                 then return id
-                else return $ \e -> co1 (TAbsE (map tyVarLName skol_tvs) (co2 e))
+                else return $ \e -> co1 (TAbsE (map (\(tv, mkn) -> unTyVar tv) skol_tvs) (co2 e))
 
 subsCheckRho :: (MonadIO m, MonadThrow m) => Sigma -> Rho -> Tc m (Expr -> Expr)
 subsCheckRho sigma1@AllT{} rho2 = do
@@ -197,10 +198,10 @@ subsCheckRho sigma1@AllT{} rho2 = do
         return $ \e -> (co2 . co1) e
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
-        subsCheckFun a1 r1 a2 r2
+        subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
 subsCheckRho (ArrT a1 r1) rho2 = do
         (a2, r2) <- unifyFun rho2
-        subsCheckFun a1 r1 a2 r2
+        subsCheckFun (unLoc a1) (unLoc r1) a2 r2
 subsCheckRho tau1 tau2 = do
         unify tau1 tau2
         return id

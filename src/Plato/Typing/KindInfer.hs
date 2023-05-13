@@ -17,17 +17,17 @@ import Data.IORef
 import qualified Data.Map.Strict as M
 import Prettyprinter
 
-inferKind :: (MonadThrow m, MonadIO m) => KnEnv -> Type -> m (Type, Kind)
+inferKind :: (MonadThrow m, MonadIO m) => KnEnv -> LType -> m (LType, Kind)
 inferKind knenv ty = runKi knenv $ do
         (ty', kn) <- infer ty
-        ty'' <- zonkType ty'
+        ty'' <- zonkType `traverse` ty'
         kn' <- zonkKind kn
         return (ty'', kn')
 
-checkKindStar :: (MonadThrow m, MonadIO m) => KnEnv -> Span -> Type -> m Type
+checkKindStar :: (MonadThrow m, MonadIO m) => KnEnv -> Span -> LType -> m LType
 checkKindStar knenv sp ty = runKi knenv $ do
         (ty', kn) <- infer ty
-        ty'' <- zonkType ty'
+        ty'' <- zonkType `traverse` ty'
         kn' <- zonkKind kn
         when (kn' /= StarK) $ lift $ throwLocErr sp $ sep [pretty ty, " doesn't have Kind *"]
         return ty''
@@ -161,20 +161,21 @@ zonkKind (MetaK kv) = do
 zonkType :: MonadIO m => Type -> Ki m Type
 zonkType (VarT tv) = return $ VarT tv
 zonkType (ConT x) = return $ ConT x
-zonkType (ArrT arg res) = ArrT <$> zonkType arg <*> zonkType res
-zonkType (AllT tvs ty) = do
+zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
+zonkType (AllT tvs body) = do
         tvs' <- forM tvs $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
-        AllT tvs' <$> zonkType ty
-zonkType (AbsT x mkn ty) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType ty
-zonkType (AppT fun arg) = AppT <$> zonkType fun <*> zonkType arg
-zonkType (RecT x kn ty) = RecT x kn <$> zonkType ty
+        AllT tvs' <$> zonkType `traverse` body
+zonkType (AbsT x mkn body) = AbsT x <$> zonkKind `traverse` mkn <*> zonkType `traverse` body
+zonkType (AppT fun arg) = AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
+{-zonkType (RecT x kn ty) = RecT x kn <$> zonkType ty
 zonkType (RecordT fields) = do
         fields' <- forM fields $ \(x, ty) -> (x,) <$> zonkType ty
         return $ RecordT fields'
 zonkType (SumT fields) = do
-        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM zonkType tys
-        return $ SumT fields'
+        fields' <- forM fields $ \(x, tys) -> (x,) <$> mapM (zonkType `traverse`) tys
+        return $ SumT fields'-}
 zonkType MetaT{} = unreachable "zonkType"
+zonkType _ = undefined -- tmp
 
 -- | Unification
 unify :: (MonadThrow m, MonadIO m) => Kind -> Kind -> Ki m ()
@@ -209,46 +210,46 @@ occursCheckErr :: MonadThrow m => MetaKv -> Kind -> Ki m ()
 occursCheckErr tv ty = lift $ throwError $ hsep ["Occurs check fail", viaShow tv <> comma, pretty ty]
 
 -- | Inference
-infer :: (MonadThrow m, MonadIO m) => Type -> Ki m (Type, Kind)
-infer t = case t of
+infer :: (MonadThrow m, MonadIO m) => LType -> Ki m (LType, Kind)
+infer (L sp t) = case t of
         VarT tv -> do
                 kn <- lookupVar (localName $ tyVarLName tv)
-                return (VarT tv, kn)
+                return (L sp $ VarT tv, kn)
         ConT x -> do
                 kn <- lookupVar x
-                return (ConT x, kn)
+                return (L sp $ ConT x, kn)
         ArrT ty1 ty2 -> do
                 (ty1', kn1) <- infer ty1
                 (ty2', kn2) <- infer ty2
                 unify kn1 StarK
                 unify kn2 StarK
-                return (ArrT ty1' ty2', StarK)
+                return (L sp $ ArrT ty1' ty2', StarK)
         AllT tvs ty1 -> do
                 binds <- forM tvs $ \tv -> do
                         kv <- newKnVar
                         return (fst tv, kv)
                 (ty1', kn1) <- extendEnvList (map (first tyVarLName) binds) (infer ty1)
                 unify kn1 StarK
-                return (AllT (map (second Just) binds) ty1', StarK)
+                return (L sp $ AllT (map (second Just) binds) ty1', StarK)
         AbsT x _ ty1 -> do
                 kv <- newKnVar
                 (ty1', kn1) <- extendEnv x kv (infer ty1)
-                return (AbsT x (Just kv) ty1', ArrK kv kn1)
+                return (L sp $ AbsT x (Just kv) ty1', ArrK kv kn1)
         AppT ty1 ty2 -> do
                 kv <- newKnVar
                 (ty1', kn1) <- infer ty1
                 (ty2', kn2) <- infer ty2
                 unify kn1 (ArrK kn2 kv)
-                return (AppT ty1' ty2', kv)
+                return (L sp $ AppT ty1' ty2', kv)
         RecT x kn ty1 -> do
                 (ty1', kn1) <- extendEnv x kn (infer ty1)
-                return (RecT x kn ty1', kn1)
+                return (L sp $ RecT x kn ty1', kn1)
         RecordT fields -> do
                 fields' <- forM fields $ \(x, ty1) -> do
                         (ty1', kn1) <- infer ty1
                         unify kn1 StarK
                         return (x, ty1')
-                return (RecordT fields', StarK)
+                return (L sp $ RecordT fields', StarK)
         SumT fields -> do
                 fields' <- forM fields $ \(x, tys) -> do
                         tys' <- forM tys $ \ty1 -> do
@@ -256,5 +257,5 @@ infer t = case t of
                                 unify kn1 StarK
                                 return ty1'
                         return (x, tys')
-                return (SumT fields', StarK)
+                return (L sp $ SumT fields', StarK)
         MetaT{} -> unreachable "infer"

@@ -27,6 +27,9 @@ mkValue glbn = case g_sort glbn of
 class Bundle a where
         bundle :: MonadThrow m => a -> ReaderT (ModuleName, Level) m a
 
+instance Bundle a => Bundle (Located a) where
+        bundle x = bundle `traverse` x
+
 instance Bundle Expr where
         bundle (VarE x) = case nameSpace (g_name x) of
                 VarName -> mkValue x
@@ -47,17 +50,17 @@ instance Bundle Expr where
         bundle e = return e
 
 instance Bundle Type where
-        bundle (RecT x kn ty) = return $ RecT x kn (bundle' ty)
+        bundle (RecT x kn ty) = return $ RecT x kn (bundle' <$> ty)
             where
                 bundle' :: Type -> Type
                 bundle' (ConT con)
                         | unLoc x == g_name con = ConT con{g_sort = Local}
                         | otherwise = ConT con
-                bundle' (ArrT ty1 ty2) = ArrT (bundle' ty1) (bundle' ty2)
-                bundle' (AllT xs ty) = AllT xs (bundle' ty)
-                bundle' (AbsT x mkn ty) = AbsT x mkn (bundle' ty)
-                bundle' (AppT ty1 ty2) = AppT (bundle' ty1) (bundle' ty2)
-                bundle' (SumT fieldtys) = SumT $ map (\(l, tys) -> (l, map bundle' tys)) fieldtys
+                bundle' (ArrT ty1 ty2) = ArrT (bundle' <$> ty1) (bundle' <$> ty2)
+                bundle' (AllT xs ty) = AllT xs (bundle' <$> ty)
+                bundle' (AbsT x mkn ty) = AbsT x mkn (bundle' <$> ty)
+                bundle' (AppT ty1 ty2) = AppT (bundle' <$> ty1) (bundle' <$> ty2)
+                bundle' (SumT fieldtys) = SumT $ map (\(l, tys) -> (l, map (bundle' <$>) tys)) fieldtys
                 bundle' ty = ty
         bundle ty = return ty
 
@@ -72,7 +75,7 @@ bundleFuncDs decs = do
                 body' <- bundle body
                 return (localtopName lev var, body')
         let fieldtys = [(localtopName lev var, ty) | FuncD var _ ty <- decs]
-        return $ FuncD (noLoc r) (RecordE fields) (RecordT fieldtys)
+        return $ FuncD (noLoc r) (RecordE fields) (noLoc $ RecordT fieldtys)
 
 bundleEval :: MonadThrow m => Expr -> m Expr
 bundleEval = (`runReaderT` (dummyModname, 0)) . bundle
@@ -84,4 +87,4 @@ bundleTopFuncDs modn decs = do
                 body' <- runReaderT (bundle body) (modn, 0)
                 return (toplevelName modn var, body')
         let fieldtys = [(toplevelName modn var, ty) | FuncD var _ ty <- decs]
-        return $ FuncD r (RecordE fields) (RecordT fieldtys)
+        return $ FuncD r (RecordE fields) (noLoc $ RecordT fieldtys)

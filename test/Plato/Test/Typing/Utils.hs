@@ -59,4 +59,4 @@ pattern ABSE :: T.Text -> Expr -> Expr
 pattern ABSE x e <- AbsE (L _ (Name VarName x)) Nothing e
 
 pattern ALLT :: T.Text -> Type -> Type
-pattern ALLT x ty <- AllT [(TV x, _)] ty
+pattern ALLT x ty <- AllT [(TV x, _)] (L _ ty)

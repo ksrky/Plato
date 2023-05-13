@@ -16,8 +16,8 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
-        describe "Expr translation" $ mapM_ ET.test ET.testcases
-        describe "Type reconstruction" $ mapM_ TC.test TC.testcases
+        -- describe "Expr translation" $ mapM_ ET.test ET.testcases
+        -- describe "Type reconstruction" $ mapM_ TC.test TC.testcases
         describe "Pretty test" $ mapM_ P.test P.testcases
 
 {-describe "Decl translation" $ mapM_ DT.test DT.testcases

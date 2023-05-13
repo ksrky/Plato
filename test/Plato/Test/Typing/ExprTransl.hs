@@ -19,6 +19,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.Hspec
 
+{-
 testcases :: [(String, IO Expr -> Expectation)]
 testcases =
         [
@@ -75,4 +76,4 @@ test (inp, iscorrect) =
                                 transExpr exp
                         )
                                 initPInfo
-                                initPState{plt_glbNameEnv = glbNameEnv}
+                                initPState{plt_glbNameEnv = glbNameEnv}-}

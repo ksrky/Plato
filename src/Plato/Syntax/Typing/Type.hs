@@ -11,16 +11,20 @@ import Plato.Syntax.Typing.Kind
 -----------------------------------------------------------
 -- Datas and types
 -----------------------------------------------------------
+type LType = Located Type
+
+type Quant = (TyVar, Maybe Kind)
+
 data Type
         = VarT TyVar
         | ConT GlbName
-        | ArrT Type Type
-        | AllT [(TyVar, Maybe Kind)] Rho
-        | AbsT LName (Maybe Kind) Type
-        | AppT Type Type
-        | RecT LName Kind Type
-        | RecordT [(GlbName, Type)]
-        | SumT [(LName, [Type])]
+        | ArrT LType LType
+        | AllT [Quant] LType
+        | AppT LType LType
+        | AbsT LName (Maybe Kind) LType
+        | RecT LName Kind LType
+        | RecordT [(GlbName, LType)]
+        | SumT [(LName, [LType])]
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -31,7 +35,11 @@ type Tau = Type
 data TyVar
         = BoundTv LName
         | SkolemTv LName Uniq
-        deriving (Show)
+        deriving (Show, Ord)
+
+unTyVar :: TyVar -> LName
+unTyVar (BoundTv x) = x
+unTyVar (SkolemTv x _) = x
 
 data MetaTv = Meta Uniq TyRef
 
@@ -51,6 +59,9 @@ instance Eq MetaTv where
 instance Show MetaTv where
         show (Meta u _) = "$" ++ show u
 
+instance Ord MetaTv where
+        Meta u1 _ `compare` Meta u2 _ = u1 `compare` u2
+
 -----------------------------------------------------------
 -- Pretty printing
 -----------------------------------------------------------
@@ -61,8 +72,8 @@ instance Pretty TyVar where
 instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
-        pretty (AppT fun arg) = pretty fun <+> pprty AppPrec arg
-        pretty (ArrT arg res) = pprty ArrPrec arg <+> "->" <+> pprty TopPrec res
+        pretty (AppT fun arg) = pretty fun <+> pprty AppPrec (unLoc arg)
+        pretty (ArrT arg res) = pprty ArrPrec (unLoc arg) <+> "->" <+> pprty TopPrec (unLoc res)
         pretty (AllT vars body) = lbrace <> hsep (map (pretty . fst) vars) <> rbrace <+> pretty body
         pretty (AbsT var mkn body) = sep [backslash <> pretty var <> maybe emptyDoc ((colon <>) . pretty) mkn] <> dot <+> pretty body
         pretty (RecT var _ body) = "μ" <> pretty var <> dot <+> pretty body
@@ -77,7 +88,7 @@ instance Pretty Type where
                         <> concatWith
                                 (\d e -> d <+> pipe <+> e)
                                 ( map
-                                        (\(c, tys) -> hsep (pretty c : map (pprty AppPrec) tys))
+                                        (\(c, tys) -> hsep (pretty c : map (pprty AppPrec . unLoc) tys))
                                         fields
                                 )
                         <> rangle

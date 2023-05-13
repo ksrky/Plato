@@ -50,7 +50,7 @@ transExpr knenv ctx = traexpr
                 return $ foldr (C.TmTAbs . unLoc) t1 xs
         traexpr (T.LetE [T.FuncD x e11 ty12] e2) = do
                 ty12' <- checkKindStar knenv NoSpan ty12
-                tyT1 <- transType ctx ty12'
+                tyT1 <- transType ctx (unLoc ty12')
                 let ctx' = addName (localName x) ctx
                 t1 <- transExpr knenv ctx' e11
                 let t1' = C.TmFix (C.TmAbs (unLoc x) tyT1 t1)
@@ -97,45 +97,45 @@ transType ctx = tratype
     where
         tratype :: MonadThrow m => T.Type -> m C.Ty
         tratype (T.VarT tv) = do
-                i <- getVarIndex ctx (localName $ tyVarLName tv)
+                i <- getVarIndex ctx (localName $ T.unTyVar tv)
                 return $ C.TyVar i (length ctx)
-        tratype (T.ConT x) = do
-                i <- getVarIndex ctx x
+        tratype (T.ConT tc) = do
+                i <- getVarIndex ctx tc
                 return $ C.TyVar i (length ctx)
-        tratype (T.ArrT ty1 ty2) = do
-                tyT1 <- tratype ty1
-                tyT2 <- tratype ty2
+        tratype (T.ArrT arg res) = do
+                tyT1 <- tratype (unLoc arg)
+                tyT2 <- tratype (unLoc res)
                 return $ C.TyArr tyT1 tyT2
-        tratype (T.AllT xs ty) = do
-                xs' <- forM xs $ \case
+        tratype (T.AllT qnts body) = do
+                qnts' <- forM qnts $ \case
                         (tv, Just kn) -> do
                                 knK <- transKind kn
-                                return (tyVarName tv, knK)
-                        _ -> throwUnexpErr "Kind inference failed"
-                let ctx' = addNameList (map (localName . tyVarLName . fst) xs) ctx
-                tyT2 <- transType ctx' ty
-                return $ foldr (uncurry C.TyAll) tyT2 xs'
-        tratype (T.AbsT x (Just kn) ty) = do
+                                return (unLoc $ T.unTyVar tv, knK)
+                        _ -> unreachable "Kind inference failed"
+                let ctx' = addNameList (map (localName . tyVarLName . fst) qnts) ctx
+                tyT2 <- transType ctx' (unLoc body)
+                return $ foldr (uncurry C.TyAll) tyT2 qnts'
+        tratype (T.AbsT x (Just kn) body) = do
                 knK1 <- transKind kn
                 let ctx' = addName (localName x) ctx
-                tyT2 <- transType ctx' ty
+                tyT2 <- transType ctx' (unLoc body)
                 return $ C.TyAbs (unLoc x) knK1 tyT2
-        tratype (T.AppT ty1 ty2) = do
-                tyT1 <- tratype ty1
-                tyT2 <- tratype ty2
+        tratype (T.AppT fun arg) = do
+                tyT1 <- tratype (unLoc fun)
+                tyT2 <- tratype (unLoc arg)
                 return $ C.TyApp tyT1 tyT2
-        tratype (T.RecT x kn ty) = do
+        tratype (T.RecT x kn body) = do
                 let ctx' = addName (localName x) ctx
                 knK1 <- transKind kn
-                tyT2 <- transType ctx' ty
+                tyT2 <- transType ctx' (unLoc body)
                 return $ C.TyRec (unLoc x) knK1 tyT2
         tratype (T.RecordT fieldtys) = do
-                fields' <- forM fieldtys $ \(l, field) -> (g_name l,) <$> tratype field
+                fields' <- forM fieldtys $ \(l, ty) -> (g_name l,) <$> tratype (unLoc ty)
                 return $ C.TyRecord fields'
         tratype (T.SumT fieldtys) = do
-                fields' <- forM fieldtys $ \(l, field) -> (unLoc l,) <$> mapM tratype field
+                fields' <- forM fieldtys $ \(l, tys) -> (unLoc l,) <$> mapM (tratype . unLoc) tys
                 return $ C.TyVariant fields'
-        tratype T.MetaT{} = throwUnexpErr "Zonking failed"
+        tratype T.MetaT{} = unreachable "Zonking failed"
         tratype ty = throwUnexpErr $ "Illegal type:" <+> pretty ty
 
 transKind :: MonadThrow m => T.Kind -> m C.Kind
@@ -148,24 +148,24 @@ transDecl modn (L sp dec) = do
         (ctx, knenv) <- get
         case dec of
                 T.TypeD con ty -> do
-                        ty' <- renameRecT ty
-                        (ty'', kn) <- inferKind knenv ty'
+                        ty' <- renameRecT (unLoc ty)
+                        (ty'', kn) <- inferKind knenv (noLoc ty')
                         let knenv' = M.insert (toplevelName modn con) kn knenv
                         knK <- transKind kn
-                        tyT <- transType ctx ty''
+                        tyT <- transType ctx (unLoc ty'')
                         let ctx' = addBinding (toplevelName modn con) (C.TyAbbBind tyT knK) ctx
                         put (ctx', knenv')
                         return (unLoc con, C.TyAbbBind tyT knK)
                 T.VarD var ty -> do
                         ty' <- checkKindStar knenv sp ty
-                        tyT <- transType ctx ty'
+                        tyT <- transType ctx (unLoc ty')
                         let ctx' = addName (toplevelName modn var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.VarBind tyT)
                 T.ConD (T.FuncD var exp ty) -> do
                         ty' <- checkKindStar knenv sp ty
                         t <- transExpr knenv ctx exp
-                        tyT <- transType ctx ty'
+                        tyT <- transType ctx (unLoc ty')
                         let ctx' = addName (toplevelName modn var) ctx
                         put (ctx', knenv)
                         return (unLoc var, C.TmAbbBind t tyT)
@@ -173,8 +173,8 @@ transDecl modn (L sp dec) = do
 transTopFuncD :: (MonadThrow m, MonadIO m) => ModuleName -> Context -> T.KnEnv -> T.FuncD -> m ((Name, C.Binding), Context)
 transTopFuncD modn ctx knenv (T.FuncD x e ty) = do
         ty' <- checkKindStar knenv NoSpan ty
-        t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
-        tyT <- transType ctx ty'
+        t <- transExpr knenv ctx (T.AbsE x (Just $ unLoc ty') e)
+        tyT <- transType ctx (unLoc ty')
         let ctx' = addName (toplevelName modn x) ctx -- tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 

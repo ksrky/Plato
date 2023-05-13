@@ -28,7 +28,7 @@ data Expr
         | AnnE Expr Type
         deriving (Eq, Show)
 
-data FuncD = FuncD LName Expr Type deriving (Eq, Show)
+data FuncD = FuncD LName Expr LType deriving (Eq, Show)
 
 -----------------------------------------------------------
 -- Pretty printing

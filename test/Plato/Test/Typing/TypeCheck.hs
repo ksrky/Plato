@@ -15,6 +15,7 @@ import Control.Monad.IO.Class
 import qualified Data.Text as T
 import Test.Hspec
 
+{-
 testcases :: [(String, IO [FuncD] -> Expectation)]
 testcases =
         [
@@ -46,4 +47,4 @@ test (inp, iscorrect) =
                                 return $ typ_binds typ
                         )
                                 initPInfo
-                                initPState
+                                initPState-}

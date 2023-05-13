@@ -11,14 +11,14 @@ import Plato.Common.Name.Global
 
 import Plato.Typing.TypeCheck
 
-import qualified Plato.Syntax.Parsing as P
-import qualified Plato.Syntax.Typing as T
+import Plato.Syntax.Parsing qualified as P
+import Plato.Syntax.Typing qualified as T
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.RWS
 import Control.Monad.Writer as Writer
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
 import Prettyprinter
 
 transExpr :: MonadThrow m => P.LExpr GlbName -> m T.Expr
@@ -65,20 +65,15 @@ transPat (L _ (P.ConP c ps)) = do
 transPat (L _ (P.VarP x)) = return $ T.VarP x
 transPat (L _ P.WildP) = return T.WildP
 
-transType :: MonadThrow m => P.LType GlbName -> m T.Type
-transType (L _ (P.VarT x)) = return $ T.VarT $ T.BoundTv x
-transType (L _ (P.ConT x)) = return $ T.ConT $ unLoc x
-transType (L _ (P.AppT ty1 ty2)) = do
-        ty1' <- transType ty1
-        ty2' <- transType ty2
-        return $ T.AppT ty1' ty2'
-transType (L _ (P.ArrT ty1 ty2)) = do
-        ty1' <- transType ty1
-        ty2' <- transType ty2
-        return $ T.ArrT ty1' ty2'
-transType (L _ (P.AllT xs ty1)) = do
-        ty1' <- transType ty1
-        return $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) xs) ty1'
+transType :: P.LType GlbName -> T.LType
+transType (L sp ty) =
+        L sp $ case ty of
+                P.VarT x -> T.VarT (T.BoundTv x)
+                P.ConT con -> T.ConT (unLoc con)
+                P.AppT fun arg -> T.AppT (transType fun) (transType arg)
+                P.ArrT arg res -> T.ArrT (transType arg) (transType res)
+                P.AllT qnts body ->
+                        T.AllT (map (\x -> (T.BoundTv x, Nothing)) qnts) (transType body)
 
 transDecls :: MonadThrow m => [P.LDecl GlbName] -> m ([T.FuncD], [Located T.Decl])
 transDecls decs = do
@@ -88,10 +83,10 @@ transDecls decs = do
                 forM decs $ \case
                         L sp (P.FuncTyD x ty)
                                 | unLoc x `elem` fns -> do
-                                        ty' <- Writer.lift $ transType ty
+                                        let ty' = transType ty
                                         tell ([(x, ty')], mempty)
                                 | otherwise -> do
-                                        ty' <- Writer.lift $ transType ty
+                                        let ty' = transType ty
                                         tell (mempty, [L sp $ T.VarD x ty'])
                         _ -> return ()
         fields <- execWriterT $
@@ -110,29 +105,29 @@ transTopDecl :: MonadThrow m => ModuleName -> P.LTopDecl GlbName -> WriterT ([Lo
 transTopDecl modn (L sp (P.DataD name params fields)) = do
         fields' <- Writer.lift $
                 forM fields $ \(l, tys) -> do
-                        tys' <- mapM transType tys
+                        let tys' = map transType tys
                         return (l, tys')
-        let fieldty = T.SumT fields'
+        let fieldty = noLoc $ T.SumT fields'
             kn = foldr T.ArrK T.StarK (replicate (length params) T.StarK)
-            bodyty = T.RecT name kn (foldr (`T.AbsT` Nothing) fieldty params)
-        tell ([L sp (T.TypeD name bodyty)], [], [])
+            bodyty = T.RecT name kn (foldr ((noLoc .) . (`T.AbsT` Nothing)) fieldty params)
+        tell ([L sp (T.TypeD name (noLoc bodyty))], [], [])
         forM_ fields' $ \(l, field) -> do
-                let res_ty = foldl T.AppT (T.ConT $ toplevelName modn name) (map (T.VarT . T.BoundTv) params)
-                    rho_ty = foldr T.ArrT res_ty field
+                let res_ty = foldl ((noLoc .) . T.AppT) (L (getLoc name) $ T.ConT $ toplevelName modn name) (map (noLoc . T.VarT . T.BoundTv) params)
+                    rho_ty = foldr ((noLoc .) . T.ArrT) res_ty field
                     sigma_ty =
                         if null params
                                 then rho_ty
-                                else T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) rho_ty
+                                else L (getLoc rho_ty) $ T.AllT (map (\x -> (T.BoundTv x, Nothing)) params) rho_ty
                     tyargs = params
                     args = map (str2varName . show) [length params + 1 .. length params + length field]
-                    tag = T.TagE (localName l) (map (T.VarE . newGlbName Local) args) fieldty
-                    foldtag = T.AppE (T.FoldE res_ty) tag
-                    exp = foldr (\(x, ty) -> T.AbsE (noLoc x) (Just ty)) foldtag (zip args field)
+                    tag = T.TagE (localName l) (map (T.VarE . newGlbName Local) args) (unLoc fieldty)
+                    foldtag = T.AppE (T.FoldE $ unLoc res_ty) tag
+                    exp = foldr (\(x, ty) -> T.AbsE (noLoc x) (Just $ unLoc ty)) foldtag (zip args field)
                     exp' = if null tyargs then exp else T.TAbsE tyargs exp
                 tell ([], [L sp $ T.FuncD l exp' sigma_ty], [])
 transTopDecl _ (L sp (P.TypeD name params ty1)) = do
-        ty1' <- Writer.lift $ transType ty1
-        tell ([L sp (T.TypeD name (foldr (`T.AbsT` Nothing) ty1' params))], [], [])
+        let ty1' = transType ty1
+        tell ([L sp (T.TypeD name (foldr ((noLoc .) . (`T.AbsT` Nothing)) ty1' params))], [], [])
 transTopDecl _ (L sp (P.Eval exp)) = do
         exp' <- transExpr exp
         tell ([], [], [L sp exp'])
@@ -152,8 +147,8 @@ ps2typ (P.Program (Just modn) _ topds) = do
         env <- gets plt_tyEnv
         let env' =
                 M.fromList
-                        ( [(toplevelName (unLoc modn) var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
-                                ++ [(toplevelName (unLoc modn) var, ty) | L _ (T.VarD var ty) <- vardecs]
+                        ( [(toplevelName (unLoc modn) var, unLoc ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
+                                ++ [(toplevelName (unLoc modn) var, unLoc ty) | L _ (T.VarD var ty) <- vardecs]
                         )
                         `M.union` env
         fundecs' <- mapM (typeCheck env') fundecs
