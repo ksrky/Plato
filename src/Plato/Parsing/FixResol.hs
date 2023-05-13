@@ -2,10 +2,10 @@ module Plato.Parsing.FixResol where
 
 import Plato.Syntax.Parsing
 
-import Plato.Types.Error
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Name.Global
+import Plato.Common.Error
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Name.Global
 
 import Control.Exception.Safe
 import Control.Monad

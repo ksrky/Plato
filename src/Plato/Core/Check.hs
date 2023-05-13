@@ -1,11 +1,11 @@
 module Plato.Core.Check where
 
+import Plato.Common.Error
+import Plato.Common.Name
 import Plato.Core.Context
 import Plato.Core.Pretty
 import Plato.Core.Subst
 import Plato.Syntax.Core
-import Plato.Types.Error
-import Plato.Types.Name
 
 import Control.Exception.Safe
 import Control.Monad
@@ -203,11 +203,11 @@ typeof ctx t = case t of
                                         Just tys -> do
                                                 let ctx' = foldl (flip $ addSomeName . VarBind) ctx tys
                                                 tyTi <- typeof ctx' ti
-                                                return $ typeShift (- ki) tyTi
+                                                return $ typeShift (-ki) tyTi
                                         Nothing | nameText li == "" -> do
                                                 let ctx' = addSomeName (VarBind $ TyVariant fieldtys) ctx
                                                 tyTi <- typeof ctx' ti
-                                                return $ typeShift (- ki) tyTi
+                                                return $ typeShift (-ki) tyTi
                                         Nothing -> throwError $ hsep ["label", pretty li, "not found"]
                                 forM_ restTy $ \tyTi -> tyeqv ctx tyTi tyT1
                                 return tyT1

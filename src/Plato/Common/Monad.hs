@@ -1,10 +1,10 @@
-module Plato.Types.Monad where
+module Plato.Common.Monad where
 
+import Plato.Common.Fixity
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Core.Context
 import Plato.Syntax.Typing
-import Plato.Types.Fixity
-import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Control.Monad.RWS
 import qualified Data.Map.Strict as M

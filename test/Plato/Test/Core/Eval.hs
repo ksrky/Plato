@@ -1,19 +1,19 @@
 module Plato.Test.Core.Eval where
 
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name.Global
 import Plato.Core.Context
 import Plato.Core.Eval
 import Plato.Syntax.Core
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
 import Plato.Transl.TypToCore
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name.Global
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.RWS
-import qualified Data.Text.IO as T
+import Data.Text.IO qualified as T
 import Prettyprinter
 import Prettyprinter.Render.String
 

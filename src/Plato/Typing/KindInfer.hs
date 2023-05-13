@@ -2,10 +2,10 @@
 
 module Plato.Typing.KindInfer where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name.Global
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name.Global
 import Plato.Typing.TcTypes
 
 import Control.Exception.Safe

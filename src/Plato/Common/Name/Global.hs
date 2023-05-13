@@ -1,8 +1,8 @@
-module Plato.Types.Name.Global where
+module Plato.Common.Name.Global where
 
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name
 
 import Control.Exception.Safe
 import qualified Data.Map as M

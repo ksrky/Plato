@@ -2,8 +2,8 @@
 
 module Plato.Parsing.Monad where
 
-import Plato.Types.Fixity
-import Plato.Types.Name
+import Plato.Common.Fixity
+import Plato.Common.Name
 
 import Control.Exception.Safe
 import Control.Monad.State.Class
@@ -56,7 +56,7 @@ movePosn :: PsPosn -> T.Text -> Int -> PsPosn
 movePosn pos _ 0 = pos
 movePosn pos inp len = case T.uncons inp of
         Nothing -> pos
-        Just (c, inp') -> movePosn (advancePosn pos c) inp' (len -1)
+        Just (c, inp') -> movePosn (advancePosn pos c) inp' (len - 1)
 
 ----------------------------------------------------------------
 -- Parser monad

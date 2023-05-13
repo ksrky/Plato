@@ -2,16 +2,16 @@
 
 module Plato.Typing.Bundle where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Control.Exception.Safe
 import Control.Monad.Reader
 
---tmp: (ModuleName, Level)
+-- tmp: (ModuleName, Level)
 
 mkValue :: MonadThrow m => GlbName -> ReaderT (ModuleName, Level) m Expr
 mkValue glbn = case g_sort glbn of
@@ -20,7 +20,7 @@ mkValue glbn = case g_sort glbn of
                 if modn == modn'
                         then return $ ProjE (VarE $ newGlbName Local $ modn2name modn) glbn
                         else return $ ProjE (VarE $ newGlbName (TopLevel modn) $ modn2name modn) glbn
-        LocalTop lev -> return $ ProjE (VarE $ newGlbName Local $ str2conName (":l" ++ show lev)) glbn --tmp: Local
+        LocalTop lev -> return $ ProjE (VarE $ newGlbName Local $ str2conName (":l" ++ show lev)) glbn -- tmp: Local
         Local -> return $ VarE glbn
 
 -- | Renaming

@@ -2,17 +2,17 @@
 
 module Plato.Test.Typing.TypeCheck where
 
+import Plato.Common.Monad
 import Plato.Syntax.Typing
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
-import Plato.Types.Monad
 
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Test.Hspec
 
 testcases :: [(String, IO [FuncD] -> Expectation)]

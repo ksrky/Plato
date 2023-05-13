@@ -3,10 +3,10 @@
 
 module Plato.Core.Pretty where
 
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Core.Context
 import Plato.Syntax.Core
-import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Prettyprinter
 
@@ -48,20 +48,24 @@ instance PrettyCore Term where
                                                 ]
                 TmTag li ts1 _ -> hcat [pretty li, hsep' (map (pprtm ctx) ts1)]
                 TmCase t1 alts ->
-                        "case" <+> ppr ctx t1 <+> "of" <+> lbrace <> line
-                                <> indent
-                                        4
-                                        ( vsep
-                                                ( map
-                                                        ( \(li, (ki, ti)) ->
-                                                                let ctx' = foldr (\i -> addName (newGlbName Local (str2varName $ show i))) ctx [1 .. ki]
-                                                                 in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
+                        "case"
+                                <+> ppr ctx t1
+                                <+> "of"
+                                <+> lbrace
+                                        <> line
+                                        <> indent
+                                                4
+                                                ( vsep
+                                                        ( map
+                                                                ( \(li, (ki, ti)) ->
+                                                                        let ctx' = foldr (\i -> addName (newGlbName Local (str2varName $ show i))) ctx [1 .. ki]
+                                                                         in hsep [pretty li, pretty ki, "->", ppr ctx' ti]
+                                                                )
+                                                                alts
                                                         )
-                                                        alts
                                                 )
-                                        )
-                                <> line
-                                <> rbrace
+                                        <> line
+                                        <> rbrace
 
 pprtm :: Context -> Term -> Doc ann
 pprtm ctx t@TmVar{} = ppr ctx t
@@ -147,6 +151,6 @@ instance PrettyCore Module where
                 let pprBinds :: Context -> [(Name, Binding)] -> Doc ann
                     pprBinds ctx [] = vsep (map (ppr ctx) evals)
                     pprBinds ctx ((x, b) : bs) =
-                        let ctx' = addName (newGlbName Local x) ctx --tmp: Local
+                        let ctx' = addName (newGlbName Local x) ctx -- tmp: Local
                          in vsep [hsep [pretty x, equals, ppr ctx b], pprBinds ctx' bs]
                  in vsep [pretty modn, pprBinds ctx binds]

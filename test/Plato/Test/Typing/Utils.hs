@@ -2,13 +2,13 @@
 
 module Plato.Test.Typing.Utils where
 
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
 
 import Plato.Syntax.Typing
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 pattern NL :: a -> Located a
 pattern NL x <- L _ x

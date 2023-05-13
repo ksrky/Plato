@@ -1,6 +1,6 @@
-module Plato.Types.Name.Reader where
+module Plato.Common.Name.Reader where
 
-import Plato.Types.Name
+import Plato.Common.Name
 import Prettyprinter
 
 data RdrName

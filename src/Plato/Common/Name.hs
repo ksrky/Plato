@@ -1,4 +1,4 @@
-module Plato.Types.Name where
+module Plato.Common.Name where
 
 import Data.List (intercalate)
 import qualified Data.Text as T

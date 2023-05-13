@@ -1,12 +1,12 @@
 module Plato.Transl.SrcToPs where
 
-import Plato.Types.Error
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
-import Plato.Types.Name.Global
-import Plato.Types.Name.Reader
+import Plato.Common.Error
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Common.Name.Global
+import Plato.Common.Name.Reader
 
 import Plato.Parsing.FixResol
 import Plato.Parsing.Monad

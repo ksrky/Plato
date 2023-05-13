@@ -1,12 +1,12 @@
 module Plato.Test.Typing.Pretty where
 
+import Plato.Common.Monad
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
-import Plato.Types.Monad
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
-import qualified Data.Text.IO as T
+import Data.Text.IO qualified as T
 import Prettyprinter
 import Prettyprinter.Render.String
 import Test.Hspec

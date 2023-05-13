@@ -3,11 +3,11 @@
 
 module Plato.Transl.PsToTyp where
 
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
-import Plato.Types.Name.Global
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Common.Name.Global
 
 import Plato.Typing.TypeCheck
 
@@ -38,7 +38,7 @@ transExpr = traexpr
                 e1' <- traexpr e1
                 return $ foldr (`T.AbsE` Nothing) e1' xs
         traexpr (L _ (P.LetE ds e)) = do
-                (fds, _) <- transDecls ds --tmp:vardecls
+                (fds, _) <- transDecls ds -- tmp:vardecls
                 e' <- transExpr e
                 return $ T.LetE fds e'
         traexpr (L _ (P.CaseE e alts)) = do
@@ -153,7 +153,7 @@ ps2typ (P.Program (Just modn) _ topds) = do
         let env' =
                 M.fromList
                         ( [(toplevelName (unLoc modn) var, ty) | T.FuncD var _ ty <- map unLoc condecs ++ fundecs]
-                          ++ [(toplevelName (unLoc modn) var, ty) | L _ (T.VarD var ty) <- vardecs]
+                                ++ [(toplevelName (unLoc modn) var, ty) | L _ (T.VarD var ty) <- vardecs]
                         )
                         `M.union` env
         fundecs' <- mapM (typeCheck env') fundecs

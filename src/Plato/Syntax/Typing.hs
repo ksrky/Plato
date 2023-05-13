@@ -1,8 +1,8 @@
 module Plato.Syntax.Typing where
 
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
 
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -143,10 +143,14 @@ instance Pretty Expr where
                         , rbrace
                         ]
         pretty (CaseE match mty alts) =
-                "case" <+> sep [pretty match, colon, maybe emptyDoc pretty mty] <+> "of" <+> lbrace <> line
-                        <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
-                        <> line
-                        <> rbrace
+                "case"
+                        <+> sep [pretty match, colon, maybe emptyDoc pretty mty]
+                        <+> "of"
+                        <+> lbrace
+                                <> line
+                                <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
+                                <> line
+                                <> rbrace
         pretty (TagE con args _) = pretty con <> hsep' (map pprexpr args)
         pretty (FoldE ty) = sep [lbracket, pretty ty, rbracket]
         pretty (AnnE exp ty) = pprexpr exp <+> colon <+> pretty ty
@@ -234,7 +238,8 @@ instance Pretty Decl where
 
 instance Pretty Program where
         pretty (Program mod decs binds body) =
-                pretty mod <> line
+                pretty mod
+                        <> line
                         <> vsep (map pretty decs)
                         <> (if null decs then emptyDoc else line)
                         <> vsep (map pretty binds)

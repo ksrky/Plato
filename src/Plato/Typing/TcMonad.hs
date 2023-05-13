@@ -2,11 +2,11 @@
 
 module Plato.Typing.TcMonad where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
 import Plato.Typing.TcTypes
 
 import Control.Exception.Safe
@@ -162,7 +162,7 @@ quantify tvs ty = do
 allBinders :: [TyVar]
 allBinders =
         [BoundTv $ noLoc $ str2tyvarName [x] | x <- ['a' .. 'z']]
-        ++ [BoundTv $ noLoc $ str2tyvarName (x : show i) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
+                ++ [BoundTv $ noLoc $ str2tyvarName (x : show i) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
 
 getEnvTypes :: Monad m => Tc m [Type]
 getEnvTypes = M.elems <$> getEnv
@@ -213,11 +213,12 @@ zonkExpr (TAppE e tys) = TAppE e <$> mapM zonkType tys
 zonkExpr (LetE decs body) =
         LetE
                 <$> forM decs (\(FuncD var e ty) -> FuncD var <$> zonkExpr e <*> zonkType ty)
-                        <*> zonkExpr body
+                <*> zonkExpr body
 zonkExpr (CaseE e mty alts) =
         CaseE
                 <$> zonkExpr e
-                <*> zonkType `traverse` mty
+                <*> zonkType
+                `traverse` mty
                 <*> forM alts (\(pat, body) -> (pat,) <$> zonkExpr body)
 zonkExpr (AnnE e ty) = AnnE <$> zonkExpr e <*> zonkType ty
 zonkExpr expr = return expr
@@ -226,7 +227,7 @@ zonkExpr expr = return expr
 -- Unification
 ----------------------------------------------------------------
 unify :: (MonadIO m, MonadThrow m) => Tau -> Tau -> Tc m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] --tmp: location
+unify ty1 ty2 | badType ty1 || badType ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] -- tmp: location
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
@@ -238,7 +239,7 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
         unify fun1 fun2
         unify arg1 arg2
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
-unify ty1 ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] --tmp: location
+unify ty1 ty2 = lift $ throwError $ vsep ["Couldn't match type.", "Expected type:" <+> pretty ty2, indent 2 ("Actual type:" <+> pretty ty1)] -- tmp: location
 
 unifyVar :: (MonadIO m, MonadThrow m) => MetaTv -> Tau -> Tc m ()
 unifyVar tv1 ty2 = do

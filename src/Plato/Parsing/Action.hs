@@ -4,8 +4,8 @@ import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
 
-import Plato.Types.Error
-import Plato.Types.Location
+import Plato.Common.Error
+import Plato.Common.Location
 
 import Control.Monad.State
 import qualified Data.Text as T

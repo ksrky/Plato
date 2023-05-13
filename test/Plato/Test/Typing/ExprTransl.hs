@@ -2,21 +2,21 @@
 
 module Plato.Test.Typing.ExprTransl where
 
-import qualified Plato.Syntax.Parsing as Parsing
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Common.Name.Global
+import Plato.Syntax.Parsing qualified as Parsing
 import Plato.Syntax.Typing
 import Plato.Transl.PsToTyp
 import Plato.Transl.SrcToPs
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
-import Plato.Types.Name.Global
 
 import Plato.Test.Typing.Utils
 import Plato.Test.Utils
 
 import Control.Exception.Safe
-import qualified Data.Map.Strict as M
-import qualified Data.Text as T
+import Data.Map.Strict qualified as M
+import Data.Text qualified as T
 import Test.Hspec
 
 testcases :: [(String, IO Expr -> Expectation)]

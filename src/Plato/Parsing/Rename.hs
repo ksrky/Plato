@@ -2,12 +2,12 @@ module Plato.Parsing.Rename where
 
 import Plato.Syntax.Parsing
 
-import Plato.Types.Error
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
-import Plato.Types.Name.Reader
+import Plato.Common.Error
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
+import Plato.Common.Name.Reader
 
 import Control.Exception.Safe
 import Control.Monad

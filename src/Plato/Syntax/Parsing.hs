@@ -1,8 +1,8 @@
 module Plato.Syntax.Parsing where
 
-import Plato.Types.Fixity
-import Plato.Types.Location
-import Plato.Types.Name
+import Plato.Common.Fixity
+import Plato.Common.Location
+import Plato.Common.Name
 
 import Prettyprinter
 
@@ -74,15 +74,23 @@ instance Pretty a => Pretty (Expr a) where
         pretty (OpE lhs op rhs) = pretty lhs <+> pretty op <+> pretty rhs
         pretty (LamE vars body) = backslash <> hsep (map pretty vars) <+> "->" <+> pretty body
         pretty (LetE decs body) =
-                "let" <+> lbrace <> line
-                        <> indent 4 (vsep (map pretty decs))
-                        <> line
-                        <> rbrace <+> "in" <+> pretty body
+                "let"
+                        <+> lbrace
+                                <> line
+                                <> indent 4 (vsep (map pretty decs))
+                                <> line
+                                <> rbrace
+                        <+> "in"
+                        <+> pretty body
         pretty (CaseE match alts) =
-                "case" <+> pretty match <+> "of" <+> lbrace <> line
-                        <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
-                        <> line
-                        <> rbrace
+                "case"
+                        <+> pretty match
+                        <+> "of"
+                        <+> lbrace
+                                <> line
+                                <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
+                                <> line
+                                <> rbrace
         pretty (FactorE exp) = pretty exp
 
 pprapp :: Pretty a => Expr a -> Doc ann
@@ -132,7 +140,8 @@ instance Pretty a => Pretty (Decl a) where
 
 instance Pretty a => Pretty (TopDecl a) where
         pretty (DataD con args fields) =
-                pretty con <> hsep' (map pretty args) <+> equals
+                pretty con <> hsep' (map pretty args)
+                        <+> equals
                         <+> concatWith (\d e -> d <+> pipe <+> e) (map (\(c, tys) -> pretty c <> hsep' (map pretty tys)) fields)
         pretty (TypeD con args body) = pretty con <> hsep' (map pretty args) <+> equals <+> pretty body
         pretty (Decl dec) = pretty dec

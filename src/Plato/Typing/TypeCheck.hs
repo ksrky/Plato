@@ -4,11 +4,11 @@
 
 module Plato.Typing.TypeCheck where
 
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Common.Name.Global
 import Plato.Syntax.Typing
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Name
-import Plato.Types.Name.Global
 import Plato.Typing.TcMonad
 import Plato.Typing.TcTypes
 
@@ -43,7 +43,7 @@ data Expected a = Infer (IORef a) | Check a
 ------------------------------------------
 -- tcPat, and its variants
 ------------------------------------------
---tmp: no translation for patterns
+-- tmp: no translation for patterns
 -- because pattern match is implemented by classifying data consructor's tag.
 -- If type application is inserted in ConP, GADT will be available.
 checkPat :: (MonadIO m, MonadThrow m) => Pat -> Rho -> Tc m [(LName, Sigma)]
@@ -147,7 +147,7 @@ tcRho (CaseE match _ alts) (Infer ref) = do
         return $ CaseE match' (Just match_ty) alts'
 tcRho (AnnE body ann_ty) exp_ty = do
         body' <- checkSigma body ann_ty
-        _ <- instSigma ann_ty exp_ty --tmp
+        _ <- instSigma ann_ty exp_ty -- tmp
         return $ AnnE body' ann_ty
 tcRho e _ = return e
 

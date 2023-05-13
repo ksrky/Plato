@@ -1,9 +1,9 @@
 module Plato.Core.Context where
 
+import Plato.Common.Error
+import Plato.Common.Name.Global
 import Plato.Core.Subst
 import Plato.Syntax.Core
-import Plato.Types.Error
-import Plato.Types.Name.Global
 
 import Control.Exception.Safe
 import qualified Data.Vector as V

@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -28,6 +28,13 @@ library
       CLI.Constant
       CLI.Options
       Main
+      Plato.Common.Error
+      Plato.Common.Fixity
+      Plato.Common.Location
+      Plato.Common.Monad
+      Plato.Common.Name
+      Plato.Common.Name.Global
+      Plato.Common.Name.Reader
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
@@ -49,13 +56,6 @@ library
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
-      Plato.Types.Error
-      Plato.Types.Fixity
-      Plato.Types.Location
-      Plato.Types.Monad
-      Plato.Types.Name
-      Plato.Types.Name.Global
-      Plato.Types.Name.Reader
       Plato.Typing.Bundle
       Plato.Typing.KindInfer
       Plato.Typing.TcMonad
@@ -96,6 +96,13 @@ executable plato
   other-modules:
       CLI.Constant
       CLI.Options
+      Plato.Common.Error
+      Plato.Common.Fixity
+      Plato.Common.Location
+      Plato.Common.Monad
+      Plato.Common.Name
+      Plato.Common.Name.Global
+      Plato.Common.Name.Reader
       Plato.Core.Check
       Plato.Core.Context
       Plato.Core.Eval
@@ -117,13 +124,6 @@ executable plato
       Plato.Transl.PsToTyp
       Plato.Transl.SrcToPs
       Plato.Transl.TypToCore
-      Plato.Types.Error
-      Plato.Types.Fixity
-      Plato.Types.Location
-      Plato.Types.Monad
-      Plato.Types.Name
-      Plato.Types.Name.Global
-      Plato.Types.Name.Reader
       Plato.Typing.Bundle
       Plato.Typing.KindInfer
       Plato.Typing.TcMonad

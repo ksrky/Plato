@@ -1,6 +1,6 @@
 module Plato.Syntax.Core where
 
-import Plato.Types.Name
+import Plato.Common.Name
 
 ----------------------------------------------------------------
 -- Syntax

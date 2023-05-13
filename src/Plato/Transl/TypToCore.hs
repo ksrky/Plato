@@ -8,11 +8,11 @@ import Plato.Core.Context
 import qualified Plato.Syntax.Core as C
 import qualified Plato.Syntax.Typing as T
 
-import Plato.Types.Error
-import Plato.Types.Location
-import Plato.Types.Monad
-import Plato.Types.Name
-import Plato.Types.Name.Global
+import Plato.Common.Error
+import Plato.Common.Location
+import Plato.Common.Monad
+import Plato.Common.Name
+import Plato.Common.Name.Global
 
 import Plato.Typing.Bundle
 import Plato.Typing.KindInfer
@@ -78,7 +78,7 @@ transExpr knenv ctx = traexpr
                                         forM ps $ \p -> case p of
                                                 T.VarP x -> return [x]
                                                 T.WildP -> return []
-                                                T.ConP{} -> throwError "pattern argument" --tmp
+                                                T.ConP{} -> throwError "pattern argument" -- tmp
                                 let ctx' = addNameList (map localName xs) ctx
                                 ti <- transExpr knenv ctx' body
                                 return (g_name li, (length xs, ti))
@@ -175,14 +175,14 @@ transTopFuncD modn ctx knenv (T.FuncD x e ty) = do
         ty' <- checkKindStar knenv NoSpan ty
         t <- transExpr knenv ctx (T.AbsE x (Just ty') e)
         tyT <- transType ctx ty'
-        let ctx' = addName (toplevelName modn x) ctx --tmp
+        let ctx' = addName (toplevelName modn x) ctx -- tmp
         return ((unLoc x, C.TmAbbBind (C.TmFix t) tyT), ctx')
 
 transEval :: (MonadThrow m, MonadIO m) => T.KnEnv -> Context -> (Located T.Expr, T.Type) -> m C.Term
 transEval knenv ctx (L _ e, ty) = do
         e' <- bundleEval e
         t <- transExpr knenv ctx e'
-        _ <- transType ctx ty --tmp
+        _ <- transType ctx ty -- tmp
         return t
 
 typ2core :: (MonadThrow m, MonadIO m) => T.Program -> Plato m C.Module
