@@ -1,4 +1,4 @@
-module Plato.TypeCheck.Translate where
+module Plato.Typing.Tc.Translate where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
