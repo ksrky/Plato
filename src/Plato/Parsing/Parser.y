@@ -106,7 +106,7 @@ decl        :: { LDecl }
                                                     { sL $1 $7 (DataD $2 $3 $6) }
             | 'data' tycon tyvarrow 'where' 'v{' constrs close
                                                     { sL $1 $7 (DataD $2 $3 $6) }
-            | fundecl                               { L (getLoc $1) (FuncD $1) }
+            | fundecl                               { L (getLoc $1) (FuncD (unLoc $1)) }
 
 -- | Data declaration
 constrs     :: { [(Ident, LType)] }

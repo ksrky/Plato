@@ -33,6 +33,8 @@ library
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
+      Plato.Core.Calc
+      Plato.Core.Env
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -45,6 +47,7 @@ library
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -70,6 +73,7 @@ library
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
       Plato.Typing.Zonking
+      Plato.TypToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -111,6 +115,8 @@ executable plato
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
+      Plato.Core.Calc
+      Plato.Core.Env
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -123,6 +129,7 @@ executable plato
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
+      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -148,6 +155,7 @@ executable plato
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
       Plato.Typing.Zonking
+      Plato.TypToCore
       Paths_Plato
   hs-source-dirs:
       src

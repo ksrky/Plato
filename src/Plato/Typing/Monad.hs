@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Plato.Typing.Monad where
 
 import Control.Monad.IO.Class (MonadIO (..))
