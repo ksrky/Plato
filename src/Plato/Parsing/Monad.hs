@@ -97,7 +97,7 @@ instance MonadTrans ParserT where
         lift c = ParserT $ \s -> c >>= (\x -> return (x, s))
 
 instance MonadIO m => MonadIO (ParserT m) where
-        liftIO = \io -> ParserT $ \s -> do
+        liftIO io = ParserT $ \s -> do
                 a <- liftIO io
                 return (a, s)
 
