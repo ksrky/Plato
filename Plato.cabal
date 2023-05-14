@@ -30,7 +30,6 @@ library
       Plato.Common.Error
       Plato.Common.Ident
       Plato.Common.Location
-      Plato.Common.Monad
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
@@ -42,6 +41,7 @@ library
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.PsToTyp
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
@@ -51,6 +51,25 @@ library
       Plato.Syntax.Parsing.Pat
       Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
+      Plato.Syntax.Typing
+      Plato.Syntax.Typing.Decl
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Type
+      Plato.Typing
+      Plato.Typing.Env
+      Plato.Typing.Kc
+      Plato.Typing.Kc.Unify
+      Plato.Typing.Kc.Utils
+      Plato.Typing.Monad
+      Plato.Typing.Tc
+      Plato.Typing.Tc.InstGen
+      Plato.Typing.Tc.Subst
+      Plato.Typing.Tc.Trans
+      Plato.Typing.Tc.Unify
+      Plato.Typing.Tc.Utils
+      Plato.Typing.Zonking
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -89,7 +108,6 @@ executable plato
       Plato.Common.Error
       Plato.Common.Ident
       Plato.Common.Location
-      Plato.Common.Monad
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
@@ -101,6 +119,7 @@ executable plato
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.PsToTyp
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
@@ -110,6 +129,25 @@ executable plato
       Plato.Syntax.Parsing.Pat
       Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
+      Plato.Syntax.Typing
+      Plato.Syntax.Typing.Decl
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Type
+      Plato.Typing
+      Plato.Typing.Env
+      Plato.Typing.Kc
+      Plato.Typing.Kc.Unify
+      Plato.Typing.Kc.Utils
+      Plato.Typing.Monad
+      Plato.Typing.Tc
+      Plato.Typing.Tc.InstGen
+      Plato.Typing.Tc.Subst
+      Plato.Typing.Tc.Trans
+      Plato.Typing.Tc.Unify
+      Plato.Typing.Tc.Utils
+      Plato.Typing.Zonking
       Paths_Plato
   hs-source-dirs:
       src

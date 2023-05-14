@@ -3,7 +3,6 @@ module Plato.Main (process) where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.RWS
-import Control.Monad.Reader
 import Data.Text qualified as T
 
 import Plato.Common.Debug

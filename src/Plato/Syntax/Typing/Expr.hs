@@ -1,23 +1,24 @@
-module Plato.Syntax.Parsing.Expr where
+module Plato.Syntax.Typing.Expr (LExpr, Expr (..), FunDecl) where
 
 import Prettyprinter
 
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Syntax.Parsing.Pat
-import Plato.Syntax.Parsing.Type
+import Plato.Syntax.Typing.Pat
+import Plato.Syntax.Typing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
 type LExpr = Located Expr
-type LFunDecl = Located FunDecl
 
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
-        | LamE [LPat] LExpr
-        | LetE [LFunDecl] LExpr
+        | AbsE LPat (Maybe Type) LExpr
+        | TAppE LExpr [Type]
+        | TAbsE [Quant] LExpr
+        | LetE [(Ident, LExpr)] [(Ident, Type)] LExpr
         deriving (Eq, Show)
 
 data FunDecl
@@ -29,5 +30,16 @@ data FunDecl
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Expr
+
+prettyAtom :: Expr -> Doc ann
+prettyAtom e@VarE{} = pretty e
+prettyAtom e = parens (pretty e)
+
+pprapp :: Expr -> Doc ann
+pprapp e = walk e []
+    where
+        walk :: Expr -> [Expr] -> Doc ann
+        walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
+        walk e' es = prettyAtom e' <+> sep (map prettyAtom es)
 
 instance Pretty FunDecl
