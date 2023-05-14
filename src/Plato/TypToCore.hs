@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.TypToCore (typ2core) where
-
+{-}
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.RWS
@@ -108,7 +108,7 @@ elabType T.MetaT{} = unreachable "Zonking failed"
 elabKind :: T.Kind -> C.Kind
 elabKind = undefined
 
-typ2core = undefined
+typ2core = undefined-}
 
 {-transExpr :: MonadThrow m => C.Context -> T.Expr -> m C.Term
 transExpr ctx = trexpr

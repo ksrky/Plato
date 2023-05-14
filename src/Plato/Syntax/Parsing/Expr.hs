@@ -2,10 +2,11 @@ module Plato.Syntax.Parsing.Expr where
 
 import Prettyprinter
 
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Path
-import {-# SOURCE #-} Plato.Syntax.Parsing.Decl
 import Plato.Syntax.Parsing.Pat
+import Plato.Syntax.Parsing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
@@ -17,12 +18,17 @@ data Expr
         | AppE LExpr LExpr
         | OpE LExpr Path LExpr
         | LamE [([LPat], LExpr)]
-        | LetE [LDecl] LExpr
+        | LetE [FunDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
         | FactorE LExpr -- removed after fixity resolution
         deriving (Eq, Show)
 
 newtype Op = Op Path deriving (Eq, Show)
+
+data FunDecl
+        = FunBind Ident LExpr
+        | FunSpec Ident LType
+        deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -31,26 +37,36 @@ instance Substitutable Expr where
         substPath (VarE path) = VarE <$> substPath path
         substPath (AppE fun arg) = AppE <$> substPath `traverse` fun <*> substPath `traverse` arg
         substPath (OpE lhs op rhs) =
-                OpE <$> substPath `traverse` lhs <*> substPath op
-                        <*> substPath `traverse` rhs
+                OpE
+                        <$> substPath
+                        `traverse` lhs
+                        <*> substPath op
+                        <*> substPath
+                        `traverse` rhs
         substPath (LamE alts) =
                 LamE
                         <$> mapM
                                 ( \(pats, body) ->
                                         (,)
                                                 <$> mapM (substPath `traverse`) pats
-                                                        <*> substPath `traverse` body
+                                                <*> substPath
+                                                `traverse` body
                                 )
                                 alts
-        substPath (LetE decs body) =
-                LetE <$> mapM (substPath `traverse`) decs
-                        <*> substPath `traverse` body
+        substPath (LetE decs body) = undefined
+        {-LetE
+                <$> mapM (substPath `traverse`) decs
+                <*> substPath
+                `traverse` body-}
         substPath (CaseE match alts) = do
                 alts' <-
                         mapM
                                 ( \(pat, exp) ->
-                                        (,) <$> substPath `traverse` pat
-                                                <*> substPath `traverse` exp
+                                        (,)
+                                                <$> substPath
+                                                `traverse` pat
+                                                <*> substPath
+                                                `traverse` exp
                                 )
                                 alts
                 CaseE <$> substPath `traverse` match <*> return alts'
@@ -71,15 +87,23 @@ instance Pretty Expr where
                 ppralt :: ([LPat], LExpr) -> Doc ann
                 ppralt (pats, body) = hsep (map pretty pats) <+> "->" <+> pretty body
         pretty (LetE decs body) =
-                "let" <+> lbrace <> line
-                        <> indent 4 (vsep (map pretty decs))
-                        <> line
-                        <> rbrace <+> "in" <+> pretty body
+                "let"
+                        <+> lbrace
+                                <> line
+                                <> indent 4 (vsep (map pretty decs))
+                                <> line
+                                <> rbrace
+                        <+> "in"
+                        <+> pretty body
         pretty (CaseE match alts) =
-                "case" <+> pretty match <+> "of" <+> lbrace <> line
-                        <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
-                        <> line
-                        <> rbrace
+                "case"
+                        <+> pretty match
+                        <+> "of"
+                        <+> lbrace
+                                <> line
+                                <> indent 4 (vsep (map (\(pat, body) -> pretty pat <+> "->" <+> pretty body) alts))
+                                <> line
+                                <> rbrace
         pretty (FactorE exp) = pretty exp
 
 pprapp :: Expr -> Doc ann
@@ -91,3 +115,6 @@ pprapp e = walk e []
         pprParendExpr :: Expr -> Doc ann
         pprParendExpr e@VarE{} = pretty e
         pprParendExpr e = parens (pretty e)
+
+instance Pretty FunDecl where
+        pretty = undefined

@@ -35,10 +35,6 @@ library
       Plato.Common.Name
       Plato.Common.Path
       Plato.Common.Utils
-      Plato.Core.Context
-      Plato.Core.Debug
-      Plato.Core.Eval
-      Plato.Core.Subst
       Plato.CoreToIO
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify
@@ -56,7 +52,6 @@ library
       Plato.PsToTyp.OpParser.Resolver
       Plato.Scoping
       Plato.Scoping.Restrictions
-      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -87,6 +82,7 @@ library
       src
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
   build-tools:
       alex
@@ -123,10 +119,6 @@ executable plato
       Plato.Common.Name
       Plato.Common.Path
       Plato.Common.Utils
-      Plato.Core.Context
-      Plato.Core.Debug
-      Plato.Core.Eval
-      Plato.Core.Subst
       Plato.CoreToIO
       Plato.KindCheck.Kc
       Plato.KindCheck.Unify
@@ -144,7 +136,6 @@ executable plato
       Plato.PsToTyp.OpParser.Resolver
       Plato.Scoping
       Plato.Scoping.Restrictions
-      Plato.Syntax.Core
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -174,6 +165,7 @@ executable plato
       src
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -222,6 +214,7 @@ test-suite Plato-test
       test
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex

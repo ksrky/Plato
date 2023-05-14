@@ -22,12 +22,10 @@ type LDecl = Located Decl
 type LModule = Located Module
 
 data Decl
-        = OpenD Path
-        | FixityD Fixity (Located Name)
-        | ModuleD Ident LModule
-        | DataD Ident [Ident] [(Ident, LType)]
-        | FuncSigD Ident LType
-        | FuncD Ident [LPat] LExpr
+        = FixityD Fixity (Located Name)
+        | -- | ModuleD Ident LModule
+          DataD Ident [Ident] [(Ident, LType)]
+        | FuncD FunDecl
         deriving (Eq, Show)
 
 newtype Module = Module [LDecl] deriving (Eq, Show)
@@ -36,12 +34,11 @@ newtype Module = Module [LDecl] deriving (Eq, Show)
 orderDecls :: [Decl] -> [Decl]
 orderDecls =
         Data.List.sortOn $ \case
-                OpenD{} -> (0 :: Int)
-                FixityD{} -> 1
-                ModuleD{} -> 2
-                DataD{} -> 3
-                FuncSigD{} -> 4
-                FuncD{} -> 5
+                FixityD{} -> (0 :: Int)
+                -- ModuleD{} -> 1
+                DataD{} -> 2
+                FuncSigD{} -> 3
+                FuncD{} -> 4
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -49,7 +46,7 @@ orderDecls =
 instance Substitutable Decl where
         substPath (OpenD path) = OpenD <$> substPath path
         substPath dec@FixityD{} = return dec
-        substPath (ModuleD id mod) = ModuleD id <$> substPath `traverse` mod
+        -- substPath (ModuleD id mod) = ModuleD id <$> substPath `traverse` mod
         substPath (DataD id params fields) =
                 DataD id params
                         <$> mapM (\(con, ty) -> (con,) <$> substPath `traverse` ty) fields
@@ -70,7 +67,7 @@ instance Pretty Decl where
                         , pretty prec
                         , pretty op
                         ]
-        pretty (ModuleD id mod) = hsep ["module", pretty id, "where", indent 4 (pretty mod)]
+        -- pretty (ModuleD id mod) = hsep ["module", pretty id, "where", indent 4 (pretty mod)]
         pretty (DataD id args fields) =
                 hsep
                         [ "data"
