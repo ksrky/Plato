@@ -10,8 +10,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
-import Plato.Syntax.Typing.Kind
-import Plato.Syntax.Typing.Type
+import Plato.Syntax.Typing
 import Plato.Typing.Env
 
 data Context = Context

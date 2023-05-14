@@ -15,7 +15,7 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
-import Plato.Syntax.Typing.Type
+import Plato.Syntax.Typing
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Utils
 

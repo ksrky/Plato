@@ -13,7 +13,7 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
-import Plato.Syntax.Typing.Kind
+import Plato.Syntax.Typing
 import Plato.Typing.Kc.Utils
 import Plato.Typing.Monad
 

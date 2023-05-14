@@ -13,7 +13,7 @@ import Data.Set qualified as S
 
 import Plato.Common.Error
 import Plato.Common.Location
-import Plato.Syntax.Typing.Type
+import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
