@@ -35,6 +35,7 @@ library
       Plato.Common.Utils
       Plato.Core.Calc
       Plato.Core.Env
+      Plato.Core.Eval
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -117,6 +118,7 @@ executable plato
       Plato.Common.Utils
       Plato.Core.Calc
       Plato.Core.Env
+      Plato.Core.Eval
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action

@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Plato.Core.Calc where
 
 import Plato.Syntax.Core

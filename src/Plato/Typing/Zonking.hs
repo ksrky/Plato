@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 
 module Plato.Typing.Zonking where
@@ -6,7 +5,6 @@ module Plato.Typing.Zonking where
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 
-import Plato.Common.Error
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
 

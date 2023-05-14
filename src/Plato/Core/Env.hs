@@ -1,4 +1,6 @@
-module Plato.Core.Context where
+{-# LANGUAGE FlexibleInstances #-}
+
+module Plato.Core.Env where
 
 import Control.Monad.Reader
 import Data.Vector qualified as V
@@ -49,14 +51,12 @@ bindingShift d bind = case bind of
         TmAbbBind t tyT_opt -> TmAbbBind (shift d t) (shift d tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (shift d tyT) opt
 
-getBinding :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Binding
-getBinding i = do
-        env <- asks getEnv
-        return $ bindingShift (i + 1) (snd $ env V.! i)
+getBinding :: Int -> CoreEnv -> Binding
+getBinding i env = bindingShift (i + 1) (snd $ env V.! i)
 
 getType :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Type
 getType i = do
-        bind <- getBinding i
+        bind <- asks (getBinding i . getEnv)
         case bind of
                 VarBind tyT -> return tyT
                 TmAbbBind _ tyT -> return tyT
@@ -64,7 +64,7 @@ getType i = do
 
 getKind :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Kind
 getKind i = do
-        bind <- getBinding i
+        bind <- asks (getBinding i . getEnv)
         case bind of
                 TyVarBind knK -> return knK
                 TyAbbBind _ knK -> return knK

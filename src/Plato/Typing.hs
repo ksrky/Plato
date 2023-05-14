@@ -1,6 +1,4 @@
-{-# LANGUAGE TupleSections #-}
-
-module Plato.Typing (typing) where
+module Plato.Typing (typingProgram) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
@@ -38,3 +36,6 @@ typing (BindDecl (ValBind id _ exp) : decs) = do
         decs' <- typing decs
         return $ BindDecl (ValBind id (Just ty) exp') : decs'
 typing _ = undefined
+
+typingProgram :: Program -> m Program
+typingProgram = undefined
