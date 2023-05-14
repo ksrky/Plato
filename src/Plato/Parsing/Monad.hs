@@ -2,7 +2,7 @@
 
 module Plato.Parsing.Monad where
 
-import Plato.Common.Global
+import Plato.Common.Uniq
 
 import Control.Monad.IO.Class
 import Control.Monad.State.Class
@@ -103,7 +103,7 @@ instance MonadIO m => MonadIO (ParserT m) where
 
 parse :: MonadIO m => String -> T.Text -> ParserT m a -> m (a, PsState)
 parse filename inp p = do
-        ref <- initUnique
+        ref <- initUniq
         runParserT
                 p
                 PsState
@@ -157,7 +157,7 @@ data PsUserState = PsUserState
         { ust_commentDepth :: Int
         , -- , ust_fixityEnv :: FixityEnv Name
           ust_indentLevels :: [Int]
-        , ust_unique :: IORef Unique
+        , ust_uniq :: IORef Uniq
         }
 
 getUserState :: Monad m => ParserT m PsUserState
@@ -166,13 +166,13 @@ getUserState = gets parser_ust
 setUserState :: Monad m => PsUserState -> ParserT m ()
 setUserState ust = modify $ \s -> s{parser_ust = ust}
 
-initUserState :: IORef Unique -> PsUserState
+initUserState :: IORef Uniq -> PsUserState
 initUserState ref =
         PsUserState
                 { ust_commentDepth = 0
                 , -- , ust_fixityEnv = M.empty
                   ust_indentLevels = []
-                , ust_unique = ref
+                , ust_uniq = ref
                 }
 
 -- comment depth ------------------------------------------
@@ -201,14 +201,14 @@ setIndentLevels lev = do
         ust <- getUserState
         setUserState ust{ust_indentLevels = lev}
 
--- unique ------------------------------------------
-instance HasUnique PsUserState where
-        getUnique = getUnique . ust_unique
+-- Uniq ------------------------------------------
+instance HasUniq PsUserState where
+        getUniq = getUniq . ust_uniq
 
-instance HasUnique PsState where
-        getUnique = getUnique . parser_ust
+instance HasUniq PsState where
+        getUniq = getUniq . parser_ust
 
-freshUniq :: MonadIO m => ParserT m Unique
+freshUniq :: MonadIO m => ParserT m Uniq
 freshUniq = do
         st <- get
-        pickUnique st
+        pickUniq st

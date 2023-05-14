@@ -99,7 +99,7 @@ tokens :-
 <code> \=                       { symbol SymEqual }       
 <code> \|                       { symbol SymVBar }
 
-<code, qual> @qual              { qualifier }
+-- <code, qual> @qual              { qualifier }
 <0, code, qual> varid           { varid }
 <0, code, qual> conid           { conid }
 <code, qual> varsym             { varsym }

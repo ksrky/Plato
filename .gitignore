@@ -11,3 +11,4 @@ stack.yaml.lock
 static
 
 examples/Plato
+src/Main

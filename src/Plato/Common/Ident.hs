@@ -8,12 +8,12 @@ import Prettyprinter
 import Prelude hiding (span)
 
 import Plato.Common.Error
-import Plato.Common.Global
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Common.Uniq
 
 -- | Identifier
-data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Unique}
+data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
         deriving (Ord, Show)
 
 instance Eq Ident where
@@ -25,15 +25,15 @@ instance GetLoc Ident where
 instance Pretty Ident where
         pretty id = pretty (nameIdent id)
 
-ident :: Located Name -> Unique -> Ident
+ident :: Located Name -> Uniq -> Ident
 ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
 
 fromIdent :: Ident -> Located Name
 fromIdent id = L (getLoc id) (nameIdent id)
 
-freshIdent :: (MonadReader ctx m, HasUnique ctx, MonadIO m) => Name -> m Ident
+freshIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Name -> m Ident
 freshIdent x = do
-        u <- pickUnique =<< ask
+        u <- pickUniq =<< ask
         return Ident{nameIdent = x, spanIdent = NoSpan, stamp = u}
 
 -- | Identifier Map

@@ -59,24 +59,5 @@ instance GetLoc [Located a] where
 sL :: (GetLoc a, GetLoc b) => a -> b -> c -> Located c
 sL x y = L (combineSpans (getLoc x) (getLoc y))
 
-{-
-cL :: Located a -> b -> Located b
-cL loc = L (getLoc loc)
-
-cSL :: Span -> Located a -> b -> Located b
-cSL sp loc = L (combineSpans sp (getLoc loc))
-
-cLL :: Located a -> Located b -> c -> Located c
-cLL loc1 loc2 = L (combineSpans (getLoc loc1) (getLoc loc2))
-
-cSLn :: Span -> [Located a] -> b -> Located b
-cSLn sp locs = L (combineSpans sp (concatSpans $ map getLoc locs))
-
-cLnL :: [Located a] -> Located b -> c -> Located c
-cLnL locs loc = L (concatSpans (map getLoc locs ++ [getLoc loc]))
-
-cLLn :: Located a -> [Located b] -> c -> Located c
-cLLn loc locs = L (concatSpans (getLoc loc : map getLoc locs))-}
-
 instance Pretty a => Pretty (Located a) where
         pretty (L _ x) = pretty x

@@ -4,11 +4,9 @@
 module Plato.Parsing.Parser where
 
 import Plato.Common.Error
-import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
-import Plato.Common.Path
 
 import Plato.Parsing.Layout
 import Plato.Parsing.Lexer
@@ -80,18 +78,7 @@ int                             { (mkLInt -> Just $$) }
 %%
 
 program     :: { [LTopDecl] }
-            : ';' impdecls ';' topdecls ';' evals   { $2 ++ $4 ++ $6 }
-
------------------------------------------------------------
--- Import declarations
------------------------------------------------------------
-impdecls    :: { [LTopDecl] }
-            : impdecl ';' impdecls                  { $1 : $3 }
-            | impdecl                               { [$1] }
-            | {- empty -}                           { [] }
-
-impdecl     :: { LTopDecl }
-            : 'import' qmodcon                      { sL $1 $2 (Import $2) }
+            : ';' topdecls ';' evals   { $2 ++ $4 }
 
 -----------------------------------------------------------
 -- Top declarations
@@ -114,30 +101,12 @@ decls       :: { [LDecl] }
             | {- empty -}                           { [] }
 
 decl        :: { LDecl }
-            -- Open directive
-            : 'open' qmodcon                        { sL $1 $2 (OpenD $2) }
-            -- Fixity declaration
-            | fixdecl                               { $1 }
-            -- Module declaration
-            | 'module' modcon modrhs                { sL $1 $3 (ModuleD $2 $3) }
             -- Data declaration
-            | 'data' tycon tyvarrow 'where' '{' constrs '}'
+            : 'data' tycon tyvarrow 'where' '{' constrs '}'
                                                     { sL $1 $7 (DataD $2 $3 $6) }
             | 'data' tycon tyvarrow 'where' 'v{' constrs close
                                                     { sL $1 $7 (DataD $2 $3 $6) }
-            | fundecl                               { $1 }
-
--- | Fixity declaration
-fixdecl     :: { LDecl }
-            : 'infix' int op                        { sL $1 $3 (FixityD (Fixity (unLoc $2) Nonfix) $3) }
-            | 'infixl' int op                       { sL $1 $3 (FixityD (Fixity (unLoc $2) Leftfix) $3) }
-            | 'infixr' int op                       { sL $1 $3 (FixityD (Fixity (unLoc $2) Rightfix) $3) }
-
--- | Module declaration
-modrhs      :: { LModule }
-            : 'where' '{' decls '}'                 { sL $1 $4 (Module $3) }
-            | 'where' 'v{' decls close              { sL $1 $4 (Module $3) }
-         -- | '=' qmodcon                           {}
+            | fundecl                               { L (getLoc $1) (FuncD $1) }
 
 -- | Data declaration
 constrs     :: { [(Ident, LType)] }
@@ -147,18 +116,18 @@ constrs     :: { [(Ident, LType)] }
 
 constr      :: { (Ident, LType) }
             : con ':' type                          { ($1, $3) }
-            -- tmp: syntax restriction: last type of 'type' must be its data type
-            | '(' conop ')' ':' type                { ($2, $5) }
+            -- tmp: syntax restriction: last type of `type` must be its data type
 
 -- | Function/signature declaration
-fundecl     :: { LDecl }
+fundecls    :: { [LFunDecl] }
+            : fundecl ';' fundecls                  { $1 : $3 }
+            | {- empty -}                           { [] }
+
+fundecl     :: { LFunDecl }
             -- Function signature
-            : var ':' type                        	{ sL $1 $3 (FuncSigD $1 $3) }
-            | '(' varop ')' ':' type                { sL $1 $5 (FuncSigD $2 $5) }
+            : var ':' type                        	{ sL $1 $3 (FunSpec $1 $3) }
             -- Function definition
-            | var patrow '=' expr               	{ sL $1 $4 (FuncD $1 $2 $4) }
-            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FuncD $2 $4 $6) }
-            | apat varop apat patrow '=' expr		{ sL $1 $6 (FuncD $2 ($1 : $3 : $4) $6) }
+            | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 $2 $4) }
 
 -----------------------------------------------------------
 -- Types
@@ -169,32 +138,26 @@ type        :: { LType }
             | btype                                 { $1 }
 
 btype       :: { LType }
-            : btype atype                           { sL $1 $2 (AppT $1 $2) }
-            | atype                                 { $1 }
+            : {-btype atype                           { sL $1 $2 (AppT $1 $2) }
+            |-} atype                                 { $1 }
 
 atype       :: { LType }
             : '(' type ')'                          { $2 }
-            | qtycon                                { L (getLoc $1) (ConT $1) }  --tmp: ? something wrong
+            | tycon                                 { L (getLoc $1) (ConT $1) }  --tmp: ? something wrong
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
 -----------------------------------------------------------
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr qop expr                        { sL $1 $3 (OpE $1 $2 $3) }
-            | lexpr                                 { $1 }
+            : lexpr                                 { $1 }
 
 lexpr       :: { LExpr }
             -- | Lambda expression
-            : '\\' patrow1 '->' expr                { sL $1 $4 (LamE [($2, $4)]) }
-            | '\\' 'where' '{' alts_ '}'            { sL $1 $5 (LamE $4) }
-            | '\\' 'where' 'v{' alts_ close         { sL $1 $5 (LamE $4) }
+            : '\\' patrow1 '->' expr                { sL $1 $4 (LamE $2 $4) }
             -- | Let expression
-            | 'let' '{' decls '}' 'in' expr         { sL $1 $6 (LetE $3 $6) } -- tmp: decls
-            | 'let' 'v{' decls close 'in' expr      { sL $1 $6 (LetE $3 $6) } -- tmp: decls
-            -- | Case expression
-            | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
-            | 'case' expr 'of' 'v{' alts close      { sL $1 $6 (CaseE $2 $5) }
+            | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
+            | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
             -- | Function application
             | fexpr                                 { $1 }
 
@@ -203,11 +166,8 @@ fexpr       :: { LExpr }
             | aexpr                                 { $1 }
 
 aexpr       :: { LExpr }
-            : '(' expr ')'                          { sL $1 $3 (FactorE $2) }
-            | '(' lexpr qop ')'                     { sL $1 $4 (AppE (L (getLoc $3) (VarE $3)) $2) }
-            | '(' qop ')'                           { sL $1 $3 (VarE $2) }
-            | qvar                                  { L (getLoc $1) (VarE $1) }
-            | qcon                                  { L (getLoc $1) (VarE $1) }
+            : var                                   { L (getLoc $1) (VarE $1) }
+            | con                                   { L (getLoc $1) (VarE $1) }
 
 -- | Alternatives
 alts        :: { [(LPat, LExpr)] }
@@ -230,12 +190,11 @@ alt_        :: { ([LPat], LExpr) }
 -- Patterns
 -----------------------------------------------------------
 pat         :: { LPat }
-            : lpat qconop pat                       { sL $1 $3 (ConP $2 ([$1, $3])) }
-            | lpat                                  { $1 }
+            : lpat                                  { $1 }
             -- tmp: infix pattern resolution 
 
 lpat 		:: { LPat }
-			: qcon apats                            { sL $1 $2 (ConP $1 $2) }
+			: con apats                             { sL $1 $2 (ConP $1 $2) }
             | apat									{ $1 }	
 
 apats       :: { [LPat] }
@@ -244,7 +203,7 @@ apats       :: { [LPat] }
 
 apat        :: { LPat }
             : '(' pat ')'                         	{ $2 }
-            | qcon                               	{ L (getLoc $1) (ConP $1 []) }
+            | con                               	{ L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }
 
@@ -270,25 +229,13 @@ typerow     :: { [LType] }
 -----------------------------------------------------------
 -- Identifiers
 -----------------------------------------------------------
-quals       :: { [Ident] }
-            : qual quals                            {% do { id <- mkIdent modName $1;
-                                                            return (id : $2) } }
-            | qual                                  {% do { id <- mkIdent modName $1;
-                                                            return [id] } }
-            | {- empty -}                           { [] }
 -- | Var
 var         :: { Ident }
             : varid                                 {% mkIdent varName $1 }
 
-qvar        :: { Path }
-            : quals var                             { mkPath $1 $2 }
-
 -- | Con
 con         :: { Ident }
             : conid                                 {% mkIdent conName $1 }
-
-qcon        :: { Path }
-            : quals con                             { mkPath $1 $2 }
 
 -- TyVar
 tyvar       :: { Ident }
@@ -297,39 +244,6 @@ tyvar       :: { Ident }
 -- | TyCon
 tycon       :: { Ident }
             : conid                                 {% mkIdent tyconName $1 }
-
-qtycon      :: { Path }
-            : quals tycon                           { mkPath $1 $2 }
-
--- | VarOp
-varop       :: { Ident }
-            : varsym                                {% mkIdent varName $1 }
-
-qvarop      :: { Path }
-            : quals varop                           { mkPath $1 $2 }
-
--- | ConOp
-conop       :: { Ident }
-            : consym                                {% mkIdent conName $1 }
-
-qconop      :: { Path }
-            : quals conop                           { mkPath $1 $2 }
-
--- | ModCon
-modcon      :: { Ident }
-            : conid                                 {% mkIdent modName $1 }
-
-qmodcon     :: { Path }
-            : quals modcon                          { mkPath $1 $2 }
-
--- | Operator
-op          :: { Located Name }
-            : varsym                                { mkLName varName $1 }
-            | consym                                { mkLName conName $1 }
-
-qop         :: { Path }
-            : qvarop                                { $1 }
-            | qconop                                { $1 }
 
 -- | for parser-error(t) rule
 close       :: { Span }
@@ -375,8 +289,4 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
-
-mkPath :: [Ident] -> Ident -> Path
-mkPath [] id = PIdent id
-mkPath (q : quals) id = foldl (\p id -> PDot p (fromIdent id)) (PIdent q) (quals ++ [id])
 }

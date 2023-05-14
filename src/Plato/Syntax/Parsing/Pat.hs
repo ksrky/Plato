@@ -4,7 +4,6 @@ import Prettyprinter
 
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Path
 
 ----------------------------------------------------------------
 -- Data and types
@@ -12,7 +11,7 @@ import Plato.Common.Path
 type LPat = Located Pat
 
 data Pat
-        = ConP Path [LPat]
+        = ConP Ident [LPat]
         | VarP Ident
         | WildP
         deriving (Eq, Show)
@@ -20,10 +19,6 @@ data Pat
 ----------------------------------------------------------------
 -- Basic instances
 ----------------------------------------------------------------
-instance Substitutable Pat where
-        substPath (ConP path pats) = ConP <$> substPath path <*> mapM (traverse substPath) pats
-        substPath (VarP id) = return $ VarP id
-        substPath WildP = return WildP
 
 ----------------------------------------------------------------
 -- Pretty printing

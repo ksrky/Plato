@@ -9,8 +9,7 @@ import Prettyprinter
 ----------------------------------------------------------------
 data Name = Name
         { nameSpace :: NameSpace
-        , -- , nameUnique :: Int
-          nameText :: T.Text
+        , nameText :: T.Text
         }
 
 instance Eq Name where
@@ -31,7 +30,6 @@ data NameSpace
         | ConName
         | TyvarName
         | TyconName
-        | ModName
         deriving (Eq, Ord, Show)
 
 varName :: T.Text -> Name
@@ -45,9 +43,6 @@ tyvarName = Name TyvarName
 
 tyconName :: T.Text -> Name
 tyconName = Name TyconName
-
-modName :: T.Text -> Name
-modName = Name ModName
 
 str2varName :: String -> Name
 str2varName = varName . T.pack

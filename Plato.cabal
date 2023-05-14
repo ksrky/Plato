@@ -27,19 +27,11 @@ library
   exposed-modules:
       Main
       Plato.Common.Error
-      Plato.Common.Fixity
-      Plato.Common.Global
       Plato.Common.Ident
       Plato.Common.Location
-      Plato.Common.Monad
       Plato.Common.Name
-      Plato.Common.Path
+      Plato.Common.Uniq
       Plato.Common.Utils
-      Plato.CoreToIO
-      Plato.KindCheck.Kc
-      Plato.KindCheck.Unify
-      Plato.KindCheck.Utils
-      Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Layout
@@ -47,35 +39,12 @@ library
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
-      Plato.PsToTyp
-      Plato.PsToTyp.OpParser
-      Plato.PsToTyp.OpParser.Resolver
-      Plato.Scoping
-      Plato.Scoping.Restrictions
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
       Plato.Syntax.Parsing.Pat
       Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
-      Plato.Syntax.Typing
-      Plato.Syntax.Typing.Expr
-      Plato.Syntax.Typing.Kind
-      Plato.Syntax.Typing.Module
-      Plato.Syntax.Typing.Pat
-      Plato.Syntax.Typing.Type
-      Plato.TypeCheck.InstGen
-      Plato.TypeCheck.Subst
-      Plato.TypeCheck.Tc
-      Plato.TypeCheck.Translate
-      Plato.TypeCheck.Unify
-      Plato.TypeCheck.Utils
-      Plato.Typing
-      Plato.Typing.CanonCase
-      Plato.Typing.Env
-      Plato.Typing.Monad
-      Plato.Typing.Zonking
-      Plato.TypToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
@@ -111,19 +80,11 @@ executable plato
   main-is: Main.hs
   other-modules:
       Plato.Common.Error
-      Plato.Common.Fixity
-      Plato.Common.Global
       Plato.Common.Ident
       Plato.Common.Location
-      Plato.Common.Monad
       Plato.Common.Name
-      Plato.Common.Path
+      Plato.Common.Uniq
       Plato.Common.Utils
-      Plato.CoreToIO
-      Plato.KindCheck.Kc
-      Plato.KindCheck.Unify
-      Plato.KindCheck.Utils
-      Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Layout
@@ -131,35 +92,12 @@ executable plato
       Plato.Parsing.Monad
       Plato.Parsing.Parser
       Plato.Parsing.Token
-      Plato.PsToTyp
-      Plato.PsToTyp.OpParser
-      Plato.PsToTyp.OpParser.Resolver
-      Plato.Scoping
-      Plato.Scoping.Restrictions
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
       Plato.Syntax.Parsing.Pat
       Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
-      Plato.Syntax.Typing
-      Plato.Syntax.Typing.Expr
-      Plato.Syntax.Typing.Kind
-      Plato.Syntax.Typing.Module
-      Plato.Syntax.Typing.Pat
-      Plato.Syntax.Typing.Type
-      Plato.TypeCheck.InstGen
-      Plato.TypeCheck.Subst
-      Plato.TypeCheck.Tc
-      Plato.TypeCheck.Translate
-      Plato.TypeCheck.Unify
-      Plato.TypeCheck.Utils
-      Plato.Typing
-      Plato.Typing.CanonCase
-      Plato.Typing.Env
-      Plato.Typing.Monad
-      Plato.Typing.Zonking
-      Plato.TypToCore
       Paths_Plato
   hs-source-dirs:
       src
