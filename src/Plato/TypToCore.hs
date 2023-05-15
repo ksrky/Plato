@@ -2,7 +2,7 @@
 
 module Plato.TypToCore where
 
-{-
+
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.RWS
@@ -17,35 +17,16 @@ import Plato.Core.Debug
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
-elabPath :: Path -> Reader Context C.Term
-elabPath (PIdent id) = do
-        i <- getVarIndex id
-        return $ C.TmVar i (mkInfo id)
-elabPath (PDot root field) = do
-        root' <- elabPath root
-        return $ C.TmProj root' (unLoc field)
-
 elabExpr :: T.Expr -> Reader Context C.Term
-elabExpr (T.VarE p) = elabPath p
-    where
-        elabPath :: Path -> Reader Context C.Term
-        elabPath (PIdent id) = do
-                i <- getVarIndex id
-                return $ C.TmVar i (mkInfo id)
-        elabPath (PDot root field) = do
-                root' <- elabPath root
-                return $ C.TmProj root' (unLoc field)
-elabExpr (T.AppE fun arg) = do
-        t1 <- elabExpr (unLoc fun)
-        t2 <- elabExpr (unLoc arg)
-        return $ C.TmApp t1 t2
+elabExpr (T.VarE var) = do
+        i <- getVarIndex var
+        return $ C.TmVar i (mkInfo var)
+elabExpr (T.AppE fun arg) = return $ C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsE id (Just ty) body) = do
         tyT1 <- elabType ty
-        t2 <- local (addName id) $ elabExpr (unLoc body)
+        t2 <- addNameWith id $ elabExpr (unLoc body)
         return $ C.TmAbs (mkInfo id) tyT1 t2
 elabExpr (T.AbsE _ Nothing _) = unreachable ""
-elabExpr (T.PAbsE pat (Just ty) body) = undefined
-elabExpr (T.PAbsE _ Nothing _) = unreachable ""
 elabExpr (T.TAppE fun argtys) = do
         t1 <- elabExpr (unLoc fun)
         tys2 <- mapM elabType argtys
@@ -59,25 +40,15 @@ elabExpr (T.TAbsE qnts body) = do
         t1 <- local (\ctx -> foldr addName ctx (map fst qnts')) $ elabExpr (unLoc body)
         return $ foldr (\(x, kn) -> C.TmTAbs (mkInfo x) kn) t1 qnts'
 elabExpr (T.LetE decs e2) = undefined
-elabExpr T.MatchE{} = undefined
 
 elabType :: T.Type -> Reader Context C.Type
 elabType (T.VarT tv) = do
         i <- getVarIndex (T.unTyVar tv)
         return $ C.TyVar i (mkInfo $ T.unTyVar tv)
-elabType (T.ConT tc) = elabPath tc
-    where
-        elabPath :: Path -> Reader Context C.Type
-        elabPath (PIdent id) = do
-                i <- getVarIndex id
-                return $ C.TyVar i (mkInfo id)
-        elabPath (PDot root field) = do
-                root' <- elabPath root
-                return $ C.TmProj root' (unLoc field)
-elabType (T.ArrT ty1 ty2) = do
-        tyT1 <- elabType (unLoc ty1)
-        tyT2 <- elabType (unLoc ty2)
-        return $ C.TyArr tyT1 tyT2
+elabType (T.ConT tc) = do
+        i <- getVarIndex tc
+        return $ C.TyVar i (mkInfo tc)
+elabType (T.ArrT ty1 ty2) = C.TyArr <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
 elabType (T.AllT tvs ty) = do
         args <- forM tvs $ \case
                 (tv, Just kn) -> do
@@ -87,22 +58,33 @@ elabType (T.AllT tvs ty) = do
         let ctx' = foldl (flip addName) ctx (map (unLoc . fst) args)
         tyT2 <- transType ctx' (unLoc ty)
         return $ foldr (\(x, knK1) -> C.TyAll (mkInfo x) knK1) tyT2 args
-elabType (T.AppT ty1 ty2) = do
-        tyT1 <- elabType (unLoc ty1)
-        tyT2 <- elabType (unLoc ty2)
-        return $ C.TyApp tyT1 tyT2
-elabType (T.AbsT x (Just kn) ty) = do
-        knK1 <- transKind kn
-        let ctx' = addName (unLoc x) ctx
-        tyT2 <- transType ctx' (unLoc ty)
-        return $ C.TyAbs (mkInfo x) knK1 tyT2
-elabType (T.AbsT x Nothing ty) = undefined
-{-elabType (T.RecT x (Just kn) ty) = do
-        knK1 <- transKind kn
-        let ctx' = addName (unLoc x) ctx
-        tyT2 <- transType ctx' (unLoc ty)
-        return $ C.TyRec (mkInfo x) knK1 tyT2-}
+elabType (T.AppT ty1 ty2) = return $ C.TyApp <$>  elabType (unLoc ty1) <*> elabType (unLoc ty2)
 elabType T.MetaT{} = unreachable "Zonking failed"
 
 elabKind :: T.Kind -> C.Kind
-elabKind = undefined-}
+elabKind StarK = KnStar
+elabKind (ArrK kn1 kn2) = KnFun (elabKind kn1) (elabKind kn2)
+elabKind MetaT{} = unreachable "Kind inference failed"
+
+elabBind :: T.Bind -> Reader CoreEnv Command
+elabBind (T.ValBind x (Just ty) exp) = do
+        exp' <- elabExpr (unLoc exp)
+        ty' <- elabType ty
+        return $ C.Bind x (C.TmAbbBind exp' ty')
+{-elabBind (T.TypeBind x (Just kn) ty) = do
+        ty' <- elabExpr (unLoc ty)
+        let kn' = elabType kn
+        return $ C.Bind x (C.TyAbbBind ty kn)-}
+elabBind _ = unreachable ""
+
+elabSpec :: T.Bind -> Reader CoreEnv Command
+elabSpec (T.ValSpec x ty) = skip {- do
+        ty' <- elabType ty
+        return$ C.Bind x (C.VarBind ty') -}
+elabSpec (T.TypeSpec x kn) = do
+        let kn' = elabKind kn
+        return $ C.Bind x (C.TyVarBind kn')
+
+elabDecl :: T.Decl -> Reader CoreEnv Command
+elabDecl (BindDecl bnd) = elabBind bnd
+elabDecl (SpecDecl spc) = elabSpec spc

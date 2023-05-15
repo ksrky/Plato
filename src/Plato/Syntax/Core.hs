@@ -19,14 +19,13 @@ data Term
         | TmFix Term
         | TmProj Term Name
         | TmRecord [(Name, Term)]
-        | TmCon Term [Term]
+        | TmCon Label [Term]
         deriving (Eq, Show)
 
 data Type
-        = TyVar Int Info
+        = TyVar !Int Info
         | TyFun Type Type
         | TyAll Info Kind Type
-        | TyAbs Info Kind Type
         | TyApp Type Type
         | TyRecord [(Name, Type)]
         deriving (Eq, Show)

@@ -34,14 +34,14 @@ lookupEnv id = asks (loop . getEnv)
                         | otherwise -> loop rest
                 Nothing -> unreachable "Core.Env.lookupEnv"
 
-addBinding :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> Binding -> m a -> m a
-addBinding id bind = local (modifyEnv $ V.cons (stamp id, bind))
+extendWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> Binding -> m a -> m a
+extendWith id bind = local (modifyEnv $ V.cons (stamp id, bind))
 
-addName :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m a -> m a
-addName id = addBinding id NameBind
+addNameWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m a -> m a
+addNameWith id = addBinding id NameBind
 
-addNameList :: (MonadReader ctx m, HasCoreEnv ctx) => [Ident] -> m a -> m a
-addNameList = flip $ foldr addName
+addNameListWith :: (MonadReader ctx m, HasCoreEnv ctx) => [Ident] -> m a -> m a
+addNameListWith = flip $ foldr addName
 
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of

@@ -15,7 +15,7 @@ type LExpr = Located Expr
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
-        | AbsE LPat (Maybe Type) LExpr
+        | AbsE Ident (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [Quant] LExpr
         | LetE [(Ident, LExpr)] [(Ident, Type)] LExpr

@@ -13,9 +13,9 @@ type LType = Located Type
 data Type
         = VarT Ident
         | ConT Ident
-        | -- | AppT LType LType
-          ArrT LType LType
+        | ArrT LType LType
         | AllT [Ident] LType
+        | AppT LType LType
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
