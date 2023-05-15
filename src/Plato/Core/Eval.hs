@@ -12,7 +12,7 @@ import Plato.Syntax.Core
 isval :: CoreEnv -> Term -> Bool
 isval env t = case t of
         TmVar i _ -> case getBinding i env of
-                VarBind{} -> True
+                TmVarBind{} -> True
                 _ -> False
         TmAbs{} -> True
         TmTAbs{} -> True

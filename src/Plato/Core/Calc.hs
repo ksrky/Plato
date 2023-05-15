@@ -26,7 +26,6 @@ tymap onvar c tyT = walk c tyT
                 TyVar fi x -> onvar c fi x
                 TyFun tyT1 tyT2 -> TyFun (walk c tyT1) (walk c tyT2)
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
-                TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
                 TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
 

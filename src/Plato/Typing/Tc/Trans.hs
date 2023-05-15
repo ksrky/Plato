@@ -46,7 +46,7 @@ prfunTrans sks arg_ty coercion = do
         return $
                 Coer $ \e ->
                         AbsE
-                                (L (getLoc id) $ VarP id)
+                                id
                                 (Just arg_ty)
                                 (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE id)))
 
@@ -58,4 +58,4 @@ funTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Sigma -> Coercion -> 
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- freshIdent $ str2varName "$x"
-        return $ Coer $ \f -> AbsE (L (getLoc id) $ VarP id) (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE id))
+        return $ Coer $ \f -> AbsE id (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE id))

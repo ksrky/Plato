@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Plato.Syntax.Typing.Decl where
 
 import Prettyprinter
@@ -15,12 +13,14 @@ import Plato.Syntax.Typing.Type
 
 data Bind
         = ValBind Ident (Maybe Type) LExpr
-        | TypeBind Ident (Maybe Kind) LType
+        | TypBind Ident (Maybe Kind) LType
         deriving (Eq, Show)
+
+-- \| TypeBind Ident (Maybe Kind) LType
 
 data Spec
         = ValSpec Ident LType
-        | TypeSpec Ident Kind
+        | TypSpec Ident Kind
         deriving (Eq, Show)
 
 data Decl

@@ -29,6 +29,8 @@ data Type
         | ConT Ident
         | ArrT LType LType
         | AllT [Quant] (Located Rho)
+        | AppT LType LType
+        | AbsT Ident Kind LType
         | MetaT MetaTv
         deriving (Eq, Show)
 

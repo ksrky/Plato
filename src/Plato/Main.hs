@@ -11,6 +11,7 @@ import Plato.Parsing
 import Plato.PsToTyp
 import Plato.Scoping
 import Plato.Typing
+import Plato.Typing.Monad
 
 data PlatoContext = PContext
 data PlatoState = PState
@@ -26,6 +27,10 @@ instance HasScope PlatoState where
 
 instance HasUniq PlatoContext where
         getUniq = undefined
+
+instance HasEnv PlatoState where
+        getEnv = undefined
+        modifyEnv = undefined
 
 process :: (MonadThrow m, MonadIO m) => T.Text -> Plato m ()
 process input = do

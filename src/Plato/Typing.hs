@@ -2,8 +2,8 @@ module Plato.Typing (typingProgram) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
+import Control.Monad.State
 
-import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -11,31 +11,33 @@ import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc
 
--- TypeSpec => ValueSpec => ModuleBind => TypeBind => ValueBind
 typing ::
-        (MonadReader env m, HasEnv env, HasUniq env, MonadThrow m, MonadIO m) =>
-        [Decl] ->
-        m [Decl]
-typing (d@(SpecDecl (TypeSpec id kn)) : decs) = do
-        decs' <- local (modifyEnv $ extend id kn) $ typing decs
-        return $ d : decs'
-typing (SpecDecl (ValSpec id ty) : decs) = do
-        ty' <- checkKindStar ty
-        local (modifyEnv $ extend id ty') $ typing decs
-{-typing (BindDecl (TypeBind id _ ty) : decs) = do
-        kn <- find id =<< getEnv =<< ask -- tmp: zonking
-        decs' <- typing decs
-        return $ BindDecl (TypeBind id (Just kn) ty) : decs'
-typing (BindDecl (DataBind id fields) : decs) = do
-        fields' <- mapM (\(con, ty) -> (con,) <$> checkKindStar ty) fields
-        decs' <- local (modifyEnv $ extendList fields') $ typing decs
-        return $ BindDecl (DataBind id fields') : decs'-}
-typing (BindDecl (ValBind id _ exp) : decs) = do
-        ty <- unLoc <$> (checkKindStar =<< find id =<< getEnv =<< ask) -- tmp: zonking?
-        exp' <- checkType exp ty
-        decs' <- typing decs
-        return $ BindDecl (ValBind id (Just ty) exp') : decs'
-typing _ = undefined
+        (MonadState env m, HasEnv env, HasUniq env, MonadThrow m, MonadIO m) =>
+        Decl ->
+        m Decl
+typing (SpecDecl (TypSpec id kn)) = do
+        modify (modifyEnv $ extend id kn)
+        return $ SpecDecl (TypSpec id kn)
+typing (SpecDecl (ValSpec id ty)) = do
+        ty' <- runReaderT (checkKindStar ty) =<< get
+        modify (modifyEnv $ extend id ty')
+        return $ SpecDecl (ValSpec id ty')
+typing (BindDecl (TypBind id _ ty)) = do
+        kn <- find id =<< getEnv =<< get -- tmp: zonking
+        ty' <- runReaderT (checkKind ty kn) =<< get
+        return $ BindDecl (TypBind id (Just kn) ty')
+typing (BindDecl (ValBind id _ exp)) = do
+        ty <- find id =<< getEnv =<< get
+        exp' <- runReaderT (checkType exp ty) =<< get
+        return $ BindDecl (ValBind id (Just ty) exp')
 
-typingProgram :: Program -> m Program
-typingProgram = undefined
+typingProgram ::
+        (MonadState s m, HasEnv s, MonadReader r m, HasUniq r, MonadThrow m, MonadIO m) =>
+        Program ->
+        m Program
+typingProgram (decs, exps) = do
+        ctx <- initContext
+        (decs', ctx') <- runStateT (mapM typing decs) ctx
+        exptys <- runReaderT (mapM inferType exps) ctx'
+        returnContext ctx'
+        return (decs', map fst exptys)

@@ -19,7 +19,7 @@ data Term
         | TmFix Term
         | TmProj Term Name
         | TmRecord [(Name, Term)]
-        | TmCon Label [Term]
+        | TmCon Name [Term]
         deriving (Eq, Show)
 
 data Type
@@ -35,7 +35,7 @@ data Kind = KnStar | KnFun Kind Kind
 
 data Binding
         = NameBind
-        | VarBind Type
+        | TmVarBind Type
         | TyVarBind Kind
         | TmAbbBind Term Type
         | TyAbbBind Type Kind

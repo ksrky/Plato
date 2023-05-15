@@ -1,5 +1,4 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TupleSections #-}
 
 module Plato.PsToTyp where
 
@@ -16,8 +15,8 @@ import Plato.Typing.Monad
 elabExpr :: P.Expr -> T.Expr
 elabExpr (P.VarE id) = T.VarE id
 elabExpr (P.AppE fun arg) = T.AppE (elabExpr <$> fun) (elabExpr <$> arg)
-elabExpr (P.LamE pats body) =
-        unLoc $ foldr (\p e -> sL p e $ T.AbsE p Nothing e) (elabExpr <$> body) (map (elabPat <$>) pats)
+elabExpr (P.LamE pats body) = undefined
+-- unLoc $ foldr (\p e -> sL p e $ T.PAbsE p Nothing e) (elabExpr <$> body) (map (elabPat <$>) pats)
 elabExpr (P.LetE decs body) = do
         undefined
 
@@ -31,28 +30,38 @@ elabType (P.VarT path) = T.VarT (T.BoundTv path)
 elabType (P.ConT con) = T.ConT con
 elabType (P.ArrT arg res) = T.ArrT (elabType <$> arg) (elabType <$> res)
 elabType (P.AllT qnts body) = T.AllT (map (\id -> (T.BoundTv id, Nothing)) qnts) (elabType <$> body)
+elabType (P.AppT fun arg) = T.AppT (elabType <$> fun) (elabType <$> arg)
 
 elabFunDecls :: [P.FunDecl] -> ([(Ident, T.LExpr)], [(Ident, T.Type)])
-elabFunDecls = undefined
+elabFunDecls _ = undefined
+
+elabFunDecl :: P.FunDecl -> T.Decl
+elabFunDecl (P.FunSpec id ty) = do
+        let ty' = elabType <$> ty
+        T.SpecDecl (T.ValSpec id ty')
+elabFunDecl (P.FunBind id [] exp) = do
+        let exp' = elabExpr <$> exp
+        T.BindDecl (T.ValBind id Nothing exp')
+elabFunDecl (P.FunBind id _ exp) = undefined
 
 elabDecl ::
         (MonadReader env m, HasUniq env, MonadIO m) =>
         P.Decl ->
         m [T.Decl]
-elabDecl (P.DataD id params constrs) = do
-        let quantify :: [Ident] -> T.LType -> T.LType
-            quantify params ty = ty
-        let constrs' = map (\(con, ty) -> (con, quantify params $ elabType <$> ty)) constrs
-        let condecs = map (T.SpecDecl . uncurry T.ValSpec) constrs'
-        kv <- newKnVar
-        return $ T.SpecDecl (T.TypeSpec id kv) : condecs
+elabDecl (P.DataD id params constrs) = undefined {-do
+                                                 let quantify :: [Ident] -> T.LType -> T.LType
+                                                     quantify params ty = ty
+                                                 let constrs' = map (\(con, ty) -> (con, quantify params $ elabType <$> ty)) constrs
+                                                 let condecs = map (\(id, ty) -> T.SpecDecl (T.ValSpec id (unLoc ty))) constrs'
+                                                 kv <- newKnVar
+                                                 return $ T.SpecDecl (T.TypSpec id kv) : condecs-}
 elabDecl (P.FuncD (P.FunSpec id sig)) = do
         let sig' = elabType <$> sig
         return [T.SpecDecl (T.ValSpec id sig')]
-elabDecl (P.FuncD (P.FunBind id [] body)) = do
-        let body' = elabExpr <$> body
-        return [T.BindDecl (T.ValBind id Nothing body')]
-elabDecl (P.FuncD P.FunBind{}) = undefined
+elabDecl (P.FuncD (P.FunBind id [] exp)) = do
+        let exp' = elabExpr <$> exp
+        return [T.BindDecl (T.ValBind id Nothing exp')]
+elabDecl (P.FuncD fundec) = return [elabFunDecl fundec]
 
 elabTopDecl :: P.TopDecl -> T.Decl
 elabTopDecl (P.Decl dec) = undefined

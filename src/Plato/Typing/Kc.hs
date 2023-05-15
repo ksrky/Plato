@@ -6,6 +6,7 @@ module Plato.Typing.Kc (
         checkKindStar,
         inferDataKind,
         inferKind,
+        checkKind,
 ) where
 
 import Control.Exception.Safe

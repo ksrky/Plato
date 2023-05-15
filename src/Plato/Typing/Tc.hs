@@ -93,7 +93,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- Env.find con =<< getEnv =<< ask
+        sigma <- find con =<< getEnv =<< ask
         (_, rho) <- instantiate sigma
         return $ split [] rho
     where
@@ -134,7 +134,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 Expected Rho ->
                 m Expr
         tcRho' (VarE var) exp_ty = do
-                sigma <- Env.find var =<< getEnv =<< ask
+                sigma <- find var =<< getEnv =<< ask
                 coercion <- instSigma sigma exp_ty
                 return $ coercion @@ VarE var
         tcRho' (AppE fun arg) exp_ty = do
@@ -143,25 +143,25 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 arg' <- checkSigma arg arg_ty
                 coercion <- instSigma res_ty exp_ty
                 return $ coercion @@ AppE fun' arg'
-        {-tcRho' (AbsE var _ body) (Check exp_ty) = do
+        tcRho' (AbsE var _ body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun sp exp_ty
-                body' <- local (modifyEnv $ Env.extend var var_ty) (checkRho body body_ty)
+                body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsE var (Just var_ty) body'
         tcRho' (AbsE var _ body) (Infer ref) = do
                 var_ty <- newTyVar
-                (body', body_ty) <- local (modifyEnv $ Env.extend var var_ty) (inferRho body)
+                (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsE var (Just var_ty) body'-}
-        tcRho' (AbsE pat _ body) (Infer ref) = do
+                return $ AbsE var (Just var_ty) body'
+        {-tcRho' (AbsE pat _ body) (Infer ref) = do
                 (binds, pat_ty) <- inferPat pat
-                (body', body_ty) <- local (modifyEnv $ Env.extendList binds) (inferRho body)
+                (body', body_ty) <- local (modifyEnv $ extendList binds) (inferRho body)
                 writeMIORef ref (ArrT (noLoc pat_ty) (noLoc body_ty))
                 return $ AbsE pat (Just pat_ty) body'
         tcRho' (AbsE pat _ body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- unifyFun sp exp_ty
                 binds <- checkPat pat arg_ty
-                body' <- local (modifyEnv $ Env.extendList binds) (checkRho body res_ty)
-                return $ AbsE pat (Just arg_ty) body'
+                body' <- local (modifyEnv $ extendList binds) (checkRho body res_ty)
+                return $ AbsE pat (Just arg_ty) body'-}
         tcRho' (LetE bnds sigs body) exp_ty = undefined {-do
                                                         env <- getEnv =<< ask
                                                         (decs', env') <-

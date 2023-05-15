@@ -7,11 +7,11 @@ import Data.Vector qualified as V
 
 import Plato.Common.Error
 import Plato.Common.Ident
-import Plato.Common.Uniq
+import Plato.Common.Name
 import Plato.Core.Calc
 import Plato.Syntax.Core
 
-type CoreEnv = V.Vector (Uniq, Binding)
+type CoreEnv = V.Vector (Name, Binding)
 
 class HasCoreEnv a where
         getEnv :: a -> CoreEnv
@@ -29,24 +29,24 @@ lookupEnv id = asks (loop . getEnv)
     where
         loop :: CoreEnv -> Binding
         loop env = case V.uncons env of
-                Just ((k, b), rest)
-                        | stamp id == k -> b
+                Just ((x, bind), rest)
+                        | nameIdent id == x -> bind
                         | otherwise -> loop rest
                 Nothing -> unreachable "Core.Env.lookupEnv"
 
 extendWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> Binding -> m a -> m a
-extendWith id bind = local (modifyEnv $ V.cons (stamp id, bind))
+extendWith id bind = local (modifyEnv $ V.cons (nameIdent id, bind))
 
 addNameWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m a -> m a
-addNameWith id = addBinding id NameBind
+addNameWith id = extendWith id NameBind
 
 addNameListWith :: (MonadReader ctx m, HasCoreEnv ctx) => [Ident] -> m a -> m a
-addNameListWith = flip $ foldr addName
+addNameListWith = flip $ foldr addNameWith
 
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of
         NameBind -> NameBind
-        VarBind tyT -> VarBind (shift d tyT)
+        TmVarBind tyT -> TmVarBind (shift d tyT)
         TyVarBind knK -> TyVarBind knK
         TmAbbBind t tyT_opt -> TmAbbBind (shift d t) (shift d tyT_opt)
         TyAbbBind tyT opt -> TyAbbBind (shift d tyT) opt
@@ -58,7 +58,7 @@ getType :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Type
 getType i = do
         bind <- asks (getBinding i . getEnv)
         case bind of
-                VarBind tyT -> return tyT
+                TmVarBind tyT -> return tyT
                 TmAbbBind _ tyT -> return tyT
                 _ -> unreachable "Plato.Core.Env.getType"
 
@@ -73,6 +73,6 @@ getKind i = do
 getVarIndex :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Int
 getVarIndex id = do
         env <- asks getEnv
-        case V.elemIndex (stamp id) (V.map fst env) of
-                Just i -> return i
+        case V.elemIndex (nameIdent id) (V.map fst env) of
+                Just idx -> return idx
                 Nothing -> unreachable "Plato.Core.Env.getVarIndex"

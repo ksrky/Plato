@@ -54,7 +54,7 @@ instance EnvManager Kind where
 
 extendSpec :: Spec -> TypEnv -> TypEnv
 extendSpec (ValSpec id ty) = extend id ty
-extendSpec (TypeSpec id kn) = extend id kn
+extendSpec (TypSpec id kn) = extend id kn
 
 extendSpecs :: [Spec] -> TypEnv -> TypEnv
 extendSpecs = flip $ foldr extendSpec
