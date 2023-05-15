@@ -45,6 +45,7 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
+      Plato.RunCore
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
@@ -68,9 +69,9 @@ library
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
       Plato.Typing.Tc
+      Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
       Plato.Typing.Tc.Subst
-      Plato.Typing.Tc.Trans
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
       Plato.Typing.Zonking
@@ -128,6 +129,7 @@ executable plato
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
+      Plato.RunCore
       Plato.Scoping
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
@@ -151,9 +153,9 @@ executable plato
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
       Plato.Typing.Tc
+      Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
       Plato.Typing.Tc.Subst
-      Plato.Typing.Tc.Trans
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
       Plato.Typing.Zonking

@@ -34,8 +34,11 @@ lookupEnv id = asks (loop . getEnv)
                         | otherwise -> loop rest
                 Nothing -> unreachable "Core.Env.lookupEnv"
 
+addBinding :: Name -> Binding -> CoreEnv -> CoreEnv
+addBinding x bind = V.cons (x, bind)
+
 extendWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> Binding -> m a -> m a
-extendWith id bind = local (modifyEnv $ V.cons (nameIdent id, bind))
+extendWith id bind = local (modifyEnv $ addBinding (nameIdent id) bind)
 
 addNameWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m a -> m a
 addNameWith id = extendWith id NameBind

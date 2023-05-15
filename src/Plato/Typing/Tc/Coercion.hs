@@ -1,4 +1,4 @@
-module Plato.Typing.Tc.Trans where
+module Plato.Typing.Tc.Coercion where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class

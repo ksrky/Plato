@@ -21,8 +21,8 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Monad
+import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
-import Plato.Typing.Tc.Trans
 import Plato.Typing.Tc.Unify
 import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking

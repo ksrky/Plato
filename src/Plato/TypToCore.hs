@@ -1,9 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore where
+module Plato.TypToCore (typ2core) where
 
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.State
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -55,6 +56,7 @@ elabType (T.AllT tvs ty) = do
         return $ foldr (\(x, knK1) -> C.TyAll (C.mkInfo x) knK1) tyT2 args
 elabType (T.AppT ty1 ty2) =
         C.TyApp <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
+elabType (T.AbsT var kn body) = undefined
 elabType T.MetaT{} = unreachable "Zonking failed"
 
 elabKind :: T.Kind -> C.Kind
@@ -68,11 +70,11 @@ elabBind (T.ValBind id (Just ty) exp) = do
         ty' <- elabType ty
         return $ C.Bind (nameIdent id) (C.TmAbbBind exp' ty')
 elabBind T.ValBind{} = unreachable ""
-
-{- elabBind (T.TypBind id (Just kn) ty) = do
-        ty' <- elabExpr (unLoc ty)
-        let kn' = elabType kn
-        return $ C.Bind id (C.TyAbbBind ty kn) -}
+elabBind (T.TypBind id (Just kn) ty) = do
+        ty' <- elabType (unLoc ty)
+        let kn' = elabKind kn
+        return $ C.Bind (nameIdent id) (C.TyAbbBind ty' kn')
+elabBind T.TypBind{} = unreachable ""
 
 elabSpec :: T.Spec -> Reader CoreEnv C.Command
 elabSpec (T.ValSpec id ty) = do
@@ -85,3 +87,10 @@ elabSpec (T.TypSpec id kn) = do
 elabDecl :: T.Decl -> Reader CoreEnv C.Command
 elabDecl (T.BindDecl bnd) = elabBind bnd
 elabDecl (T.SpecDecl spc) = elabSpec spc
+
+typ2core :: (MonadState env m, HasCoreEnv env) => T.Program -> m [C.Command]
+typ2core (decs, exps) = do
+        env <- gets getEnv
+        let cmds1 = runReader (mapM elabDecl decs) env
+            cmds2 = runReader (mapM ((C.Eval <$>) . elabExpr . unLoc) exps) env
+        return $ cmds1 ++ cmds2
