@@ -141,5 +141,3 @@ scopingProgram tdecs = do
         (tdecs', sc') <- runStateT (mapM scopingDecl tdecs) sc
         modify $ modifyScope (const sc')
         return tdecs'
-
--- runReaderT (mapM scoping tdecs) =<< get

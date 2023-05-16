@@ -5,6 +5,7 @@ module Plato.TypToCore (typ2core) where
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -13,7 +14,7 @@ import Plato.Core.Env
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
-elabExpr :: T.Expr -> Reader CoreEnv C.Term
+elabExpr :: HasCallStack => T.Expr -> Reader CoreEnv C.Term
 elabExpr (T.VarE var) = do
         i <- getVarIndex var
         return $ C.TmVar i (C.mkInfo var)
@@ -38,7 +39,7 @@ elabExpr (T.TAbsE qnts body) = do
 elabExpr (T.LetE bnds sigs body) = do
         undefined
 
-elabType :: T.Type -> Reader CoreEnv C.Type
+elabType :: HasCallStack => T.Type -> Reader CoreEnv C.Type
 elabType (T.VarT tv) = do
         i <- getVarIndex (T.unTyVar tv)
         return $ C.TyVar i (C.mkInfo $ T.unTyVar tv)
@@ -59,7 +60,7 @@ elabType (T.AppT ty1 ty2) =
 elabType (T.AbsT var kn body) = undefined
 elabType T.MetaT{} = unreachable "Zonking failed"
 
-elabKind :: T.Kind -> C.Kind
+elabKind :: HasCallStack => T.Kind -> C.Kind
 elabKind T.StarK = C.KnStar
 elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
 elabKind T.MetaK{} = unreachable "Kind inference failed"

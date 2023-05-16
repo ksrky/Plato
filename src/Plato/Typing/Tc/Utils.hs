@@ -10,6 +10,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Map.Strict qualified as M
 import Data.Set qualified as S
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Location
@@ -29,7 +30,7 @@ getMetaTvs ty = do
         ty' <- zonkType ty
         return (metaTvs ty')
 
-metaTvs :: Type -> S.Set MetaTv
+metaTvs :: HasCallStack => Type -> S.Set MetaTv
 metaTvs VarT{} = S.empty
 metaTvs ConT{} = S.empty
 metaTvs (ArrT arg res) = metaTvs (unLoc arg) `S.union` metaTvs (unLoc res)
@@ -42,7 +43,7 @@ getFreeTvs ty = do
         ty' <- zonkType ty
         return (freeTvs ty')
 
-freeTvs :: Type -> S.Set TyVar
+freeTvs :: HasCallStack => Type -> S.Set TyVar
 freeTvs (VarT tv) = S.singleton tv
 freeTvs ConT{} = S.empty
 freeTvs (ArrT arg res) = freeTvs (unLoc arg) `S.union` freeTvs (unLoc res)

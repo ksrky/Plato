@@ -4,6 +4,7 @@
 module Plato.Common.Error where
 
 import Plato.Common.Location
+import GHC.Stack
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -39,7 +40,7 @@ continueError cont =
                 ]
         )
 
-unreachable :: String -> a
+unreachable :: HasCallStack => String -> a
 unreachable s = error $ "unreachable: " ++ s
 
 ----------------------------------------------------------------

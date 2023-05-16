@@ -13,6 +13,7 @@ import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import Prettyprinter
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -122,7 +123,7 @@ inferRho exp = do
         (exp'',) <$> readMIORef ref
 
 tcRho ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (HasCallStack, MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         Expected Rho ->
         m LExpr

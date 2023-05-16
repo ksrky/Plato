@@ -14,6 +14,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Bifunctor qualified as Bifunctor
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -71,7 +72,7 @@ inferKind ty = do
         return (ty', res_kn)
 
 checkKind ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (HasCallStack, MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         LType ->
         Kind ->
         m LType

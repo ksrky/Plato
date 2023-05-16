@@ -1,14 +1,14 @@
 module Plato.Parsing.Action where
 
-import {-# SOURCE #-} Plato.Parsing.Lexer
-import Plato.Parsing.Monad
-import Plato.Parsing.Token
+import Control.Monad.State
+import qualified Data.Text as T
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Location
-
-import Control.Monad.State
-import qualified Data.Text as T
+import {-# SOURCE #-} Plato.Parsing.Lexer
+import Plato.Parsing.Monad
+import Plato.Parsing.Token
 
 type Action = AlexInput -> Int -> Parser (Located Token)
 
@@ -40,7 +40,7 @@ mkSpan pos inp len = do
 ----------------------------------------------------------------
 -- Token
 ----------------------------------------------------------------
-token :: (T.Text -> Token) -> Action
+token :: HasCallStack => (T.Text -> Token) -> Action
 token f ainp@(pos, _, _, inp) len = do
         let t = T.take len inp
         sp <- mkSpan pos inp len
@@ -108,7 +108,6 @@ beginComment _ _ = do
         setCommentDepth (cd + 1)
         setStartCode comment
         alexMonadScan
-
 endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth

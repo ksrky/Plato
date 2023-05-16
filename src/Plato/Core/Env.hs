@@ -4,6 +4,7 @@ module Plato.Core.Env where
 
 import Control.Monad.Reader
 import Data.Vector qualified as V
+import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -24,7 +25,7 @@ instance HasCoreEnv CoreEnv where
 emptyEnv :: CoreEnv
 emptyEnv = V.empty
 
-lookupEnv :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Binding
+lookupEnv :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Binding
 lookupEnv id = asks (loop . getEnv)
     where
         loop :: CoreEnv -> Binding
@@ -57,7 +58,7 @@ bindingShift d bind = case bind of
 getBinding :: Int -> CoreEnv -> Binding
 getBinding i env = bindingShift (i + 1) (snd $ env V.! i)
 
-getType :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Type
+getType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Int -> m Type
 getType i = do
         bind <- asks (getBinding i . getEnv)
         case bind of
@@ -65,7 +66,7 @@ getType i = do
                 TmAbbBind _ tyT -> return tyT
                 _ -> unreachable "Plato.Core.Env.getType"
 
-getKind :: (MonadReader ctx m, HasCoreEnv ctx) => Int -> m Kind
+getKind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Int -> m Kind
 getKind i = do
         bind <- asks (getBinding i . getEnv)
         case bind of
@@ -73,7 +74,7 @@ getKind i = do
                 TyAbbBind _ knK -> return knK
                 _ -> unreachable "Plato.Core.Env.getKind"
 
-getVarIndex :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Int
+getVarIndex :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Int
 getVarIndex id = do
         env <- asks getEnv
         case V.elemIndex (nameIdent id) (V.map fst env) of
