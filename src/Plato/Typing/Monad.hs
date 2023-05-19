@@ -2,7 +2,7 @@
 
 module Plato.Typing.Monad (
         Context (Context),
-        HasEnv (..),
+        HasTypEnv (..),
         newMIORef,
         readMIORef,
         writeMIORef,
@@ -18,16 +18,13 @@ module Plato.Typing.Monad (
         readMetaKv,
         writeMetaKv,
         initContext,
-        returnContext,
 ) where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
-import Control.Monad.State.Class
 import Plato.Common.Ident
-import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -36,27 +33,18 @@ import Plato.Typing.Env
 data Context = Context
         { typenv :: TypEnv
         , uniq :: IORef Uniq
-        , errloc :: IORef Span
         }
 
 instance HasUniq Context where
         getUniq = return . uniq
 
-class HasEnv a where
-        getEnv :: Monad m => a -> m TypEnv
-        modifyEnv :: (TypEnv -> TypEnv) -> a -> a
-
-instance HasEnv TypEnv where
-        getEnv = return
-        modifyEnv = id
-
-instance HasEnv Context where
+instance HasTypEnv Context where
         getEnv = getEnv . typenv
         modifyEnv f ctx = ctx{typenv = f (typenv ctx)}
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
-newMIORef = newMIORef
+newMIORef = liftIO . newIORef
 
 readMIORef :: MonadIO m => IORef a -> m a
 readMIORef = liftIO . readIORef
@@ -104,12 +92,7 @@ writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
 
 -- | Context management
-initContext :: (MonadState s m, HasEnv s, MonadReader r m, HasUniq r, MonadIO m) => m Context
+initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
 initContext = do
-        typenv <- getEnv =<< get
         uniq <- getUniq =<< ask
-        errloc <- liftIO $ newIORef NoSpan
-        return $ Context typenv uniq errloc
-
-returnContext :: (MonadState env m, HasEnv env) => Context -> m ()
-returnContext = modify . modifyEnv . const . typenv
+        return Context{typenv = initTypEnv, uniq = uniq}

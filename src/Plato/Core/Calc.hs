@@ -4,7 +4,7 @@ module Plato.Core.Calc where
 
 import Plato.Syntax.Core
 
-tmmap :: (Int -> Int -> Info -> Term) -> (Int -> Type -> Type) -> Int -> Term -> Term
+tmmap :: (Int -> Int -> NameInfo -> Term) -> (Int -> Type -> Type) -> Int -> Term -> Term
 tmmap onvar ontype c t = walk c t
     where
         walk c t = case t of
@@ -19,7 +19,7 @@ tmmap onvar ontype c t = walk c t
                 TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmCon l ts -> TmCon l (map (walk c) ts)
 
-tymap :: (Int -> Int -> Info -> Type) -> Int -> Type -> Type
+tymap :: (Int -> Int -> NameInfo -> Type) -> Int -> Type -> Type
 tymap onvar c tyT = walk c tyT
     where
         walk c tyT = case tyT of

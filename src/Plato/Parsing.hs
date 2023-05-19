@@ -1,16 +1,16 @@
-module Plato.Parsing (parseProgram) where
+module Plato.Parsing (parseFile) where
 
 import Control.Monad.IO.Class
-import Control.Monad.RWS
-import Data.Text qualified as T
+import Data.Text.IO qualified as T
 
-import Plato.Common.Debug
+import Plato.Driver.Monad
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
-parseProgram :: (MonadReader env m, HasInfo env, MonadIO m) => T.Text -> m Program
-parseProgram inp = do
-        file <- asks getFilePath
-        (program, _) <- liftIO $ parse file inp parser
+parseFile :: PlatoMonad m => FilePath -> m Program
+parseFile src = do
+        inp <- liftIO $ T.readFile src
+        (program, st) <- liftIO $ parse src inp parser
+        setUniq $ ust_uniq (parser_ust st)
         return program

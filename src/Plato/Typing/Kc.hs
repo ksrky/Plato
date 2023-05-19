@@ -30,7 +30,7 @@ newDataType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Ident -> m (Ident,
 newDataType id = (id,) <$> newKnVar
 
 getDataType ::
-        (MonadReader ctx m, HasEnv ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, MonadThrow m, MonadIO m) =>
         Ident ->
         m Kind
 getDataType id = zonkKind =<< Env.find id =<< getEnv =<< ask
@@ -38,7 +38,7 @@ getDataType id = zonkKind =<< Env.find id =<< getEnv =<< ask
 -- asks . (Env.find @Kind) >=> zonkKind
 
 inferDataKind ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         [Ident] ->
         [(Ident, LType)] ->
         m [(Ident, Type)]
@@ -56,13 +56,13 @@ inferDataKind params constrs = do
         return constrs''
 
 checkKindStar ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         LType ->
         m LType
 checkKindStar ty = checkKind ty StarK
 
 inferKind ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         LType ->
         m (LType, Kind)
 inferKind ty = do
@@ -72,7 +72,7 @@ inferKind ty = do
         return (ty', res_kn)
 
 checkKind ::
-        (HasCallStack, MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         LType ->
         Kind ->
         m LType

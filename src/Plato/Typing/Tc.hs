@@ -12,8 +12,8 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
 import Data.Set qualified as S
-import Prettyprinter
 import GHC.Stack
+import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -29,14 +29,14 @@ import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 checkType ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         Type ->
         m LExpr
 checkType = checkSigma
 
 inferType ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         m (LExpr, Type)
 inferType = inferSigma
@@ -45,14 +45,14 @@ data Expected a = Infer (IORef a) | Check a
 
 -- | Type check of patterns
 checkPat ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LPat ->
         Rho ->
         m [(Ident, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
 inferPat ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LPat ->
         m ([(Ident, Sigma)], Sigma)
 inferPat pat = do
@@ -62,7 +62,7 @@ inferPat pat = do
         return (binds, tc)
 
 tcPat ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LPat ->
         Expected Sigma ->
         m [(Ident, Sigma)]
@@ -90,7 +90,7 @@ instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return Id
 instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
 
 instDataCon ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
@@ -104,7 +104,7 @@ instDataCon con = do
 
 -- | Type check of Rho
 checkRho ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         Rho ->
         m LExpr
@@ -113,7 +113,7 @@ checkRho exp ty = do
         zonkExpr `traverse` exp'
 
 inferRho ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         m (LExpr, Rho)
 inferRho exp = do
@@ -123,14 +123,14 @@ inferRho exp = do
         (exp'',) <$> readMIORef ref
 
 tcRho ::
-        (HasCallStack, MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         Expected Rho ->
         m LExpr
 tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
     where
         tcRho' ::
-                (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+                (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
                 Expr ->
                 Expected Rho ->
                 m Expr
@@ -180,7 +180,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
 
 -- | Type check of Sigma
 inferSigma ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         m (LExpr, Sigma)
 inferSigma exp = do
@@ -190,7 +190,7 @@ inferSigma exp = do
         return ((genTrans tvs @@) <$> exp'', sigma)
 
 checkSigma ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LExpr ->
         Sigma ->
         m LExpr

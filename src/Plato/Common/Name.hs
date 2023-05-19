@@ -1,7 +1,7 @@
 module Plato.Common.Name where
 
-import qualified Data.Map.Strict as M
-import qualified Data.Text as T
+import Data.Map.Strict qualified as M
+import Data.Text qualified as T
 import Prettyprinter
 
 ----------------------------------------------------------------
@@ -22,7 +22,7 @@ instance Show Name where
         show (Name _ t) = T.unpack t
 
 instance Pretty Name where
-        pretty n = viaShow n
+        pretty = viaShow
 
 -- | NameSpace
 data NameSpace

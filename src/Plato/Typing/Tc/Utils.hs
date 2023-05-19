@@ -19,11 +19,10 @@ import Plato.Typing.Env
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
-getEnvTypes :: (MonadReader ctx m, HasEnv ctx) => m [Type]
+getEnvTypes :: (MonadReader ctx m, HasTypEnv ctx) => m [Type]
 getEnvTypes = do
         env <- getEnv =<< ask
         return $ concat $ M.elems $ M.map (\case ValBinding ty -> [ty]; _ -> []) env
-
 
 getMetaTvs :: MonadIO m => Type -> m (S.Set MetaTv)
 getMetaTvs ty = do

@@ -3,8 +3,8 @@
 
 module Plato.Common.Error where
 
-import Plato.Common.Location
 import GHC.Stack
+import Plato.Common.Location
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -14,10 +14,6 @@ import Prettyprinter.Render.String (renderString)
 ----------------------------------------------------------------
 -- Error handling
 ----------------------------------------------------------------
-eitherToMonadThrow :: (MonadThrow m, Exception e) => Either e a -> m a
-eitherToMonadThrow (Left e) = throw e
-eitherToMonadThrow (Right a) = return a
-
 catchError :: (MonadCatch m, MonadIO m) => m () -> m ()
 catchError =
         ( `catches`

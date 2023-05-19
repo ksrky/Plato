@@ -3,7 +3,8 @@ module Plato.Common.Ident where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import qualified Data.Map.Strict as M
+import Data.Map.Strict qualified as M
+import Data.Text qualified as T
 import Prettyprinter
 import Prelude hiding (span)
 
@@ -35,6 +36,9 @@ freshIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Name -> m Ident
 freshIdent x = do
         u <- pickUniq =<< ask
         return Ident{nameIdent = x, spanIdent = NoSpan, stamp = u}
+
+uniqName :: (T.Text -> Name) -> Uniq -> Name
+uniqName f = f . uniq2text
 
 -- | Identifier Map
 type IdentMap a = M.Map Ident a

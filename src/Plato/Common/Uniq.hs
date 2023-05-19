@@ -1,14 +1,27 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Plato.Common.Uniq where
+module Plato.Common.Uniq (
+        Uniq,
+        uniq2text,
+        HasUniq (..),
+        initUniq,
+) where
 
 import Control.Monad.IO.Class
 import Data.IORef
+import Data.Text qualified as T
+import Prettyprinter
 
 -- | Uniq
 newtype Uniq = Uniq Word
         deriving (Eq, Show, Ord, Num)
+
+uniq2text :: Uniq -> T.Text
+uniq2text (Uniq w) = T.pack $ "$" ++ show w
+
+instance Pretty Uniq where
+        pretty (Uniq w) = "$" <> viaShow w
 
 class HasUniq a where
         getUniq :: MonadIO m => a -> m (IORef Uniq)

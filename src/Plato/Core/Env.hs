@@ -22,8 +22,8 @@ instance HasCoreEnv CoreEnv where
         getEnv = id
         modifyEnv = id
 
-emptyEnv :: CoreEnv
-emptyEnv = V.empty
+initCoreEnv :: CoreEnv
+initCoreEnv = V.empty
 
 lookupEnv :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Binding
 lookupEnv id = asks (loop . getEnv)

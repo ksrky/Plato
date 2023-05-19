@@ -7,9 +7,9 @@ import Plato.Common.Uniq
 import Control.Monad.IO.Class
 import Control.Monad.State.Class
 import Control.Monad.Trans
-import qualified Data.ByteString.Internal as BS
+import Data.ByteString.Internal qualified as BS
 import Data.IORef
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Word
 
 type Parser a = ParserT IO a
@@ -102,12 +102,12 @@ instance MonadIO m => MonadIO (ParserT m) where
                 return (a, s)
 
 parse :: MonadIO m => String -> T.Text -> ParserT m a -> m (a, PsState)
-parse filename inp p = do
+parse fn inp parser = do
         ref <- initUniq
         runParserT
-                p
+                parser
                 PsState
-                        { parser_file = filename
+                        { parser_file = fn
                         , parser_pos = startPos
                         , parser_inp = inp
                         , parser_chr = '\n'

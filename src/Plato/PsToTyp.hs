@@ -8,6 +8,7 @@ import Control.Monad.Reader
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Monad
 import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
@@ -67,8 +68,5 @@ elabTopDecl :: P.TopDecl -> T.Decl
 elabTopDecl (P.Decl dec) = undefined
 elabTopDecl (P.Eval exp) = undefined
 
-ps2typ ::
-        (MonadReader env m, HasUniq env, MonadThrow m, MonadIO m) =>
-        P.Program ->
-        m T.Program
+ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m T.Program
 ps2typ = undefined

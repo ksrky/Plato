@@ -34,8 +34,10 @@ library
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Calc
+      Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
+      Plato.Driver.Monad
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -50,6 +52,7 @@ library
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
       Plato.Syntax.Core
+      Plato.Syntax.Core.Info
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -118,8 +121,10 @@ executable plato
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Calc
+      Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
+      Plato.Driver.Monad
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -134,6 +139,7 @@ executable plato
       Plato.Scoping.SynRstrc
       Plato.Scoping.Utils
       Plato.Syntax.Core
+      Plato.Syntax.Core.Info
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr

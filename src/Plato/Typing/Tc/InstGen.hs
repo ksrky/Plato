@@ -46,7 +46,7 @@ skolemise ty = return (Id, [], ty)
 
 -- | Generalization
 generalize ::
-        (MonadReader ctx m, HasEnv ctx, HasUniq ctx, MonadIO m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m) =>
         Rho ->
         m ([(TyVar, Maybe Kind)], Sigma)
 generalize ty = do

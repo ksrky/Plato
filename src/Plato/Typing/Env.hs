@@ -1,8 +1,11 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
         Binding (..),
         TypEnv,
+        initTypEnv,
+        HasTypEnv (..),
         EnvManager (..),
         extendSpec,
         extendSpecs,
@@ -23,6 +26,17 @@ data Binding
         deriving (Eq, Show)
 
 type TypEnv = IdentMap Binding
+
+class HasTypEnv a where
+        getEnv :: Monad m => a -> m TypEnv
+        modifyEnv :: (TypEnv -> TypEnv) -> a -> a
+
+instance HasTypEnv TypEnv where
+        getEnv = return
+        modifyEnv = id
+
+initTypEnv :: TypEnv
+initTypEnv = M.empty
 
 class EnvManager a where
         extend :: Ident -> a -> TypEnv -> TypEnv

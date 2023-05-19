@@ -31,6 +31,9 @@ instance HasScope Scope where
         getScope = id
         modifyScope = id
 
+initScope :: Scope
+initScope = M.empty
+
 -----------------------------------------------------------
 -- Scoping
 -----------------------------------------------------------
@@ -77,6 +80,7 @@ instance Scoping Type where
         scoping (AllT qnts body) = do
                 paramNamesUnique qnts
                 AllT qnts <$> local (extendListScope qnts) (scoping body)
+        scoping (AppT fun arg) = AppT <$> scoping fun <*> scoping arg
 
 -----------------------------------------------------------
 -- ScopingDecl
@@ -132,12 +136,7 @@ instance ScopingDecl TopDecl where
         scopingDecl (Decl dec) = Decl <$> scopingDecl dec
         scopingDecl (Eval exp) = Eval <$> (runReaderT (scoping exp) =<< get)
 
-scopingProgram ::
-        (MonadState env m, HasScope env, MonadThrow m) =>
-        Program ->
-        m Program
+scopingProgram :: MonadThrow m => Program -> m Program
 scopingProgram tdecs = do
-        sc <- gets getScope
-        (tdecs', sc') <- runStateT (mapM scopingDecl tdecs) sc
-        modify $ modifyScope (const sc')
+        (tdecs', _) <- runStateT (mapM scopingDecl tdecs) initScope
         return tdecs'

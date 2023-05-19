@@ -1,33 +1,38 @@
-module Plato.Syntax.Core where
+module Plato.Syntax.Core (
+        module Plato.Syntax.Core.Info,
+        Term (..),
+        Type (..),
+        Kind (..),
+        Binding (..),
+        Command (..),
+) where
 
-import Plato.Common.Ident
-import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Syntax.Core.Info
 
-data Info = Info {info_loc :: Span, actual_name :: Name} deriving (Eq, Show)
-
-mkInfo :: Ident -> Info
-mkInfo id = Info (getLoc id) (nameIdent id)
+type Label = Name
 
 data Term
-        = TmVar !Int Info
+        = TmVar !Int NameInfo
         | TmApp Term Term
-        | TmAbs Info Type Term
+        | TmAbs NameInfo Type Term
         | TmTApp Term Type
-        | TmTAbs Info Kind Term
-        | TmLet Info Term Term
+        | TmTAbs NameInfo Kind Term
+        | TmLet NameInfo Term Term
         | TmFix Term
-        | TmProj Term Name
-        | TmRecord [(Name, Term)]
-        | TmCon Name [Term]
+        | TmProj Term Label
+        | TmRecord [(Label, Term)]
+        | TmCon Label [Term]
         deriving (Eq, Show)
 
 data Type
-        = TyVar !Int Info
+        = TyVar !Int NameInfo
         | TyFun Type Type
-        | TyAll Info Kind Type
+        | TyAll NameInfo Kind Type
         | TyApp Type Type
-        | TyRecord [(Name, Type)]
+        | TyAbs NameInfo Kind Type
+        | TyRec NameInfo Kind Type
+        | TyRecord [(Label, Type)]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnFun Kind Kind
@@ -41,5 +46,5 @@ data Binding
         | TyAbbBind Type Kind
 
 data Command
-        = Bind Name Binding
+        = Bind NameInfo Binding
         | Eval Term
