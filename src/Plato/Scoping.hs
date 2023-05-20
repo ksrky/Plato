@@ -65,8 +65,9 @@ instance Scoping Expr where
                 return $ LamE pats' body'
         scoping (LetE decs body) = do
                 (decs', env') <- runStateT (mapM scopingDecl decs) =<< ask
+                decs'' <- bundleClauses decs'
                 body' <- local (const env') (scoping body)
-                return $ LetE decs' body'
+                return $ LetE decs'' body'
 
 instance Scoping Pat where
         scoping (ConP con pats) = ConP <$> scoping con <*> mapM scoping pats
@@ -81,6 +82,15 @@ instance Scoping Type where
                 paramNamesUnique qnts
                 AllT qnts <$> local (extendListScope qnts) (scoping body)
         scoping (AppT fun arg) = AppT <$> scoping fun <*> scoping arg
+
+instance Scoping Clause where
+        scoping (pats, exp) = do
+                -- Checking syntax restriction
+                paramPatsUnique pats
+                -- Checking scope
+                pats' <- mapM scoping pats
+                exp' <- local (extendListScope (allIdentsFromPats pats)) $ scoping exp
+                return (pats', exp')
 
 -----------------------------------------------------------
 -- ScopingDecl
@@ -103,16 +113,12 @@ instance ScopingDecl FunDecl where
                 modify $ extendScope id
                 -------------------------------------------
                 return $ FunSpec id ty'
-        scopingDecl (FunBind id pats exp) = do
-                -- Checking syntax restriction
-                paramPatsUnique pats
-                -- Checking scope
+        scopingDecl (FunBind id clses) = do
                 env <- get
                 (`runReaderT` env) $ do
                         id' <- scoping id
-                        pats' <- mapM scoping pats
-                        exp' <- local (extendListScope (allIdentsFromPats pats)) $ scoping exp
-                        return $ FunBind id' pats' exp'
+                        clses' <- scoping clses
+                        return $ FunBind id' clses'
 
 instance ScopingDecl Decl where
         scopingDecl (DataD id params fields) = do
@@ -131,10 +137,6 @@ instance ScopingDecl Decl where
                 -------------------------------------------
                 return $ DataD id params fields'
         scopingDecl (FuncD fundec) = FuncD <$> scopingDecl fundec
-
-instance ScopingDecl TopDecl where
-        scopingDecl (Decl dec) = Decl <$> scopingDecl dec
-        scopingDecl (Eval exp) = Eval <$> (runReaderT (scoping exp) =<< get)
 
 scopingProgram :: MonadThrow m => Program -> m Program
 scopingProgram tdecs = do

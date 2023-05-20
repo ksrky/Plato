@@ -78,13 +78,13 @@ int                             { (mkLInt -> Just $$) }
 %%
 
 program     :: { [LTopDecl] }
-            : ';' topdecls ';' evals   { $2 ++ $4 }
+            : ';' topdecls                          { $2 }
 
 -----------------------------------------------------------
 -- Top declarations
 -----------------------------------------------------------
 topdecls    :: { [LTopDecl] }
-            : decls                                 { map (\d -> L (getLoc d) (Decl d)) $1 }
+            : decls                                 { $1 }
 
 -----------------------------------------------------------
 -- Evaluation expressions
@@ -127,7 +127,8 @@ fundecl     :: { LFunDecl }
             -- Function signature
             : var ':' type                        	{ sL $1 $3 (FunSpec $1 $3) }
             -- Function definition
-            | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 $2 $4) }
+            | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
+            -- | var clauses
 
 -----------------------------------------------------------
 -- Types
@@ -178,12 +179,18 @@ alts        :: { [(LPat, LExpr)] }
 alt         :: { (LPat, LExpr) }
             : pat '->' expr                         { ($1, $3) }
 
-alts_       :: { [([LPat], LExpr)] }
-            : alt_ ';' alts_                        { $1 : $3 }
-            | alt_                                  { [$1] }
+
+-- | Clauses
+clauses     :: { [Clause] }
+            : 'where' '{' clauses_ '}'              { $3 }
+            | 'where' 'v{' clauses_ 'v}'            { $3 }
+
+clauses_    :: { [Clause] }
+            : clause ';' clauses_                   { $1 : $3 }
+            | clause                                { [$1] }
             | {- empty -}                           { [] }
 
-alt_        :: { ([LPat], LExpr) }
+clause      :: { Clause }
             : patrow1 '->' expr                     { ($1, $3) }
 
 -----------------------------------------------------------

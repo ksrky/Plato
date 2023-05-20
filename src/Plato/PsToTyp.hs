@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -5,9 +6,8 @@ module Plato.PsToTyp where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import GHC.Stack
 
-import Plato.Common.Error
+import Control.Monad.Writer
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
@@ -16,13 +16,29 @@ import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
 
-elabExpr :: P.Expr -> T.Expr
-elabExpr (P.VarE id) = T.VarE id
-elabExpr (P.AppE fun arg) = T.AppE (elabExpr <$> fun) (elabExpr <$> arg)
-elabExpr (P.LamE pats body) = undefined
--- unLoc $ foldr (\p e -> sL p e $ T.PAbsE p Nothing e) (elabExpr <$> body) (map (elabPat <$>) pats)
+elabExpr :: (MonadReader env m, HasUniq env, MonadIO m) => P.Expr -> m T.Expr
+elabExpr (P.VarE id) = return $ T.VarE id
+elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
+elabExpr (P.LamE pats body) = do
+        body' <- elabExpr `traverse` body
+        return $ T.ClauseE [(map (elabPat <$>) pats, body')]
 elabExpr (P.LetE decs body) = do
-        undefined
+        (bnds, spcs) <- elabFunDecls decs
+        body' <- elabExpr `traverse` body
+        return $ T.LetE bnds spcs body'
+
+elabFunDecls ::
+        (MonadReader env m, HasUniq env, MonadIO m) =>
+        [P.LFunDecl] ->
+        m ([(Ident, T.LExpr)], [(Ident, T.Type)])
+elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
+        L _ (P.FunSpec id ty) -> do
+                ty' <- elabType (unLoc ty)
+                tell ([], [(id, ty')])
+        L _ (P.FunBind id clses) -> do
+                clses' <- mapM elabClause clses
+                let body = L (getLoc clses) $ T.ClauseE clses'
+                tell ([(id, body)], [])
 
 elabPat :: P.Pat -> T.Pat
 elabPat (P.ConP con pats) = T.ConP con (map (elabPat <$>) pats)
@@ -38,34 +54,30 @@ elabType (P.AllT qnts body) = do
         T.AllT (map (\id -> (T.BoundTv id, kv)) qnts) <$> elabType `traverse` body
 elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
 
-elabFunDecls :: [P.FunDecl] -> ([(Ident, T.LExpr)], [(Ident, T.Type)])
-elabFunDecls _ = undefined
+elabClause :: (MonadReader env m, HasUniq env, MonadIO m) => P.Clause -> m T.Clause
+elabClause (pats, exp) = do
+        exp' <- elabExpr `traverse` exp
+        return (map (elabPat <$>) pats, exp')
 
-elabFunDecl :: (HasCallStack, MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m T.Decl
+elabFunDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m T.Decl
 elabFunDecl (P.FunSpec id ty) = do
         ty' <- elabType `traverse` ty
         return $ T.SpecDecl (T.ValSpec id ty')
-elabFunDecl (P.FunBind id [] exp) = do
-        let exp' = elabExpr <$> exp
-        return $ T.BindDecl (T.ValBind id exp')
-elabFunDecl P.FunBind{} = unreachable ""
+elabFunDecl (P.FunBind id clses) = do
+        clses' <- mapM elabClause clses
+        let body = L (getLoc clses) $ T.ClauseE clses'
+        return $ T.BindDecl (T.ValBind id body)
 
 elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
 elabDecl (P.DataD id params constrs) = do
         qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
-        let quantify :: T.LType -> T.LType
-            quantify ty = L (getLoc ty) $ T.AllT qnts ty
-        constrs' <- mapM (\(con, ty) -> (con,) <$> (quantify <$> elabType `traverse` ty)) constrs
+        constrs' <- mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
         sig <- newKnVar
         return $ T.SpecDecl (T.TypSpec id sig) : [T.BindDecl (T.DatBind id qnts constrs')]
-elabDecl (P.FuncD (P.FunSpec id sig)) = do
-        sig' <- elabType `traverse` sig
-        return [T.SpecDecl (T.ValSpec id sig')]
 elabDecl (P.FuncD fundec) = (:) <$> elabFunDecl fundec <*> pure []
 
 elabTopDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.TopDecl -> m [T.Decl]
-elabTopDecl (P.Decl dec) = elabDecl (unLoc dec)
-elabTopDecl (P.Eval _) = undefined
+elabTopDecl = elabDecl
 
 ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m T.Program
 ps2typ tdecs = do

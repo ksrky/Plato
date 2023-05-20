@@ -80,8 +80,8 @@ checkKind (L sp ty) exp_kn = case ty of
                 kn <- find tc =<< getEnv =<< ask
                 unify sp kn exp_kn
         ArrT arg res -> do
-                checkKind arg StarK
-                checkKind res StarK
+                checkKindStar arg
+                checkKindStar res
                 unify sp exp_kn StarK
         AllT qnts body -> do
                 qnts' <- forM qnts $ \tv -> do

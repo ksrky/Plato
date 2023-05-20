@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Plato.Syntax.Parsing.Expr where
 
 import Prettyprinter
@@ -13,6 +15,8 @@ import Plato.Syntax.Parsing.Type
 type LExpr = Located Expr
 type LFunDecl = Located FunDecl
 
+type Clause = ([LPat], LExpr)
+
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
@@ -21,9 +25,15 @@ data Expr
         deriving (Eq, Show)
 
 data FunDecl
-        = FunBind Ident [LPat] LExpr
+        = FunBind Ident [Clause]
         | FunSpec Ident LType
         deriving (Eq, Show)
+
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
+instance GetLoc Clause where
+        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
 
 ----------------------------------------------------------------
 -- Pretty printing

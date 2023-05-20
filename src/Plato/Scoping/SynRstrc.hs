@@ -1,15 +1,19 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Plato.Scoping.SynRstrc (
         defNamesUnique,
         paramNamesUnique,
         paramPatsUnique,
         dataConUnique,
         dataConType,
+        bundleClauses,
 ) where
 
 import Control.Exception.Safe
 import Data.List qualified
 import Prettyprinter
 
+import Control.Monad
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -60,3 +64,33 @@ dataConType id (con, ty) = loop1 ty
         loop2 (L sp ty) =
                 throwLocErr sp $
                         hsep ["Data constructor", squotes $ pretty con, "returns", pretty ty]
+
+{- | RULE 5: Bundling function clauses \\
+Checking number of arguments
+-}
+bundleClauses :: MonadThrow m => [LFunDecl] -> m [LFunDecl]
+bundleClauses = classify . partition
+
+classify :: MonadThrow m => [[LFunDecl]] -> m [LFunDecl]
+classify [] = return []
+classify ([] : rest) = classify rest
+classify (fspcs@(L _ FunSpec{} : _) : rest) = (fspcs ++) <$> classify rest
+classify ((L sp (FunBind id [(pats, exp)]) : fbnds) : rest) = do
+        clses <-
+                sequence
+                        [ do
+                                when (length psi /= length pats) $ throwLocErr sp "Different number of arguments"
+                                return (psi, ei)
+                        | L sp (FunBind _ [(psi, ei)]) <- fbnds
+                        ]
+        let spn = concatSpans $ sp : [spi | L spi FunBind{} <- fbnds]
+        (L spn (FunBind id ((pats, exp) : clses)) :) <$> classify rest
+classify _ = undefined
+
+partition :: [LFunDecl] -> [[LFunDecl]]
+partition =
+        Data.List.groupBy
+                ( curry $ \case
+                        (L _ (FunBind id1 _), L _ (FunBind id2 _)) -> id1 == id2
+                        _ -> False
+                )

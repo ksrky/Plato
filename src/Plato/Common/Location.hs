@@ -53,7 +53,7 @@ instance GetLoc Span where
 instance GetLoc (Located a) where
         getLoc (L sp _) = sp
 
-instance GetLoc [Located a] where
+instance GetLoc a => GetLoc [a] where
         getLoc locs = concatSpans (map getLoc locs)
 
 sL :: (GetLoc a, GetLoc b) => a -> b -> c -> Located c

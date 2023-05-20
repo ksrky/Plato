@@ -1,4 +1,9 @@
-module Plato.Syntax.Typing.Expr (LExpr, Expr (..), FunDecl) where
+module Plato.Syntax.Typing.Expr (
+        LExpr,
+        Clause,
+        Expr (..),
+        FunDecl,
+) where
 
 import Prettyprinter
 
@@ -12,6 +17,8 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 type LExpr = Located Expr
 
+type Clause = ([LPat], LExpr)
+
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
@@ -19,6 +26,7 @@ data Expr
         | TAppE LExpr [Type]
         | TAbsE [Quant] LExpr
         | LetE [(Ident, LExpr)] [(Ident, Type)] LExpr
+        | ClauseE [Clause]
         deriving (Eq, Show)
 
 data FunDecl
