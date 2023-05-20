@@ -17,7 +17,7 @@ isval env t = case t of
         TmAbs{} -> True
         TmTAbs{} -> True
         TmRecord fields -> all (\(_, vi) -> isval env vi) fields
-        TmCon _ vs -> all (isval env) vs
+        TmInj _ v _ -> isval env v
         _ -> False
 
 eval :: CoreEnv -> Term -> Term
@@ -50,10 +50,10 @@ eval env t = maybe t (eval env) (eval' t)
                 TmFix t1 -> do
                         t1' <- eval' t1
                         Just $ TmFix t1'
-                TmProj (TmRecord fields) l -> lookup l fields
-                TmProj t1 l -> do
+                TmProj (TmRecord fields) i | i < length fields -> Just $ snd (fields !! i)
+                TmProj t1 i -> do
                         t1' <- eval' t1
-                        Just $ TmProj t1' l
+                        Just $ TmProj t1' i
                 TmRecord fields -> do
                         fields' <- forM fields $ \field -> case field of
                                 (li, vi) | isval env vi -> Just (li, vi)
@@ -61,8 +61,8 @@ eval env t = maybe t (eval env) (eval' t)
                                         ti' <- eval' ti
                                         Just (li, ti')
                         Just $ TmRecord fields'
-                TmCon _ vs | all (isval env) vs -> Nothing
-                TmCon l ts -> do
-                        ts' <- mapM eval' ts
-                        Just $ TmCon l ts'
+                TmInj _ v1 _ | isval env v1 -> Nothing
+                TmInj i t1 tyT2 -> do
+                        t1' <- eval' t1
+                        Just $ TmInj i t1' tyT2
                 _ -> Nothing

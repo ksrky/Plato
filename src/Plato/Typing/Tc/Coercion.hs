@@ -26,7 +26,7 @@ Id >.> f = f
 f >.> Id = f
 Coer f1 >.> Coer f2 = Coer (f1 . f2)
 
-genTrans :: [(TyVar, Maybe Kind)] -> Coercion
+genTrans :: [Quant] -> Coercion
 genTrans [] = Id
 genTrans tvs = Coer (TAbsE tvs . noLoc)
 
@@ -34,11 +34,11 @@ instTrans :: [Type] -> Coercion
 instTrans [] = Id
 instTrans tys = Coer ((`TAppE` tys) . noLoc)
 
-prpolyTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion
+prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coercion = coercion
 prpolyTrans sks1 coercion = Coer $ \e -> TAbsE sks1 (noLoc $ coercion @@ TAppE (noLoc e) (map (VarT . fst) sks1))
 
-prfunTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [(TyVar, Maybe Kind)] -> Sigma -> Coercion -> m Coercion
+prfunTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coercion = return coercion
 prfunTrans sks _ Id = return $ Coer $ \e -> TAbsE sks (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks))
 prfunTrans sks arg_ty coercion = do
@@ -50,7 +50,7 @@ prfunTrans sks arg_ty coercion = do
                                 (Just arg_ty)
                                 (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE id)))
 
-deepskolTrans :: [(TyVar, Maybe Kind)] -> Coercion -> Coercion -> Coercion
+deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 >.> coer2
 deepskolTrans skol_tvs coer1 coer2 = coer1 >.> Coer (TAbsE skol_tvs . noLoc) >.> coer2
 

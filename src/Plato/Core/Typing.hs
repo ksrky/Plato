@@ -1,6 +1,7 @@
 module Plato.Core.Typing where
 
 import Control.Monad.Reader
+import Plato.Common.Utils
 import Plato.Core.Calc
 import Plato.Core.Env
 import Plato.Core.Monad
@@ -53,7 +54,13 @@ tyeqv tyS tyT = do
                         tyeqv tyS2 tyT2
                 (TyAbs tyX1 knKS1 tyS2, TyAbs _ knKT1 tyT2) | knKS1 == knKT1 -> do
                         extendNameWith (actualName tyX1) $ tyeqv tyS2 tyT2
-                _ -> fail $ "type mismatch: " -- ++ pretty env tyS ++ ", " ++ printty env tyT
+                (TyRec tyX1 knKS1 tyS2, TyRec _ knKT1 tyT2) | knKS1 == knKT1 -> do
+                        extendNameWith (actualName tyX1) $ tyeqv tyS2 tyT2
+                (TyRecord fields1, TyRecord fields2) | length fields1 == length fields2 -> do
+                        zipWithM_ (\(_, tyS) (_, tyT) -> tyeqv tyS tyT) fields1 fields2
+                (TySum fields1, TySum fields2) -> do
+                        zipWithM_ tyeqv fields1 fields2
+                _ -> fail "type mismatch: " -- ++ pretty env tyS ++ ", " ++ printty env tyT
 
 ----------------------------------------------------------------
 -- Typing
@@ -85,7 +92,41 @@ typeof t = case t of
         TmTAbs tyX knK1 t2 -> do
                 tyT2 <- extendWith (actualName tyX) (TyVarBind knK1) $ typeof t2
                 return $ TyAll tyX knK1 tyT2
-        _ -> undefined
+        TmLet x t1 t2 -> do
+                tyT1 <- typeof t1
+                tyT2 <- extendWith (actualName x) (TmVarBind tyT1) $ typeof t2
+                return $ shift (-1) tyT2
+        TmFix t1 -> do
+                tyT1 <- typeof t1
+                env <- asks getEnv
+                case simplifyty env tyT1 of
+                        TyFun tyT11 tyT12 -> do
+                                tyeqv tyT12 tyT11
+                                return tyT12
+                        _ -> fail "arrow type expected"
+        TmProj t1 i -> do
+                tyT1 <- typeof t1
+                env <- asks getEnv
+                case simplifyty env tyT1 of
+                        TyRecord fieldtys -> case safeAt fieldtys i of
+                                Just (_, tyT) -> return tyT
+                                Nothing -> fail "label not found"
+                        _ -> fail "record type expected"
+        TmRecord fields -> do
+                fieldtys <- forM fields $ \(li, ti) -> do
+                        tyTi <- typeof ti
+                        return (li, tyTi)
+                return $ TyRecord fieldtys
+        TmInj i t1 tyT2 -> do
+                env <- asks getEnv
+                case simplifyty env tyT2 of
+                        TySum fields -> case safeAt fields i of
+                                Just tyTi -> do
+                                        tyT1 <- typeof t1
+                                        tyeqv tyT1 tyTi
+                                        return tyT2
+                                Nothing -> fail "label not found"
+                        _ -> fail "sum type expected"
 
 ----------------------------------------------------------------
 -- Kinding
@@ -118,4 +159,10 @@ kindof tyT = case tyT of
         TyAll tyX knK1 tyT2 -> do
                 extendWith (actualName tyX) (TyVarBind knK1) $ checkKnStar tyT2
                 return KnStar
-        _ -> undefined
+        TyRec tyX knK1 tyT2 -> extendWith (actualName tyX) (TyVarBind knK1) $ kindof tyT2
+        TyRecord fields -> do
+                mapM_ (\(_, tyTi) -> checkKnStar tyTi) fields
+                return KnStar
+        TySum fields -> do
+                mapM_ checkKnStar fields
+                return KnStar

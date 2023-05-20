@@ -1,10 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TupleSections #-}
 
 module Plato.PsToTyp where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
+import GHC.Stack
 
+import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
@@ -26,44 +29,45 @@ elabPat (P.ConP con pats) = T.ConP con (map (elabPat <$>) pats)
 elabPat (P.VarP var) = T.VarP var
 elabPat P.WildP = T.WildP
 
-elabType :: P.Type -> T.Type
-elabType (P.VarT path) = T.VarT (T.BoundTv path)
-elabType (P.ConT con) = T.ConT con
-elabType (P.ArrT arg res) = T.ArrT (elabType <$> arg) (elabType <$> res)
-elabType (P.AllT qnts body) = T.AllT (map (\id -> (T.BoundTv id, Nothing)) qnts) (elabType <$> body)
-elabType (P.AppT fun arg) = T.AppT (elabType <$> fun) (elabType <$> arg)
+elabType :: (MonadReader env m, HasUniq env, MonadIO m) => P.Type -> m T.Type
+elabType (P.VarT path) = return $ T.VarT (T.BoundTv path)
+elabType (P.ConT con) = return $ T.ConT con
+elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
+elabType (P.AllT qnts body) = do
+        kv <- newKnVar
+        T.AllT (map (\id -> (T.BoundTv id, kv)) qnts) <$> elabType `traverse` body
+elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
 
 elabFunDecls :: [P.FunDecl] -> ([(Ident, T.LExpr)], [(Ident, T.Type)])
 elabFunDecls _ = undefined
 
-elabFunDecl :: P.FunDecl -> T.Decl
+elabFunDecl :: (HasCallStack, MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m T.Decl
 elabFunDecl (P.FunSpec id ty) = do
-        let ty' = elabType <$> ty
-        T.SpecDecl (T.ValSpec id ty')
+        ty' <- elabType `traverse` ty
+        return $ T.SpecDecl (T.ValSpec id ty')
 elabFunDecl (P.FunBind id [] exp) = do
         let exp' = elabExpr <$> exp
-        T.BindDecl (T.ValBind id Nothing exp')
-elabFunDecl (P.FunBind id _ exp) = undefined
+        return $ T.BindDecl (T.ValBind id exp')
+elabFunDecl P.FunBind{} = unreachable ""
 
 elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
-elabDecl (P.DataD id params constrs) = undefined {-do
-                                                 let quantify :: [Ident] -> T.LType -> T.LType
-                                                     quantify params ty = ty
-                                                 let constrs' = map (\(con, ty) -> (con, quantify params $ elabType <$> ty)) constrs
-                                                 let condecs = map (\(id, ty) -> T.SpecDecl (T.ValSpec id (unLoc ty))) constrs'
-                                                 kv <- newKnVar
-                                                 return $ T.SpecDecl (T.TypSpec id kv) : condecs-}
+elabDecl (P.DataD id params constrs) = do
+        qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
+        let quantify :: T.LType -> T.LType
+            quantify ty = L (getLoc ty) $ T.AllT qnts ty
+        constrs' <- mapM (\(con, ty) -> (con,) <$> (quantify <$> elabType `traverse` ty)) constrs
+        sig <- newKnVar
+        return $ T.SpecDecl (T.TypSpec id sig) : [T.BindDecl (T.DatBind id qnts constrs')]
 elabDecl (P.FuncD (P.FunSpec id sig)) = do
-        let sig' = elabType <$> sig
+        sig' <- elabType `traverse` sig
         return [T.SpecDecl (T.ValSpec id sig')]
-elabDecl (P.FuncD (P.FunBind id [] exp)) = do
-        let exp' = elabExpr <$> exp
-        return [T.BindDecl (T.ValBind id Nothing exp')]
-elabDecl (P.FuncD fundec) = return [elabFunDecl fundec]
+elabDecl (P.FuncD fundec) = (:) <$> elabFunDecl fundec <*> pure []
 
-elabTopDecl :: P.TopDecl -> T.Decl
-elabTopDecl (P.Decl dec) = undefined
-elabTopDecl (P.Eval exp) = undefined
+elabTopDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.TopDecl -> m [T.Decl]
+elabTopDecl (P.Decl dec) = elabDecl (unLoc dec)
+elabTopDecl (P.Eval _) = undefined
 
 ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m T.Program
-ps2typ = undefined
+ps2typ tdecs = do
+        decs <- concat <$> mapM (elabTopDecl . unLoc) tdecs
+        return (decs, [])

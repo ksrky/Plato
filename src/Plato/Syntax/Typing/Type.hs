@@ -22,7 +22,7 @@ import Plato.Syntax.Typing.Kind
 ----------------------------------------------------------------
 type LType = Located Type
 
-type Quant = (TyVar, Maybe Kind)
+type Quant = (TyVar, Kind)
 
 data Type
         = VarT TyVar

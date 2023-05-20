@@ -20,17 +20,21 @@ typing (SpecDecl (TypSpec id kn)) = do
         modify (modifyEnv $ extend id kn)
         return $ SpecDecl (TypSpec id kn)
 typing (SpecDecl (ValSpec id ty)) = do
-        ty' <- runReaderT (checkKindStar ty) =<< get
-        modify (modifyEnv $ extend id ty')
-        return $ SpecDecl (ValSpec id ty')
-typing (BindDecl (TypBind id _ ty)) = do
+        runReaderT (checkKindStar ty) =<< get
+        modify (modifyEnv $ extend id ty)
+        return $ SpecDecl (ValSpec id ty)
+typing (BindDecl (DatBind id params constrs)) = do
+        let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
+        _ <- runReaderT (local (modifyEnv extendEnv) $ mapM (checkKindStar . snd) constrs) =<< get
+        return $ BindDecl (DatBind id params constrs)
+typing (BindDecl (TypBind id ty)) = do
         kn <- find id =<< getEnv =<< get -- tmp: zonking
-        ty' <- runReaderT (checkKind ty kn) =<< get
-        return $ BindDecl (TypBind id (Just kn) ty')
-typing (BindDecl (ValBind id _ exp)) = do
+        runReaderT (checkKind ty kn) =<< get
+        return $ BindDecl (TypBind id ty)
+typing (BindDecl (ValBind id exp)) = do
         ty <- find id =<< getEnv =<< get
         exp' <- runReaderT (checkType exp ty) =<< get
-        return $ BindDecl (ValBind id (Just ty) exp')
+        return $ BindDecl (ValBind id exp')
 
 typingProgram :: (PlatoMonad m, MonadThrow m) => Program -> m Program
 typingProgram (decs, exps) = do

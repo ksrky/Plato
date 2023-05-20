@@ -17,7 +17,7 @@ tmmap onvar ontype c t = walk c t
                 TmFix t1 -> TmFix (walk c t1)
                 TmProj t1 l -> TmProj (walk c t1) l
                 TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
-                TmCon l ts -> TmCon l (map (walk c) ts)
+                TmInj i t1 tyT2 -> TmInj i (walk c t1) (ontype c tyT2)
 
 tymap :: (Int -> Int -> NameInfo -> Type) -> Int -> Type -> Type
 tymap onvar c tyT = walk c tyT
@@ -27,7 +27,10 @@ tymap onvar c tyT = walk c tyT
                 TyFun tyT1 tyT2 -> TyFun (walk c tyT1) (walk c tyT2)
                 TyAll tyX knK1 tyT2 -> TyAll tyX knK1 (walk (c + 1) tyT2)
                 TyApp tyT1 tyT2 -> TyApp (walk c tyT1) (walk c tyT2)
+                TyAbs tyX knK1 tyT2 -> TyAbs tyX knK1 (walk (c + 1) tyT2)
+                TyRec tyX knK1 tyT2 -> TyRec tyX knK1 (walk (c + 1) tyT2)
                 TyRecord fieldtys -> TyRecord (map (\(li, tyTi) -> (li, walk c tyTi)) fieldtys)
+                TySum fields -> TySum (map (walk c) fields)
 
 class Shifting a where
         shiftAbove :: Int -> Int -> a -> a

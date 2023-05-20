@@ -34,6 +34,7 @@ import Plato.Syntax.Core
 'Λ'                     { TokLambdaU }
 '{'                     { TokLBrace }
 '('                     { TokLParen }
+'μ'                     { TokMu }
 '}'                     { TokRBrace }
 ')'                     { TokRParen }
 ';'                     { TokSemi }
@@ -68,7 +69,6 @@ Bind    :: { Core (Name, Binding) }
 Term	:: { Core Term }
 	: 'λ' Var ':' Type '.' Term                     { TmAbs (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
 	| 'Λ' Tyvar ':' Kind '.' Term                   { TmTAbs (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
-	| 'Λ' Tycon ':' Kind '.' Term                   { TmTAbs (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
         | 'let' Var '=' Term 'in' Term                  { TmLet (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
         | 'fix' Term1                                   { TmFix <#> $2 }
 	| Term2                                         { $1 }
@@ -81,7 +81,7 @@ Term2	:: { Core Term }
 Term1	:: { Core Term }
 	: Var                                           { do { idx <- getVarIndex $1
                                                              ; return $ TmVar idx (mkIFN $1) } }
-        | Term1 '.' Var                                 { TmProj <#> $1 <*> pure $3 }
+        -- | Term1 '.' Var                                 { TmProj <#> $1 <*> pure $3 }
         | '{' Rcd '}'                                   { TmRecord <#> $2 }
 	| '(' Term ')'                                  { $2 }
 
@@ -91,8 +91,9 @@ Rcd     :: { Core [(Name, Term)] }
         | {- empty -}                                   { return [] }
 
 Type    :: { Core Type }
-	: '∀' Var ':' Kind '.' Type                     { TyAll (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
-        | 'λ' Tycon ':' Kind '.' Type                   { TyAbs (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
+	: '∀' Tyvar ':' Kind '.' Type                   { TyAll (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
+        | 'λ' Tyvar ':' Kind '.' Type                   { TyAbs (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
+        | 'μ' Tyvar ':' Kind '.' Type                   { TyRec (mkIFN $2) <#> $4 <*> extendNameWith $2 $6 }
         | Type2 '→' Type                                { TyFun <#> $1 <*> $3 }
         | Type2                                         { $1 }
 

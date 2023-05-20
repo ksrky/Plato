@@ -33,7 +33,7 @@ instantiate ty = return (Id, ty)
 skolemise ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
         Sigma ->
-        m (Coercion, [(TyVar, Maybe Kind)], Rho)
+        m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
         sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) tvs
         (coercion, sks2, ty') <- skolemise (subst (map fst tvs) (map (VarT . fst) sks1) (unLoc rho))
@@ -48,7 +48,7 @@ skolemise ty = return (Id, [], ty)
 generalize ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m) =>
         Rho ->
-        m ([(TyVar, Maybe Kind)], Sigma)
+        m ([Quant], Sigma)
 generalize ty = do
         env_tvs <- mapM getMetaTvs =<< getEnvTypes
         res_tvs <- getMetaTvs ty
@@ -59,13 +59,14 @@ quantify ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
         [MetaTv] ->
         Rho ->
-        m ([(TyVar, Maybe Kind)], Sigma)
+        m ([Quant], Sigma)
 quantify [] ty = return ([], ty)
 quantify tvs ty = do
         new_bndrs <- mapM ((BoundTv <$>) . freshIdent . str2tyvarName) $ take (length tvs) allBinders
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
         ty' <- zonkType ty
-        return (map (,Nothing) new_bndrs, AllT (map (,Nothing) new_bndrs) (noLoc ty'))
+        qnts <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
+        return (qnts, AllT qnts (noLoc ty'))
 
 allBinders :: [String]
 allBinders =

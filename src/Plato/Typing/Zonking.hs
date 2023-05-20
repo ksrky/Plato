@@ -1,6 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 
-module Plato.Typing.Zonking where
+module Plato.Typing.Zonking (
+        zonkExpr,
+        zonkType,
+        zonkKind,
+        zonkDecl,
+) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -14,7 +19,7 @@ zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `travers
 zonkExpr (AbsE var mbty body) = AbsE var <$> zonkType `traverse` mbty <*> zonkExpr `traverse` body
 zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr `traverse` exp <*> mapM zonkType tys
 zonkExpr (TAbsE qnts body) = do
-        qnts' <- forM qnts $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
+        qnts' <- forM qnts $ \(tv, kn) -> (tv,) <$> zonkKind kn
         TAbsE qnts' <$> zonkExpr `traverse` body
 zonkExpr (LetE bnds sigs body) = do
         bnds' <- mapM (\(id, exp) -> (id,) <$> zonkExpr `traverse` exp) bnds
@@ -26,9 +31,7 @@ zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)
 zonkType (ConT tc) = return (ConT tc)
 zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `traverse` res
-zonkType (AllT qnts ty) = do
-        qnts' <- forM qnts $ \(tv, mkn) -> (tv,) <$> zonkKind `traverse` mkn
-        AllT qnts' <$> zonkType `traverse` ty
+zonkType (AllT qnts ty) = AllT <$> zonkQuants qnts <*> zonkType `traverse` ty
 zonkType (AppT fun arg) = do
         AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
 zonkType (AbsT var kn body) = do
@@ -41,6 +44,9 @@ zonkType (MetaT tv) = do
                         ty' <- zonkType ty
                         writeMetaTv tv ty'
                         return ty'
+
+zonkQuants :: MonadIO m => [Quant] -> m [Quant]
+zonkQuants = mapM $ \(tv, kn) -> (tv,) <$> zonkKind kn
 
 zonkKind :: MonadIO m => Kind -> m Kind
 zonkKind StarK = return StarK
@@ -58,8 +64,12 @@ zonkKind (MetaK kv) = do
                         return kn'
 
 zonkBind :: MonadIO m => Bind -> m Bind
-zonkBind (ValBind id mty exp) = ValBind id <$> zonkType `traverse` mty <*> zonkExpr `traverse` exp
-zonkBind (TypBind id mkn ty) = TypBind id <$> zonkKind `traverse` mkn <*> zonkType `traverse` ty
+zonkBind (ValBind id exp) = ValBind id <$> zonkExpr `traverse` exp
+zonkBind (TypBind id ty) = TypBind id <$> zonkType `traverse` ty
+zonkBind (DatBind id params constrs) =
+        DatBind id
+                <$> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
+                <*> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) constrs
 
 zonkSpec :: MonadIO m => Spec -> m Spec
 zonkSpec (ValSpec id ty) = ValSpec id <$> zonkType `traverse` ty

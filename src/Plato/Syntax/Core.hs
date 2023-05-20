@@ -20,9 +20,9 @@ data Term
         | TmTAbs NameInfo Kind Term
         | TmLet NameInfo Term Term
         | TmFix Term
-        | TmProj Term Label
+        | TmProj Term Int
         | TmRecord [(Label, Term)]
-        | TmCon Label [Term]
+        | TmInj Int Term Type
         deriving (Eq, Show)
 
 data Type
@@ -33,6 +33,7 @@ data Type
         | TyAbs NameInfo Kind Type
         | TyRec NameInfo Kind Type
         | TyRecord [(Label, Type)]
+        | TySum [Type]
         deriving (Eq, Show)
 
 data Kind = KnStar | KnFun Kind Kind

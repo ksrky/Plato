@@ -35,6 +35,7 @@ let                     { \_ -> TokLet }
 \Λ                      { \_ -> TokLambdaU }
 \{                      { \_ -> TokLBrace }
 \(                      { \_ -> TokLParen }
+\μ                      { \_ -> TokMu }
 \}                      { \_ -> TokRBrace }
 \)                      { \_ -> TokRParen }
 \;                      { \_ -> TokSemi }
@@ -62,6 +63,7 @@ data Token
     | TokLambdaU
     | TokLBrace
     | TokLParen
+    | TokMu
     | TokRBrace
     | TokRParen
     | TokSemi
