@@ -38,14 +38,8 @@ lookupEnv id = asks (loop . getEnv)
 addBinding :: Name -> Binding -> CoreEnv -> CoreEnv
 addBinding x bind = V.cons (x, bind)
 
-extendWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> Binding -> m a -> m a
-extendWith id bind = local (modifyEnv $ addBinding (nameIdent id) bind)
-
-addNameWith :: (MonadReader ctx m, HasCoreEnv ctx) => Ident -> m a -> m a
-addNameWith id = extendWith id NameBind
-
-addNameListWith :: (MonadReader ctx m, HasCoreEnv ctx) => [Ident] -> m a -> m a
-addNameListWith = flip $ foldr addNameWith
+addName :: Name -> CoreEnv -> CoreEnv
+addName x = addBinding x NameBind
 
 bindingShift :: Int -> Binding -> Binding
 bindingShift d bind = case bind of
@@ -57,26 +51,3 @@ bindingShift d bind = case bind of
 
 getBinding :: Int -> CoreEnv -> Binding
 getBinding i env = bindingShift (i + 1) (snd $ env V.! i)
-
-getType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Int -> m Type
-getType i = do
-        bind <- asks (getBinding i . getEnv)
-        case bind of
-                TmVarBind tyT -> return tyT
-                TmAbbBind _ tyT -> return tyT
-                _ -> unreachable "Plato.Core.Env.getType"
-
-getKind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Int -> m Kind
-getKind i = do
-        bind <- asks (getBinding i . getEnv)
-        case bind of
-                TyVarBind knK -> return knK
-                TyAbbBind _ knK -> return knK
-                _ -> unreachable "Plato.Core.Env.getKind"
-
-getVarIndex :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => Ident -> m Int
-getVarIndex id = do
-        env <- asks getEnv
-        case V.elemIndex (nameIdent id) (V.map fst env) of
-                Just idx -> return idx
-                Nothing -> unreachable "Plato.Core.Env.getVarIndex"

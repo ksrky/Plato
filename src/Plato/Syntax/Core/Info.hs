@@ -1,6 +1,7 @@
 module Plato.Syntax.Core.Info (
-        NameInfo (..),
+        NameInfo (Dummy),
         mkInfo,
+        mkInfoFromName,
         actualName,
 ) where
 
@@ -15,6 +16,9 @@ data NameInfo
 
 mkInfo :: Ident -> NameInfo
 mkInfo id = NameInfo (getLoc id) (nameIdent id)
+
+mkInfoFromName :: Name -> NameInfo
+mkInfoFromName = NameInfo NoSpan
 
 actualName :: NameInfo -> Name
 actualName (NameInfo _ x) = x

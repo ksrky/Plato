@@ -45,10 +45,7 @@ elabFunDecl (P.FunBind id [] exp) = do
         T.BindDecl (T.ValBind id Nothing exp')
 elabFunDecl (P.FunBind id _ exp) = undefined
 
-elabDecl ::
-        (MonadReader env m, HasUniq env, MonadIO m) =>
-        P.Decl ->
-        m [T.Decl]
+elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
 elabDecl (P.DataD id params constrs) = undefined {-do
                                                  let quantify :: [Ident] -> T.LType -> T.LType
                                                      quantify params ty = ty

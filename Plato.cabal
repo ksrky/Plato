@@ -37,6 +37,10 @@ library
       Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
+      Plato.Core.Lexer
+      Plato.Core.Monad
+      Plato.Core.Parser
+      Plato.Core.Typing
       Plato.Driver.Monad
       Plato.Main
       Plato.Parsing
@@ -124,6 +128,10 @@ executable plato
       Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
+      Plato.Core.Lexer
+      Plato.Core.Monad
+      Plato.Core.Parser
+      Plato.Core.Typing
       Plato.Driver.Monad
       Plato.Main
       Plato.Parsing

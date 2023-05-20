@@ -12,19 +12,20 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Core.Elab
 import Plato.Core.Env
+import Plato.Core.Monad
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
 elabExpr :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Expr -> m C.Term
 elabExpr (T.VarE var) = do
-        i <- getVarIndex var
+        i <- getVarIndex (nameIdent var)
         return $ C.TmVar i (C.mkInfo var)
 elabExpr (T.AppE fun arg) = C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
-elabExpr (T.AbsE id (Just ty) body) = do
+elabExpr (T.AbsE var (Just ty) body) = do
         tyT1 <- elabType ty
-        t2 <- addNameWith id $ elabExpr (unLoc body)
-        return $ C.TmAbs (C.mkInfo id) tyT1 t2
+        t2 <- extendNameWith (nameIdent var) $ elabExpr (unLoc body)
+        return $ C.TmAbs (C.mkInfo var) tyT1 t2
 elabExpr (T.AbsE _ Nothing _) = unreachable ""
 elabExpr (T.TAppE fun argtys) = do
         t1 <- elabExpr (unLoc fun)
@@ -36,7 +37,7 @@ elabExpr (T.TAbsE qnts body) = do
                         let knK = elabKind kn
                         return (T.unTyVar tv, knK)
                 (_, Nothing) -> unreachable "Kind inference failed"
-        t1 <- addNameListWith (map fst qnts') $ elabExpr (unLoc body)
+        t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr (unLoc body)
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetE bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
@@ -47,22 +48,24 @@ elabExpr (T.LetE bnds spcs body) = do
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
-        i <- getVarIndex (T.unTyVar tv)
+        i <- getVarIndex (nameIdent $ T.unTyVar tv)
         return $ C.TyVar i (C.mkInfo $ T.unTyVar tv)
 elabType (T.ConT tc) = do
-        i <- getVarIndex tc
+        i <- getVarIndex (nameIdent tc)
         return $ C.TyVar i (C.mkInfo tc)
 elabType (T.ArrT ty1 ty2) = C.TyFun <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType (T.AllT tvs ty) = do
-        args <- forM tvs $ \case
+elabType (T.AllT qnts ty) = do
+        args <- forM qnts $ \case
                 (tv, Just kn) -> do
                         let knK = elabKind kn
                         return (T.unTyVar tv, knK)
                 _ -> unreachable "Kind inference failed"
-        tyT2 <- addNameListWith (map fst args) $ elabType (unLoc ty)
+        tyT2 <- extendNameListWith (map (nameIdent . fst) args) $ elabType (unLoc ty)
         return $ foldr (\(x, knK1) -> C.TyAll (C.mkInfo x) knK1) tyT2 args
 elabType (T.AppT ty1 ty2) = C.TyApp <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType (T.AbsT var kn body) = C.TyAbs (C.mkInfo var) (elabKind kn) <$> elabType (unLoc body)
+elabType (T.AbsT tv kn body) = do
+        tyT2 <- extendNameWith (nameIdent tv) $ elabType (unLoc body)
+        return $ C.TyAbs (C.mkInfo tv) (elabKind kn) tyT2
 elabType T.MetaT{} = unreachable "Zonking failed"
 
 elabKind :: HasCallStack => T.Kind -> C.Kind
