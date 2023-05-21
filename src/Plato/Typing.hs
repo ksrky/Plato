@@ -26,6 +26,7 @@ typing (SpecDecl (ValSpec id ty)) = do
 typing (BindDecl (DatBind id params constrs)) = do
         let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         _ <- runReaderT (local (modifyEnv extendEnv) $ mapM (checkKindStar . snd) constrs) =<< get
+        modify (modifyEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs)
         return $ BindDecl (DatBind id params constrs)
 typing (BindDecl (TypBind id ty)) = do
         kn <- find id =<< getEnv =<< get -- tmp: zonking

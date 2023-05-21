@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Reader
 import GHC.Stack
 
+import Control.Monad.Writer
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -37,10 +38,11 @@ elabExpr (T.TAbsE qnts body) = do
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetE bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
-        spcs' <- mapM (\(id, ty) -> (nameIdent id,) <$> elabType ty) spcs
+        spcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) spcs
         let rbnds = recursiveBinds bnds' spcs'
         t2 <- elabExpr (unLoc body)
         return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
+elabExpr (T.ClauseE clses) = undefined
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
@@ -65,45 +67,50 @@ elabKind T.StarK = C.KnStar
 elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
 elabKind T.MetaK{} = unreachable "Kind inference failed"
 
-elabBind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Bind -> m C.Command
-elabBind (T.ValBind id exp) = undefined {-do
-                                        t <- elabExpr (unLoc exp)
-                                        tyT <- getType =<< getVarIndex (nameIdent id)
-                                        return $ C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)-}
+elabBind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Bind -> m [C.Command]
+elabBind (T.ValBind id exp) = do
+        t <- elabExpr (unLoc exp)
+        tyT <- getType =<< getVarIndex (nameIdent id)
+        return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)]
 elabBind (T.TypBind id ty) = do
         tyT <- elabType (unLoc ty)
         knK <- getKind =<< getVarIndex (nameIdent id)
-        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK)
+        return [C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK)]
 elabBind (T.DatBind id params constrs) = do
         knK <- getKind =<< getVarIndex (nameIdent id)
-        constrs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) constrs
-        return $ C.Bind (C.mkInfo id) (C.TyAbbBind undefined knK)
+        constrs' <- mapM (\(con, ty) -> (con,) <$> elabType (T.AllT params ty)) constrs
+        let tyT =
+                foldr
+                        (\(tv, kn) -> C.TyAll (C.mkInfo $ T.unTyVar tv) (elabKind kn))
+                        (constrsToVariant constrs')
+                        params
+        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds constrs'
 
-elabSpec :: (MonadReader ctx m, HasCoreEnv ctx) => T.Spec -> m C.Command
-elabSpec (T.ValSpec id ty) = undefined
-{-do
-ty' <- elabType (unLoc ty)
-return $ C.Bind (C.mkInfo id) (C.TmVarBind ty')-}
-elabSpec (T.TypSpec id kn) = do
-        let knK = elabKind kn
-        return $ C.Bind (C.mkInfo id) (C.TyVarBind knK)
+elabSpec :: (MonadReader ctx m, HasCoreEnv ctx) => T.Spec -> m [C.Command]
+elabSpec (T.ValSpec id ty) = do
+        ty' <- elabType (unLoc ty)
+        return [C.Bind (C.mkInfo id) (C.TmVarBind ty')]
+elabSpec T.TypSpec{} = return []
 
-elabDecl :: (MonadReader ctx m, HasCoreEnv ctx) => T.Decl -> m C.Command
+elabDecl :: (MonadReader ctx m, HasCoreEnv ctx) => T.Decl -> m [C.Command]
 elabDecl (T.BindDecl bnd) = elabBind bnd
 elabDecl (T.SpecDecl spc) = elabSpec spc
 
 elabDecls :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl] -> m [C.Command]
 elabDecls decs = do
-        let fspcs = [(id, unLoc ty) | T.SpecDecl (T.ValSpec id ty) <- decs]
-            fbnds = [(id, unLoc exp) | T.BindDecl (T.ValBind id exp) <- decs]
-        fspcs' <- mapM (\(id, ty) -> (nameIdent id,) <$> elabType ty) fspcs
+        let fbnds = [(id, unLoc exp) | T.BindDecl (T.ValBind id exp) <- decs]
+            domains = map fst fbnds
+        (fspcs, rest) <- execWriterT $ forM decs $ \case
+                T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, unLoc ty)], [])
+                dec -> tell ([], [dec])
+        fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) fspcs
         fbnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr exp) fbnds
         let rbnds = recursiveBinds fbnds' fspcs'
-        cmds <- mapM elabDecl decs
-        return $ map (\(xi, ti, tyTi) -> C.Bind xi (C.TmAbbBind ti tyTi)) rbnds ++ cmds
+        cmds <- concat <$> mapM elabDecl rest
+        return $ cmds ++ map (\(id, t, tyT) -> C.Bind id (C.TmAbbBind t tyT)) rbnds
 
 typ2core :: PlatoMonad m => T.Program -> m [C.Command]
 typ2core (decs, exps) = do
-        let cmds1 = runReader (mapM elabDecl decs) initCoreEnv
+        let cmds1 = runReader (elabDecls decs) initCoreEnv
             cmds2 = runReader (mapM ((C.Eval <$>) . elabExpr . unLoc) exps) initCoreEnv
         return $ cmds1 ++ cmds2

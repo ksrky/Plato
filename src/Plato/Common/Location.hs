@@ -44,19 +44,19 @@ data Located a = L {_span :: !Span, unLoc :: a}
 noLoc :: a -> Located a
 noLoc = L NoSpan
 
-class GetLoc a where
+class HasLoc a where
         getLoc :: a -> Span
 
-instance GetLoc Span where
+instance HasLoc Span where
         getLoc = id
 
-instance GetLoc (Located a) where
+instance HasLoc (Located a) where
         getLoc (L sp _) = sp
 
-instance GetLoc a => GetLoc [a] where
+instance HasLoc a => HasLoc [a] where
         getLoc locs = concatSpans (map getLoc locs)
 
-sL :: (GetLoc a, GetLoc b) => a -> b -> c -> Located c
+sL :: (HasLoc a, HasLoc b) => a -> b -> c -> Located c
 sL x y = L (combineSpans (getLoc x) (getLoc y))
 
 instance Pretty a => Pretty (Located a) where

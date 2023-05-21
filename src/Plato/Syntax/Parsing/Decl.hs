@@ -22,5 +22,4 @@ data Decl
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty Decl where
-        pretty = undefined
+instance Pretty Decl

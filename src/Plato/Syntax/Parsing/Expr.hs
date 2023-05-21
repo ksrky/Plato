@@ -32,7 +32,7 @@ data FunDecl
 ----------------------------------------------------------------
 -- Basic instances
 ----------------------------------------------------------------
-instance GetLoc Clause where
+instance HasLoc Clause where
         getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
 
 ----------------------------------------------------------------

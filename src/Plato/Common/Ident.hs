@@ -20,7 +20,7 @@ data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2
 
-instance GetLoc Ident where
+instance HasLoc Ident where
         getLoc = spanIdent
 
 instance Pretty Ident where

@@ -7,7 +7,7 @@ module Plato.Typing.Tc (
 ) where
 
 import Control.Exception.Safe (MonadThrow)
-import Control.Monad (unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
@@ -163,18 +163,14 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 binds <- checkPat pat arg_ty
                 body' <- local (modifyEnv $ extendList binds) (checkRho body res_ty)
                 return $ AbsE pat (Just arg_ty) body'-}
-        tcRho' (LetE bnds sigs body) exp_ty = undefined {-do
-                                                        env <- getEnv =<< ask
-                                                        (decs', env') <-
-                                                                forAccumM env sigs $ \env -> \case
-                                                                        dec@(SpecDecl spec) -> do
-                                                                                return (dec, extendSpec spec env)
-                                                                        BindDecl (ValBind id (Just ty) exp) -> do
-                                                                                exp' <- checkSigma exp ty
-                                                                                return (BindDecl (ValueBind id (Just ty) exp'), env)
-                                                                        dec -> return (dec, env)
-                                                        body' <- local (modifyEnv $ const env') $ tcRho body exp_ty
-                                                        return $ LetE decs' body'-}
+        tcRho' (LetE bnds sigs body) exp_ty = local (modifyEnv $ extendList sigs) $ do
+                bnds' <- forM bnds $ \(id, exp) -> do
+                        ty <- find id =<< getEnv =<< ask
+                        exp' <- checkSigma exp ty
+                        return (id, exp')
+                body' <- tcRho body exp_ty
+                return $ LetE bnds' sigs body'
+        tcRho' ClauseE{} _ = undefined
         tcRho' TAppE{} _ = unreachable "TypeCheck.Typ.tcRho"
         tcRho' TAbsE{} _ = unreachable "TypeCheck.Typ.tcRho"
 
