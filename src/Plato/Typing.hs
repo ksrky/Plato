@@ -7,6 +7,7 @@ import Control.Monad.State
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
+import Plato.Typing.ElabClause
 import Plato.Typing.Env
 import Plato.Typing.Kc
 import Plato.Typing.Monad
@@ -32,10 +33,22 @@ typing (BindDecl (TypBind id ty)) = do
         kn <- find id =<< getEnv =<< get -- tmp: zonking
         runReaderT (checkKind ty kn) =<< get
         return $ BindDecl (TypBind id ty)
-typing (BindDecl (ValBind id exp)) = do
+typing (BindDecl (FunBind id clauses)) = do
+        ty <- find id =<< getEnv =<< get
+        -- clauses' <- runReaderT (checkType exp ty) =<< get
+        clause' <-
+                runReaderT
+                        ( do
+                                (tys, clses) <- checkClauses clauses ty
+                                elabClauses tys clses
+                        )
+                        =<< get
+        return $ BindDecl (FunBind id [clause'])
+
+{-typing (BindDecl (ValBind id exp)) = do
         ty <- find id =<< getEnv =<< get
         exp' <- runReaderT (checkType exp ty) =<< get
-        return $ BindDecl (ValBind id exp')
+        return $ BindDecl (ValBind id exp')-}
 
 typingProgram :: (PlatoMonad m, MonadThrow m) => Program -> m Program
 typingProgram (decs, exps) = do

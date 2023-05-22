@@ -40,8 +40,8 @@ elabExpr (T.TAbsE qnts body) = do
         t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr (unLoc body)
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetE bnds spcs body) = do
-        bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
-        spcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) spcs
+        bnds' <- mapM (\(id, clauses) -> (nameIdent id,) <$> elabClauses clauses) bnds
+        spcs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) spcs
         let rbnds = recursiveBinds bnds' spcs'
         t2 <- elabExpr (unLoc body)
         return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
@@ -54,7 +54,10 @@ elabExpr (T.CaseE match alts) = do
                         let xs = [nameIdent id | L _ (T.VarP id) <- ps]
                         (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
         return $ C.TmCase t alts'
-elabExpr T.ClauseE{} = unreachable "ElabClause failed"
+
+elabClauses :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => [T.Clause] -> m C.Term
+elabClauses [([], exp)] = elabExpr (unLoc exp)
+elabClauses _ = unreachable "ElabClause failed"
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
@@ -80,10 +83,14 @@ elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
 elabKind T.MetaK{} = unreachable "Kind inference failed"
 
 elabBind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Bind -> m [C.Command]
-elabBind (T.ValBind id exp) = do
+{-elabBind (T.ValBind id exp) = do
         t <- elabExpr (unLoc exp)
         tyT <- getType =<< getVarIndex (nameIdent id)
-        return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)]
+        return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)]-}
+elabBind (T.FunBind id clauses) = return [] {-do
+                                            t <- elabExpr (unLoc exp)
+                                            tyT <- getType =<< getVarIndex (nameIdent id)
+                                            return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)-}
 elabBind (T.TypBind id ty) = do
         tyT <- elabType (unLoc ty)
         knK <- getKind =<< getVarIndex (nameIdent id)
@@ -112,13 +119,13 @@ elabDecl (T.SpecDecl spc) = elabSpec spc
 
 elabDecls :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl] -> m [C.Command]
 elabDecls decs = do
-        let fbnds = [(id, unLoc exp) | T.BindDecl (T.ValBind id exp) <- decs]
+        let fbnds = [(id, clauses) | T.BindDecl (T.FunBind id clauses) <- decs]
             domains = map fst fbnds
         (fspcs, rest) <- execWriterT $ forM decs $ \case
                 T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, unLoc ty)], [])
                 dec -> tell ([], [dec])
         fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) fspcs
-        fbnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr exp) fbnds
+        fbnds' <- mapM (\(id, clauses) -> (nameIdent id,) <$> elabClauses clauses) fbnds
         let rbnds = recursiveBinds fbnds' fspcs'
         cmds <- concat <$> mapM elabDecl rest
         return $ cmds ++ map (\(id, t, tyT) -> C.Bind id (C.TmAbbBind t tyT)) rbnds

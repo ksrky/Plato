@@ -21,11 +21,18 @@ zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr `traverse` exp <*> mapM zonkType t
 zonkExpr (TAbsE qnts body) = do
         qnts' <- forM qnts $ \(tv, kn) -> (tv,) <$> zonkKind kn
         TAbsE qnts' <$> zonkExpr `traverse` body
-zonkExpr (LetE bnds sigs body) = do
-        bnds' <- mapM (\(id, exp) -> (id,) <$> zonkExpr `traverse` exp) bnds
-        sigs' <- mapM (\(id, ty) -> (id,) <$> zonkType ty) sigs
+zonkExpr (LetE bnds spcs body) = do
+        bnds' <- mapM (\(id, clauses) -> (id,) <$> mapM zonkClause clauses) bnds
+        spcs' <- mapM (\(id, ty) -> (id,) <$> zonkType `traverse` ty) spcs
         body' <- zonkExpr `traverse` body
-        return $ LetE bnds' sigs' body'
+        return $ LetE bnds' spcs' body'
+zonkExpr (CaseE match alts) = do
+        match' <- zonkExpr `traverse` match
+        alts' <- mapM (\(pats, exp) -> (pats,) <$> zonkExpr `traverse` exp) alts
+        return $ CaseE match' alts'
+
+zonkClause :: MonadIO m => Clause -> m Clause
+zonkClause (pats, exp) = (pats,) <$> zonkExpr `traverse` exp
 
 zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)
@@ -64,7 +71,9 @@ zonkKind (MetaK kv) = do
                         return kn'
 
 zonkBind :: MonadIO m => Bind -> m Bind
-zonkBind (ValBind id exp) = ValBind id <$> zonkExpr `traverse` exp
+-- zonkBind (ValBind id exp) = ValBind id <$> zonkExpr `traverse` exp
+zonkBind (FunBind id clauses) =
+        FunBind id <$> mapM (\(pats, exp) -> (pats,) <$> zonkExpr `traverse` exp) clauses
 zonkBind (TypBind id ty) = TypBind id <$> zonkType `traverse` ty
 zonkBind (DatBind id params constrs) =
         DatBind id

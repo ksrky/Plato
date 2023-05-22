@@ -2,7 +2,6 @@ module Plato.Syntax.Typing.Expr (
         LExpr,
         Clause,
         Expr (..),
-        FunDecl,
 ) where
 
 import Prettyprinter
@@ -25,19 +24,11 @@ data Expr
         | AbsE Ident (Maybe Type) LExpr
         | TAppE LExpr [Type]
         | TAbsE [Quant] LExpr
-        | LetE [(Ident, LExpr)] [(Ident, Type)] LExpr
+        | LetE [(Ident, [Clause])] [(Ident, LType)] LExpr
         | CaseE LExpr [(LPat, LExpr)]
-        | ClauseE (Maybe [Type]) [Clause]
-        deriving (Eq, Show)
-
-data FunDecl
-        = FunBind Ident [LPat] LExpr
-        | FunSpec Ident LType
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Expr
-
-instance Pretty FunDecl

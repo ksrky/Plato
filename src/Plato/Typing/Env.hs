@@ -7,8 +7,6 @@ module Plato.Typing.Env (
         initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
-        extendSpec,
-        extendSpecs,
 ) where
 
 import Control.Exception.Safe
@@ -65,10 +63,3 @@ instance EnvManager Kind where
                         _ ->
                                 throwLocErr (getLoc id) $
                                         hsep [squotes $ pretty id, "is not a type-level identifier"]
-
-extendSpec :: Spec -> TypEnv -> TypEnv
-extendSpec (ValSpec id ty) = extend id ty
-extendSpec (TypSpec id kn) = extend id kn
-
-extendSpecs :: [Spec] -> TypEnv -> TypEnv
-extendSpecs = flip $ foldr extendSpec

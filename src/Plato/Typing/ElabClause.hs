@@ -14,19 +14,11 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
 
-elabClauses :: (MonadReader env m, HasUniq env, MonadIO m, MonadThrow m) => [Type] -> [Clause] -> m LExpr
+elabClauses :: (MonadReader env m, HasUniq env, MonadIO m, MonadThrow m) => [Type] -> [Clause] -> m Clause
 elabClauses tys clauses = do
         vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
-        match vars clauses
-
-{-matchClauses :: (MonadReader env m, HasUniq env) => [Clause] -> m Expr
-matchClauses clses = do
-        undefined
-
-data Subst = Pat :=>: Pat
-
-matchClauses' :: (MonadReader env m, HasUniq env) => [Subst] -> [Clause] -> m Expr
-matchClauses' = undefined-}
+        exp <- match vars clauses
+        return ([], exp)
 
 constrArgTys :: (MonadReader env m, HasUniq env) => Ident -> m [Type]
 constrArgTys = undefined

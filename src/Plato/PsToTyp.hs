@@ -21,24 +21,26 @@ elabExpr (P.VarE id) = return $ T.VarE id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
 elabExpr (P.LamE pats body) = do
         body' <- elabExpr `traverse` body
-        return $ T.ClauseE Nothing [(map (elabPat <$>) pats, body')]
+        varpats <- mapM (\p -> (,elabPat <$> p) <$> newVarIdent) pats
+        let patlam (v, p) e = sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
+        return $ unLoc $ foldr patlam body' varpats
 elabExpr (P.LetE decs body) = do
         (bnds, spcs) <- elabFunDecls decs
         body' <- elabExpr `traverse` body
         return $ T.LetE bnds spcs body'
 
-elabFunDecls ::
+elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, MonadIO m) =>
         [P.LFunDecl] ->
-        m ([(Ident, T.LExpr)], [(Ident, T.Type)])
+        m ([(Ident, [T.Clause])], [(Ident, T.LType)])
 elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
         L _ (P.FunSpec id ty) -> do
-                ty' <- elabType (unLoc ty)
+                ty' <- elabType `traverse` ty
                 tell ([], [(id, ty')])
         L _ (P.FunBind id clses) -> do
                 clses' <- mapM elabClause clses
-                let body = L (getLoc clses) $ T.ClauseE Nothing clses'
-                tell ([(id, body)], [])
+                -- let body = L (getLoc clses) $ T.ClauseE Nothing clses'
+                tell ([(id, clses')], [])
 
 elabPat :: P.Pat -> T.Pat
 elabPat (P.ConP con pats) = T.ConP con (map (elabPat <$>) pats)
@@ -65,8 +67,8 @@ elabFunDecl (P.FunSpec id ty) = do
         return $ T.SpecDecl (T.ValSpec id ty')
 elabFunDecl (P.FunBind id clses) = do
         clses' <- mapM elabClause clses
-        let body = L (getLoc clses) $ T.ClauseE Nothing clses'
-        return $ T.BindDecl (T.ValBind id body)
+        -- let body = L (getLoc clses) $ T.ClauseE Nothing clses'
+        return $ T.BindDecl (T.FunBind id clses')
 
 elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
 elabDecl (P.DataD id params constrs) = do

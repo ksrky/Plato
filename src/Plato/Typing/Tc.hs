@@ -4,6 +4,7 @@
 module Plato.Typing.Tc (
         checkType,
         inferType,
+        checkClauses,
 ) where
 
 import Control.Exception.Safe (MonadThrow)
@@ -19,8 +20,10 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Common.Utils
 import Plato.Syntax.Typing
 import Plato.Typing.Env
+import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
@@ -163,15 +166,37 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 binds <- checkPat pat arg_ty
                 body' <- local (modifyEnv $ extendList binds) (checkRho body res_ty)
                 return $ AbsE pat (Just arg_ty) body'-}
-        tcRho' (LetE bnds sigs body) exp_ty = local (modifyEnv $ extendList sigs) $ do
-                bnds' <- forM bnds $ \(id, exp) -> do
-                        ty <- find id =<< getEnv =<< ask
-                        exp' <- checkSigma exp ty
-                        return (id, exp')
+        tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
+                bnds' <- forM bnds $ \(id, clauses) -> do
+                        sig <- find id =<< getEnv =<< ask
+                        -- exp' <- checkSigma exp ty
+                        (_, clauses') <- checkClauses clauses sig
+                        return (id, clauses')
                 body' <- tcRho body exp_ty
-                return $ LetE bnds' sigs body'
-        tcRho' ClauseE{} _ = undefined
-        tcRho' CaseE{} _ = undefined
+                mapM_ (\(_, ty) -> checkKindStar ty) spcs
+                return $ LetE bnds' spcs body'
+        {-tcRho' (ClauseE _ []) _ = undefined
+        tcRho' (ClauseE _ clauses@(hd : _)) (Check exp_ty) = do
+                (pat_tys, res_ty) <- mapAccumM (\ty _ -> unifyFun sp ty) exp_ty (fst hd)
+                clauses' <- forM clauses $ \(pats, body) -> do
+                        substs <- zipWithM checkPat pats pat_tys
+                        body' <- local (modifyEnv $ extendList $ concat substs) $ checkRho body res_ty
+                        return (pats, body')
+                return $ ClauseE (Just pat_tys) clauses'
+        tcRho' (ClauseE _ clauses) (Infer ref) = undefined  do
+                                                           clauses' <- forM clauses $ \(pats, body) -> do
+                                                                   (substs, pat_tys) <- mapAndUnzipM inferPat pats
+                                                                   (body', body_ty) <- local (modifyEnv $ extendList $ concat substs) $ inferRho body
+                                                                   return (pats, body')
+                                                           return $ ClauseE (Just pat_tys) clauses'-}
+        tcRho' (CaseE match alts) exp_ty = do
+                (match', match_ty) <- inferRho match
+                alts' <- forM alts $ \(pat, body) -> do
+                        subst <- checkPat pat match_ty
+                        (body', body_ty) <- local (modifyEnv $ extendList subst) $ inferRho body
+                        coer <- instSigma body_ty exp_ty
+                        return (pat, (coer @@) <$> body')
+                return $ CaseE match' alts'
         tcRho' TAppE{} _ = unreachable "TypeCheck.Typ.tcRho"
         tcRho' TAbsE{} _ = unreachable "TypeCheck.Typ.tcRho"
 
@@ -200,7 +225,22 @@ checkSigma exp sigma = do
         unless (null bad_tvs) $ throwError "Type not polymorphic enough"
         return $ (\e -> coercion @@ genTrans skol_tvs @@ e) <$> exp'
 
--- | Subsumption checking
+-- | Check clauses
+checkClauses ::
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        [Clause] ->
+        Type ->
+        m ([Type], [Clause])
+checkClauses [] _ = return ([], [])
+checkClauses clauses@(hd : _) exp_ty = do
+        (pat_tys, res_ty) <- mapAccumM (\ty _ -> unifyFun NoSpan ty) exp_ty (fst hd)
+        clauses' <- forM clauses $ \(pats, body) -> do
+                substs <- zipWithM checkPat pats pat_tys
+                body' <- local (modifyEnv $ extendList $ concat substs) $ checkSigma body res_ty
+                return (pats, body')
+        return (pat_tys, clauses')
+
+-- | Subsumption checking.  Coersing sigma1 to sigma2.
 subsCheck :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Sigma -> Sigma -> m Coercion
 subsCheck sigma1 sigma2 = do
         (coercion1, skol_tvs, rho2) <- skolemise sigma2
@@ -210,6 +250,7 @@ subsCheck sigma1 sigma2 = do
         unless (null bad_tvs) $ throwError $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
+-- | Subsumption checkking. Coersing sigma to rho.
 subsCheckRho :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Sigma -> Rho -> m Coercion
 subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1

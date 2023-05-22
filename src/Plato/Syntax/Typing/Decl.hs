@@ -12,7 +12,8 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 
 data Bind
-        = ValBind Ident LExpr
+        = -- ValBind Ident LExpr |
+          FunBind Ident [Clause]
         | TypBind Ident LType
         | DatBind Ident [Quant] [(Ident, LType)]
         deriving (Eq, Show)
