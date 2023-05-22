@@ -13,16 +13,28 @@ import Plato.Syntax.Core.Info
 type Label = Name
 
 data Term
-        = TmVar !Int NameInfo
-        | TmApp Term Term
-        | TmAbs NameInfo Type Term
-        | TmTApp Term Type
-        | TmTAbs NameInfo Kind Term
-        | TmLet NameInfo Term Term
-        | TmFix Term
-        | TmProj Term Int
-        | TmRecord [(Label, Term)]
-        | TmInj Int Term Type
+        = -- | Term-level variable
+          TmVar !Int NameInfo
+        | -- | Application
+          TmApp Term Term
+        | -- | Abstraction
+          TmAbs NameInfo Type Term
+        | -- | Type application
+          TmTApp Term Type
+        | -- | Type abstraction
+          TmTAbs NameInfo Kind Term
+        | -- | Let binding
+          TmLet NameInfo Term Term
+        | -- | Fix combinator
+          TmFix Term
+        | -- | Record projection
+          TmProj Term Int
+        | -- | Record
+          TmRecord [(Label, Term)]
+        | -- | Injection to variants
+          TmInj Int Term Type
+        | -- | Case tree
+          TmCase Term [(Label, Term)]
         deriving (Eq, Show)
 
 data Type

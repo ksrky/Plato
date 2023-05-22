@@ -70,11 +70,13 @@ library
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
       Plato.Typing
+      Plato.Typing.ElabClause
       Plato.Typing.Env
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
+      Plato.Typing.Subst
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
@@ -161,11 +163,13 @@ executable plato
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
       Plato.Typing
+      Plato.Typing.ElabClause
       Plato.Typing.Env
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
+      Plato.Typing.Subst
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen

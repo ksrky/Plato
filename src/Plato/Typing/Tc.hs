@@ -171,6 +171,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 body' <- tcRho body exp_ty
                 return $ LetE bnds' sigs body'
         tcRho' ClauseE{} _ = undefined
+        tcRho' CaseE{} _ = undefined
         tcRho' TAppE{} _ = unreachable "TypeCheck.Typ.tcRho"
         tcRho' TAbsE{} _ = unreachable "TypeCheck.Typ.tcRho"
 

@@ -26,7 +26,8 @@ data Expr
         | TAppE LExpr [Type]
         | TAbsE [Quant] LExpr
         | LetE [(Ident, LExpr)] [(Ident, Type)] LExpr
-        | ClauseE [Clause]
+        | CaseE LExpr [(LPat, LExpr)]
+        | ClauseE (Maybe [Type]) [Clause]
         deriving (Eq, Show)
 
 data FunDecl
@@ -38,16 +39,5 @@ data FunDecl
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Expr
-
-prettyAtom :: Expr -> Doc ann
-prettyAtom e@VarE{} = pretty e
-prettyAtom e = parens (pretty e)
-
-pprapp :: Expr -> Doc ann
-pprapp e = walk e []
-    where
-        walk :: Expr -> [Expr] -> Doc ann
-        walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
-        walk e' es = prettyAtom e' <+> sep (map prettyAtom es)
 
 instance Pretty FunDecl

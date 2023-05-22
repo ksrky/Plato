@@ -67,23 +67,6 @@ instance Ord MetaTv where
 ----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty id
+        pretty (SkolemTv id) = pretty (nameIdent id) <> pretty (stamp id)
 
-instance Pretty Type where
-        pretty (VarT var) = pretty var
-        pretty (ConT con) = pretty con
-        pretty (ArrT arg res) = pprty ArrPrec (unLoc arg) <+> "->" <+> pprty TopPrec (unLoc res)
-        pretty (AllT qnts body) = lbrace <> hsep (map (pretty . fst) qnts) <> rbrace <+> pretty body
-        pretty (MetaT tv) = viaShow tv
-
-data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
-
-precty :: Type -> Prec
-precty AllT{} = TopPrec
-precty ArrT{} = ArrPrec
-precty _ = AtomPrec
-
-pprty :: Prec -> Type -> Doc ann
-pprty p ty
-        | fromEnum p >= fromEnum (precty ty) = parens (pretty ty)
-        | otherwise = pretty ty
+instance Pretty Type

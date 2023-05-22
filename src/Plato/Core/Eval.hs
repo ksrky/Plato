@@ -2,6 +2,7 @@ module Plato.Core.Eval where
 
 import Control.Monad (forM)
 
+import Plato.Common.Utils
 import Plato.Core.Calc
 import Plato.Core.Env
 import Plato.Syntax.Core
@@ -50,7 +51,7 @@ eval env t = maybe t (eval env) (eval' t)
                 TmFix t1 -> do
                         t1' <- eval' t1
                         Just $ TmFix t1'
-                TmProj (TmRecord fields) i | i < length fields -> Just $ snd (fields !! i)
+                TmProj (TmRecord fields) i | i < length fields -> snd <$> safeAt fields i
                 TmProj t1 i -> do
                         t1' <- eval' t1
                         Just $ TmProj t1' i
@@ -65,4 +66,10 @@ eval env t = maybe t (eval env) (eval' t)
                 TmInj i t1 tyT2 -> do
                         t1' <- eval' t1
                         Just $ TmInj i t1' tyT2
+                TmCase (TmInj i v11 _) alts | isval env v11 -> case safeAt alts i of
+                        Just (_, body) -> Just $ substTop body v11
+                        Nothing -> Nothing
+                TmCase t alts -> do
+                        t' <- eval' t
+                        Just $ TmCase t' alts
                 _ -> Nothing

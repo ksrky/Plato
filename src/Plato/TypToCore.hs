@@ -5,9 +5,9 @@ module Plato.TypToCore (typ2core) where
 
 import Control.Monad
 import Control.Monad.Reader
+import Control.Monad.Writer
 import GHC.Stack
 
-import Control.Monad.Writer
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -18,7 +18,10 @@ import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
-elabExpr :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Expr -> m C.Term
+elabExpr ::
+        (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) =>
+        T.Expr ->
+        m C.Term
 elabExpr (T.VarE var) = do
         i <- getVarIndex (nameIdent var)
         return $ C.TmVar i (C.mkInfo var)
@@ -42,7 +45,16 @@ elabExpr (T.LetE bnds spcs body) = do
         let rbnds = recursiveBinds bnds' spcs'
         t2 <- elabExpr (unLoc body)
         return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
-elabExpr (T.ClauseE clses) = undefined
+elabExpr (T.CaseE match alts) = do
+        t <- elabExpr (unLoc match)
+        alts' <- forM alts $ \(pat, exp) -> case unLoc pat of
+                T.WildP -> unreachable ""
+                T.VarP{} -> unreachable ""
+                T.ConP c ps -> do
+                        let xs = [nameIdent id | L _ (T.VarP id) <- ps]
+                        (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
+        return $ C.TmCase t alts'
+elabExpr T.ClauseE{} = unreachable "ElabClause failed"
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
@@ -78,12 +90,14 @@ elabBind (T.TypBind id ty) = do
         return [C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK)]
 elabBind (T.DatBind id params constrs) = do
         knK <- getKind =<< getVarIndex (nameIdent id)
-        constrs' <- mapM (\(con, ty) -> (con,) <$> elabType (T.AllT params ty)) constrs
-        let tyT =
+        constrs' <- extendNameWith (nameIdent id) $ do
+                mapM (\(con, ty) -> (con,) <$> elabType (T.AllT params ty)) constrs
+        let tyT_tmp =
                 foldr
-                        (\(tv, kn) -> C.TyAll (C.mkInfo $ T.unTyVar tv) (elabKind kn))
+                        (\(tv, kn) -> C.TyAbs (C.mkInfo $ T.unTyVar tv) (elabKind kn))
                         (constrsToVariant constrs')
                         params
+            tyT = C.TyRec (C.mkInfo id) knK tyT_tmp
         return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds constrs'
 
 elabSpec :: (MonadReader ctx m, HasCoreEnv ctx) => T.Spec -> m [C.Command]

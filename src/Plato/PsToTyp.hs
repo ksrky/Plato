@@ -21,7 +21,7 @@ elabExpr (P.VarE id) = return $ T.VarE id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
 elabExpr (P.LamE pats body) = do
         body' <- elabExpr `traverse` body
-        return $ T.ClauseE [(map (elabPat <$>) pats, body')]
+        return $ T.ClauseE Nothing [(map (elabPat <$>) pats, body')]
 elabExpr (P.LetE decs body) = do
         (bnds, spcs) <- elabFunDecls decs
         body' <- elabExpr `traverse` body
@@ -37,7 +37,7 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
                 tell ([], [(id, ty')])
         L _ (P.FunBind id clses) -> do
                 clses' <- mapM elabClause clses
-                let body = L (getLoc clses) $ T.ClauseE clses'
+                let body = L (getLoc clses) $ T.ClauseE Nothing clses'
                 tell ([(id, body)], [])
 
 elabPat :: P.Pat -> T.Pat
@@ -65,7 +65,7 @@ elabFunDecl (P.FunSpec id ty) = do
         return $ T.SpecDecl (T.ValSpec id ty')
 elabFunDecl (P.FunBind id clses) = do
         clses' <- mapM elabClause clses
-        let body = L (getLoc clses) $ T.ClauseE clses'
+        let body = L (getLoc clses) $ T.ClauseE Nothing clses'
         return $ T.BindDecl (T.ValBind id body)
 
 elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
