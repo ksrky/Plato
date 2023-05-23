@@ -46,7 +46,25 @@ instance HasLoc Clause where
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty Expr
+instance Pretty Expr where
+        pretty (VarE var) = pretty var
+        pretty exp@AppE{} = prExpr2 exp
+        pretty (OpE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
+        pretty (LamE vars body) = hsep [backslash <> hsep (map pretty vars), "->", pretty body]
+        pretty (LetE decs body) =
+                hsep ["let", lbrace, concatWith (surround semi) (map pretty decs), rbrace, "in", pretty body]
+        pretty (FactorE exp) = pretty exp
+
+prExpr2 :: Expr -> Doc ann
+prExpr2 e = walk e []
+    where
+        walk :: Expr -> [Expr] -> Doc ann
+        walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
+        walk e' es = prExpr1 e' <+> sep (map prExpr1 es)
+
+prExpr1 :: Expr -> Doc ann
+prExpr1 e@VarE{} = pretty e
+prExpr1 e = parens (pretty e)
 
 instance Pretty FunDecl
 

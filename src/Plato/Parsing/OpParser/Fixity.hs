@@ -17,6 +17,9 @@ defaultFixity = Fixity maxPrec Leftfix
 ----------------------------------------------------------------
 type FixityEnv = M.Map Name Fixity
 
+initFixityEnv :: FixityEnv
+initFixityEnv = M.empty
+
 class HasFixityEnv a where
         getFixityEnv :: a -> FixityEnv
         modifyFixityEnv :: (FixityEnv -> FixityEnv) -> a -> a

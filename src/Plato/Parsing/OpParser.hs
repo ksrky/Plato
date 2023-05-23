@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Parsing.OpParser where
+module Plato.Parsing.OpParser (opParser) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader.Class

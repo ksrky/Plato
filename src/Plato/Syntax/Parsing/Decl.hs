@@ -14,7 +14,7 @@ type LDecl = Located Decl
 
 data Decl
         = DataD Ident [Ident] [(Ident, LType)]
-        | FuncD FunDecl
+        | FuncD [LFunDecl]
         deriving (Eq, Show)
 
 ----------------------------------------------------------------

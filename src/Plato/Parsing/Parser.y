@@ -111,7 +111,7 @@ decl        :: { LDecl }
                                                     { sL $1 $7 (DataD $2 $3 $6) }
             | 'data' tycon tyvarrow 'where' 'v{' constrs close
                                                     { sL $1 $7 (DataD $2 $3 $6) }
-            | fundecl                               { L (getLoc $1) (FuncD (unLoc $1)) }
+            | fundecl                               { L (getLoc $1) (FuncD [$1]) }
 
 -- | Data declaration
 constrs     :: { [(Ident, LType)] }
@@ -121,7 +121,7 @@ constrs     :: { [(Ident, LType)] }
 
 constr      :: { (Ident, LType) }
             : con ':' type                          { ($1, $3) }
-            -- tmp: syntax restriction: last type of `type` must be its data type
+            -- syntax restriction: last type of `type` must be its data type
 
 -- | Function/signature declaration
 fundecls    :: { [LFunDecl] }
@@ -131,9 +131,10 @@ fundecls    :: { [LFunDecl] }
 fundecl     :: { LFunDecl }
             -- Function signature
             : var ':' type                        	{ sL $1 $3 (FunSpec $1 $3) }
+            | '(' varop ')' ':' type                { sL $1 $5 (FunSpec $2 $5) }
             -- Function definition
             | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
-            -- | var clauses
+            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) } -- tmp: synRestrc #patrow >= 2
 
 -----------------------------------------------------------
 -- Types
@@ -149,14 +150,15 @@ btype       :: { LType }
 
 atype       :: { LType }
             : '(' type ')'                          { $2 }
-            | tycon                                 { L (getLoc $1) (ConT $1) }  --tmp: ? something wrong
+            | tycon                                 { L (getLoc $1) (ConT $1) }  -- tmp: ? something wrong
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
 -----------------------------------------------------------
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr                                 { $1 }
+            : lexpr op expr                         { sL $1 $3 (OpE $1 $2 $3) }
+            | lexpr                                 { $1 }
 
 lexpr       :: { LExpr }
             -- | Lambda expression
@@ -172,7 +174,9 @@ fexpr       :: { LExpr }
             | aexpr                                 { $1 }
 
 aexpr       :: { LExpr }
-            : var                                   { L (getLoc $1) (VarE $1) }
+            : '(' op ')'                            { L (combineSpans $1 $3) (VarE $2) }
+            | '(' expr ')'                          { $2 }
+            | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 
 -- | Alternatives
@@ -203,7 +207,7 @@ clause      :: { Clause }
 -----------------------------------------------------------
 pat         :: { LPat }
             : lpat                                  { $1 }
-            -- tmp: infix pattern resolution 
+            -- TODO: infix pattern resolution 
 
 lpat 		:: { LPat }
 			: con apats                             { sL $1 $2 (ConP $1 $2) }
@@ -249,13 +253,26 @@ var         :: { Ident }
 con         :: { Ident }
             : conid                                 {% mkIdent conName $1 }
 
--- TyVar
+-- | TyVar
 tyvar       :: { Ident }
             : varid                                 {% mkIdent tyvarName $1 }
 
 -- | TyCon
 tycon       :: { Ident }
             : conid                                 {% mkIdent tyconName $1 }
+
+-- | VarOp
+varop       :: { Ident }
+            : varsym                                {% mkIdent varName $1 }
+
+-- | ConOp
+conop       :: { Ident }
+            : consym                                {% mkIdent conName $1 }
+
+-- | Op
+op          :: { Ident }
+            : varop                                 { $1 }
+            | conop                                 { $1 }
 
 -- | for parser-error(t) rule
 close       :: { Span }

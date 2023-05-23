@@ -68,22 +68,15 @@ elabClause (pats, exp) = do
         exp' <- elabExpr `traverse` exp
         return (map (elabPat <$>) pats, exp')
 
-elabFunDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m (T.Decl 'T.TcUndone)
-elabFunDecl (P.FunSpec id ty) = do
-        ty' <- elabType `traverse` ty
-        return $ T.SpecDecl (T.ValSpec id ty')
-elabFunDecl (P.FunBind id clses) = do
-        clses' <- mapM elabClause clses
-        -- let body = L (getLoc clses) $ T.ClauseE Nothing clses'
-        return $ T.BindDecl (T.FunBind id clses')
-
 elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl 'T.TcUndone]
 elabDecl (P.DataD id params constrs) = do
         qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
         constrs' <- mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
         sig <- newKnVar
         return $ T.SpecDecl (T.TypSpec id sig) : [T.BindDecl (T.DatBind id qnts constrs')]
-elabDecl (P.FuncD fundec) = (:) <$> elabFunDecl fundec <*> pure []
+elabDecl (P.FuncD fundecs) = do
+        (bnds, spcs) <- elabFunDecls fundecs
+        return $ map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
 
 elabTopDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.TopDecl -> m [T.Decl 'T.TcUndone]
 elabTopDecl = elabDecl
