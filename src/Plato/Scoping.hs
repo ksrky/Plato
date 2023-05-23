@@ -60,6 +60,7 @@ instance Scoping Ident where
 instance Scoping Expr where
         scoping (VarE var) = VarE <$> scoping var
         scoping (AppE fun arg) = AppE <$> scoping fun <*> scoping arg
+        scoping (OpE left op right) = OpE <$> scoping left <*> pure op <*> scoping right
         scoping (LamE pats body) = do
                 paramPatsUnique pats
                 pats' <- scoping pats
@@ -70,6 +71,7 @@ instance Scoping Expr where
                 decs'' <- bundleClauses decs'
                 body' <- local (const env') (scoping body)
                 return $ LetE decs'' body'
+        scoping (FactorE exp) = FactorE <$> scoping exp
 
 instance Scoping Pat where
         scoping (ConP con pats) = ConP <$> scoping con <*> mapM scoping pats
@@ -121,6 +123,7 @@ instance ScopingDecl FunDecl where
                         id' <- scoping id
                         clses' <- scoping clses
                         return $ FunBind id' clses'
+        scopingDecl dec@FixDecl{} = return dec
 
 instance ScopingDecl Decl where
         scopingDecl (DataD id params fields) = do

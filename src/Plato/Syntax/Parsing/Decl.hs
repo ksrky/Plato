@@ -12,8 +12,6 @@ import Plato.Syntax.Parsing.Type
 ----------------------------------------------------------------
 type LDecl = Located Decl
 
--- type LModule = Located Module
-
 data Decl
         = DataD Ident [Ident] [(Ident, LType)]
         | FuncD FunDecl

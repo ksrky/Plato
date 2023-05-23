@@ -5,8 +5,10 @@ module Plato.PsToTyp where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-
 import Control.Monad.Writer
+import GHC.Stack
+
+import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
@@ -15,9 +17,13 @@ import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
 
-elabExpr :: (MonadReader env m, HasUniq env, MonadIO m) => P.Expr -> m (T.Expr 'T.TcUndone)
+elabExpr :: (HasCallStack, MonadReader env m, HasUniq env, MonadIO m) => P.Expr -> m (T.Expr 'T.TcUndone)
 elabExpr (P.VarE id) = return $ T.VarE id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
+elabExpr (P.OpE left op right) = do
+        left' <- elabExpr `traverse` left
+        right' <- elabExpr `traverse` right
+        return $ T.AppE (sL left' op $ T.AppE (L (getLoc op) (T.VarE op)) left') right'
 elabExpr (P.LamE pats body) = do
         body' <- elabExpr `traverse` body
         varpats <- mapM (\p -> (,elabPat <$> p) <$> newVarIdent) pats
@@ -27,6 +33,7 @@ elabExpr (P.LetE decs body) = do
         (bnds, spcs) <- elabFunDecls decs
         body' <- elabExpr `traverse` body
         return $ T.LetE bnds spcs body'
+elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, MonadIO m) =>
@@ -40,6 +47,7 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
                 clses' <- mapM elabClause clses
                 -- let body = L (getLoc clses) $ T.ClauseE Nothing clses'
                 tell ([(id, clses')], [])
+        L _ P.FixDecl{} -> return ()
 
 elabPat :: P.Pat -> T.Pat
 elabPat (P.ConP con pats) = T.ConP con (map (elabPat <$>) pats)
