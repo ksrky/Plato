@@ -16,7 +16,6 @@ import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Typing.Env
-import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
 getEnvTypes :: (MonadReader ctx m, HasTypEnv ctx) => m [Type]

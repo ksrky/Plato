@@ -1,7 +1,12 @@
 {
 {-# LANGUAGE ViewPatterns #-}
 
-module Plato.Parsing.Parser where
+module Plato.Parsing.Parser (
+    parser,
+    exprParser,
+    typeParser,
+    declsParser
+) where
 
 import Plato.Common.Error
 import Plato.Common.Ident

@@ -7,6 +7,7 @@ module Plato.Syntax.Typing.Type (
         Sigma,
         Rho,
         Tau,
+        prQuants,
 ) where
 
 import Data.IORef (IORef)
@@ -69,4 +70,26 @@ instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
         pretty (SkolemTv id) = pretty (nameIdent id) <> pretty (stamp id)
 
-instance Pretty Type
+prQuants :: [Quant] -> Doc ann
+prQuants qnts = hsep (map (\(tv, kn) -> parens $ hcat [pretty tv, colon, pretty kn]) qnts)
+
+instance Pretty Type where
+        pretty (VarT var) = pretty var
+        pretty (ConT con) = pretty con
+        pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
+        pretty (AllT qnts body) = hcat [lbrace, prQuants qnts, rbrace, space, pretty body]
+        pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
+        pretty (AbsT var ann body) = hsep [backslash <> pretty var <> pretty ann] <> dot <+> pretty body
+        pretty (MetaT tv) = viaShow tv
+
+data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
+
+precOf :: Type -> Prec
+precOf AllT{} = TopPrec
+precOf ArrT{} = ArrPrec
+precOf _ = AtomPrec
+
+prty :: Prec -> Type -> Doc ann
+prty p ty
+        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
+        | otherwise = pretty ty

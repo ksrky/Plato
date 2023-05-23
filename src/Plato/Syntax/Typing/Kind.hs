@@ -36,9 +36,9 @@ instance Ord MetaKv where
 ----------------------------------------------------------------
 instance Pretty Kind where
         pretty StarK = "*"
-        pretty (ArrK k1 k2) = prettyAtom k1 <+> pretty k2
+        pretty (ArrK kn1 kn2) = prettyKind1 kn1 <+> pretty kn2
         pretty (MetaK m) = viaShow m
 
-prettyAtom :: Kind -> Doc ann
-prettyAtom StarK = pretty StarK
-prettyAtom kn = parens (pretty kn)
+prettyKind1 :: Kind -> Doc ann
+prettyKind1 StarK = pretty StarK
+prettyKind1 kn = parens (pretty kn)

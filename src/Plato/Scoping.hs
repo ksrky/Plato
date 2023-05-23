@@ -1,4 +1,9 @@
-module Plato.Scoping where
+module Plato.Scoping (
+        initScope,
+        scoping,
+        scopingDecl,
+        scopingProgram,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader

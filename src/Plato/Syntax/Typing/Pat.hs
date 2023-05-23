@@ -1,4 +1,4 @@
-module Plato.Syntax.Typing.Pat where
+module Plato.Syntax.Typing.Pat (LPat, Pat (..), prAtomPat) where
 
 import Prettyprinter
 
@@ -20,12 +20,12 @@ data Pat
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Pat where
-        pretty (ConP con pats) = pretty con <+> hsep (map (pprAtomPat . unLoc) pats)
+        pretty (ConP con pats) = pretty con <+> hsep (map prAtomPat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
-pprAtomPat :: Pat -> Doc ann
-pprAtomPat pat@(ConP con pats)
+prAtomPat :: LPat -> Doc ann
+prAtomPat pat@(L _ (ConP con pats))
         | null pats = pretty con
         | otherwise = parens $ pretty pat
-pprAtomPat pat = pretty pat
+prAtomPat pat = pretty pat

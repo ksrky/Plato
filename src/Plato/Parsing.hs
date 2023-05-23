@@ -1,6 +1,7 @@
-module Plato.Parsing (parseFile) where
+module Plato.Parsing (parseFile, parsePartial) where
 
 import Control.Monad.IO.Class
+import Data.Text qualified as T
 import Data.Text.IO qualified as T
 
 import Plato.Driver.Monad
@@ -14,3 +15,8 @@ parseFile src = do
         (program, st) <- liftIO $ parse src inp parser
         setUniq $ ust_uniq (parser_ust st)
         return program
+
+parsePartial :: MonadIO m => T.Text -> Parser a -> m a
+parsePartial inp parser = do
+        (ast, _) <- liftIO $ parse "<no file name>" inp parser
+        return ast
