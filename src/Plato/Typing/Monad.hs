@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Plato.Typing.Monad (
         Context (Context),
         HasTypEnv (..),
@@ -33,6 +31,7 @@ import Plato.Typing.Env
 data Context = Context
         { typenv :: TypEnv
         , uniq :: IORef Uniq
+        , conenv :: ConEnv
         }
 
 instance HasUniq Context where
@@ -41,6 +40,10 @@ instance HasUniq Context where
 instance HasTypEnv Context where
         getEnv = getEnv . typenv
         modifyEnv f ctx = ctx{typenv = f (typenv ctx)}
+
+instance HasConEnv Context where
+        getConEnv = getConEnv . conenv
+        modifyConEnv f ctx = ctx{conenv = f (conenv ctx)}
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
@@ -95,4 +98,4 @@ writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
 initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
 initContext = do
         uniq <- getUniq =<< ask
-        return Context{typenv = initTypEnv, uniq = uniq}
+        return Context{typenv = initTypEnv, uniq = uniq, conenv = initConEnv}

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Plato.Typing.Tc.Unify (
         unify,
         unifyFun,

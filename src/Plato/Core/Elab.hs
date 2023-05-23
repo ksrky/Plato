@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Plato.Core.Elab where
 
 import Plato.Common.Ident

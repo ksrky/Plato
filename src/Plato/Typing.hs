@@ -1,3 +1,6 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+
 module Plato.Typing (typingProgram) where
 
 import Control.Exception.Safe
@@ -7,16 +10,15 @@ import Control.Monad.State
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
-import Plato.Typing.ElabClause
 import Plato.Typing.Env
 import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc
 
 typing ::
-        (MonadState env m, HasTypEnv env, HasUniq env, MonadThrow m, MonadIO m) =>
-        Decl ->
-        m Decl
+        (MonadState env m, HasTypEnv env, HasUniq env, HasConEnv env, MonadThrow m, MonadIO m) =>
+        Decl 'TcUndone ->
+        m (Decl 'TcDone)
 typing (SpecDecl (TypSpec id kn)) = do
         modify (modifyEnv $ extend id kn)
         return $ SpecDecl (TypSpec id kn)
@@ -35,22 +37,10 @@ typing (BindDecl (TypBind id ty)) = do
         return $ BindDecl (TypBind id ty)
 typing (BindDecl (FunBind id clauses)) = do
         ty <- find id =<< getEnv =<< get
-        -- clauses' <- runReaderT (checkType exp ty) =<< get
-        clause' <-
-                runReaderT
-                        ( do
-                                (tys, clses) <- checkClauses clauses ty
-                                elabClauses tys clses
-                        )
-                        =<< get
-        return $ BindDecl (FunBind id [clause'])
+        exp <- runReaderT (checkClauses clauses ty) =<< get
+        return $ BindDecl (FunBindok id exp)
 
-{-typing (BindDecl (ValBind id exp)) = do
-        ty <- find id =<< getEnv =<< get
-        exp' <- runReaderT (checkType exp ty) =<< get
-        return $ BindDecl (ValBind id exp')-}
-
-typingProgram :: (PlatoMonad m, MonadThrow m) => Program -> m Program
+typingProgram :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)
 typingProgram (decs, exps) = do
         ctx <- initContext
         (decs', ctx') <- runStateT (mapM typing decs) ctx

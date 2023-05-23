@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Plato.Common.Uniq (
         Uniq,
         uniq2text,

@@ -6,6 +6,8 @@ author: "ksrk"
 maintainer: "kswgrky@gmail.com"
 copyright: "2022 ksrk"
 
+language: GHC2021
+
 extra-source-files:
   - README.md
   - ChangeLog.md

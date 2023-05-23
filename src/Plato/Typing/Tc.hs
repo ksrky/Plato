@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 
 module Plato.Typing.Tc (
         checkType,
@@ -20,8 +20,8 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
-import Plato.Common.Utils
 import Plato.Syntax.Typing
+import Plato.Typing.ElabClause
 import Plato.Typing.Env
 import Plato.Typing.Kc
 import Plato.Typing.Monad
@@ -32,37 +32,27 @@ import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 checkType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
         Type ->
-        m LExpr
+        m (LExpr 'TcDone)
 checkType = checkSigma
 
 inferType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
-        m (LExpr, Type)
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
+        m (LExpr 'TcDone, Type)
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
 
--- | Type check of patterns
+-- | Type checking of patterns
 checkPat ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
         LPat ->
         Rho ->
         m [(Ident, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
-
-inferPat ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LPat ->
-        m ([(Ident, Sigma)], Sigma)
-inferPat pat = do
-        ref <- newMIORef (error "inferRho: empty result")
-        binds <- tcPat pat (Infer ref)
-        tc <- readMIORef ref
-        return (binds, tc)
 
 tcPat ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -105,38 +95,38 @@ instDataCon con = do
         split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
         split acc tau = (acc, tau)
 
--- | Type check of Rho
+-- | Type checking of Rho
 checkRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
         Rho ->
-        m LExpr
+        m (LExpr 'TcDone)
 checkRho exp ty = do
         exp' <- tcRho exp (Check ty)
         zonkExpr `traverse` exp'
 
 inferRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
-        m (LExpr, Rho)
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
+        m (LExpr 'TcDone, Rho)
 inferRho exp = do
-        ref <- newMIORef (error "inferRho: empty result")
+        ref <- newMIORef (unreachable "inferRho: empty result")
         exp' <- tcRho exp (Infer ref)
         exp'' <- zonkExpr `traverse` exp'
         (exp'',) <$> readMIORef ref
 
 tcRho ::
-        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
+        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
         Expected Rho ->
-        m LExpr
+        m (LExpr 'TcDone)
 tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
     where
         tcRho' ::
-                (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-                Expr ->
+                (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+                Expr 'TcUndone ->
                 Expected Rho ->
-                m Expr
+                m (Expr 'TcDone)
         tcRho' (VarE var) exp_ty = do
                 sigma <- find var =<< getEnv =<< ask
                 coercion <- instSigma sigma exp_ty
@@ -147,15 +137,15 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 arg' <- checkSigma arg arg_ty
                 coercion <- instSigma res_ty exp_ty
                 return $ coercion @@ AppE fun' arg'
-        tcRho' (AbsE var _ body) (Check exp_ty) = do
+        tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun sp exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
-                return $ AbsE var (Just var_ty) body'
-        tcRho' (AbsE var _ body) (Infer ref) = do
+                return $ AbsEok var var_ty body'
+        tcRho' (AbsE var body) (Infer ref) = do
                 var_ty <- newTyVar
                 (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsE var (Just var_ty) body'
+                return $ AbsEok var var_ty body'
         {-tcRho' (AbsE pat _ body) (Infer ref) = do
                 (binds, pat_ty) <- inferPat pat
                 (body', body_ty) <- local (modifyEnv $ extendList binds) (inferRho body)
@@ -170,11 +160,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 bnds' <- forM bnds $ \(id, clauses) -> do
                         sig <- find id =<< getEnv =<< ask
                         -- exp' <- checkSigma exp ty
-                        (_, clauses') <- checkClauses clauses sig
-                        return (id, clauses')
+                        -- (_, clauses') <- checkClauses clauses sig
+                        exp' <- checkClauses clauses sig
+                        return (id, exp')
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
-                return $ LetE bnds' spcs body'
+                return $ LetEok bnds' spcs body'
         {-tcRho' (ClauseE _ []) _ = undefined
         tcRho' (ClauseE _ clauses@(hd : _)) (Check exp_ty) = do
                 (pat_tys, res_ty) <- mapAccumM (\ty _ -> unifyFun sp ty) exp_ty (fst hd)
@@ -197,14 +188,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer @@) <$> body')
                 return $ CaseE match' alts'
-        tcRho' TAppE{} _ = unreachable "TypeCheck.Typ.tcRho"
-        tcRho' TAbsE{} _ = unreachable "TypeCheck.Typ.tcRho"
 
 -- | Type check of Sigma
 inferSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
-        m (LExpr, Sigma)
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
+        m (LExpr 'TcDone, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
@@ -212,10 +201,10 @@ inferSigma exp = do
         return ((genTrans tvs @@) <$> exp'', sigma)
 
 checkSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        LExpr ->
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        LExpr 'TcUndone ->
         Sigma ->
-        m LExpr
+        m (LExpr 'TcDone)
 checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         exp' <- checkRho exp rho
@@ -227,27 +216,36 @@ checkSigma exp sigma = do
 
 -- | Check clauses
 checkClauses ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadThrow m) =>
-        [Clause] ->
+        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
+        [Clause 'TcUndone] ->
         Type ->
-        m ([Type], [Clause])
-checkClauses [] _ = return ([], [])
-checkClauses clauses@(hd : _) exp_ty = do
-        (pat_tys, res_ty) <- mapAccumM (\ty _ -> unifyFun NoSpan ty) exp_ty (fst hd)
+        m (LExpr 'TcDone)
+checkClauses clauses exp_ty = do
+        let (pat_tys, res_ty) = split [] exp_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 substs <- zipWithM checkPat pats pat_tys
                 body' <- local (modifyEnv $ extendList $ concat substs) $ checkSigma body res_ty
                 return (pats, body')
-        return (pat_tys, clauses')
+        elabClauses pat_tys clauses'
+    where
+        split :: [Sigma] -> Rho -> ([Sigma], Tau)
+        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
+        split acc tau = (acc, tau)
 
 -- | Subsumption checking.  Coersing sigma1 to sigma2.
-subsCheck :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Sigma -> Sigma -> m Coercion
+subsCheck ::
+        (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        Sigma ->
+        Sigma ->
+        m Coercion
 subsCheck sigma1 sigma2 = do
         (coercion1, skol_tvs, rho2) <- skolemise sigma2
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
         let bad_tvs = S.fromList (map fst skol_tvs) `S.intersection` esc_tvs
-        unless (null bad_tvs) $ throwError $ hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
+        unless (null bad_tvs) $
+                throwError $
+                        hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
 -- | Subsumption checkking. Coersing sigma to rho.

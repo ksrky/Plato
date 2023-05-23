@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Plato.Core.Env where
 
 import Control.Monad.Reader

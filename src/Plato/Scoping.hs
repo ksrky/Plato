@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TupleSections #-}
-
 module Plato.Scoping where
 
 import Control.Exception.Safe

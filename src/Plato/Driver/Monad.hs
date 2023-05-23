@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 module Plato.Driver.Monad where
 
 import Control.Monad.RWS

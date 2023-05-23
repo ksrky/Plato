@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Plato.Parsing.Monad where
 
 import Plato.Common.Uniq

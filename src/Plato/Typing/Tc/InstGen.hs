@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Plato.Typing.Tc.InstGen (
         instantiate,
         skolemise,

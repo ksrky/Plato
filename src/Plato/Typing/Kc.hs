@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Plato.Typing.Kc (
         newDataType,
         getDataType,

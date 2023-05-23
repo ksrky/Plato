@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
@@ -7,6 +6,9 @@ module Plato.Typing.Env (
         initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
+        ConEnv,
+        initConEnv,
+        HasConEnv (..),
 ) where
 
 import Control.Exception.Safe
@@ -25,6 +27,9 @@ data Binding
 
 type TypEnv = IdentMap Binding
 
+initTypEnv :: TypEnv
+initTypEnv = M.empty
+
 class HasTypEnv a where
         getEnv :: Monad m => a -> m TypEnv
         modifyEnv :: (TypEnv -> TypEnv) -> a -> a
@@ -32,9 +37,6 @@ class HasTypEnv a where
 instance HasTypEnv TypEnv where
         getEnv = return
         modifyEnv = id
-
-initTypEnv :: TypEnv
-initTypEnv = M.empty
 
 class EnvManager a where
         extend :: Ident -> a -> TypEnv -> TypEnv
@@ -63,3 +65,21 @@ instance EnvManager Kind where
                         _ ->
                                 throwLocErr (getLoc id) $
                                         hsep [squotes $ pretty id, "is not a type-level identifier"]
+
+-----------------------------------------------------------
+-- Constructor Env
+-----------------------------------------------------------
+
+-- | Mapping a type constructor to data constructors
+type ConEnv = IdentMap [(Ident, [Type])]
+
+initConEnv :: ConEnv
+initConEnv = M.empty
+
+class HasConEnv a where
+        getConEnv :: Monad m => a -> m ConEnv
+        modifyConEnv :: (ConEnv -> ConEnv) -> a -> a
+
+instance HasConEnv ConEnv where
+        getConEnv = return
+        modifyConEnv = id

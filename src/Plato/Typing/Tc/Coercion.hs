@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Plato.Typing.Tc.Coercion where
 
 import Control.Monad.IO.Class
@@ -9,7 +11,7 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 
-data Coercion = Id | Coer (Expr -> Expr)
+data Coercion = Id | Coer (Expr 'TcDone -> Expr 'TcDone)
 
 instance Eq Coercion where
         Id == Id = True
@@ -17,7 +19,7 @@ instance Eq Coercion where
 
 infixr 9 @@, >.>
 
-(@@) :: Coercion -> Expr -> Expr
+(@@) :: Coercion -> Expr 'TcDone -> Expr 'TcDone
 Id @@ e = e
 Coer f @@ e = f e
 
@@ -45,9 +47,9 @@ prfunTrans sks arg_ty coercion = do
         id <- freshIdent $ str2varName "$x"
         return $
                 Coer $ \e ->
-                        AbsE
+                        AbsEok
                                 id
-                                (Just arg_ty)
+                                arg_ty
                                 (noLoc $ coercion @@ TAbsE sks (noLoc $ AppE (noLoc $ TAppE (noLoc e) (map (VarT . fst) sks)) (noLoc $ VarE id)))
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
@@ -58,4 +60,4 @@ funTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Sigma -> Coercion -> 
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- freshIdent $ str2varName "$x"
-        return $ Coer $ \f -> AbsE id (Just a2) (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE id))
+        return $ Coer $ \f -> AbsEok id a2 (noLoc $ co_res @@ AppE (noLoc f) (noLoc $ co_arg @@ VarE id))

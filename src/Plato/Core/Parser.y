@@ -1,5 +1,4 @@
 {
-{-# LANGUAGE TupleSections #-}
 module Plato.Core.Parser (parse) where
 
 import Plato.Common.Name

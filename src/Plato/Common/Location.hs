@@ -1,7 +1,3 @@
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Plato.Common.Location where
 
 import Prettyprinter

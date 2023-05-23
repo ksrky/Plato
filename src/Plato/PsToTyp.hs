@@ -1,6 +1,5 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TupleSections #-}
 
 module Plato.PsToTyp where
 
@@ -16,13 +15,13 @@ import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
 
-elabExpr :: (MonadReader env m, HasUniq env, MonadIO m) => P.Expr -> m T.Expr
+elabExpr :: (MonadReader env m, HasUniq env, MonadIO m) => P.Expr -> m (T.Expr 'T.TcUndone)
 elabExpr (P.VarE id) = return $ T.VarE id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
 elabExpr (P.LamE pats body) = do
         body' <- elabExpr `traverse` body
         varpats <- mapM (\p -> (,elabPat <$> p) <$> newVarIdent) pats
-        let patlam (v, p) e = sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
+        let patlam (v, p) e = sL p e $ T.AbsE v $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         return $ unLoc $ foldr patlam body' varpats
 elabExpr (P.LetE decs body) = do
         (bnds, spcs) <- elabFunDecls decs
@@ -32,7 +31,7 @@ elabExpr (P.LetE decs body) = do
 elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, MonadIO m) =>
         [P.LFunDecl] ->
-        m ([(Ident, [T.Clause])], [(Ident, T.LType)])
+        m ([(Ident, [T.Clause 'T.TcUndone])], [(Ident, T.LType)])
 elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
         L _ (P.FunSpec id ty) -> do
                 ty' <- elabType `traverse` ty
@@ -56,12 +55,12 @@ elabType (P.AllT qnts body) = do
         T.AllT (map (\id -> (T.BoundTv id, kv)) qnts) <$> elabType `traverse` body
 elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
 
-elabClause :: (MonadReader env m, HasUniq env, MonadIO m) => P.Clause -> m T.Clause
+elabClause :: (MonadReader env m, HasUniq env, MonadIO m) => P.Clause -> m (T.Clause 'T.TcUndone)
 elabClause (pats, exp) = do
         exp' <- elabExpr `traverse` exp
         return (map (elabPat <$>) pats, exp')
 
-elabFunDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m T.Decl
+elabFunDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.FunDecl -> m (T.Decl 'T.TcUndone)
 elabFunDecl (P.FunSpec id ty) = do
         ty' <- elabType `traverse` ty
         return $ T.SpecDecl (T.ValSpec id ty')
@@ -70,7 +69,7 @@ elabFunDecl (P.FunBind id clses) = do
         -- let body = L (getLoc clses) $ T.ClauseE Nothing clses'
         return $ T.BindDecl (T.FunBind id clses')
 
-elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl]
+elabDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.Decl -> m [T.Decl 'T.TcUndone]
 elabDecl (P.DataD id params constrs) = do
         qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
         constrs' <- mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
@@ -78,10 +77,10 @@ elabDecl (P.DataD id params constrs) = do
         return $ T.SpecDecl (T.TypSpec id sig) : [T.BindDecl (T.DatBind id qnts constrs')]
 elabDecl (P.FuncD fundec) = (:) <$> elabFunDecl fundec <*> pure []
 
-elabTopDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.TopDecl -> m [T.Decl]
+elabTopDecl :: (MonadReader env m, HasUniq env, MonadIO m) => P.TopDecl -> m [T.Decl 'T.TcUndone]
 elabTopDecl = elabDecl
 
-ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m T.Program
+ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m (T.Program 'T.TcUndone)
 ps2typ tdecs = do
         decs <- concat <$> mapM (elabTopDecl . unLoc) tdecs
         return (decs, [])

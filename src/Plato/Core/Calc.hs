@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Plato.Core.Calc where
 
 import Plato.Syntax.Core
@@ -18,6 +16,7 @@ tmmap onvar ontype c t = walk c t
                 TmProj t1 l -> TmProj (walk c t1) l
                 TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
                 TmInj i t1 tyT2 -> TmInj i (walk c t1) (ontype c tyT2)
+                TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk c ti)) alts)
 
 tymap :: (Int -> Int -> NameInfo -> Type) -> Int -> Type -> Type
 tymap onvar c tyT = walk c tyT

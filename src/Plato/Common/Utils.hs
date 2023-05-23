@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-
 module Plato.Common.Utils where
 
 import Control.Monad.State

@@ -1,8 +1,12 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+
 module Plato.Syntax.Typing.Decl where
 
 import Prettyprinter
 
 import Plato.Common.Ident
+import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
 import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
@@ -11,12 +15,12 @@ import Plato.Syntax.Typing.Type
 -- Datas and types
 ----------------------------------------------------------------
 
-data Bind
-        = -- ValBind Ident LExpr |
-          FunBind Ident [Clause]
-        | TypBind Ident LType
-        | DatBind Ident [Quant] [(Ident, LType)]
-        deriving (Eq, Show)
+data Bind (a :: TcFlag) where
+        -- ValBind Ident LExpr |
+        FunBind :: Ident -> [Clause 'TcUndone] -> Bind 'TcUndone
+        FunBindok :: Ident -> LExpr 'TcDone -> Bind 'TcDone
+        TypBind :: Ident -> LType -> Bind a
+        DatBind :: Ident -> [Quant] -> [(Ident, LType)] -> Bind a
 
 -- \| TypeBind Ident (Maybe Kind) LType
 
@@ -25,14 +29,21 @@ data Spec
         | TypSpec Ident Kind
         deriving (Eq, Show)
 
-data Decl
-        = BindDecl Bind
+data Decl a
+        = BindDecl (Bind a)
         | SpecDecl Spec
-        deriving (Eq, Show)
+
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
+instance Eq (Bind a)
+instance Show (Bind a)
+instance Eq (Decl a)
+instance Show (Decl a)
 
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty Bind
+instance Pretty (Bind a)
 instance Pretty Spec
-instance Pretty Decl
+instance Pretty (Decl a)
