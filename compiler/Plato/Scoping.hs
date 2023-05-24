@@ -1,4 +1,5 @@
 module Plato.Scoping (
+        Scope,
         initScope,
         scoping,
         scopingDecl,

@@ -35,7 +35,7 @@ defNamesUnique = loop
 -- | RULE 2: Paramter name uniqueness
 paramNamesUnique :: MonadThrow m => [Ident] -> m ()
 paramNamesUnique ids = do
-        let dup = [(id1, id2) | id1 <- ids, id2 <- ids, nameIdent id1 == nameIdent id2]
+        let dup = [(id1, id2) | id1 <- ids, id2 <- ids, stamp id1 /= stamp id2, nameIdent id1 == nameIdent id2]
         case dup of
                 [] -> return ()
                 (id1, id2) : _ ->

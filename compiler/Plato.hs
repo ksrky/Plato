@@ -12,7 +12,7 @@ import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ unPlato (process' src) =<< initSession
+runPlato src = catchError $ unPlato (process src) =<< initSession
 
 process :: FilePath -> Plato ()
 process src = do
@@ -23,8 +23,3 @@ process src = do
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'
-
-process' :: FilePath -> Plato ()
-process' src = do
-        pssyn <- parseFile src
-        liftIO $ print pssyn

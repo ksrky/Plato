@@ -126,6 +126,7 @@ constr      :: { (Ident, LType) }
 -- | Function/signature declaration
 fundecls    :: { [LFunDecl] }
             : fundecl ';' fundecls                  { $1 : $3 }
+            | fundecl                               { [$1] }
             | {- empty -}                           { [] }
 
 fundecl     :: { LFunDecl }
