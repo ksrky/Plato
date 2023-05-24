@@ -1,11 +1,12 @@
-data List a = Nil | a :: List a
+data List a where
+    Nil : List a
+    (::) : a -> List a -> List a
 
 infixr 5 ::
 
 (++) : {a} List a -> List a -> List a
-(++) l m = case l of
-    Nil -> m
-    x :: xs -> x :: (xs ++ m)
+Nil ++ m = m
+(x :: xs) ++ m = x :: (xs ++ m)
 
 infixr 5 ++
 

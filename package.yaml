@@ -6,6 +6,8 @@ author: "ksrk"
 maintainer: "kswgrky@gmail.com"
 copyright: "2022 ksrk"
 
+language: GHC2021
+
 extra-source-files:
   - README.md
   - ChangeLog.md
@@ -54,14 +56,15 @@ ghc-options:
 
 default-extensions:
   - OverloadedStrings
+  - ImportQualifiedPost
 
 library:
-  source-dirs: src
+  source-dirs: compiler
 
 executables:
   plato:
     main: Main.hs
-    source-dirs: src
+    source-dirs: src/plato
     ghc-options:
       - -threaded
       - -rtsopts

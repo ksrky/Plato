@@ -1,4 +1,6 @@
-data List a = Nil | a :: List a
+data List a where
+    Nil : List a
+    (::) : a -> List a -> List a
 
 infixr 5 ::
 

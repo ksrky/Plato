@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -25,48 +25,76 @@ source-repository head
 
 library
   exposed-modules:
-      CLI.Constant
-      CLI.Options
-      Main
-      Plato.Core.Check
-      Plato.Core.Context
+      Plato
+      Plato.Common.Error
+      Plato.Common.Ident
+      Plato.Common.Location
+      Plato.Common.Name
+      Plato.Common.Uniq
+      Plato.Common.Utils
+      Plato.Core.Calc
+      Plato.Core.Elab
+      Plato.Core.Env
       Plato.Core.Eval
-      Plato.Core.Pretty
-      Plato.Core.Subst
-      Plato.Main
+      Plato.Core.Lexer
+      Plato.Core.Monad
+      Plato.Core.Parser
+      Plato.Core.Typing
+      Plato.Driver.Monad
+      Plato.Driver.Pipeline
+      Plato.Parsing
       Plato.Parsing.Action
-      Plato.Parsing.FixResol
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.OpParser
+      Plato.Parsing.OpParser.Fixity
+      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
-      Plato.Parsing.Rename
       Plato.Parsing.Token
+      Plato.PsToTyp
+      Plato.RunCore
+      Plato.Scoping
+      Plato.Scoping.SynRstrc
+      Plato.Scoping.Utils
       Plato.Syntax.Core
+      Plato.Syntax.Core.Info
       Plato.Syntax.Parsing
+      Plato.Syntax.Parsing.Decl
+      Plato.Syntax.Parsing.Expr
+      Plato.Syntax.Parsing.Pat
+      Plato.Syntax.Parsing.TopDecl
+      Plato.Syntax.Parsing.Type
       Plato.Syntax.Typing
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
-      Plato.Types.Error
-      Plato.Types.Fixity
-      Plato.Types.Location
-      Plato.Types.Monad
-      Plato.Types.Name
-      Plato.Types.Name.Global
-      Plato.Types.Name.Reader
-      Plato.Typing.Bundle
-      Plato.Typing.KindInfer
-      Plato.Typing.TcMonad
-      Plato.Typing.TcTypes
-      Plato.Typing.TypeCheck
+      Plato.Syntax.Typing.Base
+      Plato.Syntax.Typing.Decl
+      Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Kind
+      Plato.Syntax.Typing.Pat
+      Plato.Syntax.Typing.Type
+      Plato.Typing
+      Plato.Typing.ElabClause
+      Plato.Typing.Env
+      Plato.Typing.Kc
+      Plato.Typing.Kc.Unify
+      Plato.Typing.Kc.Utils
+      Plato.Typing.Monad
+      Plato.Typing.Subst
+      Plato.Typing.Tc
+      Plato.Typing.Tc.Coercion
+      Plato.Typing.Tc.InstGen
+      Plato.Typing.Tc.Subst
+      Plato.Typing.Tc.Unify
+      Plato.Typing.Tc.Utils
+      Plato.Typing.Zonking
+      Plato.TypToCore
   other-modules:
       Paths_Plato
   hs-source-dirs:
-      src
+      compiler
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
   build-tools:
       alex
@@ -89,51 +117,19 @@ library
     , text
     , transformers
     , vector
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable plato
   main-is: Main.hs
   other-modules:
-      CLI.Constant
-      CLI.Options
-      Plato.Core.Check
-      Plato.Core.Context
-      Plato.Core.Eval
-      Plato.Core.Pretty
-      Plato.Core.Subst
-      Plato.Main
-      Plato.Parsing.Action
-      Plato.Parsing.FixResol
-      Plato.Parsing.Layout
-      Plato.Parsing.Lexer
-      Plato.Parsing.Monad
-      Plato.Parsing.Parser
-      Plato.Parsing.Rename
-      Plato.Parsing.Token
-      Plato.Syntax.Core
-      Plato.Syntax.Parsing
-      Plato.Syntax.Typing
-      Plato.Transl.CoreToIO
-      Plato.Transl.PsToTyp
-      Plato.Transl.SrcToPs
-      Plato.Transl.TypToCore
-      Plato.Types.Error
-      Plato.Types.Fixity
-      Plato.Types.Location
-      Plato.Types.Monad
-      Plato.Types.Name
-      Plato.Types.Name.Global
-      Plato.Types.Name.Reader
-      Plato.Typing.Bundle
-      Plato.Typing.KindInfer
-      Plato.Typing.TcMonad
-      Plato.Typing.TcTypes
-      Plato.Typing.TypeCheck
+      Config
+      Options
       Paths_Plato
   hs-source-dirs:
-      src
+      src/plato
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -157,31 +153,22 @@ executable plato
     , text
     , transformers
     , vector
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.Test.Core.Eval
-      Plato.Test.Core.KindInfer
-      Plato.Test.Core.Pretty
-      Plato.Test.CoreSpec
-      Plato.Test.Parsing.FixResol
-      Plato.Test.Parsing.Pretty
-      Plato.Test.Parsing.Utils
-      Plato.Test.ParsingSpec
-      Plato.Test.Typing.ExprTransl
-      Plato.Test.Typing.Pretty
-      Plato.Test.Typing.TypeCheck
-      Plato.Test.Typing.Utils
-      Plato.Test.TypingSpec
-      Plato.Test.Utils
+      Plato.Parsing.LexerSpec
+      Plato.Parsing.OpParserSpec
+      Plato.Parsing.ParserSpec
+      Plato.ScopingSpec
       Paths_Plato
   hs-source-dirs:
       test
   default-extensions:
       OverloadedStrings
+      ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex
@@ -206,4 +193,4 @@ test-suite Plato-test
     , text
     , transformers
     , vector
-  default-language: Haskell2010
+  default-language: GHC2021

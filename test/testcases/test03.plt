@@ -1,3 +1,5 @@
--- | data type declaration 2
+-- | recursive data type declaration
 
-data Nat = Zero | Succ Nat
+data Nat where
+    Zero : Nat
+    Succ : Nat -> Nat

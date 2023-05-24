@@ -1,8 +1,10 @@
 -- | case expression
 
-data Bool = True | False
+data Bool where
+    True : Bool
+    False : Bool
 
 not : Bool -> Bool
-not = \b -> case b of
+not b = case b of
     True -> False
     False -> True

@@ -1,7 +1,9 @@
--- evaluation
+-- | Function clauses
 
-data Bool = True | False
+data Bool where
+    True : Bool
+    False : Bool
 
-(\b -> case b of
-    True -> False
-    False -> True) False
+not : Bool -> Bool
+not True = False
+not False = True

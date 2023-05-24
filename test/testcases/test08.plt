@@ -1,4 +1,6 @@
-data Nat = Zero | Succ Nat
+data Nat where
+    Zero : Nat
+    Succ : Nat -> Nat
 
 infixl 6 +
 infixl 7 *

@@ -64,3 +64,5 @@
 - ignore: { name: Use first }
 - ignore: { name: Use lambda-case }
 - ignore: { name: Use isNothing }
+- ignore: { name: Use <&> }
+- ignore: { name: Use newtype instead of data }
