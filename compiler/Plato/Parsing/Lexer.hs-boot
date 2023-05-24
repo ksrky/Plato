@@ -7,5 +7,4 @@ import Plato.Parsing.Token
 code :: Int
 comment :: Int
 layout :: Int
-qual :: Int
 alexMonadScan :: Parser (Located Token)

@@ -1,6 +1,7 @@
 module Plato.Core.Typing where
 
 import Control.Monad.Reader
+import Plato.Common.Error
 import Plato.Common.Utils
 import Plato.Core.Calc
 import Plato.Core.Env
@@ -18,7 +19,7 @@ istyabb env i = case getBinding i env of
 gettyabb :: CoreEnv -> Int -> Type
 gettyabb env i = case getBinding i env of
         TyAbbBind tyT _ -> tyT
-        _ -> error "unreachable"
+        _ -> unreachable "gettyabb"
 
 computety :: CoreEnv -> Type -> Maybe Type
 computety ctx tyT = case tyT of

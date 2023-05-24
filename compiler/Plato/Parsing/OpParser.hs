@@ -22,7 +22,7 @@ linearize (L _ (OpE lhs op rhs)) = do
                 asks getFixityEnv
                         >>= ( \case
                                 Just op' -> return op'
-                                Nothing -> return $ Fixity maxPrec Leftfix
+                                Nothing -> return defaultFixity
                             )
                                 . M.lookup (nameIdent op)
         return $ lhs' ++ [TOp op fix] ++ rhs'

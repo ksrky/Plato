@@ -4,6 +4,9 @@
 
 module Plato.Parsing.Lexer where
 
+import Control.Monad (when)
+import Control.Monad.State (lift)
+
 import Plato.Parsing.Action
 import Plato.Parsing.Layout
 import Plato.Parsing.Monad
@@ -11,9 +14,6 @@ import Plato.Parsing.Token
 
 import Plato.Common.Error
 import Plato.Common.Location
-
-import Control.Monad (when)
-import Control.Monad.State (lift)
 }
 
 
@@ -35,8 +35,6 @@ $symbol = $common
 @varsym = ($symbol # \:) $symbol*
 @consym = \: $symbol+
 
-@qual = @conid \.
-
 @decimal = $digit+
 
 tokens :-
@@ -44,7 +42,6 @@ tokens :-
 --    code = 1
 --    comment = 2
 --    layout = 3
---    qual = 4
 
 <0> $nl+                        ;
 <0> $white_nonl+                { spaces }
@@ -55,7 +52,7 @@ tokens :-
 
 -- | line comment
 <0, code, layout>
-        "--" \-* ~$symbol .*    ;
+    "--" \-* ~$symbol .*        ;
 
 -- | block comment
 <0, code, comment> "{-"         { beginComment }
@@ -64,7 +61,7 @@ tokens :-
 <comment> $nl+                  ;
 
 
--- | keyword
+-- | keywords
 <code> case                     { keyword KwCase }
 <0, code> data                  { keyword KwData }
 <0, code> import                { keyword KwImport }
@@ -78,7 +75,7 @@ tokens :-
 <0, code> module                { keyword KwModule }
 <code> where                    { layoutKeyword KwWhere }
 
---| special symbol
+--| special symbols
 <code> \,                       { symbol SymComma }
 <code> \'                       { symbol SymDash }
 <0, code> \{                    { leftBrace }
@@ -92,21 +89,19 @@ tokens :-
 
 <code> @varsym                  { varsym }
 
---| common symbol
+--| common symbols
 <code> \-\>                     { symbol SymArrow }
 <code> \\                       { symbol SymBackslash }
 <code> \:                       { symbol SymColon }
 <code> \=                       { symbol SymEqual }       
 <code> \|                       { symbol SymVBar }
 
--- <code, qual> @qual              { qualifier }
-<0, code, qual> varid           { varid }
-<0, code, qual> conid           { conid }
-<code, qual> varsym             { varsym }
-<code, qual> consym             { consym }
+<0, code> @varid                 { varid }
+<0, code> @conid                 { conid }
+<code> @varsym                   { varsym }
+<code> @consym                   { consym }
 
 <code> @decimal                 { integer }
-
 {
 lexer :: (Located Token -> Parser a) -> Parser a
 lexer = (alexMonadScan >>=)

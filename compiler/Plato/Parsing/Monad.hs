@@ -1,7 +1,5 @@
 module Plato.Parsing.Monad where
 
-import Plato.Common.Uniq
-
 import Control.Monad.IO.Class
 import Control.Monad.State.Class
 import Control.Monad.Trans
@@ -9,6 +7,8 @@ import Data.ByteString.Internal qualified as BS
 import Data.IORef
 import Data.Text qualified as T
 import Data.Word
+
+import Plato.Common.Uniq
 
 type Parser a = ParserT IO a
 
@@ -115,7 +115,7 @@ parse fn inp parser = do
                         }
 
 parseLine :: MonadIO m => T.Text -> ParserT m a -> m (a, PsState)
-parseLine inp p = parse "<interactive>" inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
+parseLine inp p = parse "<no file name>" inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
 
 startPos :: PsPosn
 startPos = PsPosn 0 1 1
@@ -168,8 +168,7 @@ initUserState :: IORef Uniq -> PsUserState
 initUserState ref =
         PsUserState
                 { ust_commentDepth = 0
-                , -- , ust_fixityEnv = M.empty
-                  ust_indentLevels = []
+                , ust_indentLevels = []
                 , ust_uniq = ref
                 }
 
@@ -181,14 +180,6 @@ setCommentDepth :: Monad m => Int -> ParserT m ()
 setCommentDepth cd = do
         ust <- getUserState
         setUserState ust{ust_commentDepth = cd}
-
-{-getFixityEnv :: Monad m => ParserT m (FixityEnv Name)
-getFixityEnv = ust_fixityEnv <$> getUserState
-
-setFixityEnv :: Monad m => FixityEnv Name -> ParserT m ()
-setFixityEnv fixenv = do
-        ust <- getUserState
-        setUserState ust{ust_fixityEnv = fixenv-}
 
 -- indent levels ------------------------------------------
 getIndentLevels :: Monad m => ParserT m [Int]

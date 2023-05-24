@@ -78,15 +78,12 @@ conid                           { (mkLConId -> Just $$) }
 varsym                          { (mkLVarSym -> Just $$) }
 consym                          { (mkLConSym -> Just $$) }
 
-qual                            { (mkLQual -> Just $$) }
-
 int                             { (mkLInt -> Just $$) }
 
 %%
 
 program     :: { [LTopDecl] }
-            : ';' topdecls                          {% lift (print $2) >> return $2 }
-            | topdecls                              { $1 }
+            : ';' topdecls                          { $2 }
 
 -----------------------------------------------------------
 -- Top declarations
@@ -287,13 +284,45 @@ close       :: { Span }
             | error                                 {% popLayoutLevel $1 }
 
 -- | Dummy parser
-tokens      :: { [Located Token] }
+tokens      :: { [Token] }
             : token tokens                          { $1 : $2 }
             | {- empty -}                           { [] }
 
-token       :: { Located Token }
-            : error                                 { $1 }
-
+token       :: { Token }
+            : 'case'                                { TokKeyword KwCase }
+            | 'data'                                { TokKeyword KwData }
+            | 'import'                              { TokKeyword KwImport }
+            | 'infix'                               { TokKeyword KwInfix }
+            | 'infixl'                              { TokKeyword KwInfixL }
+            | 'infixr'                              { TokKeyword KwInfixR }
+            | 'in'                                  { TokKeyword KwIn }
+            | 'of'                                  { TokKeyword KwOf }
+            | 'open'                                { TokKeyword KwOpen }
+            | 'module'                              { TokKeyword KwModule }
+            | 'let'                                 { TokKeyword KwLet }
+            | 'where'                               { TokKeyword KwWhere }
+            | '->'                                  { TokSymbol SymArrow }
+            | '\\'                                  { TokSymbol SymBackslash }
+            | ','                                   { TokSymbol SymComma }
+            | ':'                                   { TokSymbol SymColon }
+            | '\''                                  { TokSymbol SymDash }
+            | '='                                   { TokSymbol SymEqual }
+            | '{'                                   { TokSymbol SymLBrace }
+            | '['                                   { TokSymbol SymLBrack }
+            | '('                                   { TokSymbol SymLParen }
+            | '}'                                   { TokSymbol SymRBrace }
+            | ']'                                   { TokSymbol SymRBrack }
+            | ')'                                   { TokSymbol SymRParen }
+            | ';'                                   { TokSymbol SymSemicolon }
+            | '_'                                   { TokSymbol SymUScore }
+            | '|'                                   { TokSymbol SymVBar }
+            | 'v{'                                  { TokSymbol SymVLBrace }
+            | 'v}'                                  { TokSymbol SymVRBrace }
+            | varid                                 { TokVarId (unLoc $1) }
+            | conid                                 { TokConId (unLoc $1) }
+            | varsym                                { TokVarSym (unLoc $1) }
+            | consym                                { TokConSym (unLoc $1) }
+            | int                                   { TokInt (unLoc $1) }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
@@ -317,10 +346,6 @@ mkLVarSym _ = Nothing
 mkLConSym :: Located Token -> Maybe (Located T.Text)
 mkLConSym (L sp (TokConSym t)) = Just (L sp t)
 mkLConSym _ = Nothing
-
-mkLQual :: Located Token -> Maybe (Located T.Text)
-mkLQual (L sp (TokQual t)) = Just (L sp t)
-mkLQual _ = Nothing
 
 mkLInt :: Located Token -> Maybe (Located Int)
 mkLInt (L sp (TokInt n)) = Just (L sp n)

@@ -49,7 +49,7 @@ token f ainp@(pos, _, _, inp) len = do
         scd <- getStartCode
         case lev of
                 _ | scd == code -> return $ L sp (f t)
-                m : ms
+                m : ms {- scd == 0 -}
                         | m == 0 -> do
                                 -- note: Layout rule
                                 -- L (< 0 >: ts) (m : ms)  = ;  :  (L ts (m : ms))             if m = 0
@@ -62,13 +62,13 @@ token f ainp@(pos, _, _, inp) len = do
                                 setIndentLevels ms
                                 setInput ainp
                                 return $ L sp0 (TokSymbol SymVRBrace)
-                [] -> do
+                [] {- scd == 0 -} -> do
                         ---------- note: Layout rule
                         ---------- L (< 0 >: ts) []        = L ts []
                         setStartCode code
                         setInput ainp
                         return $ L sp0 (TokSymbol SymSemicolon)
-                _ -> error "unreachable: negative indent level"
+                _ -> unreachable "negative indent level"
 
 keyword :: Keyword -> Action
 keyword = token . const . TokKeyword
@@ -92,9 +92,6 @@ varsym (pos, _, _, inp) len = do
 
 consym :: Action
 consym = token TokConSym
-
-qualifier :: Action
-qualifier = begin qual >> token TokQual
 
 integer :: Action
 integer = token (TokInt . read . T.unpack)

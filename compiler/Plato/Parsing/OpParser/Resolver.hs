@@ -3,6 +3,7 @@ module Plato.Parsing.OpParser.Resolver where
 import Control.Exception.Safe
 import Control.Monad
 
+import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -15,17 +16,18 @@ instance HasLoc (Tok a) where
         getLoc (TTerm tm) = getLoc tm
         getLoc (TOp op _) = getLoc op
 
-parse :: forall a m. MonadThrow m => (Located a -> Ident -> Located a -> a) -> [Tok a] -> m (Located a)
+parse :: forall a m. (HasCallStack, MonadThrow m) => (Located a -> Ident -> Located a -> a) -> [Tok a] -> m (Located a)
 parse infixtm toks = do
         (result, rest) <- parseTerm (Fixity (-1) Nonfix) toks
         unless (null rest) $ unreachable "Token stack remained"
         return result
     where
-        parseTerm :: Fixity -> [Tok a] -> m (Located a, [Tok a])
+        parseTerm :: HasCallStack => Fixity -> [Tok a] -> m (Located a, [Tok a])
         parseTerm fix (TTerm lhs : rest) = parseOp fix lhs rest
         parseTerm _ _ = unreachable "malformed infix expression"
 
-        parseOp :: Fixity -> Located a -> [Tok a] -> m (Located a, [Tok a])
+        parseOp :: HasCallStack => Fixity -> Located a -> [Tok a] -> m (Located a, [Tok a])
+        parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op fix@(Fixity prec dir)) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
                         throwPsErr

@@ -18,21 +18,20 @@ import Plato.Syntax.Parsing
 spec :: Spec
 spec = do
         describe "Fixity resolution" $ do
-                it "x" $ do
-                        pending -- opParse "x" `shouldReturn` "x"
                 it "x + y" $ do
-                        pending -- opParse "x + y" `shouldReturn` "(x + y)"
+                        opParse "x + y" `shouldReturn` "(x + y)"
                 it "x + y * z" $ do
-                        pending -- opParse "x + y * z" `shouldReturn` "((x + y) * z)"
+                        opParse "x + y * z" `shouldReturn` "(x + (y * z))"
                 it "x ++ y ++ z" $ do
-                        pending -- opParse "x ++ y ++ z" `shouldReturn` "(x ++ (y ++ z))"
+                        opParse "x ++ y ++ z" `shouldReturn` "(x ++ (y ++ z))"
                 it "x > y > z" $ do
-                        pending -- opParse "x > y > z" `shouldThrow` anyException
+                        opParse "x > y > z" `shouldThrow` anyException
 
 fixityEnv :: FixityEnv
 fixityEnv =
         M.fromList
-                [ (varName "+", Fixity 6 Leftfix)
+                [ (varName "*", Fixity 7 Leftfix)
+                , (varName "+", Fixity 6 Leftfix)
                 , (varName "-", Fixity 6 Leftfix)
                 , (varName "++", Fixity 5 Rightfix)
                 , (varName ">", Fixity 4 Nonfix)

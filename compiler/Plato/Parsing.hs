@@ -18,5 +18,5 @@ parseFile src = do
 
 parsePartial :: MonadIO m => T.Text -> Parser a -> m a
 parsePartial inp parser = do
-        (ast, _) <- liftIO $ parse "<no file name>" inp parser
+        (ast, _) <- liftIO $ parseLine inp parser
         return ast
