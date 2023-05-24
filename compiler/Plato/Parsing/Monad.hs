@@ -1,6 +1,7 @@
 module Plato.Parsing.Monad where
 
 import Control.Monad.IO.Class
+
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import Data.ByteString.Internal qualified as BS

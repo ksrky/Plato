@@ -2,6 +2,7 @@ module Plato.Common.Location where
 
 import Prettyprinter
 
+-- | Source location includes file name, line number and column number
 data Loc
         = Loc
                 !FilePath -- file name
@@ -12,6 +13,7 @@ data Loc
 instance Pretty Loc where
         pretty (Loc f l c) = hcat [pretty f, colon, pretty l, colon, pretty c]
 
+-- | From start location to end location
 data Span
         = Span
                 !Loc -- start loc
@@ -23,6 +25,7 @@ instance Pretty Span where
         pretty (Span s (Loc _ el ec)) = hcat [pretty s, "-", pretty el, colon, pretty ec]
         pretty NoSpan = emptyDoc
 
+-- | Combining spans
 combineSpans :: Span -> Span -> Span
 combineSpans (Span s1 e1) (Span s2 e2) = Span (s1 `min` s2) (e1 `max` e2)
 combineSpans (Span s1 e1) NoSpan = Span s1 e1
@@ -35,6 +38,7 @@ concatSpans [sp] = sp
 concatSpans (sp : sps) = combineSpans sp (concatSpans sps)
 
 data Located a = L {_span :: !Span, unLoc :: a}
+
         deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 noLoc :: a -> Located a
