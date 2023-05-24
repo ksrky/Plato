@@ -25,8 +25,10 @@ source-repository head
 
 library
   exposed-modules:
+      Interface.Config
+      Interface.Main
+      Interface.Options
       Main
-      Plato.Common.Debug
       Plato.Common.Error
       Plato.Common.Ident
       Plato.Common.Location
@@ -124,7 +126,9 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Plato.Common.Debug
+      Interface.Config
+      Interface.Main
+      Interface.Options
       Plato.Common.Error
       Plato.Common.Ident
       Plato.Common.Location
