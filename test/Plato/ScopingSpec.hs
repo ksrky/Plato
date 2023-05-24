@@ -1,4 +1,4 @@
-module Plato.Test.ScopingSpec where
+module Plato.ScopingSpec where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -13,7 +13,7 @@ import Plato.Scoping
 spec :: Spec
 spec = do
         describe "Scope checking of expressions" $ do
-                it "\\x -> x" $ do
+                it "" $ do
                         head [23 ..] `shouldBe` (23 :: Int)
 
 checkExpr :: (MonadIO m, MonadThrow m) => T.Text -> m ()

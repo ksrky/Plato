@@ -2,6 +2,7 @@ module Plato.Common.Uniq (
         Uniq,
         uniq2text,
         HasUniq (..),
+        uniqZero,
         initUniq,
 ) where
 
@@ -32,5 +33,8 @@ class HasUniq a where
 instance HasUniq (IORef Uniq) where
         getUniq = return
 
+uniqZero :: Uniq
+uniqZero = 0
+
 initUniq :: MonadIO m => m (IORef Uniq)
-initUniq = liftIO $ newIORef 0
+initUniq = liftIO $ newIORef uniqZero

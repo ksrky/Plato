@@ -66,7 +66,13 @@ prExpr1 :: Expr -> Doc ann
 prExpr1 e@VarE{} = pretty e
 prExpr1 e = parens (pretty e)
 
-instance Pretty FunDecl
+prClause :: Clause -> Doc ann
+prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
+
+instance Pretty FunDecl where
+        pretty (FunBind id clauses) = hsep [pretty id, "where", line, indent 4 (vsep (map prClause clauses))]
+        pretty (FunSpec id ty) = hsep [pretty id, colon, pretty ty]
+        pretty (FixDecl id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
 
 instance Pretty FixDir where
         pretty Leftfix = "infixl"

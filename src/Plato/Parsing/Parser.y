@@ -5,7 +5,8 @@ module Plato.Parsing.Parser (
     parser,
     exprParser,
     typeParser,
-    declsParser
+    declsParser,
+    tokenParser,
 ) where
 
 import Plato.Common.Error
@@ -37,6 +38,7 @@ import Prettyprinter
 %name exprParser expr
 %name typeParser type
 %name declsParser decls
+%name tokenParser tokens
 
 %token
 
@@ -83,7 +85,8 @@ int                             { (mkLInt -> Just $$) }
 %%
 
 program     :: { [LTopDecl] }
-            : ';' topdecls                          { $2 }
+            : ';' topdecls                          {% lift (print $2) >> return $2 }
+            | topdecls                              { $1 }
 
 -----------------------------------------------------------
 -- Top declarations
@@ -107,9 +110,9 @@ decls       :: { [LDecl] }
 
 decl        :: { LDecl }
             -- Data declaration
-            : 'data' tycon tyvarrow 'where' '{' constrs '}'
+            : 'data' tycon tyvarseq 'where' '{' constrs '}'
                                                     { sL $1 $7 (DataD $2 $3 $6) }
-            | 'data' tycon tyvarrow 'where' 'v{' constrs close
+            | 'data' tycon tyvarseq 'where' 'v{' constrs close
                                                     { sL $1 $7 (DataD $2 $3 $6) }
             | fundecl                               { L (getLoc $1) (FuncD [$1]) }
 
@@ -140,7 +143,7 @@ fundecl     :: { LFunDecl }
 -- Types
 -----------------------------------------------------------
 type        :: { LType }
-            : '{' tyvarrow '}' type                 { sL $1 $4 (AllT $2 $4) }
+            : '{' tyvarseq1 '}' type                { sL $1 $4 (AllT $2 $4) }
             | btype '->' type                       { sL $1 $3 (ArrT $1 $3) }
             | btype                                 { $1 }
 
@@ -225,7 +228,7 @@ apat        :: { LPat }
 
 
 -----------------------------------------------------------
--- Rows
+-- Sequence
 -----------------------------------------------------------
 patrow      :: { [LPat] }
             : apat patrow                           { $1 : $2 }
@@ -234,9 +237,13 @@ patrow      :: { [LPat] }
 patrow1     :: { [LPat] }
             : apat patrow                           { $1 : $2 }
 
-tyvarrow    :: { [Ident] }
-            : tyvar tyvarrow                        { $1 : $2 }
+tyvarseq    :: { [Ident] }
+            : tyvar tyvarseq                        { $1 : $2 }
             | {- empty -}                           { [] }
+
+tyvarseq1   :: { [Ident] }
+            : tyvar tyvarseq                        { $1 : $2 }
+            | tyvar                                 { [$1] }
 
 typerow     :: { [LType] }
             : atype typerow                         { $1 : $2 }
@@ -278,6 +285,14 @@ op          :: { Ident }
 close       :: { Span }
             : 'v}'                                  { $1 }
             | error                                 {% popLayoutLevel $1 }
+
+-- | Dummy parser
+tokens      :: { [Located Token] }
+            : token tokens                          { $1 : $2 }
+            | {- empty -}                           { [] }
+
+token       :: { Located Token }
+            : error                                 { $1 }
 
 
 {

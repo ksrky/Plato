@@ -42,6 +42,7 @@ library
       Plato.Core.Parser
       Plato.Core.Typing
       Plato.Driver.Monad
+      Plato.Driver.Pipeline
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -139,6 +140,7 @@ executable plato
       Plato.Core.Parser
       Plato.Core.Typing
       Plato.Driver.Monad
+      Plato.Driver.Pipeline
       Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
@@ -221,9 +223,10 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.Test.OpParserSpec
-      Plato.Test.ScopingSpec
-      Plato.Test.Utils
+      Plato.Parsing.LexerSpec
+      Plato.Parsing.OpParserSpec
+      Plato.Parsing.ParserSpec
+      Plato.ScopingSpec
       Paths_Plato
   hs-source-dirs:
       test

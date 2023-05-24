@@ -1,12 +1,21 @@
 module Plato.Common.Error where
 
-import GHC.Stack
-import Plato.Common.Location
-
-import Control.Exception.Safe
-import Control.Monad.IO.Class
+import Control.Exception.Safe (
+        Exception,
+        Handler (Handler),
+        IOException,
+        MonadCatch,
+        MonadThrow,
+        SomeException,
+        catches,
+        throw,
+ )
+import Control.Monad.IO.Class (MonadIO (..))
+import GHC.Stack (HasCallStack)
 import Prettyprinter
 import Prettyprinter.Render.String (renderString)
+
+import Plato.Common.Location
 
 ----------------------------------------------------------------
 -- Error handling

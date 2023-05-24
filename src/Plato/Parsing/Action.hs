@@ -1,7 +1,7 @@
 module Plato.Parsing.Action where
 
 import Control.Monad.State
-import qualified Data.Text as T
+import Data.Text qualified as T
 import GHC.Stack
 
 import Plato.Common.Error
@@ -48,7 +48,7 @@ token f ainp@(pos, _, _, inp) len = do
         lev <- getIndentLevels
         scd <- getStartCode
         case lev of
-                _ | scd /= 0 -> return $ L sp (f t)
+                _ | scd == code -> return $ L sp (f t)
                 m : ms
                         | m == 0 -> do
                                 -- note: Layout rule
@@ -108,6 +108,7 @@ beginComment _ _ = do
         setCommentDepth (cd + 1)
         setStartCode comment
         alexMonadScan
+
 endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth

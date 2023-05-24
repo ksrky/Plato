@@ -1,4 +1,8 @@
-module Plato.Syntax.Parsing.Pat where
+module Plato.Syntax.Parsing.Pat (
+        LPat,
+        Pat (..),
+        prAtomPat,
+) where
 
 import Prettyprinter
 
@@ -17,19 +21,15 @@ data Pat
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
--- Basic instances
-----------------------------------------------------------------
-
-----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Pat where
-        pretty (ConP con pats) = hsep (pretty con : map pprpat pats)
+        pretty (ConP con pats) = hsep (pretty con : map prAtomPat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 
-pprpat :: LPat -> Doc ann
-pprpat pat@(L _ (ConP con pats))
+prAtomPat :: LPat -> Doc ann
+prAtomPat pat@(L _ (ConP con pats))
         | null pats = pretty con
         | otherwise = parens $ pretty pat
-pprpat pat = pretty pat
+prAtomPat pat = pretty pat
