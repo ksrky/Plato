@@ -59,12 +59,12 @@ default-extensions:
   - ImportQualifiedPost
 
 library:
-  source-dirs: src
+  source-dirs: compiler
 
 executables:
   plato:
     main: Main.hs
-    source-dirs: src
+    source-dirs: src/plato
     ghc-options:
       - -threaded
       - -rtsopts

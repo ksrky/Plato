@@ -1,8 +1,8 @@
-module Interface.Main where
+module Main where
 
-import Interface.Config
-import Interface.Options
-import Plato.Main
+import Config
+import Options
+import Plato
 
 main :: IO ()
 main = processOptions =<< runWithOptions

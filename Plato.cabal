@@ -25,10 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Interface.Config
-      Interface.Main
-      Interface.Options
-      Main
+      Plato
       Plato.Common.Error
       Plato.Common.Ident
       Plato.Common.Location
@@ -45,7 +42,6 @@ library
       Plato.Core.Typing
       Plato.Driver.Monad
       Plato.Driver.Pipeline
-      Plato.Main
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Layout
@@ -95,7 +91,7 @@ library
   other-modules:
       Paths_Plato
   hs-source-dirs:
-      src
+      compiler
   default-extensions:
       OverloadedStrings
       ImportQualifiedPost
@@ -126,75 +122,11 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Interface.Config
-      Interface.Main
-      Interface.Options
-      Plato.Common.Error
-      Plato.Common.Ident
-      Plato.Common.Location
-      Plato.Common.Name
-      Plato.Common.Uniq
-      Plato.Common.Utils
-      Plato.Core.Calc
-      Plato.Core.Elab
-      Plato.Core.Env
-      Plato.Core.Eval
-      Plato.Core.Lexer
-      Plato.Core.Monad
-      Plato.Core.Parser
-      Plato.Core.Typing
-      Plato.Driver.Monad
-      Plato.Driver.Pipeline
-      Plato.Main
-      Plato.Parsing
-      Plato.Parsing.Action
-      Plato.Parsing.Layout
-      Plato.Parsing.Lexer
-      Plato.Parsing.Monad
-      Plato.Parsing.OpParser
-      Plato.Parsing.OpParser.Fixity
-      Plato.Parsing.OpParser.Resolver
-      Plato.Parsing.Parser
-      Plato.Parsing.Token
-      Plato.PsToTyp
-      Plato.RunCore
-      Plato.Scoping
-      Plato.Scoping.SynRstrc
-      Plato.Scoping.Utils
-      Plato.Syntax.Core
-      Plato.Syntax.Core.Info
-      Plato.Syntax.Parsing
-      Plato.Syntax.Parsing.Decl
-      Plato.Syntax.Parsing.Expr
-      Plato.Syntax.Parsing.Pat
-      Plato.Syntax.Parsing.TopDecl
-      Plato.Syntax.Parsing.Type
-      Plato.Syntax.Typing
-      Plato.Syntax.Typing.Base
-      Plato.Syntax.Typing.Decl
-      Plato.Syntax.Typing.Expr
-      Plato.Syntax.Typing.Kind
-      Plato.Syntax.Typing.Pat
-      Plato.Syntax.Typing.Type
-      Plato.Typing
-      Plato.Typing.ElabClause
-      Plato.Typing.Env
-      Plato.Typing.Kc
-      Plato.Typing.Kc.Unify
-      Plato.Typing.Kc.Utils
-      Plato.Typing.Monad
-      Plato.Typing.Subst
-      Plato.Typing.Tc
-      Plato.Typing.Tc.Coercion
-      Plato.Typing.Tc.InstGen
-      Plato.Typing.Tc.Subst
-      Plato.Typing.Tc.Unify
-      Plato.Typing.Tc.Utils
-      Plato.Typing.Zonking
-      Plato.TypToCore
+      Config
+      Options
       Paths_Plato
   hs-source-dirs:
-      src
+      src/plato
   default-extensions:
       OverloadedStrings
       ImportQualifiedPost

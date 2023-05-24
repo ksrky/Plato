@@ -1,4 +1,4 @@
-module Interface.Config where
+module Config where
 
 data Config = Config
         { cfg_version :: String

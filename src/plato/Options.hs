@@ -1,4 +1,4 @@
-module Interface.Options where
+module Options where
 
 import Options.Applicative
 
