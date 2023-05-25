@@ -9,7 +9,6 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Parsing
 
--- Fixity resolution
 data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
 
 instance HasLoc (Tok a) where

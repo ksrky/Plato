@@ -21,10 +21,8 @@ import Plato.Parsing.Token
 
 import Plato.Syntax.Parsing
 
-import Control.Monad (unless, forM)
 import Control.Monad.State (lift)
 import Control.Exception.Safe (MonadThrow)
-import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Prettyprinter
 }

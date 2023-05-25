@@ -47,6 +47,7 @@ library
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.Nicifier
       Plato.Parsing.OpParser
       Plato.Parsing.OpParser.Fixity
       Plato.Parsing.OpParser.Resolver
