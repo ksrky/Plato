@@ -22,17 +22,17 @@ spec = do
                 it "let expression" $ do
                         parseExpr "let {id : A -> A; id = \\x -> x} in id a" `shouldReturn` "let {id : A -> A; id where {-> \\x -> x}} in id a"
         describe "Parsing a file" $ do
+                it "test01.plt" $ do
+                        parseProg "test01.plt" `shouldReturn` ["data Bool where {True : Bool; False : Bool}"]
                 it "test02.plt" $ do
-                        pending
-
--- parseProg "test02.plt" `shouldReturn` ";data Bool where { True : Bool; False : Bool }"
+                        parseProg "test02.plt" `shouldReturn` ["id : {a} a -> a", "id where {-> \\x -> x}"]
 
 parseExpr :: T.Text -> IO String
 parseExpr inp = do
         exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
         return $ show (pretty exp)
 
-parseProg :: FilePath -> IO String
+parseProg :: FilePath -> IO [String]
 parseProg fn = do
         ast <- runReaderT (parseFile ("test/testcases/" ++ fn)) =<< initSession
-        return $ show (pretty ast)
+        return $ map (show . pretty) ast

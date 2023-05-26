@@ -75,8 +75,8 @@ instance HasScope Context where
 
 test :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'TcUndone)
 test inp = do
-        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
         uniq <- initUniq
+        exp <- runReaderT (parsePartial inp exprParser) uniq
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp)) (Context uniq sc)
 
