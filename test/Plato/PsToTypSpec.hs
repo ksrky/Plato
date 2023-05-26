@@ -7,11 +7,11 @@ module Plato.PsToTypSpec where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+import Data.IORef
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Test.Hspec
 
-import Data.IORef
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name

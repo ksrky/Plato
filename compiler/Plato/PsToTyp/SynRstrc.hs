@@ -10,9 +10,9 @@ module Plato.PsToTyp.SynRstrc (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Data.List qualified
 import Prettyprinter
-import Control.Monad
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -85,7 +85,8 @@ classify ((L sp (FunBind id [(pats, exp)]) : fbnds) : rest) = do
                         ]
         let spn = concatSpans $ sp : [spi | L spi FunBind{} <- fbnds]
         (L spn (FunBind id ((pats, exp) : clses)) :) <$> classify rest
-classify _ = undefined
+classify ((L _ FunBind{} : _) : _) = unreachable "malformed clauses"
+classify ((L _ FixDecl{} : _) : _) = unreachable "deleted by Nicifier"
 
 partition :: [LFunDecl] -> [[LFunDecl]]
 partition =

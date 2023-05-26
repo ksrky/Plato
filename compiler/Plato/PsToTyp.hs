@@ -72,11 +72,11 @@ elabType (P.VarT var) = do
         return $ T.VarT (T.BoundTv var')
 elabType (P.ConT con) = T.ConT <$> scoping con
 elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
-elabType (P.AllT qnts body) = do
-        paramNamesUnique qnts
-        kv <- newKnVar
-        body' <- elabType `traverse` body
-        return $ T.AllT (map (\id -> (T.BoundTv id, kv)) qnts) body'
+elabType (P.AllT vars body) = do
+        paramNamesUnique vars
+        qnts <- mapM (\id -> do kv <- newKnVar; return (T.BoundTv id, kv)) vars
+        body' <- local (extendListScope vars) $ elabType `traverse` body
+        return $ T.AllT qnts body'
 elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
 
 elabFunDecls :: -- tmp: type signature in let binding
@@ -101,20 +101,25 @@ elabClause (pats, exp) = do
         return (pats', exp')
 
 elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.Decl] -> m [T.Decl 'T.TcUndone]
-elabDecls [] = undefined
-elabDecls (P.DataD id params constrs : decs) = do
+elabDecls [] = return []
+elabDecls (P.DataD id params constrs : rest) = do
+        paramNamesUnique params
+        dataConUnique $ map fst constrs
+        mapM_ (dataConType id) constrs
         qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
-        constrs' <- mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
+        constrs' <-
+                local (extendListScope $ id : params) $
+                        mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
+        rest' <- local (extendScope id) $ elabDecls rest
         sig <- newKnVar
-        decs' <- local (extendScope id) $ elabDecls decs
-        return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : decs'
-elabDecls (P.FuncD fundecs : decs) = do
+        return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
+elabDecls (P.FuncD fundecs : rest) = do
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
                 (bnds, spcs) <- elabFunDecls fundecs
-                decs' <- elabDecls decs
+                rest' <- elabDecls rest
                 let fundecs' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
-                return $ fundecs' ++ decs'
+                return $ fundecs' ++ rest'
 
 elabTopDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
 elabTopDecls = elabDecls . map unLoc

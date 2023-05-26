@@ -16,7 +16,7 @@ process src = do
         isFlagOn "ddump-parsing" $ liftIO $ print pssyn
         pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'
-        typsyn' <- typingProgram typsyn
+        typsyn' <- typing typsyn
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'

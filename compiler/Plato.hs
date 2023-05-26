@@ -19,7 +19,7 @@ process src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'
-        typsyn' <- typingProgram typsyn
+        typsyn' <- typing typsyn
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'

@@ -167,6 +167,7 @@ test-suite Plato-test
       Plato.Parsing.LexerSpec
       Plato.Parsing.ParserSpec
       Plato.PsToTypSpec
+      Plato.TypingSpec
       Paths_Plato
   hs-source-dirs:
       test

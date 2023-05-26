@@ -146,40 +146,14 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsEok var var_ty body'
-        {-tcRho' (AbsE pat _ body) (Infer ref) = do
-                (binds, pat_ty) <- inferPat pat
-                (body', body_ty) <- local (modifyEnv $ extendList binds) (inferRho body)
-                writeMIORef ref (ArrT (noLoc pat_ty) (noLoc body_ty))
-                return $ AbsE pat (Just pat_ty) body'
-        tcRho' (AbsE pat _ body) (Check exp_ty) = do
-                (arg_ty, res_ty) <- unifyFun sp exp_ty
-                binds <- checkPat pat arg_ty
-                body' <- local (modifyEnv $ extendList binds) (checkRho body res_ty)
-                return $ AbsE pat (Just arg_ty) body'-}
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
                         sig <- find id =<< getEnv =<< ask
-                        -- exp' <- checkSigma exp ty
-                        -- (_, clauses') <- checkClauses clauses sig
                         exp' <- checkClauses clauses sig
                         return (id, exp')
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
                 return $ LetEok bnds' spcs body'
-        {-tcRho' (ClauseE _ []) _ = undefined
-        tcRho' (ClauseE _ clauses@(hd : _)) (Check exp_ty) = do
-                (pat_tys, res_ty) <- mapAccumM (\ty _ -> unifyFun sp ty) exp_ty (fst hd)
-                clauses' <- forM clauses $ \(pats, body) -> do
-                        substs <- zipWithM checkPat pats pat_tys
-                        body' <- local (modifyEnv $ extendList $ concat substs) $ checkRho body res_ty
-                        return (pats, body')
-                return $ ClauseE (Just pat_tys) clauses'
-        tcRho' (ClauseE _ clauses) (Infer ref) = undefined  do
-                                                           clauses' <- forM clauses $ \(pats, body) -> do
-                                                                   (substs, pat_tys) <- mapAndUnzipM inferPat pats
-                                                                   (body', body_ty) <- local (modifyEnv $ extendList $ concat substs) $ inferRho body
-                                                                   return (pats, body')
-                                                           return $ ClauseE (Just pat_tys) clauses'-}
         tcRho' (CaseE match alts) exp_ty = do
                 (match', match_ty) <- inferRho match
                 alts' <- forM alts $ \(pat, body) -> do
