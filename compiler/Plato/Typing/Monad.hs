@@ -1,5 +1,4 @@
 module Plato.Typing.Monad (
-        Context (Context),
         HasTypEnv (..),
         newMIORef,
         readMIORef,
