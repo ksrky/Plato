@@ -1,5 +1,3 @@
-module Pair
-
 data Pair a b = Pair a b
 
 fst : {a b} Pair a b -> a

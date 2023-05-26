@@ -1,61 +1,61 @@
-module Plato.List
-
-import Plato.Bool
-import Plato.Nat
-import Plato.Maybe
-
-data List a = Nil | a :: List a
+import Bool
+import Nat
+import Maybe
 
 infixr 5 ::
-
-(++) : {a} List a -> List a -> List a
-(++) l m = case l of
-    Nil -> m
-    x :: xs -> x :: (xs ++ m)
-
 infixr 5 ++
 
+data List a where
+    Nil : List a
+    (::) : a -> List a -> List a
+
+(++) : {a} List a -> List a -> List a
+(++) Nil m = m
+(x :: xs) ++ m = x :: (xs ++ m)
+
 head : {a} List a -> Maybe a
-head l = case l of
-    Nil -> Nothing
-    hd :: _ -> Just hd
+head Nil = Nothing
+head (hd :: _) -> Just hd
 
 last : {a} List a -> Maybe a
-last l = case l of
-    Nil -> Nothing
-    hd :: tl -> case tl of
-        Nil -> Just hd
-        _ -> last tl
+last Nil = Nothing
+last (hd :: Nil) = Just hd
+last (_ :: tl) = last tl
 
 tail : {a} List a -> List a
-tail l = case l of
-    Nil -> Nil
-    _ :: tl -> tl
+tail Nil = Nil
+tail (_ :: tl) = tl
 
+{-
 init : {a} List a -> List a
-init l = case l of
-    Nil -> Nil
-    x :: xs -> let
-        init' : {a} a -> List a -> List a
-        init' y l' = case l' of
-            Nil -> Nil
-            z :: zs -> y :: init' z zs
-         in init' x xs
+init Nil = Nil
+init (x :: xs) ->
+    let init' : {a} a -> List a -> List a -- error : Scoped type variables
+        init' y Nil = Nil
+        init' y (z :: zs) -> y :: init' z zs
+     in init' x xs
+
+-- Alternative
+init : {a} List a -> List a
+init Nil = Nil
+init {a} (x :: xs) ->
+    let init' : a -> List a -> List a -- error : Scoped type variables
+        init' y Nil = Nil
+        init' y (z :: zs) -> y :: init' z zs
+     in init' x xs
+-}
 
 null : {a} List a -> Bool
-null l = case l of
-    Nil -> True
-    _ -> False
+null Nil = True
+null _ = False
 
 length : {a} List a -> Nat
-length l = case l of
-    Nil -> Zero
-    x :: xs -> Succ (length xs)
+length Nil = Zero
+length (x :: xs) = Succ (length xs)
 
 map : {a b} (a -> b) -> List a -> List b
-map f l = case l of
-    Nil -> Nil
-    x :: xs -> f x :: map f xs
+map f Nil = Nil
+map f (x :: xs) f x :: map f xs
 
 reverse : {a} List a -> List a
 reverse l =
@@ -66,14 +66,12 @@ reverse l =
      in rev l Nil
 
 filter : {a} (a -> Bool) -> List a -> List a
-filter f l = case l of
-    Nil -> Nil
-    x :: xs -> if (f x) (x :: filter f xs) (filter f xs)
+filter f Nil = Nil
+filter f (x :: xs) -> ifThenElse (f x) (x :: filter f xs) (filter f xs)
 
 foldr : {a b} (a -> b -> b) -> b -> List a -> b
-foldr k z = 
-    let
-        go l = case l of
-            Nil ->  z
-            y : ys = k y (go ys)
+foldr {a b} k z = 
+    let go : List a -> b 
+        go Nil = z
+        go (y :: ys) = k y (go ys)
      in go

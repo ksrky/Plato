@@ -1,27 +1,22 @@
-module Plato.Bool
-
-data Bool = True | False
-
-(&&) : Bool -> Bool -> Bool
-(&&) x y = case x of
-    True -> y
-    False -> False
+data Bool where
+    True : Bool
+    False : Bool
 
 infixr 3 &&
-
-(||) : Bool -> Bool -> Bool
-(||) x y = case x of
-    True -> True
-    False -> y
-
 infixr 2 ||
 
-not : Bool -> Bool
-not b = case b of
-    True -> False
-    False -> True
+(&&) : Bool -> Bool -> Bool
+True && y = y
+False && _ = False
 
-if : {a} Bool -> a -> a -> a
-if test then else = case test of
-    True -> then
-    False -> else
+(||) : Bool -> Bool -> Bool
+True || _  =True
+False　|| y -> y
+
+not : Bool -> Bool
+not True = False
+not False = True
+
+ifThenElse : {a} Bool -> a -> a -> a
+ifThenElse True then _ = then
+ifThenElse False _ else = else

@@ -1,5 +1,6 @@
 module Options where
 
+import Config
 import Options.Applicative
 
 type Package = String
@@ -7,7 +8,7 @@ type Package = String
 data Options
         = REPL [FilePath]
         | Run FilePath
-        | Version
+        | Version String
         deriving (Eq, Show)
 
 repl :: Parser Options
@@ -19,7 +20,7 @@ run = Run <$> argument str (metavar "FILE...")
 version :: Parser Options
 version =
         flag'
-                Version
+                (Version (cfg_version config))
                 ( long "version"
                         <> short 'v'
                         <> help "print version"
@@ -39,6 +40,6 @@ runWithOptions =
                 info
                         (opts <**> helper)
                         ( fullDesc
-                                <> progDesc "Print a greeting for TARGET"
-                                <> header "hello - a test for optparse-applicative"
+                                <> progDesc "Compile Plato program and evaluate it on the core language."
+                                <> header ("Plato version " ++ cfg_version config ++ ", Copyright ksrk (c) 2022.")
                         )

@@ -1,20 +1,17 @@
-module Plato.Either
+import Bool
 
-import Plato.Bool
-
-data Either a b = Left a | Right b
+data Either a b where
+    Left : a -> Either a b
+    Right : b -> Either a b
 
 either : {a b c} (a -> c) -> (b -> c) -> Either a b -> c
-either f g e = case e of
-    Left x -> f x
-    Right y -> g y
+either f _ (Left x) = f x
+either _ g (Right y) = g y
 
 isLeft : {a b} Either a b -> Bool
-isLeft e = case e of
-    Left x -> True
-    _ -> False
+isLeft (Left x) = True
+isLeft _ = False
 
 isRight : {a b} Either a b -> Bool
-isRight e = case e of
-    Right y -> True
-    _ -> False
+isRight (Right y) = True
+isRight _ = False
