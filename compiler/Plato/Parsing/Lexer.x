@@ -96,12 +96,12 @@ tokens :-
 <code> \=                       { symbol SymEqual }       
 <code> \|                       { symbol SymVBar }
 
-<0, code> @varid                 { varid }
-<0, code> @conid                 { conid }
-<code> @varsym                   { varsym }
-<code> @consym                   { consym }
+<0, code> @varid                { varid }
+<0, code> @conid                { conid }
+<code> @varsym                  { varsym }
+<code> @consym                  { consym }
 
-<code> @decimal                 { integer }
+<code> $digit                   { digit }
 {
 lexer :: (Located Token -> Parser a) -> Parser a
 lexer = (alexMonadScan >>=)

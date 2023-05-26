@@ -76,7 +76,7 @@ conid                           { (mkLConId -> Just $$) }
 varsym                          { (mkLVarSym -> Just $$) }
 consym                          { (mkLConSym -> Just $$) }
 
-int                             { (mkLInt -> Just $$) }
+digit                           { (mkLDigit -> Just $$) }
 
 %%
 
@@ -134,6 +134,12 @@ fundecl     :: { LFunDecl }
             -- Function definition
             | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
             | '(' varop ')' patrow '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) } -- tmp: synRestrc #patrow >= 2
+            | fixdecl                               { $1 }
+
+fixdecl     :: { LFunDecl }
+            : 'infix' digit op                      { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Nonfix)) }
+            | 'infixl' digit op                     { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Leftfix)) }
+            | 'infixr' digit op                     { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Rightfix)) }
 
 -----------------------------------------------------------
 -- Types
@@ -321,7 +327,7 @@ token       :: { Token }
             | conid                                 { TokConId (unLoc $1) }
             | varsym                                { TokVarSym (unLoc $1) }
             | consym                                { TokConSym (unLoc $1) }
-            | int                                   { TokInt (unLoc $1) }
+            | digit                                 { TokDigit (unLoc $1) }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
@@ -346,9 +352,9 @@ mkLConSym :: Located Token -> Maybe (Located T.Text)
 mkLConSym (L sp (TokConSym t)) = Just (L sp t)
 mkLConSym _ = Nothing
 
-mkLInt :: Located Token -> Maybe (Located Int)
-mkLInt (L sp (TokInt n)) = Just (L sp n)
-mkLInt _ = Nothing
+mkLDigit :: Located Token -> Maybe (Located Int)
+mkLDigit (L sp (TokDigit n)) = Just (L sp n)
+mkLDigit _ = Nothing
 
 mkLName :: (T.Text -> Name) -> Located T.Text -> Located Name
 mkLName f (L sp t) = L sp (f t)
