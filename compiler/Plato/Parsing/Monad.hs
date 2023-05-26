@@ -1,7 +1,6 @@
 module Plato.Parsing.Monad where
 
 import Control.Monad.IO.Class
-
 import Control.Monad.State.Class
 import Control.Monad.Trans
 import Data.ByteString.Internal qualified as BS
@@ -100,9 +99,8 @@ instance MonadIO m => MonadIO (ParserT m) where
                 a <- liftIO io
                 return (a, s)
 
-parse :: MonadIO m => String -> T.Text -> ParserT m a -> m (a, PsState)
-parse fn inp parser = do
-        ref <- initUniq
+parse :: String -> IORef Uniq -> T.Text -> ParserT m a -> m (a, PsState)
+parse fn uniq inp parser = do
         runParserT
                 parser
                 PsState
@@ -112,11 +110,11 @@ parse fn inp parser = do
                         , parser_chr = '\n'
                         , parser_bytes = []
                         , parser_scd = 0
-                        , parser_ust = initUserState ref
+                        , parser_ust = initUserState uniq
                         }
 
-parseLine :: MonadIO m => T.Text -> ParserT m a -> m (a, PsState)
-parseLine inp p = parse "<no file name>" inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
+parseLine :: IORef Uniq -> T.Text -> ParserT m a -> m (a, PsState)
+parseLine uniq inp p = parse "<no file name>" uniq inp (ParserT $ \st -> runParserT p st{parser_scd = 1 {-code-}})
 
 startPos :: PsPosn
 startPos = PsPosn 0 1 1

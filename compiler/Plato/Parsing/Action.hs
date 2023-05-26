@@ -93,8 +93,8 @@ varsym (pos, _, _, inp) len = do
 consym :: Action
 consym = token TokConSym
 
-integer :: Action
-integer = token (TokInt . read . T.unpack)
+digit :: Action
+digit = token (TokDigit . read . T.unpack)
 
 ----------------------------------------------------------------
 -- Comment

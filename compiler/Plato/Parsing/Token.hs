@@ -10,7 +10,7 @@ data Token
         | TokConId T.Text
         | TokVarSym T.Text
         | TokConSym T.Text
-        | TokInt Int
+        | TokDigit Int
         | TokEOF
         deriving (Eq, Show)
 
@@ -64,7 +64,7 @@ instance Pretty Token where
         pretty (TokConId t) = pretty t
         pretty (TokVarSym t) = pretty t
         pretty (TokConSym t) = pretty t
-        pretty (TokInt n) = pretty n
+        pretty (TokDigit d) = pretty d
         pretty TokEOF = "<eof>"
 
 instance Pretty Keyword where

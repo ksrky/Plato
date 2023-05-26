@@ -1,4 +1,4 @@
-module Plato.Parsing.OpParser.Resolver where
+module Plato.Nicifier.OpParser.Resolver where
 
 import Control.Exception.Safe
 import Control.Monad

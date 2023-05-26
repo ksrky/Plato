@@ -21,4 +21,21 @@ data Type
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty Type
+instance Pretty Type where
+        pretty (VarT var) = pretty var
+        pretty (ConT con) = pretty con
+        pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
+        pretty (ArrT arg res) = prty ArrPrec (unLoc arg) <+> "->" <+> prty TopPrec (unLoc res)
+        pretty (AllT vars body) = braces (hsep (map pretty vars)) <+> pretty body
+
+data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
+
+precOf :: Type -> Prec
+precOf AllT{} = TopPrec
+precOf ArrT{} = ArrPrec
+precOf _ = AtomPrec
+
+prty :: Prec -> Type -> Doc ann
+prty p ty
+        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
+        | otherwise = pretty ty

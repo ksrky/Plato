@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Scoping.SynRstrc (
+module Plato.PsToTyp.SynRstrc (
         defNamesUnique,
         paramNamesUnique,
         paramPatsUnique,
@@ -10,14 +10,14 @@ module Plato.Scoping.SynRstrc (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Data.List qualified
 import Prettyprinter
 
-import Control.Monad
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Scoping.Utils
+import Plato.PsToTyp.Utils
 import Plato.Syntax.Parsing
 
 -- | RULE 1: Declared name uniqueness
@@ -35,7 +35,7 @@ defNamesUnique = loop
 -- | RULE 2: Paramter name uniqueness
 paramNamesUnique :: MonadThrow m => [Ident] -> m ()
 paramNamesUnique ids = do
-        let dup = [(id1, id2) | id1 <- ids, id2 <- ids, nameIdent id1 == nameIdent id2]
+        let dup = [(id1, id2) | id1 <- ids, id2 <- ids, stamp id1 /= stamp id2, nameIdent id1 == nameIdent id2]
         case dup of
                 [] -> return ()
                 (id1, id2) : _ ->
@@ -85,7 +85,8 @@ classify ((L sp (FunBind id [(pats, exp)]) : fbnds) : rest) = do
                         ]
         let spn = concatSpans $ sp : [spi | L spi FunBind{} <- fbnds]
         (L spn (FunBind id ((pats, exp) : clses)) :) <$> classify rest
-classify _ = undefined
+classify ((L _ FunBind{} : _) : _) = unreachable "malformed clauses"
+classify ((L _ FixDecl{} : _) : _) = unreachable "deleted by Nicifier"
 
 partition :: [LFunDecl] -> [[LFunDecl]]
 partition =

@@ -50,8 +50,8 @@ initSession = liftIO $ Session <$> newIORef initPlatoEnv
 
 instance HasUniq Session where
         getUniq (Session ref) = do
-                ref <- liftIO $ readIORef ref
-                liftIO $ newIORef $ plt_uniq ref
+                env <- liftIO $ readIORef ref
+                liftIO $ newIORef $ plt_uniq env
 
 class (MonadReader Session m, MonadIO m) => PlatoMonad m where
         getSession :: m PlatoEnv
@@ -79,15 +79,18 @@ isFlagOn flag action = do
 ---------------------------------------------------------------
 -- Plato
 ----------------------------------------------------------------
-type Plato = ReaderT Session IO
 
-unPlato :: Plato a -> Session -> IO a
+type PlatoT m = ReaderT Session m
+
+unPlato :: PlatoT m a -> Session -> m a
 unPlato = runReaderT
 
-instance PlatoMonad Plato where
+instance MonadIO m => PlatoMonad (PlatoT m) where
         getSession = do
                 Session ref <- ask
                 liftIO $ readIORef ref
         setSession env = do
                 Session ref <- ask
                 liftIO $ writeIORef ref env
+
+type Plato = PlatoT IO

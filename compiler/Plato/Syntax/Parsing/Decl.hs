@@ -20,4 +20,15 @@ data Decl
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty Decl
+instance Pretty Decl where
+        pretty (DataD con args constrs) =
+                hsep
+                        [ "data"
+                        , hsep (pretty con : map pretty args)
+                        , "where"
+                        , braces $
+                                concatWith
+                                        (surround $ semi <> space)
+                                        (map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs)
+                        ]
+        pretty (FuncD fundecs) = concatWith (surround $ semi <> space) (map pretty fundecs)

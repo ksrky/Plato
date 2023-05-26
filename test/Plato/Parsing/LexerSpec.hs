@@ -2,11 +2,10 @@ module Plato.Parsing.LexerSpec where
 
 import Control.Monad.Reader
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
 import Test.Hspec
 
+import Plato.Common.Uniq
 import Plato.Parsing
-import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Parsing.Token
 
@@ -25,11 +24,5 @@ spec = do
 semi :: Token
 semi = TokSymbol SymSemicolon
 
-parseTokensFile :: FilePath -> IO [Token]
-parseTokensFile fn = do
-        inp <- T.readFile ("test/testcases/" ++ fn)
-        (toks, _) <- liftIO $ parseLine inp tokenParser
-        return toks
-
 parseTokens :: T.Text -> IO [Token]
-parseTokens inp = liftIO $ parsePartial inp tokenParser
+parseTokens inp = runReaderT (parsePartial inp tokenParser) =<< initUniq

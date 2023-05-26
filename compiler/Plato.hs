@@ -4,27 +4,36 @@ import Control.Monad.IO.Class
 
 import Plato.Common.Error
 import Plato.Driver.Monad
+import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
 import Plato.RunCore
-import Plato.Scoping
 import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ unPlato (process' src) =<< initSession
+runPlato src = catchError $ unPlato (compile src) =<< initSession
 
-process :: FilePath -> Plato ()
-process src = do
+compile :: FilePath -> Plato ()
+compile src = do
         pssyn <- parseFile src
-        pssyn' <- scopingProgram pssyn
+        pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'
-        typsyn' <- typingProgram typsyn
+        typsyn' <- typing typsyn
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'
 
-process' :: FilePath -> Plato ()
-process' src = do
-        pssyn <- parseFile src
-        liftIO $ print pssyn
+{-repl :: [FilePath] -> IO ()
+repl files = do
+        env <- initSession
+        _ <- unPlato (mapM compile files) env
+        runInputT defaultSettings (catchError $ unPlato loop env)
+    where
+        loop :: (MonadIO m, MonadMask m) => PlatoT (InputT m) ()
+        loop = do
+                minput <- lift $ getInputLine ">> "
+                case minput of
+                        Nothing -> return ()
+                        Just "" -> return ()
+                        Just inp -> continueError (return ()) $ dynCompile (T.pack inp)-}
