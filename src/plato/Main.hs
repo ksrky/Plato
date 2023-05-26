@@ -8,7 +8,6 @@ main :: IO ()
 main = processOptions =<< runWithOptions
 
 processOptions :: Options -> IO ()
-processOptions (Install _) = undefined
-processOptions (REPL _files) = undefined
+processOptions (REPL _files) = error "not implemented"
 processOptions (Run src) = runPlato src
 processOptions Version = putStrLn $ "Plato version " ++ cfg_version config

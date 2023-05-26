@@ -12,10 +12,10 @@ import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> IO ()
-runPlato src = catchError $ unPlato (process src) =<< initSession
+runPlato src = catchError $ unPlato (compile src) =<< initSession
 
-process :: FilePath -> Plato ()
-process src = do
+compile :: FilePath -> Plato ()
+compile src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'
@@ -23,3 +23,17 @@ process src = do
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'
+
+{-repl :: [FilePath] -> IO ()
+repl files = do
+        env <- initSession
+        _ <- unPlato (mapM compile files) env
+        runInputT defaultSettings (catchError $ unPlato loop env)
+    where
+        loop :: (MonadIO m, MonadMask m) => PlatoT (InputT m) ()
+        loop = do
+                minput <- lift $ getInputLine ">> "
+                case minput of
+                        Nothing -> return ()
+                        Just "" -> return ()
+                        Just inp -> continueError (return ()) $ dynCompile (T.pack inp)-}

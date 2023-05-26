@@ -79,15 +79,18 @@ isFlagOn flag action = do
 ---------------------------------------------------------------
 -- Plato
 ----------------------------------------------------------------
-type Plato = ReaderT Session IO
 
-unPlato :: Plato a -> Session -> IO a
+type PlatoT m = ReaderT Session m
+
+unPlato :: PlatoT m a -> Session -> m a
 unPlato = runReaderT
 
-instance PlatoMonad Plato where
+instance MonadIO m => PlatoMonad (PlatoT m) where
         getSession = do
                 Session ref <- ask
                 liftIO $ readIORef ref
         setSession env = do
                 Session ref <- ask
                 liftIO $ writeIORef ref env
+
+type Plato = PlatoT IO

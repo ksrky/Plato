@@ -20,3 +20,13 @@ process src = do
         coresyn <- typ2core typsyn'
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'
+
+{-dynCompile :: MonadIO m => T.Text -> PlatoT m ()
+dynCompile inp = do
+        pssyn <- parsePartial inp exprParser
+        pssyn' <- opParse pssyn
+        typsyn <- elabExpr $ unLoc pssyn'
+        typsyn' <- inferType typsyn
+        coresyn <- typ2core typsyn'
+        coresyn' <- runCore coresyn
+        liftIO $ mapM_ printResult coresyn'-}
