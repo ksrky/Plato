@@ -1,8 +1,9 @@
 module Plato.PsToTyp.Scoping (
         Scope,
-        HasScope(..),
+        HasScope (..),
         initScope,
         scoping,
+        extendScopeFromSeq,
 ) where
 
 import Control.Exception.Safe
@@ -14,6 +15,7 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.PsToTyp.Utils
 
 type Scope = M.Map Name Ident
 
@@ -34,9 +36,12 @@ initScope = M.empty
 
 scoping :: (MonadReader r m, HasScope r, MonadThrow m) => Ident -> m Ident
 scoping id = do
-                sc <- asks getScope
-                case M.lookup (nameIdent id) sc of
-                        Just id' -> return id'
-                        Nothing ->
-                                throwLocErr (getLoc id) $
-                                        hsep ["Not in scope ", squotes $ pretty id]
+        sc <- asks getScope
+        case M.lookup (nameIdent id) sc of
+                Just id' -> return id'
+                Nothing ->
+                        throwLocErr (getLoc id) $
+                                hsep ["Not in scope ", squotes $ pretty id]
+
+extendScopeFromSeq :: (MonadReader env m, HasScope env, HasDomain a) => [a] -> m env
+extendScopeFromSeq decs = asks (extendListScope (map getDomain decs))

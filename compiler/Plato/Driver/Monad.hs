@@ -50,8 +50,8 @@ initSession = liftIO $ Session <$> newIORef initPlatoEnv
 
 instance HasUniq Session where
         getUniq (Session ref) = do
-                ref <- liftIO $ readIORef ref
-                liftIO $ newIORef $ plt_uniq ref
+                env <- liftIO $ readIORef ref
+                liftIO $ newIORef $ plt_uniq env
 
 class (MonadReader Session m, MonadIO m) => PlatoMonad m where
         getSession :: m PlatoEnv
