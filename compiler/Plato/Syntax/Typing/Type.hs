@@ -77,7 +77,7 @@ instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
         pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
-        pretty (AllT qnts body) = hcat [lbrace, prQuants qnts, rbrace, space, pretty body]
+        pretty (AllT qnts body) = hcat [braces (prQuants qnts), pretty body]
         pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
         pretty (AbsT var ann body) = hsep [backslash <> pretty var <> pretty ann] <> dot <+> pretty body
         pretty (MetaT tv) = viaShow tv

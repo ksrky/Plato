@@ -9,6 +9,7 @@ import Prettyprinter
 import Test.Hspec
 
 import Plato.Common.Name
+import Plato.Common.Uniq
 import Plato.Nicifier.OpParser
 import Plato.Nicifier.OpParser.Fixity
 import Plato.Parsing
@@ -39,6 +40,6 @@ fixityEnv =
 
 test :: T.Text -> IO String
 test inp = do
-        exp <- parsePartial inp exprParser
+        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
         exp' <- runReaderT (opParse exp) fixityEnv
         return $ show $ pretty exp'

@@ -2,12 +2,12 @@ module Plato.Parsing.ParserSpec where
 
 import Control.Monad.Reader
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
 import Prettyprinter
 import Test.Hspec
 
+import Plato.Common.Uniq
+import Plato.Driver.Monad
 import Plato.Parsing
-import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 
 spec :: Spec
@@ -19,6 +19,8 @@ spec = do
                         parseExpr "f x y" `shouldReturn` "f x y"
                 it "multiple lambda abstraction" $ do
                         parseExpr "\\x y z -> x" `shouldReturn` "\\x y z -> x"
+                it "let expression" $ do
+                        parseExpr "let {id : A -> A; id = \\x -> x} in id a" `shouldReturn` "let {id : A -> A; id where {-> \\x -> x}} in id a"
         describe "Parsing a file" $ do
                 it "test02.plt" $ do
                         pending
@@ -27,11 +29,10 @@ spec = do
 
 parseExpr :: T.Text -> IO String
 parseExpr inp = do
-        exp <- parsePartial inp exprParser
+        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
         return $ show (pretty exp)
 
 parseProg :: FilePath -> IO String
 parseProg fn = do
-        inp <- T.readFile ("test/testcases/" ++ fn)
-        (ast, _) <- liftIO $ parse fn inp parser
+        ast <- runReaderT (parseFile ("test/testcases/" ++ fn)) =<< initSession
         return $ show (pretty ast)

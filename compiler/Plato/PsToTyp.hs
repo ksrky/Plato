@@ -54,7 +54,7 @@ elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
         local (const env) $ do
                 (bnds, spcs) <- elabFunDecls fdecs
-                body' <- local (const env) $ elabExpr `traverse` body
+                body' <- elabExpr `traverse` body
                 return $ T.LetE bnds spcs body'
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
@@ -63,7 +63,7 @@ elabPat (P.ConP con pats) = do
         con' <- scoping con
         pats' <- mapM (elabPat `traverse`) pats
         return $ T.ConP con' pats'
-elabPat (P.VarP var) = T.VarP <$> scoping var
+elabPat (P.VarP var) = return $ T.VarP var
 elabPat P.WildP = return T.WildP
 
 elabType :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => P.Type -> m T.Type
@@ -88,8 +88,9 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
                 ty' <- elabType `traverse` ty
                 tell ([], [(id, ty')])
         L _ (P.FunBind id clses) -> do
+                id' <- scoping id
                 clses' <- mapM elabClause clses
-                tell ([(id, clses')], [])
+                tell ([(id', clses')], [])
         L _ P.FixDecl{} -> unreachable "deleted by Nicifier"
 
 elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => P.Clause -> m (T.Clause 'T.TcUndone)

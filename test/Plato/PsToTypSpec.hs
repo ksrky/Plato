@@ -26,16 +26,16 @@ spec :: Spec
 spec = do
         describe "Scope checking of expressions" $ do
                 it "lambda abstraction" $ do
-                        scopingExpr "\\x -> x"
+                        test "\\x -> x"
                                 >>= ( `shouldSatisfy`
                                         (\case AbsE id1 (L _ (VarE id1')) -> check [(id1, id1')]; _ -> False)
                                     )
                 it "Unbound variable" $ do
-                        scopingExpr "\\x -> y" `shouldThrow` anyException
+                        test "\\x -> y" `shouldThrow` anyException
                 it "parameter name conflict" $ do
-                        scopingExpr "\\x x -> x" `shouldThrow` anyException
+                        test "\\x x -> x" `shouldThrow` anyException
                 it "let binding" $ do
-                        scopingExpr "let {x : ty; x = exp} in x"
+                        test "let {x : ty; x = exp} in x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
                                                 LetE [(id1', _)] [(id1, _)] (L _ (VarE id1'')) -> check [(id1, id1'), (id1, id1'')]
@@ -43,7 +43,7 @@ spec = do
                                         )
                                     )
                 it "pattern abstraction" $ do
-                        scopingExpr "\\(Con x) -> x"
+                        test "\\(Con x) -> x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
                                                 AbsE id1 (L _ (CaseE (L _ (VarE id1')) [(L _ (ConP _ [L _ (VarP id2)]), L _ (VarE id2'))])) ->
@@ -52,13 +52,17 @@ spec = do
                                         )
                                     )
 
-defScope :: Scope
-defScope =
-        M.fromList
-                [ (varName "exp", Ident{nameIdent = varName "exp", spanIdent = NoSpan, stamp = uniqZero})
-                , (conName "Con", Ident{nameIdent = conName "Con", spanIdent = NoSpan, stamp = uniqZero})
-                , (tyvarName "ty", Ident{nameIdent = tyvarName "ty", spanIdent = NoSpan, stamp = uniqZero})
-                ]
+defScope :: MonadIO m => IORef Uniq -> m Scope
+defScope ref = do
+        u1 <- pickUniq ref
+        u2 <- pickUniq ref
+        u3 <- pickUniq ref
+        return $
+                M.fromList
+                        [ (varName "exp", Ident{nameIdent = varName "exp", spanIdent = NoSpan, stamp = u1})
+                        , (conName "Con", Ident{nameIdent = conName "Con", spanIdent = NoSpan, stamp = u2})
+                        , (tyvarName "ty", Ident{nameIdent = tyvarName "ty", spanIdent = NoSpan, stamp = u3})
+                        ]
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -69,11 +73,12 @@ instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-scopingExpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'TcUndone)
-scopingExpr inp = do
-        exp <- parsePartial inp exprParser
+test :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'TcUndone)
+test inp = do
+        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
         uniq <- initUniq
-        runReaderT (elabExpr (unLoc exp)) (Context uniq defScope)
+        sc <- defScope uniq
+        runReaderT (elabExpr (unLoc exp)) (Context uniq sc)
 
 check :: [(Ident, Ident)] -> Bool
 check = all (\(id1, id2) -> stamp id1 == stamp id2)

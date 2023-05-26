@@ -61,9 +61,6 @@ library
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
       Plato.RunCore
-      Plato.Scoping
-      Plato.Scoping.SynRstrc
-      Plato.Scoping.Utils
       Plato.Syntax.Core
       Plato.Syntax.Core.Info
       Plato.Syntax.Parsing

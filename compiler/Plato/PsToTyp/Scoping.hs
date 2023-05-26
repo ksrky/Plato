@@ -44,4 +44,4 @@ scoping id = do
                                 hsep ["Not in scope ", squotes $ pretty id]
 
 extendScopeFromSeq :: (MonadReader env m, HasScope env, HasDomain a) => [a] -> m env
-extendScopeFromSeq decs = asks (extendListScope (map getDomain decs))
+extendScopeFromSeq decs = asks (extendListScope (getDomain decs))
