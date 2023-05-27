@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.PsToTyp (
@@ -14,6 +15,7 @@ import Control.Exception.Safe
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.IORef (IORef)
+import Data.List qualified
 import GHC.Stack
 
 import Plato.Common.Error
@@ -122,7 +124,7 @@ elabDecls (P.FuncD fundecs : rest) = do
                 return $ fundecs' ++ rest'
 
 elabTopDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
-elabTopDecls = elabDecls . map unLoc
+elabTopDecls tdecs = Data.List.sort <$> elabDecls (map unLoc tdecs)
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 

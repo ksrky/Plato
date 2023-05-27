@@ -128,6 +128,20 @@ typeof t = case t of
                                         return tyT2
                                 Nothing -> fail "label not found"
                         _ -> fail "sum type expected"
+        TmCase t alts -> do
+                env <- asks getEnv
+                tyT <- typeof t
+                case simplifyty env tyT of
+                        TySum fields -> do
+                                when (length alts /= length fields) $ fail "field length not match"
+                                zipWithM_ (\(_, ti) tyTi -> checkType ti tyTi) alts fields
+                                return $ head fields -- tmp: fields null
+                        _ -> fail "sum type required"
+
+checkType :: CoreMonad env m => Term -> Type -> m ()
+checkType t tyT = do
+        tyT' <- typeof t
+        tyeqv tyT' tyT
 
 ----------------------------------------------------------------
 -- Kinding

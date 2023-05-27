@@ -87,7 +87,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- find con =<< getEnv =<< ask
+        sigma <- zonkType =<< find con =<< getEnv =<< ask
         (_, rho) <- instantiate sigma
         return $ split [] rho
     where
@@ -128,7 +128,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 Expected Rho ->
                 m (Expr 'TcDone)
         tcRho' (VarE var) exp_ty = do
-                sigma <- find var =<< getEnv =<< ask
+                sigma <- zonkType =<< find var =<< getEnv =<< ask
                 coercion <- instSigma sigma exp_ty
                 return $ coercion @@ VarE var
         tcRho' (AppE fun arg) exp_ty = do
@@ -148,7 +148,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsEok var var_ty body'
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sig <- find id =<< getEnv =<< ask
+                        sig <- zonkType =<< find id =<< getEnv =<< ask
                         exp' <- checkClauses clauses sig
                         return (id, exp')
                 body' <- tcRho body exp_ty

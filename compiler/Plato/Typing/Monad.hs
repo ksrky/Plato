@@ -33,6 +33,11 @@ data Context = Context
         , conenv :: ConEnv
         }
 
+initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
+initContext = do
+        uniq <- getUniq =<< ask
+        return Context{typenv = initTypEnv, uniq = uniq, conenv = initConEnv}
+
 instance HasUniq Context where
         getUniq = return . uniq
 
@@ -92,9 +97,3 @@ readMetaKv (MetaKv _ ref) = readMIORef ref
 
 writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
-
--- | Context management
-initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
-initContext = do
-        uniq <- getUniq =<< ask
-        return Context{typenv = initTypEnv, uniq = uniq, conenv = initConEnv}

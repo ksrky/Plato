@@ -29,6 +29,7 @@ productTy :: [Type] -> Type
 productTy tys = TyRecord (map (dummyVN,) tys)
 
 recursiveBinds :: [(Name, Term)] -> [(Ident, Type)] -> [(NameInfo, Term, Type)]
+recursiveBinds [] [] = []
 recursiveBinds bnds spcs =
         let spcs' = map (\(id, tyT) -> (nameIdent id, tyT)) spcs
             t = TmFix (TmAbs Dummy (TyRecord spcs') (TmRecord bnds))

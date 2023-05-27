@@ -13,6 +13,7 @@ import Plato.Typing.Env
 import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc
+import Plato.Typing.Zonking
 
 typingDecls ::
         (MonadReader env m, HasTypEnv env, HasUniq env, HasConEnv env, MonadThrow m, MonadIO m) =>
@@ -32,12 +33,12 @@ typingDecls (BindDecl (DatBind id params constrs) : decs) = do
         decs' <- local (modifyEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $ typingDecls decs
         return $ BindDecl (DatBind id params constrs) : decs'
 typingDecls (BindDecl (TypBind id ty) : decs) = do
-        kn <- find id =<< getEnv =<< ask -- tmp: zonking
+        kn <- zonkKind =<< find id =<< getEnv =<< ask
         checkKind ty kn
         decs' <- local (modifyEnv $ extend id kn) $ typingDecls decs
         return $ BindDecl (TypBind id ty) : decs'
 typingDecls (BindDecl (FunBind id clauses) : decs) = do
-        ty <- find id =<< getEnv =<< ask
+        ty <- zonkType =<< find id =<< getEnv =<< ask
         exp <- checkClauses clauses ty
         decs' <- local (modifyEnv $ extend id ty) $ typingDecls decs
         return $ BindDecl (FunBindok id exp) : decs'
@@ -45,6 +46,6 @@ typingDecls (BindDecl (FunBind id clauses) : decs) = do
 typing :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)
 typing (decs, _exps) = do
         ctx <- initContext
-        decs' <- runReaderT (typingDecls decs) ctx
+        decs' <- runReaderT (typingDecls decs >>= mapM zonkDecl) ctx
         -- exptys <- runReaderT (mapM inferType exps) ctx'
         return (decs', []) -- tmp: evals

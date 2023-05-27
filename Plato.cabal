@@ -83,7 +83,6 @@ library
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
-      Plato.Typing.Subst
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen

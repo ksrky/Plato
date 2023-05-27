@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.ElabClause (elabClauses) where
@@ -35,7 +36,20 @@ dataConsof ty = do
         lookupIdent (getTycon ty) =<< getConEnv =<< ask
 
 subst :: LExpr 'TcDone -> Ident -> Ident -> LExpr 'TcDone
-subst = undefined
+subst exp id1 id2 = subst' <$> exp
+    where
+        subst' :: Expr 'TcDone -> Expr 'TcDone
+        subst' (VarE var)
+                | var == id2 = VarE id1
+                | otherwise = VarE var
+        subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
+        subst' (AbsEok var ty body) = AbsEok var ty (subst' <$> body)
+        subst' (TAppE exp tyargs) = TAppE (subst' <$> exp) tyargs
+        subst' (TAbsE qnts body) = TAbsE qnts (subst' <$> body)
+        subst' (LetEok bnds sigs body) =
+                LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
+        subst' (CaseE match alts) =
+                CaseE (subst' <$> match) (map (\(id, exp) -> (id, subst' <$> exp)) alts)
 
 isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True

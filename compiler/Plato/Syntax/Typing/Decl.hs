@@ -6,6 +6,7 @@ module Plato.Syntax.Typing.Decl where
 import Prettyprinter
 
 import Plato.Common.Ident
+import Plato.Common.Utils
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
 import Plato.Syntax.Typing.Kind
@@ -38,6 +39,16 @@ deriving instance Eq (Bind a)
 deriving instance Show (Bind a)
 deriving instance Eq (Decl a)
 deriving instance Show (Decl a)
+instance Numbered (Decl a) where
+        toNumber (SpecDecl TypSpec{}) = 0
+        toNumber (SpecDecl ValSpec{}) = 1
+        toNumber (BindDecl DatBind{}) = 2
+        toNumber (BindDecl TypBind{}) = 3
+        toNumber (BindDecl FunBind{}) = 4
+        toNumber (BindDecl FunBindok{}) = 4
+
+instance Ord (Decl a) where
+        compare x y = compare (toNumber x) (toNumber y)
 
 ----------------------------------------------------------------
 -- Pretty printing
