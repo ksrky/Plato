@@ -45,8 +45,6 @@ typingDecls (BindDecl (FunBind id clauses) : decs) = do
         return $ BindDecl (FunBindok id exp) : decs'
 
 typing :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)
-typing (decs, _exps) = do
+typing decs = do
         ctx <- initContext
-        decs' <- runReaderT (typingDecls decs >>= mapM zonkDecl) ctx
-        -- exptys <- runReaderT (mapM inferType exps) ctx'
-        return (decs', []) -- tmp: evals
+        runReaderT (typingDecls decs >>= mapM zonkDecl) ctx

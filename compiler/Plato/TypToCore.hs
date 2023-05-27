@@ -159,7 +159,6 @@ elabDecls decs = do
         elabDecls' rest
 
 typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Command]
-typ2core (decs, _exps) = do
-        let cmds1 = runReader (elabDecls decs) initCoreEnv
-        -- cmds2 = runReader (mapM ((C.Eval <$>) . elabExpr . unLoc) exps) initCoreEnv -- tmp: evals
-        return cmds1 -- ++ cmds2
+typ2core decs = do
+        let cmds = runReader (elabDecls decs) initCoreEnv
+        return cmds

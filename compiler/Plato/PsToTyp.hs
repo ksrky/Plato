@@ -138,5 +138,4 @@ instance HasScope Context where
 ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m (T.Program 'T.TcUndone)
 ps2typ tdecs = do
         uniq <- getUniq =<< ask
-        decs <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)
-        return (decs, [])
+        runReaderT (elabTopDecls tdecs) (Context uniq initScope)

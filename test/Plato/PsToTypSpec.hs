@@ -67,7 +67,7 @@ spec = do
                         test_file "test04.plt"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                ([_, BindDecl (FunBind _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])], _) ->
+                                                [_, BindDecl (FunBind _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])] ->
                                                         check [(f, f'), (x, x')]
                                                 _ -> False
                                         )
