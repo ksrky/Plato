@@ -77,8 +77,4 @@ checkKind (L sp ty) exp_kn = case ty of
                 arg_kn <- newKnVar
                 checkKind fun (ArrK arg_kn exp_kn)
                 checkKind arg arg_kn
-        AbsT var var_kn body -> do
-                body_kn <- newKnVar
-                unify sp exp_kn (ArrK var_kn body_kn)
-                local (modifyEnv $ extend var var_kn) $ checkKind body body_kn
         MetaT{} -> unreachable "Plato.KindInfer.Typ.checkKind received MetaT"

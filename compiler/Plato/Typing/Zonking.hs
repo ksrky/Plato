@@ -39,8 +39,6 @@ zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `travers
 zonkType (AllT qnts ty) = AllT <$> zonkQuants qnts <*> zonkType `traverse` ty
 zonkType (AppT fun arg) = do
         AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (AbsT var kn body) = do
-        AbsT var <$> zonkKind kn <*> zonkType `traverse` body
 zonkType (MetaT tv) = do
         mb_ty <- readMetaTv tv
         case mb_ty of

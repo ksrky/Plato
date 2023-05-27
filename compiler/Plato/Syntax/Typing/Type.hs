@@ -31,7 +31,6 @@ data Type
         | ArrT LType LType
         | AllT [Quant] (Located Rho)
         | AppT LType LType
-        | AbsT Ident Kind LType
         | MetaT MetaTv
         deriving (Eq, Show)
 
@@ -82,7 +81,6 @@ instance Pretty Type where
         pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
         pretty (AllT qnts body) = hsep [braces (prQuants qnts), pretty body]
         pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
-        pretty (AbsT var ann body) = hsep [backslash <> pretty var <> pretty ann] <> dot <+> pretty body
         pretty (MetaT tv) = pretty tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)

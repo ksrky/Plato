@@ -73,47 +73,12 @@ elabType (T.AllT qnts ty) = do
         tyT2 <- extendNameListWith (map (nameIdent . fst) args) $ elabType (unLoc ty)
         return $ foldr (\(x, knK1) -> C.TyAll (C.mkInfo x) knK1) tyT2 args
 elabType (T.AppT ty1 ty2) = C.TyApp <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType (T.AbsT tv kn body) = do
-        tyT2 <- extendNameWith (nameIdent tv) $ elabType (unLoc body)
-        return $ C.TyAbs (C.mkInfo tv) (elabKind kn) tyT2
 elabType T.MetaT{} = unreachable "Zonking failed"
 
 elabKind :: HasCallStack => T.Kind -> C.Kind
 elabKind T.StarK = C.KnStar
 elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
 elabKind T.MetaK{} = unreachable "elabKind passed T.MetaK"
-
-{-
-elabBind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Bind 'T.TcDone -> m [C.Command]
-elabBind T.FunBindok{} = return []
-elabBind (T.TypBind id ty) = do
-        tyT <- elabType (unLoc ty)
-        knK <- getKind =<< getVarIndex (nameIdent id)
-        return [C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK)]
-elabBind (T.DatBind id params constrs) = do
-        knK <- getKind =<< getVarIndex (nameIdent id)
-        constrs' <- extendNameWith (nameIdent id) $ do
-                mapM (\(con, ty) -> (con,) <$> elabType (T.AllT params ty)) constrs
-        let tyT_tmp =
-                foldr
-                        (\(tv, kn) -> C.TyAbs (C.mkInfo $ T.unTyVar tv) (elabKind kn))
-                        (constrsToVariant constrs')
-                        params
-            tyT = C.TyRec (C.mkInfo id) knK tyT_tmp
-        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds constrs'
-
-elabSpec :: (MonadReader ctx m, HasCoreEnv ctx) => T.Spec -> m [C.Command]
-elabSpec (T.ValSpec id ty) = do
-        tyT <- elabType (unLoc ty)
-        return [C.Bind (C.mkInfo id) (C.TmVarBind tyT)]
-elabSpec (T.TypSpec id kn) = do
-        let knK = elabKind kn
-        return []
-
-elabDecl :: (MonadReader ctx m, HasCoreEnv ctx) => T.Decl 'T.TcDone -> m [C.Command]
-elabDecl (T.BindDecl bnd) = elabBind bnd
-elabDecl (T.SpecDecl spc) = elabSpec spc
--}
 
 elabDecls :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
 elabDecls decs = do

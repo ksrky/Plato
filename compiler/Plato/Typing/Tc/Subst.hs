@@ -2,7 +2,6 @@ module Plato.Typing.Tc.Subst (subst, apply) where
 
 import Data.Map.Strict qualified as M
 
-import Plato.Common.Error
 import Plato.Syntax.Typing
 
 type Subst = M.Map TyVar Tau
@@ -16,5 +15,4 @@ apply _ ty@ConT{} = ty
 apply s (ArrT arg res) = ArrT (apply s <$> arg) (apply s <$> res)
 apply s (AllT tvs body) = AllT tvs $ apply (foldr (\(tv, _) -> M.delete tv) s tvs) <$> body
 apply s (AppT fun arg) = AppT (apply s <$> fun) (apply s <$> arg)
-apply _ AbsT{} = unreachable ""
 apply _ ty@MetaT{} = ty
