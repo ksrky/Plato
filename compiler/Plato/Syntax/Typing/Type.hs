@@ -58,7 +58,7 @@ instance Eq MetaTv where
         (MetaTv u1 _) == (MetaTv u2 _) = u1 == u2
 
 instance Show MetaTv where
-        show (MetaTv u _) = "$" ++ show u
+        show (MetaTv u _) = show u
 
 instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
@@ -70,6 +70,9 @@ instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
         pretty (SkolemTv id) = pretty (nameIdent id) <> pretty (stamp id)
 
+instance Pretty MetaTv where
+        pretty (MetaTv u _) = pretty u
+
 prQuants :: [Quant] -> Doc ann
 prQuants qnts = hsep (map (\(tv, kn) -> parens $ hcat [pretty tv, colon, pretty kn]) qnts)
 
@@ -77,10 +80,10 @@ instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
         pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
-        pretty (AllT qnts body) = hcat [braces (prQuants qnts), pretty body]
+        pretty (AllT qnts body) = hsep [braces (prQuants qnts), pretty body]
         pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
         pretty (AbsT var ann body) = hsep [backslash <> pretty var <> pretty ann] <> dot <+> pretty body
-        pretty (MetaT tv) = viaShow tv
+        pretty (MetaT tv) = pretty tv
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
 

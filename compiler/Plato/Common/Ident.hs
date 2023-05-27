@@ -15,10 +15,13 @@ import Plato.Common.Uniq
 
 -- | Identifier
 data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
-        deriving (Ord, Show)
+        deriving (Show)
 
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2
+
+instance Ord Ident where
+        compare id1 id2 = compare (stamp id1) (stamp id2)
 
 instance HasLoc Ident where
         getLoc = spanIdent
@@ -46,4 +49,4 @@ type IdentMap a = M.Map Ident a
 lookupIdent :: MonadThrow m => Ident -> M.Map Ident a -> m a
 lookupIdent id idmap = case M.lookup id idmap of
         Just val -> return val
-        Nothing -> throwLocErr (spanIdent id) $ hsep ["Not in scope ", squotes $ pretty id]
+        Nothing -> throwLocErr (spanIdent id) $ hsep ["Unknown identifier", squotes $ pretty id]

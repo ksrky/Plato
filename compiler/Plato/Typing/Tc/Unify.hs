@@ -61,7 +61,7 @@ unify sp = unify'
                 tvs2 <- getMetaTvs ty2
                 when (tv1 `S.member` tvs2) $
                         throwLocErr sp $
-                                hsep ["Infinite type:", squotes $ pretty ty2]
+                                hsep ["Infinite type:", squotes $ pretty tv1, "~", squotes $ pretty ty2]
 
         badType :: Tau -> Bool
         badType (VarT (BoundTv _)) = True

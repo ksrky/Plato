@@ -35,13 +35,14 @@ recursiveBinds bnds spcs =
         let spcs' = map (\(id, tyT) -> (nameIdent id, tyT)) spcs
             t = TmFix (TmAbs Dummy (TyRecord spcs') (TmRecord bnds))
             rbnd = (Dummy, t, TyRecord spcs')
-         in foldl
-                ( \acc (idi, tyTi) ->
-                        let i = length acc - 1
-                         in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
-                )
-                [rbnd]
-                spcs
+         in reverse $
+                foldl
+                        ( \acc (idi, tyTi) ->
+                                let i = length acc - 1
+                                 in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
+                        )
+                        [rbnd]
+                        spcs
 
 constrsToVariant :: [(Ident, Type)] -> Type
 constrsToVariant constrs = TySum (map ((productTy . split []) . snd) constrs)

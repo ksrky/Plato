@@ -99,7 +99,7 @@ elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThr
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        exp' <- elabExpr `traverse` exp
+        exp' <- local (extendListScope $ allIdentsFromPats pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.Decl] -> m [T.Decl 'T.TcUndone]

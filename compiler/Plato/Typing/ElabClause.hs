@@ -55,7 +55,7 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
-isVar ([], _) = unreachable ""
+isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
@@ -67,7 +67,7 @@ match ::
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
 match [var] [] = return $ noLoc (CaseE (noLoc $ VarE $ fst var) [])
-match _ [] = throwError "absurd type"
+match _ [] = throwError "sequence of absurd type"
 match [] (([], exp) : _) = return exp -- note: clauses should be singleton if not redundant
 match [] _ = unreachable "Number of variables and patterns are not same"
 match (u : us) clauses

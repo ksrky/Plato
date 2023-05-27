@@ -4,6 +4,7 @@
 module Plato.Typing.Zonking (
         zonkExpr,
         zonkType,
+        zonkQuants,
         zonkKind,
         zonkDecl,
 ) where

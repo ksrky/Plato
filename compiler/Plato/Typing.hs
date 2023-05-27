@@ -39,9 +39,9 @@ typingDecls (BindDecl (TypBind id ty) : decs) = do
         decs' <- local (modifyEnv $ extend id kn) $ typingDecls decs
         return $ BindDecl (TypBind id ty) : decs'
 typingDecls (BindDecl (FunBind id clauses) : decs) = do
-        ty <- zonkType =<< find id =<< getEnv =<< ask
-        exp <- checkClauses clauses ty
-        decs' <- local (modifyEnv $ extend id ty) $ typingDecls decs
+        sigma <- zonkType =<< find id =<< getEnv =<< ask
+        exp <- checkClauses clauses sigma
+        decs' <- local (modifyEnv $ extend id sigma) $ typingDecls decs
         return $ BindDecl (FunBindok id exp) : decs'
 
 typing :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)

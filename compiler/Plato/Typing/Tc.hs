@@ -70,9 +70,9 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         unless (length pats == length arg_tys) $
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        envs <- zipWithM checkPat pats arg_tys
+        subst <- concat <$> zipWithM checkPat pats arg_tys
         _ <- instPatSigma res_ty exp_ty
-        return (concat envs)
+        return subst
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -130,13 +130,13 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' (VarE var) exp_ty = do
                 sigma <- zonkType =<< find var =<< getEnv =<< ask
                 coercion <- instSigma sigma exp_ty
-                return $ coercion @@ VarE var
+                return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
                 (arg_ty, res_ty) <- unifyFun sp fun_ty
                 arg' <- checkSigma arg arg_ty
                 coercion <- instSigma res_ty exp_ty
-                return $ coercion @@ AppE fun' arg'
+                return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun sp exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
@@ -148,8 +148,8 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsEok var var_ty body'
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sig <- zonkType =<< find id =<< getEnv =<< ask
-                        exp' <- checkClauses clauses sig
+                        sigma <- zonkType =<< find id =<< getEnv =<< ask
+                        exp' <- checkClauses clauses sigma
                         return (id, exp')
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
@@ -160,7 +160,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         subst <- checkPat pat match_ty
                         (body', body_ty) <- local (modifyEnv $ extendList subst) $ inferRho body
                         coer <- instSigma body_ty exp_ty
-                        return (pat, (coer @@) <$> body')
+                        return (pat, (coer .>) <$> body')
                 return $ CaseE match' alts'
 
 -- | Type check of Sigma
@@ -172,7 +172,7 @@ inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
         exp'' <- zonkExpr `traverse` exp'
-        return ((genTrans tvs @@) <$> exp'', sigma)
+        return ((genTrans tvs .>) <$> exp'', sigma)
 
 checkSigma ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
@@ -186,23 +186,26 @@ checkSigma exp sigma = do
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ throwError "Type not polymorphic enough"
-        return $ (\e -> coercion @@ genTrans skol_tvs @@ e) <$> exp'
+        return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
 
 -- | Check clauses
 checkClauses ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadThrow m) =>
         [Clause 'TcUndone] ->
-        Type ->
+        Sigma ->
         m (LExpr 'TcDone)
-checkClauses clauses exp_ty = do
-        let (pat_tys, res_ty) = split [] exp_ty
+checkClauses clauses sigma_ty = do
+        (coer, rho_ty) <- instantiate sigma_ty
+        let (pat_tys, res_ty) = split [] rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
-                substs <- zipWithM checkPat pats pat_tys
-                body' <- local (modifyEnv $ extendList $ concat substs) $ checkSigma body res_ty
+                subst <- concat <$> zipWithM checkPat pats pat_tys
+                body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
                 return (pats, body')
-        elabClauses pat_tys clauses'
+        exp <- elabClauses pat_tys clauses'
+        return $ (coer .>) <$> exp
     where
         split :: [Sigma] -> Rho -> ([Sigma], Tau)
+        split acc ty | length acc == length (fst $ head clauses) = (acc, ty)
         split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
         split acc tau = (acc, tau)
 
@@ -227,7 +230,7 @@ subsCheckRho :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Sig
 subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
-        return (coercion2 >.> coercion1)
+        return (coercion2 <.> coercion1)
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun NoSpan rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
