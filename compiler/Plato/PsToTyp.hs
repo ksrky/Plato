@@ -45,7 +45,7 @@ elabExpr (P.OpE left op right) = do
 elabExpr (P.LamE pats body) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        body' <- local (extendListScope (allIdentsFromPats pats)) $ elabExpr `traverse` body
+        body' <- local (extendListScope (getDomain pats)) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.TcUndone -> T.LPat -> m (T.LExpr 'T.TcUndone)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
@@ -58,6 +58,14 @@ elabExpr (P.LetE fdecs body) = do
                 (bnds, spcs) <- elabFunDecls fdecs
                 body' <- elabExpr `traverse` body
                 return $ T.LetE bnds spcs body'
+elabExpr (P.CaseE match alts) = do
+        match' <- elabExpr `traverse` match
+        alts' <- forM alts $ \(pat, body) -> do
+                pat' <- elabPat `traverse` pat
+                body' <- local (extendListScope $ getDomain pat) (elabExpr `traverse` body)
+                return (pat', body')
+
+        return $ T.CaseE match' alts'
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader env m, HasScope env, MonadThrow m) => P.Pat -> m T.Pat
@@ -99,7 +107,7 @@ elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThr
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        exp' <- local (extendListScope $ allIdentsFromPats pats) $ elabExpr `traverse` exp
+        exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.Decl] -> m [T.Decl 'T.TcUndone]

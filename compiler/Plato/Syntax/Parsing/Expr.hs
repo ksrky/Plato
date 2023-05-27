@@ -23,6 +23,7 @@ data Expr
         | OpE LExpr Ident LExpr
         | LamE [LPat] LExpr
         | LetE [LFunDecl] LExpr
+        | CaseE LExpr [(LPat, LExpr)]
         | FactorE LExpr
         deriving (Eq, Show)
 
@@ -57,6 +58,13 @@ instance Pretty Expr where
                         , braces $ concatWith (surround $ semi <> space) (map pretty decs)
                         , "in"
                         , pretty body
+                        ]
+        pretty (CaseE match alts) =
+                hsep
+                        [ "case"
+                        , pretty match
+                        , "of"
+                        , braces $ hsep (map (\(pat, body) -> hsep [pretty pat, "->", pretty body]) alts)
                         ]
         pretty (FactorE exp) = pretty exp
 

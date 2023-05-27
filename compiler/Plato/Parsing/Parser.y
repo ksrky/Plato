@@ -165,6 +165,9 @@ lexpr       :: { LExpr }
             -- | Let expression
             | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
             | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
+            -- | Case expression
+            | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
+            | 'case' expr 'of' 'v{' alts 'v}'       { sL $1 $6 (CaseE $2 $5) }
             -- | Function application
             | fexpr                                 { $1 }
 

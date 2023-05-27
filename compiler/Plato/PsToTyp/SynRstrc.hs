@@ -44,7 +44,7 @@ paramNamesUnique ids = do
 
 paramPatsUnique :: MonadThrow m => [LPat] -> m ()
 paramPatsUnique pats = do
-        let ids = allIdentsFromPats pats
+        let ids = getDomain pats
         paramNamesUnique ids
 
 -- | RULE 3: Data constructor name uniqueness

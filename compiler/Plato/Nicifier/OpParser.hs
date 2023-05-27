@@ -47,6 +47,10 @@ instance OpParser LExpr where
                                 decs' <- opParse decs
                                 body' <- opParse body
                                 return $ LetE decs' body'
+                        CaseE match alts -> do
+                                match' <- opParse match
+                                alts' <- mapM (\(p, e) -> (p,) <$> opParse e) alts
+                                return $ CaseE match' alts'
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where
