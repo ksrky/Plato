@@ -140,12 +140,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun sp exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
-                return $ AbsEok var var_ty body'
+                return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
                 var_ty <- newTyVar
                 (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsEok var var_ty body'
+                return $ AbsEok var var_ty (unLoc body')
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
                         sigma <- zonkType =<< find id =<< getEnv =<< ask

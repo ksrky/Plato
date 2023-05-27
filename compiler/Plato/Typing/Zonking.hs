@@ -17,11 +17,11 @@ import Plato.Typing.Monad
 zonkExpr :: MonadIO m => Expr 'TcDone -> m (Expr 'TcDone)
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
-zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr `traverse` body
-zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr `traverse` exp <*> mapM zonkType tys
+zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr body
+zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr exp <*> mapM zonkType tys
 zonkExpr (TAbsE qnts body) = do
         qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonkKind kn) qnts
-        TAbsE qnts' <$> zonkExpr `traverse` body
+        TAbsE qnts' <$> zonkExpr body
 zonkExpr (LetEok bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (id,) <$> zonkExpr `traverse` exp) bnds
         spcs' <- mapM (\(id, ty) -> (id,) <$> zonkType `traverse` ty) spcs

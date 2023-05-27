@@ -43,9 +43,9 @@ subst exp id1 id2 = subst' <$> exp
                 | var == id2 = VarE id1
                 | otherwise = VarE var
         subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
-        subst' (AbsEok var ty body) = AbsEok var ty (subst' <$> body)
-        subst' (TAppE exp tyargs) = TAppE (subst' <$> exp) tyargs
-        subst' (TAbsE qnts body) = TAbsE qnts (subst' <$> body)
+        subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
+        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
+        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
         subst' (LetEok bnds sigs body) =
                 LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
         subst' (CaseE match alts) =

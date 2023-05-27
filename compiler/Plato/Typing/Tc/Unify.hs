@@ -33,6 +33,9 @@ unify sp = unify'
         unify' (ArrT arg1 res1) (ArrT arg2 res2) = do
                 unify' (unLoc arg1) (unLoc arg2)
                 unify' (unLoc res1) (unLoc res2)
+        unify' (AppT fun1 arg1) (AppT fun2 arg2) = do
+                unify' (unLoc fun1) (unLoc fun2)
+                unify' (unLoc arg1) (unLoc arg2)
         unify' (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
         unify' (MetaT tv) ty = unifyVar tv ty
         unify' ty (MetaT tv) = unifyVar tv ty

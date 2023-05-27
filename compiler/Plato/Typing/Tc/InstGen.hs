@@ -27,7 +27,7 @@ instantiate (AllT tvs tau) = do
         return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
 instantiate ty = return (Id, ty)
 
--- | Soklemisation
+-- | Skolemisation
 skolemise ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
         Sigma ->

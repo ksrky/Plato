@@ -17,5 +17,4 @@ apply s (ArrT arg res) = ArrT (apply s <$> arg) (apply s <$> res)
 apply s (AllT tvs body) = AllT tvs $ apply (foldr (\(tv, _) -> M.delete tv) s tvs) <$> body
 apply s (AppT fun arg) = AppT (apply s <$> fun) (apply s <$> arg)
 apply _ AbsT{} = unreachable ""
--- apply s (AbsT var ann body) = AbsT var ann (apply s <$> body)
 apply _ ty@MetaT{} = ty

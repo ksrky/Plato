@@ -27,9 +27,9 @@ data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr a -> LExpr a -> Expr a
         AbsE :: Ident -> LExpr 'TcUndone -> Expr 'TcUndone
-        AbsEok :: Ident -> Type -> LExpr 'TcDone -> Expr 'TcDone
-        TAppE :: LExpr 'TcDone -> [Type] -> Expr 'TcDone
-        TAbsE :: [Quant] -> LExpr 'TcDone -> Expr 'TcDone
+        AbsEok :: Ident -> Type -> Expr 'TcDone -> Expr 'TcDone
+        TAppE :: Expr 'TcDone -> [Type] -> Expr 'TcDone
+        TAbsE :: [Quant] -> Expr 'TcDone -> Expr 'TcDone
         LetE :: [(Ident, [Clause 'TcUndone])] -> [(Ident, LType)] -> LExpr 'TcUndone -> Expr 'TcUndone
         LetEok :: [(Ident, LExpr 'TcDone)] -> [(Ident, LType)] -> LExpr 'TcDone -> Expr 'TcDone
         CaseE :: LExpr a -> [(LPat, LExpr a)] -> Expr a
