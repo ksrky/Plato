@@ -2,6 +2,7 @@ module Plato.Core.Elab where
 
 import Plato.Common.Ident
 import Plato.Common.Name
+import Plato.Core.Calc
 import Plato.Syntax.Core
 
 fixComb :: Type -> Kind -> Term
@@ -37,7 +38,7 @@ recursiveBinds bnds spcs =
          in foldl
                 ( \acc (idi, tyTi) ->
                         let i = length acc - 1
-                         in (mkInfo idi, TmProj (TmVar i Dummy) i, tyTi) : acc
+                         in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
                 )
                 [rbnd]
                 spcs

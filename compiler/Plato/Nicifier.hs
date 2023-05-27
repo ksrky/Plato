@@ -40,4 +40,4 @@ nicifyDecls decs = do
                         decs
 
 dropFixDecl :: [LFunDecl] -> [LFunDecl]
-dropFixDecl = filter (\case (L _ FixDecl{}) -> True; _ -> False)
+dropFixDecl = filter (\case (L _ FixDecl{}) -> False; _ -> True)

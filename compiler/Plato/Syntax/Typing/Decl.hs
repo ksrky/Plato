@@ -21,7 +21,8 @@ data Bind (a :: TcFlag) where
         FunBind :: Ident -> [Clause 'TcUndone] -> Bind 'TcUndone
         FunBindok :: Ident -> LExpr 'TcDone -> Bind 'TcDone
         TypBind :: Ident -> LType -> Bind a
-        DatBind :: Ident -> [Quant] -> [(Ident, LType)] -> Bind a
+        DatBind :: Ident -> [Quant] -> [(Ident, LType)] -> Bind 'TcUndone
+        DatBindok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Bind 'TcDone
 
 data Spec
         = ValSpec Ident LType
@@ -43,6 +44,7 @@ instance Numbered (Decl a) where
         toNumber (SpecDecl TypSpec{}) = 0
         toNumber (SpecDecl ValSpec{}) = 1
         toNumber (BindDecl DatBind{}) = 2
+        toNumber (BindDecl DatBindok{}) = 2
         toNumber (BindDecl TypBind{}) = 3
         toNumber (BindDecl FunBind{}) = 4
         toNumber (BindDecl FunBindok{}) = 4
@@ -64,6 +66,13 @@ instance Pretty (Bind a) where
         pretty (FunBindok id exp) = hsep [pretty id, equals, pretty exp]
         pretty (TypBind id ty) = hsep [pretty id, equals, pretty ty]
         pretty (DatBind id params constrs) =
+                hsep
+                        [ "data"
+                        , hsep (pretty id : [prQuants params])
+                        , "where"
+                        , vsep (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
+                        ]
+        pretty (DatBindok id _ params constrs) =
                 hsep
                         [ "data"
                         , hsep (pretty id : [prQuants params])

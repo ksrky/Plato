@@ -59,10 +59,12 @@ data Binding
         | TyVarBind !Kind
         | TmAbbBind !Term !Type
         | TyAbbBind !Type !Kind
+        deriving (Show)
 
 data Command
         = Bind NameInfo !Binding
         | Eval !Term
+        deriving (Show)
 
 instance Pretty Term where
         pretty (TmVar i _) = pretty i
@@ -97,8 +99,8 @@ instance Pretty Binding where
         pretty NameBind = emptyDoc
         pretty (TmVarBind tyT) = colon <> pretty tyT
         pretty (TyVarBind knK) = colon <> pretty knK
-        pretty (TmAbbBind t tyT) = equals <> pretty t <> pretty tyT
-        pretty (TyAbbBind tyT knK) = equals <> pretty tyT <> pretty knK
+        pretty (TmAbbBind t _) = equals <> pretty t
+        pretty (TyAbbBind tyT _) = equals <> pretty tyT
 
 instance Pretty Command where
         pretty (Bind _ bind) = pretty bind

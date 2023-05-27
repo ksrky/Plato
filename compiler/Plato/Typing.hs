@@ -30,8 +30,9 @@ typingDecls (SpecDecl (ValSpec id ty) : decs) = do
 typingDecls (BindDecl (DatBind id params constrs) : decs) = do
         let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
+        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         decs' <- local (modifyEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $ typingDecls decs
-        return $ BindDecl (DatBind id params constrs) : decs'
+        return $ BindDecl (DatBindok id kn params constrs) : decs'
 typingDecls (BindDecl (TypBind id ty) : decs) = do
         kn <- zonkKind =<< find id =<< getEnv =<< ask
         checkKind ty kn

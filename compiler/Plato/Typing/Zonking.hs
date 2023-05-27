@@ -9,7 +9,6 @@ module Plato.Typing.Zonking (
 ) where
 
 import Control.Monad.IO.Class
-import Control.Monad.Reader
 
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
@@ -20,7 +19,7 @@ zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `travers
 zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr `traverse` body
 zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr `traverse` exp <*> mapM zonkType tys
 zonkExpr (TAbsE qnts body) = do
-        qnts' <- forM qnts $ \(tv, kn) -> (tv,) <$> zonkKind kn
+        qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonkKind kn) qnts
         TAbsE qnts' <$> zonkExpr `traverse` body
 zonkExpr (LetEok bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (id,) <$> zonkExpr `traverse` exp) bnds
@@ -31,9 +30,6 @@ zonkExpr (CaseE match alts) = do
         match' <- zonkExpr `traverse` match
         alts' <- mapM (\(pats, exp) -> (pats,) <$> zonkExpr `traverse` exp) alts
         return $ CaseE match' alts'
-
--- zonkClause :: MonadIO m => Clause -> m Clause
--- zonkClause (pats, exp) = (pats,) <$> zonkExpr `traverse` exp
 
 zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)
@@ -76,9 +72,10 @@ zonkBind :: MonadIO m => Bind 'TcDone -> m (Bind 'TcDone)
 zonkBind (FunBindok id exp) =
         FunBindok id <$> zonkExpr `traverse` exp
 zonkBind (TypBind id ty) = TypBind id <$> zonkType `traverse` ty
-zonkBind (DatBind id params constrs) =
-        DatBind id
-                <$> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
+zonkBind (DatBindok id sig params constrs) =
+        DatBindok id
+                <$> zonkKind sig
+                <*> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
                 <*> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) constrs
 
 zonkSpec :: MonadIO m => Spec -> m Spec
