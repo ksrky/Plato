@@ -36,6 +36,18 @@ spec = do
                                                , "not : Bool -> Bool"
                                                , "not where {b -> case b of {True -> False; False -> True}}"
                                                ]
+                it "test08.plt" $ do
+                        parseProg "test08.plt"
+                                `shouldReturn` [ "data Nat where {Zero : Nat; Succ : Nat -> Nat}"
+                                               , "infixl 6 +"
+                                               , "infixl 7 *"
+                                               , "+ : Nat -> Nat -> Nat"
+                                               , "+ where {Zero n -> n}"
+                                               , "+ where {(Succ m) n -> Succ ((m + n))}"
+                                               , "* : Nat -> Nat -> Nat"
+                                               , "* where {Zero n -> Zero}"
+                                               , "* where {(Succ m) n -> (n + (m * n))}"
+                                               ]
 
 parseExpr :: T.Text -> IO String
 parseExpr inp = do

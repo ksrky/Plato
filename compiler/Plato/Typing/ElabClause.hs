@@ -15,7 +15,6 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Monad
-import Prettyprinter
 
 elabClauses ::
         (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>

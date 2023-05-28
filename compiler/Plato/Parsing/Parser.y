@@ -127,7 +127,8 @@ fundecl     :: { LFunDecl }
             | '(' varop ')' ':' type                { sL $1 $5 (FunSpec $2 $5) }
             -- Function definition
             | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
-            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) } -- tmp: synRestrc #patrow >= 2
+            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) } -- tmp: synRstrc #patrow >= 2
+            | pat varop pat '=' expr                { sL $1 $5 (FunBind $2 [([$1, $3], $5)]) }             
             | fixdecl                               { $1 }
 
 fixdecl     :: { LFunDecl }
@@ -144,8 +145,8 @@ type        :: { LType }
             | btype                                 { $1 }
 
 btype       :: { LType }
-            : {-btype atype                           { sL $1 $2 (AppT $1 $2) }
-            |-} atype                                 { $1 }
+            : btype atype                           { sL $1 $2 (AppT $1 $2) }
+            | atype                                 { $1 }
 
 atype       :: { LType }
             : '(' type ')'                          { $2 }
