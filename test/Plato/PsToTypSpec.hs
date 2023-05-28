@@ -63,7 +63,7 @@ spec = do
                                         )
                                     )
         describe "Scope checking of aa file" $ do
-                it "test02.plt" $ do
+                it "test04.plt" $ do
                         test_file "test04.plt"
                                 >>= ( `shouldSatisfy`
                                         ( \case

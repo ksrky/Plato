@@ -26,6 +26,16 @@ spec = do
                         parseProg "test01.plt" `shouldReturn` ["data Bool where {True : Bool; False : Bool}"]
                 it "test02.plt" $ do
                         parseProg "test02.plt" `shouldReturn` ["id : {a} a -> a", "id where {-> \\x -> x}"]
+                it "test03.plt" $ do
+                        parseProg "test03.plt" `shouldReturn` ["data Nat where {Zero : Nat; Succ : Nat -> Nat}"]
+                it "test04.plt" $ do
+                        parseProg "test04.plt" `shouldReturn` ["g : {a b} (a -> b) -> a -> b", "g where {f x -> f x}"]
+                it "test05.plt" $ do
+                        parseProg "test05.plt"
+                                `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
+                                               , "not : Bool -> Bool"
+                                               , "not where {b -> case b of {True -> False False -> True}}"
+                                               ]
 
 parseExpr :: T.Text -> IO String
 parseExpr inp = do

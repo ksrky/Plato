@@ -1,6 +1,7 @@
 module Plato.Typing.Tc.Unify (
         unify,
         unifyFun,
+        unifyFuns,
 ) where
 
 import Control.Exception.Safe
@@ -70,10 +71,22 @@ unify sp = unify'
         badType (VarT (BoundTv _)) = True
         badType _ = False
 
-unifyFun :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Span -> Rho -> m (Sigma, Rho)
-unifyFun _ (ArrT arg res) = return (unLoc arg, unLoc res)
-unifyFun err_sp tau = do
+unifyFun :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Rho -> m (Sigma, Rho)
+unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
+unifyFun tau = do
         arg_ty <- newTyVar
         res_ty <- newTyVar
-        unify err_sp tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        unify NoSpan tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         return (arg_ty, res_ty)
+
+unifyFuns :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Int -> Rho -> m ([Sigma], Rho)
+unifyFuns 0 rho = return ([], rho)
+unifyFuns n (ArrT arg res) = do
+        (args', res') <- unifyFuns (n - 1) (unLoc res)
+        return (unLoc arg : args', res')
+unifyFuns n tau = do
+        arg_ty <- newTyVar
+        res_ty <- newTyVar
+        unify NoSpan tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        (args', res') <- unifyFuns (n - 1) res_ty
+        return (arg_ty : args', res')

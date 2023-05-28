@@ -120,7 +120,7 @@ elabDecls (P.DataD id params constrs : rest) = do
         constrs' <-
                 local (extendListScope $ id : params) $
                         mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
-        rest' <- local (extendScope id) $ elabDecls rest
+        rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
         sig <- newKnVar
         return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
 elabDecls (P.FuncD fundecs : rest) = do

@@ -133,12 +133,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- unifyFun sp fun_ty
+                (arg_ty, res_ty) <- unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
                 coercion <- instSigma res_ty exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
-                (var_ty, body_ty) <- unifyFun sp exp_ty
+                (var_ty, body_ty) <- unifyFun exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
@@ -196,7 +196,8 @@ checkClauses ::
         m (LExpr 'TcDone)
 checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
-        let (pat_tys, res_ty) = split [] rho_ty
+        (pat_tys, res_ty) <- unifyFuns (length (fst $ head clauses)) rho_ty
+        -- let (pat_tys, res_ty) = split [] rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 subst <- concat <$> zipWithM checkPat pats pat_tys
                 body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
@@ -207,11 +208,6 @@ checkClauses clauses sigma_ty = do
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ throwError "Type not polymorphic enough"
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
-    where
-        split :: [Sigma] -> Rho -> ([Sigma], Tau)
-        split acc ty | length acc == length (fst $ head clauses) = (acc, ty)
-        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
-        split acc tau = (acc, tau)
 
 -- | Subsumption checking.  Coersing sigma1 to sigma2.
 subsCheck ::
@@ -236,10 +232,10 @@ subsCheckRho sigma1@AllT{} rho2 = do
         coercion2 <- subsCheckRho rho1 rho2
         return (coercion2 <.> coercion1)
 subsCheckRho rho1 (ArrT a2 r2) = do
-        (a1, r1) <- unifyFun NoSpan rho1
+        (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
 subsCheckRho (ArrT a1 r1) rho2 = do
-        (a2, r2) <- unifyFun NoSpan rho2
+        (a2, r2) <- unifyFun rho2
         subsCheckFun (unLoc a1) (unLoc r1) a2 r2
 subsCheckRho tau1 tau2 = do
         unify NoSpan tau1 tau2
