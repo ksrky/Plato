@@ -1,16 +1,17 @@
-data Pair a b = Pair a b
+data a :,: b where
+    (:,:) : a -> b -> Pair a b
 
-fst : {a b} Pair a b -> a
-fst (Pair x _) = x
+fst : {a b} a :,: b -> a
+fst (x :,: _) = x
 
 snd : {a b} Pair a b -> b
-snd (Pair _ y) = y
+snd (_ :,: y) = y
 
-curry : {a b c} (Pair a b -> c) -> a -> b -> c
-curry f x y = f (Pair x y)
+curry : {a b c} (a :,: b -> c) -> a -> b -> c
+curry f x y = f (x :,: y)
 
-uncurry : {a b c} (a -> b -> c) -> Pair a b -> c
-uncurry (Pair x y) p = f x y
+uncurry : {a b c} (a -> b -> c) -> a :,: b -> c
+uncurry (x :,: y) p = f x y
 
-swap : {a b} Pair a b -> Pair b a
-swap (Pair x y) = Pair y x
+swap : {a b} Pair a b -> b :,: a
+swap (x :,: y) = y :,: x

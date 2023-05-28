@@ -93,13 +93,19 @@ decls       :: { [LDecl] }
 
 decl        :: { LDecl }
             -- Data declaration
-            : 'data' tycon tyvarseq 'where' '{' constrs '}'
-                                                    { sL $1 $7 (DataD $2 $3 $6) }
-            | 'data' tycon tyvarseq 'where' 'v{' constrs close
-                                                    { sL $1 $7 (DataD $2 $3 $6) }
+            : 'data' tycon tyvarseq datarhs
+                                                    { sL $1 $4 (DataD $2 $3 (unLoc $4)) }
+            | 'data' tyvar tyconop tyvar datarhs
+                                                    { sL $1 $5 (DataD $3 [$2, $4] (unLoc $5)) }
+            | 'data' '(' tyconop ')' tyvarseq datarhs
+                                                    { sL $1 $6 (DataD $3 $5 (unLoc $6)) }
             | fundecl                               { L (getLoc $1) (FuncD [$1]) }
 
 -- | Data declaration
+datarhs     :: { Located [(Ident, LType)] }
+            : 'where' '{' constrs '}'               { sL $1 $4 $3 }
+            | 'where' 'v{' constrs close            { sL $1 $4 $3 }
+
 constrs     :: { [(Ident, LType)] }
             : constr ';' constrs                    { $1 : $3 }
             | constr                                { [$1] }
@@ -120,8 +126,8 @@ fundecl     :: { LFunDecl }
             : var ':' type                        	{ sL $1 $3 (FunSpec $1 $3) }
             | '(' varop ')' ':' type                { sL $1 $5 (FunSpec $2 $5) }
             -- Function definition
-            | var patrow '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
-            | '(' varop ')' patrow '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) } -- tmp: synRstrc #patrow >= 2
+            | var patseq '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
+            | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) }
             | pat varop pat '=' expr                { sL $1 $5 (FunBind $2 [([$1, $3], $5)]) }             
             | fixdecl                               { $1 }
 
@@ -156,7 +162,7 @@ expr        :: { LExpr }
 
 lexpr       :: { LExpr }
             -- | Lambda expression
-            : '\\' patrow1 '->' expr                { sL $1 $4 (LamE $2 $4) }
+            : '\\' patseq1 '->' expr                { sL $1 $4 (LamE $2 $4) }
             -- | Let expression
             | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
             | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
@@ -197,7 +203,7 @@ clauses_    :: { [Clause] }
             | {- empty -}                           { [] }
 
 clause      :: { Clause }
-            : patrow1 '->' expr                     { ($1, $3) }
+            : patseq1 '->' expr                     { ($1, $3) }
 
 -----------------------------------------------------------
 -- Patterns
@@ -225,12 +231,12 @@ apat        :: { LPat }
 -----------------------------------------------------------
 -- Sequence
 -----------------------------------------------------------
-patrow      :: { [LPat] }
-            : apat patrow                           { $1 : $2 }
+patseq      :: { [LPat] }
+            : apat patseq                           { $1 : $2 }
             | {- empty -}                           { [] }
 
-patrow1     :: { [LPat] }
-            : apat patrow                           { $1 : $2 }
+patseq1     :: { [LPat] }
+            : apat patseq                           { $1 : $2 }
 
 tyvarseq    :: { [Ident] }
             : tyvar tyvarseq                        { $1 : $2 }
@@ -240,8 +246,8 @@ tyvarseq1   :: { [Ident] }
             : tyvar tyvarseq                        { $1 : $2 }
             | tyvar                                 { [$1] }
 
-typerow     :: { [LType] }
-            : atype typerow                         { $1 : $2 }
+typeseq     :: { [LType] }
+            : atype typeseq                         { $1 : $2 }
             | {- empty -}                           { [] }
 
 -----------------------------------------------------------
@@ -270,6 +276,10 @@ varop       :: { Ident }
 -- | ConOp
 conop       :: { Ident }
             : consym                                {% mkIdent conName $1 }
+
+-- | TyconOp
+tyconop     :: { Ident }
+            : consym                                {% mkIdent tyconName $1 }
 
 -- | Op
 op          :: { Ident }
