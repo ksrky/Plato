@@ -23,7 +23,7 @@ initPlatoEnv =
                 { plt_filePath = ""
                 , plt_directoryPath = ""
                 , plt_uniq = uniqZero
-                , plt_flags = [("ddump-parsing", False)]
+                , plt_flags = [("ddump-parsing", False), ("ddump-core", False)]
                 }
 
 class HasInfo a where

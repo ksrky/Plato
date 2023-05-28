@@ -1,6 +1,4 @@
 module Plato.Typing.Kc (
-        newDataType,
-        getDataType,
         checkKindStar,
         inferDataKind,
         inferKind,
@@ -22,15 +20,6 @@ import Plato.Typing.Env
 import Plato.Typing.Kc.Unify
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
-
-newDataType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Ident -> m (Ident, Kind)
-newDataType id = (id,) <$> newKnVar
-
-getDataType ::
-        (MonadReader ctx m, HasTypEnv ctx, MonadThrow m, MonadIO m) =>
-        Ident ->
-        m Kind
-getDataType id = zonkKind =<< find id =<< getEnv =<< ask
 
 -- asks . (Env.find @Kind) >=> zonkKind
 
@@ -71,27 +60,21 @@ checkKind ::
         m ()
 checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
-                kn <- find id =<< getEnv =<< ask
+                kn <- zonkKind =<< find id =<< getEnv =<< ask
                 unify sp kn exp_kn
         VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
         ConT tc -> do
-                kn <- find tc =<< getEnv =<< ask
+                kn <- zonkKind =<< find tc =<< getEnv =<< ask
                 unify sp kn exp_kn
         ArrT arg res -> do
                 checkKindStar arg
                 checkKindStar res
                 unify sp exp_kn StarK
-        AllT qnts body -> do
-                qnts' <- forM qnts $ \tv -> do
-                        kv <- newKnVar
-                        return (fst tv, kv)
-                local (modifyEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts')) $ checkKind body exp_kn
+        AllT qnts body ->
+                local (modifyEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
+                        checkKind body exp_kn
         AppT fun arg -> do
                 arg_kn <- newKnVar
                 checkKind fun (ArrK arg_kn exp_kn)
                 checkKind arg arg_kn
-        AbsT var var_kn body -> do
-                body_kn <- newKnVar
-                unify sp exp_kn (ArrK var_kn body_kn)
-                local (modifyEnv $ extend var var_kn) $ checkKind body body_kn
         MetaT{} -> unreachable "Plato.KindInfer.Typ.checkKind received MetaT"

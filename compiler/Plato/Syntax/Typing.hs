@@ -15,4 +15,4 @@ import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
 
-type Program a = ([Decl a], [LExpr a])
+type Program a = [Decl a]

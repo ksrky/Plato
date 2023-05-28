@@ -9,6 +9,7 @@ module Plato.Typing.Env (
         ConEnv,
         initConEnv,
         HasConEnv (..),
+        extendConEnv,
 ) where
 
 import Control.Exception.Safe
@@ -83,3 +84,11 @@ class HasConEnv a where
 instance HasConEnv ConEnv where
         getConEnv = return
         modifyConEnv = id
+
+extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env
+extendConEnv id constrs =
+        modifyConEnv $ M.insert id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
+    where
+        split :: [Sigma] -> Rho -> [Sigma]
+        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
+        split acc _ = acc

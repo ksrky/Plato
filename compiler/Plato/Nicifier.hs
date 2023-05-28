@@ -23,7 +23,7 @@ nicifyDecls decs = do
                 L _ FuncD{} : _ -> do
                         let sp = concatSpans (map getLoc ds)
                         fdss <- forM ds $ \case
-                                L _ (FuncD fds) -> dropFixDecl <$> opParse fds
+                                L _ (FuncD fds) -> opParse fds
                                 _ -> return []
                         return [L sp $ FuncD $ concat fdss]
 
@@ -38,6 +38,3 @@ nicifyDecls decs = do
                                 _ -> False
                         )
                         decs
-
-dropFixDecl :: [LFunDecl] -> [LFunDecl]
-dropFixDecl = filter (\case (L _ FixDecl{}) -> True; _ -> False)

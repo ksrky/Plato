@@ -1,6 +1,8 @@
 module Plato.Driver.Pipeline where
 
 import Control.Monad.IO.Class
+import Prettyprinter
+import Prettyprinter.Render.Text
 
 import Plato.Driver.Monad
 import Plato.Nicifier
@@ -10,14 +12,16 @@ import Plato.RunCore
 import Plato.TypToCore
 import Plato.Typing
 
-process :: FilePath -> Plato ()
-process src = do
+compile :: FilePath -> Plato ()
+compile src = do
         pssyn <- parseFile src
-        isFlagOn "ddump-parsing" $ liftIO $ print pssyn
         pssyn' <- nicify pssyn
+        isFlagOn "ddump-parsing" $ liftIO $ putDoc $ pretty pssyn'
         typsyn <- ps2typ pssyn'
         typsyn' <- typing typsyn
+        isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
+        isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
         coresyn' <- runCore coresyn
         liftIO $ mapM_ printResult coresyn'
 

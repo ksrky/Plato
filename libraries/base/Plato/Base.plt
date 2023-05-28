@@ -1,5 +1,3 @@
-module Plato.Base
-
 ($) : {a b} (a -> b) -> a -> b
 f $ x = f x
 

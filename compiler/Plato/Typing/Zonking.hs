@@ -4,12 +4,12 @@
 module Plato.Typing.Zonking (
         zonkExpr,
         zonkType,
+        zonkQuants,
         zonkKind,
         zonkDecl,
 ) where
 
 import Control.Monad.IO.Class
-import Control.Monad.Reader
 
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
@@ -17,11 +17,11 @@ import Plato.Typing.Monad
 zonkExpr :: MonadIO m => Expr 'TcDone -> m (Expr 'TcDone)
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
-zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr `traverse` body
-zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr `traverse` exp <*> mapM zonkType tys
+zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr body
+zonkExpr (TAppE exp tys) = TAppE <$> zonkExpr exp <*> mapM zonkType tys
 zonkExpr (TAbsE qnts body) = do
-        qnts' <- forM qnts $ \(tv, kn) -> (tv,) <$> zonkKind kn
-        TAbsE qnts' <$> zonkExpr `traverse` body
+        qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonkKind kn) qnts
+        TAbsE qnts' <$> zonkExpr body
 zonkExpr (LetEok bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (id,) <$> zonkExpr `traverse` exp) bnds
         spcs' <- mapM (\(id, ty) -> (id,) <$> zonkType `traverse` ty) spcs
@@ -32,9 +32,6 @@ zonkExpr (CaseE match alts) = do
         alts' <- mapM (\(pats, exp) -> (pats,) <$> zonkExpr `traverse` exp) alts
         return $ CaseE match' alts'
 
--- zonkClause :: MonadIO m => Clause -> m Clause
--- zonkClause (pats, exp) = (pats,) <$> zonkExpr `traverse` exp
-
 zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)
 zonkType (ConT tc) = return (ConT tc)
@@ -42,8 +39,6 @@ zonkType (ArrT arg res) = ArrT <$> zonkType `traverse` arg <*> zonkType `travers
 zonkType (AllT qnts ty) = AllT <$> zonkQuants qnts <*> zonkType `traverse` ty
 zonkType (AppT fun arg) = do
         AppT <$> zonkType `traverse` fun <*> zonkType `traverse` arg
-zonkType (AbsT var kn body) = do
-        AbsT var <$> zonkKind kn <*> zonkType `traverse` body
 zonkType (MetaT tv) = do
         mb_ty <- readMetaTv tv
         case mb_ty of
@@ -76,9 +71,10 @@ zonkBind :: MonadIO m => Bind 'TcDone -> m (Bind 'TcDone)
 zonkBind (FunBindok id exp) =
         FunBindok id <$> zonkExpr `traverse` exp
 zonkBind (TypBind id ty) = TypBind id <$> zonkType `traverse` ty
-zonkBind (DatBind id params constrs) =
-        DatBind id
-                <$> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
+zonkBind (DatBindok id sig params constrs) =
+        DatBindok id
+                <$> zonkKind sig
+                <*> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
                 <*> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) constrs
 
 zonkSpec :: MonadIO m => Spec -> m Spec

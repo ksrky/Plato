@@ -19,7 +19,7 @@ uniq2text :: Uniq -> T.Text
 uniq2text (Uniq w) = T.pack $ "$" ++ show w
 
 instance Pretty Uniq where
-        pretty (Uniq w) = "$" <> viaShow w
+        pretty (Uniq w) = viaShow w
 
 class HasUniq a where
         getUniq :: MonadIO m => a -> m (IORef Uniq)

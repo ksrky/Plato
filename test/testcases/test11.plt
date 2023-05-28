@@ -1,11 +1,14 @@
-data Either a b where
-	Left : a -> Either a b
-	Right : b -> Either a b
+data Nat where
+    Zero : Nat
+    Succ : Nat -> Nat
 
-data T where
-	T1 : T
-	T2 : T
+(+) : Nat -> Nat -> Nat
+Zero + n = n
+Succ m + n = Succ (m + n)
 
-case Left T1 of
-    Left x -> x
-    Right y -> y
+infixl 6 +
+
+fib : Nat -> Nat
+fib Zero = Zero
+fib (Succ Zero) = Succ Zero
+fib (Succ (Succ n)) = fib n + fib (Succ n)

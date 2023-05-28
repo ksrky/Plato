@@ -38,10 +38,9 @@ scoping :: (MonadReader r m, HasScope r, MonadThrow m) => Ident -> m Ident
 scoping id = do
         sc <- asks getScope
         case M.lookup (nameIdent id) sc of
-                Just id' -> return id'
+                Just id' -> return id{stamp = stamp id'}
                 Nothing ->
-                        throwLocErr (getLoc id) $
-                                hsep ["Not in scope ", squotes $ pretty id]
+                        throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]
 
 extendScopeFromSeq :: (MonadReader env m, HasScope env, HasDomain a) => [a] -> m env
 extendScopeFromSeq decs = asks (extendListScope (getDomain decs))

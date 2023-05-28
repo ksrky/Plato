@@ -14,6 +14,7 @@ import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Typing.Env
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.Subst
@@ -27,7 +28,7 @@ instantiate (AllT tvs tau) = do
         return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
 instantiate ty = return (Id, ty)
 
--- | Soklemisation
+-- | Skolemisation
 skolemise ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
         Sigma ->
@@ -60,13 +61,8 @@ quantify ::
         m ([Quant], Sigma)
 quantify [] ty = return ([], ty)
 quantify tvs ty = do
-        new_bndrs <- mapM ((BoundTv <$>) . freshIdent . str2tyvarName) $ take (length tvs) allBinders
+        new_bndrs <- mapM (const $ BoundTv <$> freshIdent TyvarName) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
         ty' <- zonkType ty
         qnts <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
         return (qnts, AllT qnts (noLoc ty'))
-
-allBinders :: [String]
-allBinders =
-        [[x] | x <- ['a' .. 'z']]
-                ++ [x : show i | i <- [1 :: Integer ..], x <- ['a' .. 'z']]

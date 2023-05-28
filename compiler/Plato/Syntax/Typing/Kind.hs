@@ -26,7 +26,7 @@ instance Eq MetaKv where
         (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
 
 instance Show MetaKv where
-        show (MetaKv u _) = "$" ++ show u
+        show (MetaKv u _) = "MetaKv " ++ show u
 
 instance Ord MetaKv where
         MetaKv u1 _ `compare` MetaKv u2 _ = u1 `compare` u2
@@ -34,10 +34,13 @@ instance Ord MetaKv where
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
+instance Pretty MetaKv where
+        pretty (MetaKv u _) = "$" <> pretty u
+
 instance Pretty Kind where
         pretty StarK = "*"
         pretty (ArrK kn1 kn2) = prettyKind1 kn1 <+> pretty kn2
-        pretty (MetaK m) = viaShow m
+        pretty (MetaK kv) = pretty kv
 
 prettyKind1 :: Kind -> Doc ann
 prettyKind1 StarK = pretty StarK

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.ElabClause (elabClauses) where
@@ -15,6 +16,7 @@ import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Monad
 
+-- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::
         (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
         [Type] ->
@@ -35,13 +37,26 @@ dataConsof ty = do
         lookupIdent (getTycon ty) =<< getConEnv =<< ask
 
 subst :: LExpr 'TcDone -> Ident -> Ident -> LExpr 'TcDone
-subst = undefined
+subst exp id1 id2 = subst' <$> exp
+    where
+        subst' :: Expr 'TcDone -> Expr 'TcDone
+        subst' (VarE var)
+                | var == id2 = VarE id1
+                | otherwise = VarE var
+        subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
+        subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
+        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
+        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
+        subst' (LetEok bnds sigs body) =
+                LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
+        subst' (CaseE match alts) =
+                CaseE (subst' <$> match) (map (\(id, exp) -> (id, subst' <$> exp)) alts)
 
 isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
-isVar ([], _) = unreachable ""
+isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
@@ -52,8 +67,8 @@ match ::
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
-match [var] [] = return $ noLoc (CaseE (noLoc $ VarE $ fst var) [])
-match _ [] = throwError "absurd type"
+match [(var, ty)] [] = return $ noLoc (AbsEok var ty (CaseE (noLoc $ VarE var) []))
+match _ [] = throwError "sequence of absurd type"
 match [] (([], exp) : _) = return exp -- note: clauses should be singleton if not redundant
 match [] _ = unreachable "Number of variables and patterns are not same"
 match (u : us) clauses
@@ -66,10 +81,11 @@ matchVar ::
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
-matchVar (var, _) rest clauses = do
+matchVar (var, ty) rest clauses = do
         let clauses' = (`map` clauses) $ \case
-                (L _ WildP : pats, exp) -> (pats, exp)
-                (L _ (VarP varp) : pats, exp) -> (pats, subst exp var varp)
+                (L _ WildP : pats, exp) -> (pats, L (getLoc exp) $ AbsEok var ty (unLoc exp))
+                (L _ (VarP varp) : pats, exp) ->
+                        (pats, L (getLoc exp) $ AbsEok var ty (unLoc $ subst exp var varp))
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
@@ -85,7 +101,7 @@ matchCon ::
 matchCon (var, ty) rest clauses = do
         constrs <- dataConsof ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ noLoc $ CaseE (noLoc $ VarE var) alts
+        return $ noLoc $ AbsEok var ty (CaseE (noLoc $ VarE var) alts)
 
 matchClause ::
         (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>

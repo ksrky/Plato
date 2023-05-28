@@ -1,5 +1,5 @@
 module Plato.Typing.Monad (
-        HasTypEnv (..),
+        setLoc,
         newMIORef,
         readMIORef,
         writeMIORef,
@@ -22,27 +22,46 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 
 data Context = Context
-        { typenv :: TypEnv
-        , uniq :: IORef Uniq
-        , conenv :: ConEnv
+        { ctx_typenv :: TypEnv
+        , ctx_uniq :: IORef Uniq
+        , ctx_conenv :: ConEnv
+        , ctx_currentLoc :: Span
         }
 
+initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
+initContext = do
+        uniq <- getUniq =<< ask
+        return
+                Context
+                        { ctx_typenv = initTypEnv
+                        , ctx_uniq = uniq
+                        , ctx_conenv = initConEnv
+                        , ctx_currentLoc = NoSpan
+                        }
+
 instance HasUniq Context where
-        getUniq = return . uniq
+        getUniq = return . ctx_uniq
 
 instance HasTypEnv Context where
-        getEnv = getEnv . typenv
-        modifyEnv f ctx = ctx{typenv = f (typenv ctx)}
+        getEnv = getEnv . ctx_typenv
+        modifyEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
 
 instance HasConEnv Context where
-        getConEnv = getConEnv . conenv
-        modifyConEnv f ctx = ctx{conenv = f (conenv ctx)}
+        getConEnv = getConEnv . ctx_conenv
+        modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
+
+instance HasLoc Context where
+        getLoc = ctx_currentLoc
+
+setLoc :: Span -> Context -> Context
+setLoc sp ctx = ctx{ctx_currentLoc = sp}
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
@@ -60,7 +79,7 @@ newUniq = pickUniq =<< ask
 
 -- | Variable generation
 newVarIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Ident
-newVarIdent = freshIdent dummyVN
+newVarIdent = freshIdent VarName
 
 -- | Type variable generation
 newTyVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Type
@@ -92,9 +111,3 @@ readMetaKv (MetaKv _ ref) = readMIORef ref
 
 writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
-
--- | Context management
-initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
-initContext = do
-        uniq <- getUniq =<< ask
-        return Context{typenv = initTypEnv, uniq = uniq, conenv = initConEnv}

@@ -1,4 +1,7 @@
-module Plato.RunCore (runCore, printResult) where
+module Plato.RunCore (runCore, printResult, prettyCommands) where
+
+import Prettyprinter
+import Prettyprinter.Render.Text
 
 import Plato.Core.Env
 import Plato.Core.Eval
@@ -16,4 +19,7 @@ evalCommands env (Eval t : cmds) =
          in (eval env t : res, env')
 
 printResult :: Term -> IO ()
-printResult = undefined
+printResult = putDoc . pretty
+
+prettyCommands :: [Command] -> Doc ann
+prettyCommands cmds = concatWith (surround semi) (map pretty cmds) <> line

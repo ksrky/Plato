@@ -3,7 +3,9 @@
 module Plato.Nicifier.OpParser (opParse) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.Reader.Class
+import Control.Monad.Trans.Writer
 import Data.Map.Strict qualified as M
 import Data.Maybe qualified as Maybe
 
@@ -47,13 +49,17 @@ instance OpParser LExpr where
                                 decs' <- opParse decs
                                 body' <- opParse body
                                 return $ LetE decs' body'
+                        CaseE match alts -> do
+                                match' <- opParse match
+                                alts' <- mapM (\(p, e) -> (p,) <$> opParse e) alts
+                                return $ CaseE match' alts'
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where
         opParse (pats, exp) = (pats,) <$> opParse exp
 
 instance OpParser [LFunDecl] where
-        opParse decs = local (modifyFixityEnv extendFixity) $ mapM opParserFunD decs
+        opParse decs = local (modifyFixityEnv extendFixity) $ mapM opParserFunD rest
             where
                 defs = [id | L _ (FunSpec id _) <- decs]
                 extendDefault :: FixityEnv -> FixityEnv
@@ -63,47 +69,12 @@ instance OpParser [LFunDecl] where
                         M.alter
                                 (Maybe.maybe (throwLocErr (getLoc id) "Operator not in scope") (const $ Just fix))
                                 (nameIdent id)
-                fixds = [(id, fix) | L _ (FixDecl id fix) <- decs]
+                (fixmap, rest) = execWriter $ forM decs $ \case
+                        L _ (FixDecl id fix) -> tell ([(id, fix)], [])
+                        d -> tell ([], [d])
                 extendFixity :: FixityEnv -> FixityEnv
-                extendFixity env = foldr (uncurry addFixity) (extendDefault env) fixds
+                extendFixity env = foldr (uncurry addFixity) (extendDefault env) fixmap
                 opParserFunD :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => LFunDecl -> m LFunDecl
                 opParserFunD (L sp dec) = case dec of
                         FunBind id clauses -> L sp <$> (FunBind id <$> mapM opParse clauses)
                         _ -> return $ L sp dec
-
-{-opParser :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => Located Expr -> m (Located Expr)
-opParser (L sp exp) =
-        L sp <$> case exp of
-                VarE{} -> return exp
-                AppE fun arg -> AppE <$> opParser fun <*> opParser arg
-                OpE{} -> do
-                        toks <- linearize (L sp exp)
-                        unLoc <$> parse OpE toks
-                LamE var exp -> LamE var <$> opParser exp
-                LetE decs body -> do
-                        decs' <- opParserFunDecls decs
-                        body' <- opParser body
-                        return $ LetE decs' body'
-                FactorE e -> unLoc <$> opParser e
-
-opParserClause :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => Clause -> m Clause
-opParserClause (pats, exp) = (pats,) <$> opParser exp
-
-opParserFunDecls :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => [LFunDecl] -> m [LFunDecl]
-opParserFunDecls decs = do
-        let defs = [id | L _ (FunSpec id _) <- decs]
-            extends :: FixityEnv -> FixityEnv
-            extends env = foldr (\id -> M.insert (nameIdent id) defaultFixity) env defs
-            addFixity :: Ident -> Fixity -> FixityEnv -> FixityEnv
-            addFixity id fix =
-                M.alter
-                        (Maybe.maybe (throwLocErr (getLoc id) "Operator not in scope") (const $ Just fix))
-                        (nameIdent id)
-            fixds = [(id, fix) | L _ (FixDecl id fix) <- decs]
-            extends' env = foldr (uncurry addFixity) (extends env) fixds
-        local (modifyFixityEnv extends') $ mapM opParserFunD decs
-    where
-        opParserFunD :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => LFunDecl -> m LFunDecl
-        opParserFunD (L sp dec) = case dec of
-                FunBind id clauses -> L sp <$> (FunBind id <$> mapM opParserClause clauses)
-                _ -> return $ L sp dec-}

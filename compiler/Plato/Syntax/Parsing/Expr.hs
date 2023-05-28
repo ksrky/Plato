@@ -23,6 +23,7 @@ data Expr
         | OpE LExpr Ident LExpr
         | LamE [LPat] LExpr
         | LetE [LFunDecl] LExpr
+        | CaseE LExpr [(LPat, LExpr)]
         | FactorE LExpr
         deriving (Eq, Show)
 
@@ -58,6 +59,16 @@ instance Pretty Expr where
                         , "in"
                         , pretty body
                         ]
+        pretty (CaseE match alts) =
+                hsep
+                        [ "case"
+                        , pretty match
+                        , "of"
+                        , braces $
+                                concatWith
+                                        (surround $ semi <> space)
+                                        (map (\(pat, body) -> hsep [pretty pat, "->", pretty body]) alts)
+                        ]
         pretty (FactorE exp) = pretty exp
 
 prExpr2 :: Expr -> Doc ann
@@ -65,7 +76,7 @@ prExpr2 e = walk e []
     where
         walk :: Expr -> [Expr] -> Doc ann
         walk (AppE e1 e2) es = walk (unLoc e1) (unLoc e2 : es)
-        walk e' es = prExpr1 e' <+> sep (map prExpr1 es)
+        walk e' es = prExpr1 e' <+> hsep (map prExpr1 es)
 
 prExpr1 :: Expr -> Doc ann
 prExpr1 e@VarE{} = pretty e

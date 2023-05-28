@@ -51,9 +51,6 @@ library
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
-      Plato.Parsing.OpParser
-      Plato.Parsing.OpParser.Fixity
-      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
@@ -83,10 +80,10 @@ library
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils
       Plato.Typing.Monad
-      Plato.Typing.Subst
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
+      Plato.Typing.Tc.SubsCheck
       Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils

@@ -25,8 +25,8 @@ $large = [A-Z]
 $alpha = [a-zA-Z]
 $digit = 0-9
 
-$special = [\(\)\,\;\[\]\`\{\}\_\"\']
-$common = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~\:]
+$special = [\(\)\;\{\}\_\"\']
+$common = [\!\#\$\%\&\*\+\.\,\/\<\=\>\?\@\\\^\`\|\-\~\[\]\:]
 $symbol = $common
 
 @varid = $small [$alpha $digit \_ \']*
@@ -65,24 +65,19 @@ tokens :-
 <code> case                     { keyword KwCase }
 <0, code> data                  { keyword KwData }
 <0, code> import                { keyword KwImport }
+<code> in                       { keyword KwIn }
 <0, code> infix                 { keyword KwInfix }
 <0, code> infixl                { keyword KwInfixL }
 <0, code> infixr                { keyword KwInfixR }
-<code> in                       { keyword KwIn }
-<code> of                       { layoutKeyword KwOf }
-<0, code> open                  { keyword KwOpen }
 <code> let                      { layoutKeyword KwLet }
-<0, code> module                { keyword KwModule }
+<code> of                       { layoutKeyword KwOf }
 <code> where                    { layoutKeyword KwWhere }
 
 --| special symbols
-<code> \,                       { symbol SymComma }
 <code> \'                       { symbol SymDash }
 <0, code> \{                    { leftBrace }
-<code> \[                       { symbol SymLBrack }
 <0, code> \(                    { symbol SymLParen }
 <0, code> \}                    { rightBrace }
-<code> \]                       { symbol SymRBrack }
 <0, code> \)                    { symbol SymRParen }
 <0, code> \;                    { symbol SymSemicolon }
 <code> \_                       { symbol SymUScore }
@@ -93,8 +88,7 @@ tokens :-
 <code> \-\>                     { symbol SymArrow }
 <code> \\                       { symbol SymBackslash }
 <code> \:                       { symbol SymColon }
-<code> \=                       { symbol SymEqual }       
-<code> \|                       { symbol SymVBar }
+<code> \=                       { symbol SymEqual }
 
 <0, code> @varid                { varid }
 <0, code> @conid                { conid }

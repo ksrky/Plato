@@ -1,16 +1,17 @@
-data Nat = Zero | Succ Nat
+data Nat where
+    Zero : Nat
+    Succ : Nat -> Nat
 
-(+) : Nat -> Nat -> Nat
-(+) m n = case m of
-    Zero -> n
-    Succ m' -> Succ (m' + n)
+data Bool where
+    True : Bool
+    False : Bool
 
-(*) : Nat -> Nat -> Nat
-(*) m n = case m of
-    Zero -> Zero
-    Succ m' -> n + m' * n
+(>=) : Nat -> Nat -> Bool
+(>=) (Succ m) (Succ n) = m >= n
+(>=) Zero (Succ _) = False
+(>=) m Zero = True
 
-infixl 6 +
-infixl 7 *
-
-Succ Zero + Succ (Succ Zero) * Succ (Succ (Succ Zero))
+(<) : Nat -> Nat -> Bool
+(<) (Succ m) (Succ n) = m < n
+(<) Zero (Succ _) = True
+(<) _ Zero = False

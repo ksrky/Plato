@@ -6,6 +6,7 @@ module Plato.TypingSpec where
 import Control.Monad.Reader
 import Data.IORef
 import Data.Text qualified as T
+import Prettyprinter
 import Test.Hspec
 
 import Plato.Common.Location
@@ -24,9 +25,34 @@ spec = do
         describe "Type checking of declarations" $ do
                 it "lambda abstraction" $ do
                         test_decls "id : {a} a -> a; id = \\x -> x" `shouldReturn` ()
+                it "function clause" $ do
+                        test_decls "id : {a} a -> a; id x = x" `shouldReturn` ()
         describe "Type checking of a file" $ do
                 it "test01.plt" $ do
                         test_file "test01.plt" `shouldReturn` ()
+                it "test02.plt" $ do
+                        test_file "test02.plt" `shouldReturn` ()
+                it "test03.plt" $ do
+                        test_file "test03.plt" `shouldReturn` ()
+                it "test04.plt" $ do
+                        test_file "test04.plt" `shouldReturn` ()
+                it "test05.plt" $ do
+                        test_file "test05.plt" `shouldReturn` ()
+                it "test06.plt" $ do
+                        test_file "test06.plt" `shouldReturn` ()
+                it "test07.plt" $ do
+                        test_file "test07.plt" `shouldReturn` ()
+                it "test08.plt" $ do
+                        test_file "test08.plt" `shouldReturn` ()
+                it "test09.plt" $ do
+                        test_file "test09.plt" `shouldReturn` ()
+                it "test10.plt" $ do
+                        test_file "test10.plt" `shouldReturn` ()
+        describe "Uniq rewrited?" $ do
+                it "test01.plt" $ do
+                        test_uniq "test01.plt" >>= (`shouldSatisfy` isSorted)
+                it "test02.plt" $ do
+                        test_uniq "test02.plt" >>= (`shouldSatisfy` isSorted)
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -51,7 +77,30 @@ test_file fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        typsyn' <- ps2typ pssyn'
-                        void $ typing typsyn'
+                        typsyn <- ps2typ pssyn'
+                        typsyn' <- typing typsyn
+                        liftIO $ print $ map (show . pretty) typsyn'
                 )
                 =<< initSession
+
+test_uniq :: String -> IO [Uniq]
+test_uniq fn =
+        runReaderT
+                ( do
+                        pssyn <- parseFile ("test/testcases/" ++ fn)
+                        uniq1 <- liftIO . readIORef =<< getUniq =<< ask
+                        pssyn' <- nicify pssyn
+                        uniq2 <- liftIO . readIORef =<< getUniq =<< ask
+                        typsyn <- ps2typ pssyn'
+                        uniq3 <- liftIO . readIORef =<< getUniq =<< ask
+                        _ <- typing typsyn
+                        uniq4 <- liftIO . readIORef =<< getUniq =<< ask
+                        liftIO $ print [uniq1, uniq2, uniq3, uniq4]
+                        return [uniq1, uniq2, uniq3, uniq4]
+                )
+                =<< initSession
+
+isSorted :: Ord a => [a] -> Bool
+isSorted [] = True
+isSorted [_] = True
+isSorted (x : y : xs) = x <= y && isSorted (y : xs)

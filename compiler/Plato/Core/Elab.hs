@@ -2,6 +2,7 @@ module Plato.Core.Elab where
 
 import Plato.Common.Ident
 import Plato.Common.Name
+import Plato.Core.Calc
 import Plato.Syntax.Core
 
 fixComb :: Type -> Kind -> Term
@@ -29,17 +30,19 @@ productTy :: [Type] -> Type
 productTy tys = TyRecord (map (dummyVN,) tys)
 
 recursiveBinds :: [(Name, Term)] -> [(Ident, Type)] -> [(NameInfo, Term, Type)]
+recursiveBinds [] [] = []
 recursiveBinds bnds spcs =
         let spcs' = map (\(id, tyT) -> (nameIdent id, tyT)) spcs
             t = TmFix (TmAbs Dummy (TyRecord spcs') (TmRecord bnds))
             rbnd = (Dummy, t, TyRecord spcs')
-         in foldl
-                ( \acc (idi, tyTi) ->
-                        let i = length acc - 1
-                         in (mkInfo idi, TmProj (TmVar i Dummy) i, tyTi) : acc
-                )
-                [rbnd]
-                spcs
+         in reverse $
+                foldl
+                        ( \acc (idi, tyTi) ->
+                                let i = length acc - 1
+                                 in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
+                        )
+                        [rbnd]
+                        spcs
 
 constrsToVariant :: [(Ident, Type)] -> Type
 constrsToVariant constrs = TySum (map ((productTy . split []) . snd) constrs)

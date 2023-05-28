@@ -29,22 +29,23 @@ elabExpr (T.VarE var) = do
 elabExpr (T.AppE fun arg) = C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsEok var ty body) = do
         tyT1 <- elabType ty
-        t2 <- extendNameWith (nameIdent var) $ elabExpr (unLoc body)
+        t2 <- extendNameWith (nameIdent var) $ elabExpr body
         return $ C.TmAbs (C.mkInfo var) tyT1 t2
 elabExpr (T.TAppE fun argtys) = do
-        t1 <- elabExpr (unLoc fun)
+        t1 <- elabExpr fun
         tys2 <- mapM elabType argtys
         return $ foldl C.TmTApp t1 tys2
 elabExpr (T.TAbsE qnts body) = do
         qnts' <- forM qnts $ \(tv, kn) -> return (T.unTyVar tv, elabKind kn)
-        t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr (unLoc body)
+        t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr body
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetEok bnds spcs body) = do
         bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
         spcs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) spcs
         let rbnds = recursiveBinds bnds' spcs'
         t2 <- elabExpr (unLoc body)
-        return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
+        -- return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
+        return $ foldr (\(xi, ti, tyTi) t -> C.TmApp (C.TmAbs xi tyTi t) ti) t2 rbnds
 elabExpr (T.CaseE match alts) = do
         t <- elabExpr (unLoc match)
         alts' <- forM alts $ \(pat, exp) -> case unLoc pat of
@@ -54,10 +55,6 @@ elabExpr (T.CaseE match alts) = do
                         let xs = [nameIdent id | L _ (T.VarP id) <- ps]
                         (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
         return $ C.TmCase t alts'
-
--- elabClauses :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => [T.Clause 'T.TcUndone] -> m C.Term
--- elabClauses [([], exp)] = elabExpr (unLoc exp)
--- elabClauses _ = unreachable "ElabClause failed"
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
@@ -72,50 +69,12 @@ elabType (T.AllT qnts ty) = do
         tyT2 <- extendNameListWith (map (nameIdent . fst) args) $ elabType (unLoc ty)
         return $ foldr (\(x, knK1) -> C.TyAll (C.mkInfo x) knK1) tyT2 args
 elabType (T.AppT ty1 ty2) = C.TyApp <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType (T.AbsT tv kn body) = do
-        tyT2 <- extendNameWith (nameIdent tv) $ elabType (unLoc body)
-        return $ C.TyAbs (C.mkInfo tv) (elabKind kn) tyT2
 elabType T.MetaT{} = unreachable "Zonking failed"
 
 elabKind :: HasCallStack => T.Kind -> C.Kind
 elabKind T.StarK = C.KnStar
 elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
-elabKind T.MetaK{} = unreachable "Kind inference failed"
-
-elabBind :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Bind 'T.TcDone -> m [C.Command]
-{-elabBind (T.ValBind id exp) = do
-        t <- elabExpr (unLoc exp)
-        tyT <- getType =<< getVarIndex (nameIdent id)
-        return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)]-}
-elabBind T.FunBindok{} = return [] {-do
-                                            t <- elabExpr (unLoc exp)
-                                            tyT <- getType =<< getVarIndex (nameIdent id)
-                                            return [C.Bind (C.mkInfo id) (C.TmAbbBind t tyT)-}
-elabBind (T.TypBind id ty) = do
-        tyT <- elabType (unLoc ty)
-        knK <- getKind =<< getVarIndex (nameIdent id)
-        return [C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK)]
-elabBind (T.DatBind id params constrs) = do
-        knK <- getKind =<< getVarIndex (nameIdent id)
-        constrs' <- extendNameWith (nameIdent id) $ do
-                mapM (\(con, ty) -> (con,) <$> elabType (T.AllT params ty)) constrs
-        let tyT_tmp =
-                foldr
-                        (\(tv, kn) -> C.TyAbs (C.mkInfo $ T.unTyVar tv) (elabKind kn))
-                        (constrsToVariant constrs')
-                        params
-            tyT = C.TyRec (C.mkInfo id) knK tyT_tmp
-        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds constrs'
-
-elabSpec :: (MonadReader ctx m, HasCoreEnv ctx) => T.Spec -> m [C.Command]
-elabSpec (T.ValSpec id ty) = do
-        ty' <- elabType (unLoc ty)
-        return [C.Bind (C.mkInfo id) (C.TmVarBind ty')]
-elabSpec T.TypSpec{} = return []
-
-elabDecl :: (MonadReader ctx m, HasCoreEnv ctx) => T.Decl 'T.TcDone -> m [C.Command]
-elabDecl (T.BindDecl bnd) = elabBind bnd
-elabDecl (T.SpecDecl spc) = elabSpec spc
+elabKind T.MetaK{} = unreachable "elabKind passed T.MetaK"
 
 elabDecls :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
 elabDecls decs = do
@@ -124,14 +83,43 @@ elabDecls decs = do
         (fspcs, rest) <- execWriterT $ forM decs $ \case
                 T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, unLoc ty)], [])
                 dec -> tell ([], [dec])
-        fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) fspcs
-        fbnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) fbnds
-        let rbnds = recursiveBinds fbnds' fspcs'
-        cmds <- concat <$> mapM elabDecl rest
-        return $ cmds ++ map (\(id, t, tyT) -> C.Bind id (C.TmAbbBind t tyT)) rbnds
+        let elabDecls' :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
+            elabDecls' (T.SpecDecl T.TypSpec{} : rest) = do
+                elabDecls' rest
+            elabDecls' (T.BindDecl (T.DatBindok id kn params constrs) : rest) = do
+                let knK = elabKind kn
+                extendNameWith (nameIdent id) $ do
+                        let elabConstrs :: (MonadReader ctx m, HasCoreEnv ctx) => [(Ident, T.LType)] -> m [(Ident, C.Type)]
+                            elabConstrs [] = return []
+                            elabConstrs ((con, ty) : cs) = do
+                                c <- (con,) <$> elabType (T.AllT params ty)
+                                cs' <- extendNameWith (nameIdent con) $ elabConstrs cs
+                                return $ c : cs'
+                        fun_constrs <- elabConstrs constrs
+                        var_constrs <- mapM (\(con, ty) -> (con,) <$> elabType (unLoc ty)) constrs
+                        let params' = map (\(tv, kn) -> (C.mkInfo $ T.unTyVar tv, elabKind kn)) params
+                            tyT_nonrec = foldr (uncurry C.TyAbs) (constrsToVariant var_constrs) params'
+                            tyT = C.TyRec (C.mkInfo id) knK tyT_nonrec
+                        rest' <- extendNameListWith (map (nameIdent . fst) constrs) $ elabDecls' rest
+                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds fun_constrs ++ rest'
+            elabDecls' (T.BindDecl (T.TypBind id ty) : rest) = do
+                -- tmp: remove
+                tyT <- elabType (unLoc ty)
+                knK <- getKind =<< getVarIndex (nameIdent id)
+                rest' <- elabDecls' rest
+                return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : rest'
+            elabDecls' (T.SpecDecl (T.ValSpec id ty) : rest) = do
+                tyT <- elabType (unLoc ty)
+                rest' <- extendWith (nameIdent id) (C.TmVarBind tyT) $ elabDecls' rest
+                return $ C.Bind (C.mkInfo id) (C.TmVarBind tyT) : rest'
+            elabDecls' _ = do
+                fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) fspcs
+                fbnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) fbnds
+                let rbnds = recursiveBinds fbnds' fspcs'
+                return $ map (\(id, t, tyT) -> C.Bind id (C.TmAbbBind t tyT)) rbnds
+        elabDecls' rest
 
 typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Command]
-typ2core (decs, exps) = do
-        let cmds1 = runReader (elabDecls decs) initCoreEnv
-            cmds2 = runReader (mapM ((C.Eval <$>) . elabExpr . unLoc) exps) initCoreEnv
-        return $ cmds1 ++ cmds2
+typ2core decs = do
+        let cmds = runReader (elabDecls decs) initCoreEnv
+        return cmds

@@ -15,3 +15,6 @@ safeAt xs i =
         if i < length xs
                 then Just (xs !! i)
                 else Nothing
+
+class Numbered a where
+        toNumber :: a -> Integer

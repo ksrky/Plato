@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.PsToTyp (
@@ -14,6 +15,7 @@ import Control.Exception.Safe
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.IORef (IORef)
+import Data.List qualified
 import GHC.Stack
 
 import Plato.Common.Error
@@ -43,7 +45,7 @@ elabExpr (P.OpE left op right) = do
 elabExpr (P.LamE pats body) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        body' <- local (extendListScope (allIdentsFromPats pats)) $ elabExpr `traverse` body
+        body' <- local (extendListScope (getDomain pats)) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.TcUndone -> T.LPat -> m (T.LExpr 'T.TcUndone)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
@@ -53,9 +55,18 @@ elabExpr (P.LamE pats body) = do
 elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
         local (const env) $ do
-                (bnds, spcs) <- elabFunDecls fdecs
+                fdecs' <- bundleClauses fdecs
+                (bnds, spcs) <- elabFunDecls fdecs'
                 body' <- elabExpr `traverse` body
                 return $ T.LetE bnds spcs body'
+elabExpr (P.CaseE match alts) = do
+        match' <- elabExpr `traverse` match
+        alts' <- forM alts $ \(pat, body) -> do
+                pat' <- elabPat `traverse` pat
+                body' <- local (extendListScope $ getDomain pat) (elabExpr `traverse` body)
+                return (pat', body')
+
+        return $ T.CaseE match' alts'
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader env m, HasScope env, MonadThrow m) => P.Pat -> m T.Pat
@@ -97,7 +108,7 @@ elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThr
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        exp' <- elabExpr `traverse` exp
+        exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.Decl] -> m [T.Decl 'T.TcUndone]
@@ -110,19 +121,20 @@ elabDecls (P.DataD id params constrs : rest) = do
         constrs' <-
                 local (extendListScope $ id : params) $
                         mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
-        rest' <- local (extendScope id) $ elabDecls rest
+        rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
         sig <- newKnVar
         return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
 elabDecls (P.FuncD fundecs : rest) = do
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
-                (bnds, spcs) <- elabFunDecls fundecs
+                fundecs' <- bundleClauses fundecs
+                (bnds, spcs) <- elabFunDecls fundecs'
                 rest' <- elabDecls rest
-                let fundecs' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
-                return $ fundecs' ++ rest'
+                let fundecs'' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
+                return $ fundecs'' ++ rest'
 
 elabTopDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
-elabTopDecls = elabDecls . map unLoc
+elabTopDecls tdecs = Data.List.sort <$> elabDecls (map unLoc tdecs)
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -136,5 +148,6 @@ instance HasScope Context where
 ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m (T.Program 'T.TcUndone)
 ps2typ tdecs = do
         uniq <- getUniq =<< ask
-        decs <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)
-        return (decs, [])
+        prog <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)
+        setUniq uniq
+        return prog
