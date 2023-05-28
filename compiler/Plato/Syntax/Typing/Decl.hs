@@ -68,7 +68,8 @@ instance Pretty (Bind a) where
         pretty (DatBind id params constrs) =
                 hsep
                         [ "data"
-                        , hsep (pretty id : map prQuant params)
+                        , pretty id
+                        , hsep (pretty id : map (parens . prQuant) params)
                         , "where"
                         , braces $
                                 concatWith

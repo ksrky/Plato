@@ -8,6 +8,7 @@ module Plato.Syntax.Typing.Type (
         Rho,
         Tau,
         prQuant,
+        prQuants,
 ) where
 
 import Data.IORef (IORef)
@@ -73,13 +74,17 @@ instance Pretty MetaTv where
         pretty (MetaTv u _) = "$" <> pretty u
 
 prQuant :: Quant -> Doc ann
-prQuant (tv, kn) = parens $ hcat [pretty tv, colon, pretty kn]
+prQuant (tv, kn) = hcat [pretty tv, colon, pretty kn]
+
+prQuants :: [Quant] -> Doc ann
+prQuants [(tv, kn)] = hcat [pretty tv, colon, pretty kn]
+prQuants qnts = hsep $ map (parens . prQuant) qnts
 
 instance Pretty Type where
         pretty (VarT var) = pretty var
         pretty (ConT con) = pretty con
         pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
-        pretty (AllT qnts body) = hsep [braces (hsep $ map prQuant qnts), pretty body]
+        pretty (AllT qnts body) = hsep [braces (prQuants qnts), pretty body]
         pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
         pretty (MetaT tv) = pretty tv
 

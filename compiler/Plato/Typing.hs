@@ -47,4 +47,6 @@ typingDecls (BindDecl (FunBind id clauses) : decs) = do
 typing :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)
 typing decs = do
         ctx <- initContext
-        runReaderT (typingDecls decs >>= mapM zonkDecl) ctx
+        prog <- runReaderT (typingDecls decs >>= mapM zonkDecl) ctx
+        setUniq =<< getUniq ctx
+        return prog

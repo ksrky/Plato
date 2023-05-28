@@ -34,6 +34,11 @@ spec = do
                         test_file "test02.plt" `shouldReturn` ()
                 it "test03.plt" $ do
                         test_file "test03.plt" `shouldReturn` ()
+        describe "Uniq rewrited?" $ do
+                it "test01.plt" $ do
+                        test_uniq "test01.plt" >>= (`shouldSatisfy` isSorted)
+                it "test02.plt" $ do
+                        test_uniq "test02.plt" >>= (`shouldSatisfy` isSorted)
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -63,3 +68,25 @@ test_file fn =
                         liftIO $ print $ map (show . pretty) typsyn'
                 )
                 =<< initSession
+
+test_uniq :: String -> IO [Uniq]
+test_uniq fn =
+        runReaderT
+                ( do
+                        pssyn <- parseFile ("test/testcases/" ++ fn)
+                        uniq1 <- liftIO . readIORef =<< getUniq =<< ask
+                        pssyn' <- nicify pssyn
+                        uniq2 <- liftIO . readIORef =<< getUniq =<< ask
+                        typsyn <- ps2typ pssyn'
+                        uniq3 <- liftIO . readIORef =<< getUniq =<< ask
+                        _ <- typing typsyn
+                        uniq4 <- liftIO . readIORef =<< getUniq =<< ask
+                        liftIO $ print [uniq1, uniq2, uniq3, uniq4]
+                        return [uniq1, uniq2, uniq3, uniq4]
+                )
+                =<< initSession
+
+isSorted :: Ord a => [a] -> Bool
+isSorted [] = True
+isSorted [_] = True
+isSorted (x : y : xs) = x <= y && isSorted (y : xs)

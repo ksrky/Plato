@@ -56,16 +56,13 @@ instance Pretty (Expr a) where
                 hcat
                         [ backslash
                         , pretty var
-                        , colon <+> pretty ann
+                        , colon
+                        , pretty ann
                         , dot <+> pretty body
                         ]
-        pretty (TAppE fun tyargs) = hsep (pretty fun : map pretty tyargs)
+        pretty (TAppE fun tyargs) = hsep (prExpr1 fun : map pretty tyargs)
         pretty (TAbsE qnts body) =
-                hcat
-                        [ backslash
-                        , hsep $ map prQuant qnts
-                        , dot <+> pretty body
-                        ]
+                hcat [backslash, prQuants qnts, dot <+> pretty body]
         pretty (LetE bnds spcs body) =
                 hsep
                         [ "let"
