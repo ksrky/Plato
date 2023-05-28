@@ -42,10 +42,10 @@ deriving instance Eq (Decl a)
 deriving instance Show (Decl a)
 instance Numbered (Decl a) where
         toNumber (SpecDecl TypSpec{}) = 0
-        toNumber (SpecDecl ValSpec{}) = 1
-        toNumber (BindDecl DatBind{}) = 2
-        toNumber (BindDecl DatBindok{}) = 2
-        toNumber (BindDecl TypBind{}) = 3
+        toNumber (BindDecl DatBind{}) = 1
+        toNumber (BindDecl DatBindok{}) = 1
+        toNumber (BindDecl TypBind{}) = 2
+        toNumber (SpecDecl ValSpec{}) = 3
         toNumber (BindDecl FunBind{}) = 4
         toNumber (BindDecl FunBindok{}) = 4
 
@@ -59,16 +59,14 @@ instance Pretty (Bind a) where
         pretty (FunBind id clauses) =
                 hsep
                         [ pretty id
-                        , equals
                         , "where"
-                        , indent 4 (vsep (map prClause clauses))
+                        , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
                         ]
         pretty (FunBindok id exp) = hsep [pretty id, equals, pretty exp]
         pretty (TypBind id ty) = hsep [pretty id, equals, pretty ty]
         pretty (DatBind id params constrs) =
                 hsep
                         [ "data"
-                        , pretty id
                         , hsep (pretty id : map (parens . prQuant) params)
                         , "where"
                         , braces $

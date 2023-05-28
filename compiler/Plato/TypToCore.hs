@@ -86,10 +86,6 @@ elabDecls decs = do
         let elabDecls' :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
             elabDecls' (T.SpecDecl T.TypSpec{} : rest) = do
                 elabDecls' rest
-            elabDecls' (T.SpecDecl (T.ValSpec id ty) : rest) = do
-                tyT <- elabType (unLoc ty)
-                rest' <- extendWith (nameIdent id) (C.TmVarBind tyT) $ elabDecls' rest
-                return $ C.Bind (C.mkInfo id) (C.TmVarBind tyT) : rest'
             elabDecls' (T.BindDecl (T.DatBindok id kn params constrs) : rest) = do
                 let knK = elabKind kn
                 extendNameWith (nameIdent id) $ do
@@ -112,6 +108,10 @@ elabDecls decs = do
                 knK <- getKind =<< getVarIndex (nameIdent id)
                 rest' <- elabDecls' rest
                 return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : rest'
+            elabDecls' (T.SpecDecl (T.ValSpec id ty) : rest) = do
+                tyT <- elabType (unLoc ty)
+                rest' <- extendWith (nameIdent id) (C.TmVarBind tyT) $ elabDecls' rest
+                return $ C.Bind (C.mkInfo id) (C.TmVarBind tyT) : rest'
             elabDecls' _ = do
                 fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType ty) fspcs
                 fbnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) fbnds

@@ -64,7 +64,10 @@ instance Pretty Expr where
                         [ "case"
                         , pretty match
                         , "of"
-                        , braces $ hsep (map (\(pat, body) -> hsep [pretty pat, "->", pretty body]) alts)
+                        , braces $
+                                concatWith
+                                        (surround $ semi <> space)
+                                        (map (\(pat, body) -> hsep [pretty pat, "->", pretty body]) alts)
                         ]
         pretty (FactorE exp) = pretty exp
 

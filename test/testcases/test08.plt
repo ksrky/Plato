@@ -13,5 +13,3 @@ Succ m' + n = Succ (m' + n)
 (*) : Nat -> Nat -> Nat
 Zero * n = Zero
 Succ m' * n = n + m' * n
-
-Succ (Succ Zero) * Succ Zero + Succ (Succ (Succ Zero))

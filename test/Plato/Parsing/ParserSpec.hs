@@ -34,7 +34,7 @@ spec = do
                         parseProg "test05.plt"
                                 `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
                                                , "not : Bool -> Bool"
-                                               , "not where {b -> case b of {True -> False False -> True}}"
+                                               , "not where {b -> case b of {True -> False; False -> True}}"
                                                ]
 
 parseExpr :: T.Text -> IO String

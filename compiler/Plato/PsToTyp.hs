@@ -126,10 +126,11 @@ elabDecls (P.DataD id params constrs : rest) = do
 elabDecls (P.FuncD fundecs : rest) = do
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
-                (bnds, spcs) <- elabFunDecls fundecs
+                fundecs' <- bundleClauses fundecs
+                (bnds, spcs) <- elabFunDecls fundecs'
                 rest' <- elabDecls rest
-                let fundecs' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
-                return $ fundecs' ++ rest'
+                let fundecs'' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
+                return $ fundecs'' ++ rest'
 
 elabTopDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
 elabTopDecls tdecs = Data.List.sort <$> elabDecls (map unLoc tdecs)

@@ -66,18 +66,14 @@ instance Pretty (Expr a) where
         pretty (LetE bnds spcs body) =
                 hsep
                         [ "let"
-                        , lbrace <> line
-                        , indent 4 (vsep (map pretty spcs ++ map pretty bnds)) <> line
-                        , rbrace
+                        , braces $ concatWith (surround $ semi <> space) (map pretty spcs ++ map pretty bnds)
                         , "in"
                         , pretty body
                         ]
         pretty (LetEok bnds spcs body) =
                 hsep
                         [ "let"
-                        , lbrace <> line
-                        , indent 4 (vsep (map pretty spcs ++ map pretty bnds)) <> line
-                        , rbrace
+                        , braces $ concatWith (surround $ semi <> space) (map pretty spcs ++ map pretty bnds)
                         , " in"
                         , pretty body
                         ]
@@ -86,10 +82,10 @@ instance Pretty (Expr a) where
                         [ "case"
                         , pretty match
                         , "of"
-                        , lbrace <> line
-                        , indent 4 (vsep (map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts))
-                                <> line
-                        , rbrace
+                        , braces $
+                                concatWith
+                                        (surround $ semi <> space)
+                                        (map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts)
                         ]
 
 prExpr2 :: Expr a -> Doc ann

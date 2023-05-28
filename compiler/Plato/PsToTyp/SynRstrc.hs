@@ -75,7 +75,7 @@ classify :: MonadThrow m => [[LFunDecl]] -> m [LFunDecl]
 classify [] = return []
 classify ([] : rest) = classify rest
 classify (fspcs@(L _ FunSpec{} : _) : rest) = (fspcs ++) <$> classify rest
-classify ((L sp (FunBind id [(pats, exp)]) : fbnds) : rest) = do
+classify (fbnds@(L sp (FunBind id [(pats, _)]) : _) : rest) = do
         clses <-
                 sequence
                         [ do
@@ -84,7 +84,7 @@ classify ((L sp (FunBind id [(pats, exp)]) : fbnds) : rest) = do
                         | L sp (FunBind _ [(psi, ei)]) <- fbnds
                         ]
         let spn = concatSpans $ sp : [spi | L spi FunBind{} <- fbnds]
-        (L spn (FunBind id ((pats, exp) : clses)) :) <$> classify rest
+        (L spn (FunBind id clses) :) <$> classify rest
 classify ((L _ FunBind{} : _) : _) = unreachable "malformed clauses"
 classify ((L _ FixDecl{} : _) : _) = unreachable "deleted by Nicifier"
 
@@ -92,6 +92,7 @@ partition :: [LFunDecl] -> [[LFunDecl]]
 partition =
         Data.List.groupBy
                 ( curry $ \case
-                        (L _ (FunBind id1 _), L _ (FunBind id2 _)) -> id1 == id2
+                        -- before scoping
+                        (L _ (FunBind id1 _), L _ (FunBind id2 _)) -> nameIdent id1 == nameIdent id2
                         _ -> False
                 )
