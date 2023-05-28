@@ -20,7 +20,7 @@ data Pat
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Pat where
-        pretty (ConP con pats) = pretty con <+> hsep (map prAtomPat pats)
+        pretty (ConP con pats) = hsep (pretty con : map prAtomPat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
 

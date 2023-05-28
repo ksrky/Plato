@@ -42,6 +42,8 @@ spec = do
                         test_file "test06.plt" `shouldReturn` ()
                 it "test07.plt" $ do
                         test_file "test07.plt" `shouldReturn` ()
+                it "test08.plt" $ do
+                        test_file "test08.plt" `shouldReturn` ()
         describe "Uniq rewrited?" $ do
                 it "test01.plt" $ do
                         test_uniq "test01.plt" >>= (`shouldSatisfy` isSorted)
