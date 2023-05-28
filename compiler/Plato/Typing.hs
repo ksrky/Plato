@@ -16,7 +16,7 @@ import Plato.Typing.Tc
 import Plato.Typing.Zonking
 
 typingDecls ::
-        (MonadReader env m, HasTypEnv env, HasUniq env, HasConEnv env, MonadThrow m, MonadIO m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, HasConEnv env, MonadCatch m, MonadIO m) =>
         [Decl 'TcUndone] ->
         m [Decl 'TcDone]
 typingDecls [] = return []
@@ -47,7 +47,7 @@ typingDecls (BindDecl (FunBind id clauses) : decs) = do
         decs' <- typingDecls decs
         return $ BindDecl (FunBindok id exp) : decs'
 
-typing :: (PlatoMonad m, MonadThrow m) => Program 'TcUndone -> m (Program 'TcDone)
+typing :: (PlatoMonad m, MonadCatch m) => Program 'TcUndone -> m (Program 'TcDone)
 typing decs = do
         ctx <- initContext
         prog <- runReaderT (typingDecls decs >>= mapM zonkDecl) ctx

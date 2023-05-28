@@ -1,5 +1,5 @@
 module Plato.Typing.Monad (
-        HasTypEnv (..),
+        setLoc,
         newMIORef,
         readMIORef,
         writeMIORef,
@@ -22,6 +22,7 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -31,12 +32,19 @@ data Context = Context
         { ctx_typenv :: TypEnv
         , ctx_uniq :: IORef Uniq
         , ctx_conenv :: ConEnv
+        , ctx_currentLoc :: Span
         }
 
 initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
 initContext = do
         uniq <- getUniq =<< ask
-        return Context{ctx_typenv = initTypEnv, ctx_uniq = uniq, ctx_conenv = initConEnv}
+        return
+                Context
+                        { ctx_typenv = initTypEnv
+                        , ctx_uniq = uniq
+                        , ctx_conenv = initConEnv
+                        , ctx_currentLoc = NoSpan
+                        }
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
@@ -48,6 +56,12 @@ instance HasTypEnv Context where
 instance HasConEnv Context where
         getConEnv = getConEnv . ctx_conenv
         modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
+
+instance HasLoc Context where
+        getLoc = ctx_currentLoc
+
+setLoc :: Span -> Context -> Context
+setLoc sp ctx = ctx{ctx_currentLoc = sp}
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)

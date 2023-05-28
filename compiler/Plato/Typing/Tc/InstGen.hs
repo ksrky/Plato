@@ -14,6 +14,7 @@ import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Typing.Env
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.Subst

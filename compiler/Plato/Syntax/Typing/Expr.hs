@@ -43,6 +43,32 @@ deriving instance Show (Expr a)
 prClause :: Clause a -> Doc ann
 prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
 
+prBinds :: [(Ident, [Clause 'TcUndone])] -> Doc ann
+prBinds bnds =
+        concatWith
+                (surround $ semi <> space)
+                ( map
+                        ( \(id, clses) ->
+                                hsep
+                                        [ pretty id
+                                        , "where"
+                                        , braces $ concatWith (surround $ semi <> space) (map prClause clses)
+                                        ]
+                        )
+                        bnds
+                )
+
+prBinds' :: [(Ident, LExpr 'TcDone)] -> Doc ann
+prBinds' bnds =
+        concatWith
+                (surround $ semi <> space)
+                (map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) bnds)
+prSpecs :: [(Ident, LType)] -> Doc ann
+prSpecs spcs =
+        concatWith
+                (surround $ semi <> space)
+                (map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs)
+
 instance Pretty (Expr a) where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
@@ -66,14 +92,14 @@ instance Pretty (Expr a) where
         pretty (LetE bnds spcs body) =
                 hsep
                         [ "let"
-                        , braces $ concatWith (surround $ semi <> space) (map pretty spcs ++ map pretty bnds)
+                        , braces $ prSpecs spcs <> semi <+> prBinds bnds
                         , "in"
                         , pretty body
                         ]
         pretty (LetEok bnds spcs body) =
                 hsep
                         [ "let"
-                        , braces $ concatWith (surround $ semi <> space) (map pretty spcs ++ map pretty bnds)
+                        , braces $ prSpecs spcs <> semi <+> prBinds' bnds
                         , " in"
                         , pretty body
                         ]
@@ -93,7 +119,7 @@ prExpr2 e = walk e []
     where
         walk :: Expr a -> [Expr a] -> Doc ann
         walk (AppE fun arg) acc = walk (unLoc fun) (unLoc arg : acc)
-        walk fun args = prExpr1 fun <+> sep (map prExpr1 args)
+        walk fun args = prExpr1 fun <+> hsep (map prExpr1 args)
 
 prExpr1 :: Expr a -> Doc ann
 prExpr1 e@VarE{} = pretty e

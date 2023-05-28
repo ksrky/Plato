@@ -1,4 +1,6 @@
 module Plato.Typing.Tc.Unify (
+        UnificationError (..),
+        InfiniteTypeError (..),
         unify,
         unifyFun,
         unifyFuns,
@@ -9,26 +11,24 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Set qualified as S
-import Prettyprinter
 
-import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Utils
 
-unify :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Span -> Tau -> Tau -> m ()
-unify sp = unify'
+data UnificationError = UnificationError Tau Tau deriving (Show)
+data InfiniteTypeError = InfiniteTypeError Tau Tau deriving (Show)
+
+instance Exception UnificationError
+instance Exception InfiniteTypeError
+
+unify :: forall ctx m. (MonadReader ctx m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
+unify = unify'
     where
-        unify' :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
-        unify' ty1 ty2 | badType ty1 || badType ty2 = do
-                throwLocErr sp $
-                        vsep
-                                [ "Couldn't match type."
-                                , "Expected type:" <+> pretty ty2
-                                , indent 2 ("Actual type:" <+> pretty ty1)
-                                ]
+        unify' :: Tau -> Tau -> m ()
+        unify' ty1 ty2 | badType ty1 || badType ty2 = throw (UnificationError ty1 ty2)
         unify' (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
         unify' (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
         unify' (ArrT arg1 res1) (ArrT arg2 res2) = do
@@ -40,15 +40,9 @@ unify sp = unify'
         unify' (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
         unify' (MetaT tv) ty = unifyVar tv ty
         unify' ty (MetaT tv) = unifyVar tv ty
-        unify' ty1 ty2 =
-                throwLocErr sp $
-                        vsep
-                                [ "Couldn't match type."
-                                , "Expected type:" <+> pretty ty2
-                                , indent 2 ("Actual type:" <+> pretty ty1)
-                                ]
+        unify' ty1 ty2 = throw (UnificationError ty1 ty2)
 
-        unifyVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
+        unifyVar :: MetaTv -> Tau -> m ()
         unifyVar tv1 ty2@(MetaT tv2) = do
                 mb_ty1 <- readMetaTv tv1
                 mb_ty2 <- readMetaTv tv2
@@ -60,12 +54,13 @@ unify sp = unify'
                 occursCheck tv1 ty2
                 writeMetaTv tv1 ty2
 
-        occursCheck :: (MonadReader ctx m, MonadThrow m, MonadIO m) => MetaTv -> Tau -> m ()
+        occursCheck :: MetaTv -> Tau -> m ()
         occursCheck tv1 ty2 = do
                 tvs2 <- getMetaTvs ty2
-                when (tv1 `S.member` tvs2) $
-                        throwLocErr sp $
-                                hsep ["Infinite type:", squotes $ pretty tv1, "~", squotes $ pretty ty2]
+                when (tv1 `S.member` tvs2) $ do
+                        mb_ty1 <- readMetaTv tv1
+                        let ty1 = case mb_ty1 of Just ty1 -> ty1; Nothing -> MetaT tv1
+                        throw $ InfiniteTypeError ty1 ty2
 
         badType :: Tau -> Bool
         badType (VarT (BoundTv _)) = True
@@ -76,7 +71,7 @@ unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
 unifyFun tau = do
         arg_ty <- newTyVar
         res_ty <- newTyVar
-        unify NoSpan tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         return (arg_ty, res_ty)
 
 unifyFuns :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Int -> Rho -> m ([Sigma], Rho)
@@ -87,6 +82,6 @@ unifyFuns n (ArrT arg res) = do
 unifyFuns n tau = do
         arg_ty <- newTyVar
         res_ty <- newTyVar
-        unify NoSpan tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         (args', res') <- unifyFuns (n - 1) res_ty
         return (arg_ty : args', res')

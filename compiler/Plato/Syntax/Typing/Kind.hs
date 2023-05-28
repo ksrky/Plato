@@ -40,7 +40,7 @@ instance Pretty MetaKv where
 instance Pretty Kind where
         pretty StarK = "*"
         pretty (ArrK kn1 kn2) = prettyKind1 kn1 <+> pretty kn2
-        pretty (MetaK m) = viaShow m
+        pretty (MetaK kv) = pretty kv
 
 prettyKind1 :: Kind -> Doc ann
 prettyKind1 StarK = pretty StarK

@@ -48,7 +48,7 @@ spec = do
                                                , "* where {Zero n -> Zero}"
                                                , "* where {(Succ m) n -> (n + (m * n))}"
                                                ]
-                it "test00.plt" $ do
+                it "test09.plt" $ do
                         test_file "test09.plt"
                                 `shouldReturn` [ "data List a where {Nil : List a; :: : a -> List a -> List a}"
                                                , "infixr 5 ::"
@@ -62,7 +62,7 @@ spec = do
                                 `shouldReturn` [ "infixr 5 ::"
                                                , "data List a where {Nil : List a; :: : a -> List a -> List a}"
                                                , "reverse : {a} List a -> List a"
-                                               , "reverse where {l -> let {rev : {a} List a -> List a -> List a; rev where {Nil a -> a}; rev where {(:: x xs) a -> rev xs\n((x :: a))}} in rev l Nil}"
+                                               , "reverse where {l -> let {rev : {a} List a -> List a -> List a; rev where {Nil a -> a}; rev where {(:: x xs) a -> rev xs ((x :: a))}} in rev l Nil}"
                                                ]
 
 test_expr :: T.Text -> IO String
