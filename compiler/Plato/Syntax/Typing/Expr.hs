@@ -63,7 +63,7 @@ instance Pretty (Expr a) where
         pretty (TAbsE qnts body) =
                 hcat
                         [ backslash
-                        , prQuants qnts
+                        , hsep $ map prQuant qnts
                         , dot <+> pretty body
                         ]
         pretty (LetE bnds spcs body) =

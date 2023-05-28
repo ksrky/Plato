@@ -6,6 +6,7 @@ module Plato.TypingSpec where
 import Control.Monad.Reader
 import Data.IORef
 import Data.Text qualified as T
+import Prettyprinter
 import Test.Hspec
 
 import Plato.Common.Location
@@ -24,9 +25,15 @@ spec = do
         describe "Type checking of declarations" $ do
                 it "lambda abstraction" $ do
                         test_decls "id : {a} a -> a; id = \\x -> x" `shouldReturn` ()
+                it "function clause" $ do
+                        test_decls "id : {a} a -> a; id x = x" `shouldReturn` ()
         describe "Type checking of a file" $ do
                 it "test01.plt" $ do
                         test_file "test01.plt" `shouldReturn` ()
+                it "test02.plt" $ do
+                        test_file "test02.plt" `shouldReturn` ()
+                it "test03.plt" $ do
+                        test_file "test03.plt" `shouldReturn` ()
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -51,7 +58,8 @@ test_file fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        typsyn' <- ps2typ pssyn'
-                        void $ typing typsyn'
+                        typsyn <- ps2typ pssyn'
+                        typsyn' <- typing typsyn
+                        liftIO $ print $ map (show . pretty) typsyn'
                 )
                 =<< initSession

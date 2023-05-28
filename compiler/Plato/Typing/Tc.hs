@@ -195,14 +195,18 @@ checkClauses ::
         Sigma ->
         m (LExpr 'TcDone)
 checkClauses clauses sigma_ty = do
-        (coer, rho_ty) <- instantiate sigma_ty
+        (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         let (pat_tys, res_ty) = split [] rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 subst <- concat <$> zipWithM checkPat pats pat_tys
                 body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'
-        return $ (coer .>) <$> exp
+        env_tys <- getEnvTypes
+        esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
+        let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
+        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
     where
         split :: [Sigma] -> Rho -> ([Sigma], Tau)
         split acc ty | length acc == length (fst $ head clauses) = (acc, ty)

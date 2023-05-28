@@ -68,17 +68,14 @@ instance Pretty (Bind a) where
         pretty (DatBind id params constrs) =
                 hsep
                         [ "data"
-                        , hsep (pretty id : [prQuants params])
+                        , hsep (pretty id : map prQuant params)
                         , "where"
-                        , vsep (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
+                        , braces $
+                                concatWith
+                                        (surround (semi <> space))
+                                        (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
                         ]
-        pretty (DatBindok id _ params constrs) =
-                hsep
-                        [ "data"
-                        , hsep (pretty id : [prQuants params])
-                        , "where"
-                        , vsep (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
-                        ]
+        pretty (DatBindok id _ params constrs) = pretty (DatBind id params constrs)
 
 instance Pretty Spec where
         pretty (ValSpec id ty) = hsep [pretty id, colon, pretty ty]

@@ -56,10 +56,6 @@ elabExpr (T.CaseE match alts) = do
                         (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
         return $ C.TmCase t alts'
 
--- elabClauses :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => [T.Clause 'T.TcUndone] -> m C.Term
--- elabClauses [([], exp)] = elabExpr (unLoc exp)
--- elabClauses _ = unreachable "ElabClause failed"
-
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do
         i <- getVarIndex (nameIdent $ T.unTyVar tv)
