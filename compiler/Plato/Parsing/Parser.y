@@ -113,7 +113,7 @@ constrs     :: { [(Ident, LType)] }
 
 constr      :: { (Ident, LType) }
             : con ':' type                          { ($1, $3) }
-            -- syntax restriction: last type of `type` must be its data type
+            | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
 fundecls    :: { [LFunDecl] }
@@ -209,8 +209,9 @@ clause      :: { Clause }
 -- Patterns
 -----------------------------------------------------------
 pat         :: { LPat }
-            : lpat                                  { $1 }
+            : lpat conop pat                        { sL $1 $3 (ConP $2 [$1, $3]) }
             -- TODO: infix pattern resolution 
+            | lpat                                  { $1 }
 
 lpat 		:: { LPat }
 			: con apats                             { sL $1 $2 (ConP $1 $2) }

@@ -60,6 +60,7 @@ dataConType id (con, ty) = loop1 ty
         loop1 (L _ (ArrT _ ty2)) = loop1 ty2
         loop1 ty = loop2 ty
         loop2 :: MonadThrow m => LType -> m ()
+        loop2 (L _ (AppT ty1 _)) = loop2 ty1
         loop2 (L _ (ConT id2)) | nameIdent id == nameIdent id2 = return ()
         loop2 (L sp ty) =
                 throwLocErr sp $
