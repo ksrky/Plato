@@ -43,31 +43,25 @@ import Prettyprinter
 'case'                          { L $$ (TokKeyword KwCase) }
 'data'                          { L $$ (TokKeyword KwData) }
 'import'                        { L $$ (TokKeyword KwImport) }
+'in'                            { L $$ (TokKeyword KwIn) }
 'infix'                         { L $$ (TokKeyword KwInfix) }
 'infixl'                        { L $$ (TokKeyword KwInfixL) }
 'infixr'                        { L $$ (TokKeyword KwInfixR) }
-'in'                            { L $$ (TokKeyword KwIn) }
-'of'                            { L $$ (TokKeyword KwOf) }
-'open'                          { L $$ (TokKeyword KwOpen) }
-'module'                        { L $$ (TokKeyword KwModule) }
 'let'                           { L $$ (TokKeyword KwLet) }
+'of'                            { L $$ (TokKeyword KwOf) }
 'where'                         { L $$ (TokKeyword KwWhere) }
 
 '->'                            { L $$ (TokSymbol SymArrow) }
 '\\'                            { L $$ (TokSymbol SymBackslash) }
-','                             { L $$ (TokSymbol SymComma) }
 ':'                             { L $$ (TokSymbol SymColon) }
 '\''                            { L $$ (TokSymbol SymDash) }
 '='                             { L $$ (TokSymbol SymEqual) }
 '{'                             { L $$ (TokSymbol SymLBrace) }
-'['                             { L $$ (TokSymbol SymLBrack) }
 '('                             { L $$ (TokSymbol SymLParen) }
 '}'                             { L $$ (TokSymbol SymRBrace) }
-']'                             { L $$ (TokSymbol SymRBrack) }
 ')'                             { L $$ (TokSymbol SymRParen) }
 ';'                             { L $$ (TokSymbol SymSemicolon) }
 '_'                             { L $$ (TokSymbol SymUScore) }
-'|'                             { L $$ (TokSymbol SymVBar) }
 'v{'                            { L $$ (TokSymbol SymVLBrace) }
 'v}'                            { L $$ (TokSymbol SymVRBrace) }
 
@@ -296,30 +290,24 @@ token       :: { Token }
             : 'case'                                { TokKeyword KwCase }
             | 'data'                                { TokKeyword KwData }
             | 'import'                              { TokKeyword KwImport }
+            | 'in'                                  { TokKeyword KwIn }
             | 'infix'                               { TokKeyword KwInfix }
             | 'infixl'                              { TokKeyword KwInfixL }
             | 'infixr'                              { TokKeyword KwInfixR }
-            | 'in'                                  { TokKeyword KwIn }
             | 'of'                                  { TokKeyword KwOf }
-            | 'open'                                { TokKeyword KwOpen }
-            | 'module'                              { TokKeyword KwModule }
             | 'let'                                 { TokKeyword KwLet }
             | 'where'                               { TokKeyword KwWhere }
             | '->'                                  { TokSymbol SymArrow }
             | '\\'                                  { TokSymbol SymBackslash }
-            | ','                                   { TokSymbol SymComma }
             | ':'                                   { TokSymbol SymColon }
             | '\''                                  { TokSymbol SymDash }
             | '='                                   { TokSymbol SymEqual }
             | '{'                                   { TokSymbol SymLBrace }
-            | '['                                   { TokSymbol SymLBrack }
             | '('                                   { TokSymbol SymLParen }
             | '}'                                   { TokSymbol SymRBrace }
-            | ']'                                   { TokSymbol SymRBrack }
             | ')'                                   { TokSymbol SymRParen }
             | ';'                                   { TokSymbol SymSemicolon }
             | '_'                                   { TokSymbol SymUScore }
-            | '|'                                   { TokSymbol SymVBar }
             | 'v{'                                  { TokSymbol SymVLBrace }
             | 'v}'                                  { TokSymbol SymVRBrace }
             | varid                                 { TokVarId (unLoc $1) }

@@ -23,9 +23,7 @@ data Keyword
         | KwInfixR
         | KwIn
         | KwOf
-        | KwOpen
         | KwLet
-        | KwModule
         | KwWhere
         deriving (Eq, Show)
 
@@ -33,18 +31,14 @@ data Symbol
         = SymArrow
         | SymBackslash
         | SymColon
-        | SymComma
         | SymDash
         | SymEqual
         | SymLBrace
-        | SymLBrack
         | SymLParen
         | SymRBrace
-        | SymRBrack
         | SymRParen
         | SymSemicolon
         | SymUScore
-        | SymVBar
         | SymVLBrace
         | SymVRBrace
         deriving (Eq, Show)
@@ -55,7 +49,6 @@ commonSymbols =
         , ("\\", SymBackslash)
         , (":", SymColon)
         , ("=", SymEqual)
-        , ("|", SymVBar)
         ]
 instance Pretty Token where
         pretty (TokKeyword k) = pretty k
@@ -76,26 +69,20 @@ instance Pretty Keyword where
         pretty KwInfixR = "infixr"
         pretty KwIn = "in"
         pretty KwOf = "of"
-        pretty KwOpen = "open"
         pretty KwLet = "let"
-        pretty KwModule = "module"
         pretty KwWhere = "where"
 
 instance Pretty Symbol where
         pretty SymArrow = "->"
         pretty SymBackslash = "\\"
         pretty SymColon = ":"
-        pretty SymComma = ","
         pretty SymDash = "'"
         pretty SymEqual = "="
         pretty SymLBrace = "{"
-        pretty SymLBrack = "["
         pretty SymLParen = "("
         pretty SymRBrace = "{"
-        pretty SymRBrack = "]"
         pretty SymRParen = ")"
         pretty SymSemicolon = ";"
         pretty SymUScore = "_"
-        pretty SymVBar = "|"
         pretty SymVLBrace = "v{"
         pretty SymVRBrace = "v}"
