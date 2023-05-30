@@ -39,8 +39,8 @@ spec = do
                 it "test01.plt" $ do
                         test_file "test01.plt"
                                 `shouldReturn` [ "Bool = μBool:*. ({}|{})"
-                                               , "True = ((fold [Bool])) inj_0[Bool]()"
-                                               , "False = ((fold [Bool])) inj_1[Bool]()"
+                                               , "True = (fold [Bool]) inj_0[Bool]()"
+                                               , "False = (fold [Bool]) inj_1[Bool]()"
                                                ]
                 it "test02.plt" $ do
                         test_file "test02.plt"
@@ -52,6 +52,19 @@ spec = do
                                 `shouldReturn` [ "Nat = μNat:*. ({}|{?:Nat})"
                                                , "Zero = (fold [Nat]) inj_0[Nat]()"
                                                , "Succ = (fold [Nat]) (λ?:Nat. inj_1[Nat](?))"
+                                               ]
+                it "test04.plt" $ do
+                        test_file "test04.plt"
+                                `shouldReturn` [ "? = fix (λ?:{g:∀a*. ∀b*. (a->b)->a->b}. {g=Λa:*. Λb:*. ((Λa:*. Λb:*. λ$17:a. λ$16:a->b. $16 $17)a)b})"
+                                               , "g = ?.0"
+                                               ]
+                it "test05.plt" $ do
+                        test_file "test05.plt"
+                                `shouldReturn` [ "Bool = μBool:*. ({}|{})"
+                                               , "True = (fold [Bool]) inj_0[Bool]()"
+                                               , "False = (fold [Bool]) inj_1[Bool]()"
+                                               , "? = fix (λ?:{not:Bool->Bool}. {not=λ$16:Bool. case ((unfold [Bool]) $16) {True -> False | False -> True}})"
+                                               , "not = ?.0"
                                                ]
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}

@@ -104,7 +104,7 @@ instance Pretty Term where
         pretty (TmCase t alts) =
                 hsep
                         [ "case"
-                        , pretty t
+                        , prTerm1 t
                         , braces $
                                 concatWith
                                         (surround (space <> pipe <> space))
@@ -128,9 +128,9 @@ prTerm2 t = walk t []
 
 instance Pretty Type where
         pretty (TyVar _ fi) = pretty (actualName fi)
-        pretty (TyFun tyT1 tyT2) = hcat [pretty tyT1, "->", pretty tyT2]
+        pretty (TyFun tyT1 tyT2) = hcat [prType1 ArrPrec tyT1, "->", prType1 TopPrec tyT2]
         pretty (TyAll fi knK1 tyT2) = hcat ["∀", pretty (actualName fi), pretty knK1, dot, space, pretty tyT2]
-        pretty (TyApp tyT1 tyT2) = pretty tyT1 <+> parens (pretty tyT2)
+        pretty (TyApp tyT1 tyT2) = prType1 AtomPrec tyT1 <+> prType1 AppPrec tyT2
         pretty (TyAbs fi knK1 tyT2) = hcat ["λ", pretty (actualName fi), colon, pretty knK1, dot, space, pretty tyT2]
         pretty (TyRec fi knK1 tyT2) = hcat ["μ", pretty (actualName fi), colon, pretty knK1, dot, space, pretty tyT2]
         pretty (TyRecord fields) =
@@ -140,9 +140,26 @@ instance Pretty Type where
                                 (map (\(l, ty) -> hcat [pretty l, colon, pretty ty]) fields)
         pretty (TySum fields) = parens $ concatWith (surround pipe) (map pretty fields)
 
+data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
+
+precOf :: Type -> Prec
+precOf TyVar{} = AtomPrec
+precOf TyFun{} = ArrPrec
+precOf TyApp{} = AppPrec
+precOf _ = TopPrec
+
+prType1 :: Prec -> Type -> Doc ann
+prType1 p ty
+        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
+        | otherwise = pretty ty
+
 instance Pretty Kind where
         pretty KnStar = "*"
-        pretty (KnFun knK1 knK2) = hcat [pretty knK1, "->", pretty knK2]
+        pretty (KnFun knK1 knK2) = hcat [prKind1 knK1, "->", pretty knK2]
+
+prKind1 :: Kind -> Doc ann
+prKind1 KnStar = pretty KnStar
+prKind1 knK = parens (pretty knK)
 
 instance Pretty Binding where
         pretty NameBind = emptyDoc

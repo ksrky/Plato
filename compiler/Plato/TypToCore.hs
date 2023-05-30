@@ -40,6 +40,7 @@ elabExpr (T.TAbsE qnts body) = do
         t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr body
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetEok bnds spcs body) = do
+        -- TODO
         bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
         spcs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) spcs
         let rbnds = recursiveBinds bnds' spcs'
