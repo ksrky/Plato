@@ -1,4 +1,4 @@
-# generated dirs
+# generated directories
 .stack-work/
 dist-newstyle/
 stack.yaml.lock
@@ -10,5 +10,5 @@ stack.yaml.lock
 /site
 static
 
-examples/Plato
+# Executable file
 src/Main
