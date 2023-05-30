@@ -15,8 +15,10 @@ tmmap onvar ontype c t = walk c t
                 TmFix t1 -> TmFix (walk c t1)
                 TmProj t1 l -> TmProj (walk c t1) l
                 TmRecord fields -> TmRecord (map (\(li, ti) -> (li, walk c ti)) fields)
-                TmInj i t1 tyT2 -> TmInj i (walk c t1) (ontype c tyT2)
+                TmInj i tyT elims -> TmInj i (ontype c tyT) (map (walk c) elims)
                 TmCase t alts -> TmCase (walk c t) (map (\(li, ti) -> (li, walk c ti)) alts)
+                TmFold tyT -> TmFold (ontype c tyT)
+                TmUnfold tyT -> TmUnfold (ontype c tyT)
 
 tymap :: (Int -> Int -> NameInfo -> Type) -> Int -> Type -> Type
 tymap onvar c tyT = walk c tyT

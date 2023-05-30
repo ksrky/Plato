@@ -15,42 +15,56 @@ import Plato.Syntax.Core.Info
 type Label = Name
 
 data Term
-        = -- | Term-level variable
+        = -- | Term-level variable @x@
           TmVar !Int NameInfo
-        | -- | Application
+        | -- | Application @t t@
           TmApp !Term !Term
-        | -- | Abstraction
+        | -- | Abstraction @λx:T.t@
           TmAbs NameInfo !Type !Term
-        | -- | Type application
+        | -- | Term-type application @t \@T@
           TmTApp !Term !Type
-        | -- | Type abstraction
+        | -- | Term-type abstraction @λX:K.t@
           TmTAbs NameInfo !Kind !Term
         | -- | Let binding
           TmLet NameInfo !Term !Term
-        | -- | Fix combinator
+        | -- | Fix combinator @fix t@
           TmFix !Term
-        | -- | Record projection
+        | -- | Record projection @t.i@
           TmProj !Term !Int
-        | -- | Record
+        | -- | Record @{l_1:t_1...l_n:t_n}@
           TmRecord ![(Label, Term)]
-        | -- | Injection to variants
-          TmInj Int !Term !Type
-        | -- | Case tree
+        | -- | Injection @inj_i[T](t_1...t_n)@
+          TmInj Int Type ![Term]
+        | -- | Case @case t {l_1->t_1...l_n->t_n}@
           TmCase !Term ![(Label, Term)]
+        | TmFold Type
+        | TmUnfold Type
         deriving (Eq, Show)
 
 data Type
-        = TyVar !Int NameInfo
-        | TyFun !Type !Type
-        | TyAll NameInfo !Kind !Type
-        | TyApp !Type !Type
-        | TyAbs NameInfo !Kind !Type
-        | TyRec NameInfo !Kind !Type
-        | TyRecord ![(Label, Type)]
-        | TySum ![Type]
+        = -- | Type-level variable @X@
+          TyVar !Int NameInfo
+        | -- | Type of functions  @T->T@
+          TyFun !Type !Type
+        | -- | Universal type @∀X:K.T@
+          TyAll NameInfo !Kind !Type
+        | -- | Type-type application @T T@
+          TyApp !Type !Type
+        | -- | Type-type abstraction @ΛX:K.T@
+          TyAbs NameInfo !Kind !Type
+        | -- | Recursive type @μX:K.T@
+          TyRec NameInfo !Kind !Type
+        | -- | Type of record @{l_1:T_1...l_n:T_n}@
+          TyRecord ![(Label, Type)]
+        | -- | Sum type @T_1+...+T_n@
+          TySum ![Type]
         deriving (Eq, Show)
 
-data Kind = KnStar | KnFun !Kind !Kind
+data Kind
+        = -- | Kind of proper types @*@
+          KnStar
+        | -- | Kind of type operators @K->K@
+          KnFun !Kind !Kind
         deriving (Eq, Show)
 
 data Binding
@@ -66,42 +80,7 @@ data Command
         | Eval !Term
         deriving (Show)
 
-instance Pretty Term where
-        pretty (TmVar i _) = pretty i
-        pretty (TmApp t1 t2) = parens $ pretty t1 <> parens (pretty t2)
-        pretty (TmAbs _ tyT1 t2) = parens $ hcat [pipe, pretty tyT1, dot, pretty t2]
-        pretty (TmTApp t1 tyT2) = parens $ pretty t1 <> parens (pretty tyT2)
-        pretty (TmTAbs _ knK1 t2) = parens $ hcat [pipe, pretty knK1, pretty t2]
-        pretty TmLet{} = undefined
-        pretty (TmFix t) = parens $ "fix" <> parens (pretty t)
-        pretty (TmProj t i) = hcat [pretty t, dot, pretty i]
-        pretty (TmRecord fields) =
-                hcat [lbrace, concatWith (surround comma) (map (pretty . snd) fields), rbrace]
-        pretty (TmInj i t1 tyT2) = hcat ["inj_", pretty i, "^", pretty tyT2, parens (pretty t1)]
-        pretty (TmCase t alts) =
-                hcat ["case_", pretty t, hcat (map (\(_, t) -> pipe <> pretty t) alts)]
-
-instance Pretty Type where
-        pretty (TyVar i _) = pretty i
-        pretty (TyFun tyT1 tyT2) = parens $ hcat [pretty tyT1, "->", pretty tyT2]
-        pretty (TyAll _ knK1 tyT2) = parens $ hcat [squote, pretty knK1, dot, pretty tyT2]
-        pretty (TyApp tyT1 tyT2) = parens $ pretty tyT1 <> parens (pretty tyT2)
-        pretty (TyAbs _ knK1 tyT2) = parens $ hcat [pipe, pretty knK1, dot, pretty tyT2]
-        pretty (TyRec _ knK1 tyT2) = parens $ hcat [slash, pretty knK1, dot, pretty tyT2]
-        pretty (TyRecord fields) = braces $ concatWith (surround comma) (map (pretty . snd) fields)
-        pretty (TySum fields) = parens $ concatWith (surround pipe) (map pretty fields)
-
-instance Pretty Kind where
-        pretty KnStar = "*"
-        pretty (KnFun knK1 knK2) = parens $ hcat [pretty knK1, "->", pretty knK2]
-
-instance Pretty Binding where
-        pretty NameBind = emptyDoc
-        pretty (TmVarBind tyT) = colon <> pretty tyT
-        pretty (TyVarBind knK) = colon <> pretty knK
-        pretty (TmAbbBind t _) = equals <> pretty t
-        pretty (TyAbbBind tyT _) = equals <> pretty tyT
-
-instance Pretty Command where
-        pretty (Bind _ bind) = pretty bind
-        pretty (Eval t) = pretty t
+instance Pretty Term
+instance Pretty Type
+instance Pretty Kind
+instance Pretty Command

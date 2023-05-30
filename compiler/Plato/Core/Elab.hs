@@ -66,4 +66,4 @@ mkConstr num = walk (-1)
         walk :: Int -> Type -> Term
         walk (-1) (TyAll x knK1 tyT2) = TmTAbs x knK1 (walk (-1) tyT2)
         walk n (TyFun tyT1 tyT2) = TmAbs Dummy tyT1 (walk (n + 1) tyT2)
-        walk n tyT = TmInj num (TmRecord (map (\i -> (dummyVN, TmVar (n - i) Dummy)) [0 .. n])) tyT
+        walk n tyT = TmInj num tyT (map (\i -> TmVar (n - i) Dummy) [0 .. n])

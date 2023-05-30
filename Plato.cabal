@@ -33,6 +33,7 @@ library
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Calc
+      Plato.Core.Codegen
       Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
@@ -165,6 +166,7 @@ test-suite Plato-test
       Plato.Parsing.ParserSpec
       Plato.PsToTypSpec
       Plato.TypingSpec
+      Plato.TypToCoreSpec
       Paths_Plato
   hs-source-dirs:
       test
