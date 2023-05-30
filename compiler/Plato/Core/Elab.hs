@@ -51,19 +51,19 @@ constrsToVariant constrs = TySum (map ((productTy . split []) . snd) constrs)
         split acc (TyFun arg res) = split (arg : acc) res
         split acc _ = acc
 
-constrBinds :: [(Ident, Type)] -> [Command]
-constrBinds = loop 0
+constrBinds :: Ident -> [(Ident, Type)] -> [Command]
+constrBinds tyname = loop 0
     where
         loop :: Int -> [(Ident, Type)] -> [Command]
         loop _ [] = []
-        loop n ((con, tyT) : rest) =
-                let t = mkConstr n tyT
-                 in Bind (mkInfo con) (TmAbbBind t tyT) : loop (n + 1) rest
+        loop n_con ((con, tyT) : rest) =
+                let t = TmApp (TmFold (TyVar n_con (mkInfo tyname))) (mkConstr n_con tyT)
+                 in Bind (mkInfo con) (TmAbbBind t tyT) : loop (n_con + 1) rest
 
 mkConstr :: Int -> Type -> Term
-mkConstr num = walk (-1)
+mkConstr n_con = walk (-1)
     where
         walk :: Int -> Type -> Term
         walk (-1) (TyAll x knK1 tyT2) = TmTAbs x knK1 (walk (-1) tyT2)
-        walk n (TyFun tyT1 tyT2) = TmAbs Dummy tyT1 (walk (n + 1) tyT2)
-        walk n tyT = TmInj num tyT (map (\i -> TmVar (n - i) Dummy) [0 .. n])
+        walk n_arg (TyFun tyT1 tyT2) = TmAbs Dummy tyT1 (walk (n_arg + 1) tyT2)
+        walk n_arg tyT = TmInj n_con tyT (map (\i -> TmVar (n_arg - i) Dummy) [0 .. n_arg])

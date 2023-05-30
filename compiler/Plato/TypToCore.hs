@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (typ2core) where
+module Plato.TypToCore (elabDecls, typ2core) where
 
 import Control.Monad
 import Control.Monad.Reader
@@ -84,8 +84,7 @@ elabDecls decs = do
                 T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, unLoc ty)], [])
                 dec -> tell ([], [dec])
         let elabDecls' :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
-            elabDecls' (T.SpecDecl T.TypSpec{} : rest) = do
-                elabDecls' rest
+            elabDecls' (T.SpecDecl T.TypSpec{} : rest) = elabDecls' rest
             elabDecls' (T.BindDecl (T.DatBindok id kn params constrs) : rest) = do
                 let knK = elabKind kn
                 extendNameWith (nameIdent id) $ do
@@ -101,7 +100,7 @@ elabDecls decs = do
                             tyT_nonrec = foldr (uncurry C.TyAbs) (constrsToVariant var_constrs) params'
                             tyT = C.TyRec (C.mkInfo id) knK tyT_nonrec
                         rest' <- extendNameListWith (map (nameIdent . fst) constrs) $ elabDecls' rest
-                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds fun_constrs ++ rest'
+                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds id fun_constrs ++ rest'
             elabDecls' (T.BindDecl (T.TypBind id ty) : rest) = do
                 -- tmp: remove
                 tyT <- elabType (unLoc ty)
