@@ -27,12 +27,12 @@ spec = do
         describe "Core elaboration of declarations" $ do
                 it "lambda abstraction" $ do
                         test_decls "id : {a} a -> a; id = \\x -> x"
-                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=Λa:*. (Λa:*. λx:a. x)a})"
+                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=(λid:∀a*. a->a. Λa:*. (Λa:*. λx:a. x) a) (?.0)})"
                                                , "id = ?.0"
                                                ]
                 it "function clause" $ do
                         test_decls "id : {a} a -> a; id x = x"
-                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=Λa:*. (Λa:*. λ$9:a. $9)a})"
+                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=(λid:∀a*. a->a. Λa:*. (Λa:*. λ$9:a. $9) a) (?.0)})"
                                                , "id = ?.0"
                                                ]
         describe "Core elaboration of a file" $ do
@@ -44,7 +44,7 @@ spec = do
                                                ]
                 it "test02.plt" $ do
                         test_file "test02.plt"
-                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=Λa:*. (Λa:*. λx:a. x)a})"
+                                `shouldReturn` [ "? = fix (λ?:{id:∀a*. a->a}. {id=(λid:∀a*. a->a. Λa:*. (Λa:*. λx:a. x) a) (?.0)})"
                                                , "id = ?.0"
                                                ]
                 it "test03.plt" $ do
@@ -55,7 +55,7 @@ spec = do
                                                ]
                 it "test04.plt" $ do
                         test_file "test04.plt"
-                                `shouldReturn` [ "? = fix (λ?:{g:∀a*. ∀b*. (a->b)->a->b}. {g=Λa:*. Λb:*. ((Λa:*. Λb:*. λ$17:a. λ$16:a->b. $16 $17)a)b})"
+                                `shouldReturn` [ "? = fix (λ?:{g:∀a*. ∀b*. (a->b)->a->b}. {g=(λg:∀a*. ∀b*. (a->b)->a->b. Λa:*. Λb:*. ((Λa:*. Λb:*. λ$17:a. λ$16:a->b. $16 $17) a) b) (?.0)})"
                                                , "g = ?.0"
                                                ]
                 it "test05.plt" $ do
@@ -63,7 +63,20 @@ spec = do
                                 `shouldReturn` [ "Bool = μBool:*. ({}|{})"
                                                , "True = (fold [Bool]) inj_0[Bool]()"
                                                , "False = (fold [Bool]) inj_1[Bool]()"
-                                               , "? = fix (λ?:{not:Bool->Bool}. {not=λ$16:Bool. case ((unfold [Bool]) $16) {True -> False | False -> True}})"
+                                               , "? = fix (λ?:{not:Bool->Bool}. {not=(λnot:Bool->Bool. λ$16:Bool. case ((unfold [Bool]) $16) {True -> False | False -> True}) (?.0)})"
+                                               , "not = ?.0"
+                                               ]
+                it "test06.plt" $ do
+                        test_file "test06.plt"
+                                `shouldReturn` [ "? = fix (λ?:{f:∀a*. a->a}. {f=(λf:∀a*. a->a. Λa:*. (Λa:*. (λ?:{g:∀b*. b->b, h:∀c*. c->c}. (λh:∀c*. c->c. (λg:∀b*. b->b. g a) (?.1)) (?.0)) (fix (λ?:{g:∀b*. b->b, h:∀c*. c->c}. {g=(λg:∀b*. b->b. Λb:*. (Λb:*. λx:b. x) b) (?.0),h=(λh:∀c*. c->c. Λc:*. (Λc:*. λy:c. y) c) (?.1)}))) a) (?.0)})"
+                                               , "f = ?.0"
+                                               ]
+                it "test07.plt" $ do
+                        test_file "test07.plt"
+                                `shouldReturn` [ "Bool = μBool:*. ({}|{})"
+                                               , "True = (fold [Bool]) inj_0[Bool]()"
+                                               , "False = (fold [Bool]) inj_1[Bool]()"
+                                               , "? = fix (λ?:{not:Bool->Bool}. {not=(λnot:Bool->Bool. λ$15:Bool. case ((unfold [Bool]) $15) {True -> False | False -> True}) (?.0)})"
                                                , "not = ?.0"
                                                ]
 

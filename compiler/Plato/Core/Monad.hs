@@ -47,4 +47,4 @@ getVarIndex x = do
         env <- asks getEnv
         case V.elemIndex x (V.map fst env) of
                 Just idx -> return idx
-                Nothing -> unreachable "Plato.Core.Env.getVarIndex"
+                Nothing -> unreachable $ "Unbound name, " ++ show x

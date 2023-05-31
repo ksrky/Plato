@@ -84,7 +84,7 @@ instance Pretty Term where
         pretty (TmVar _ fi) = pretty $ actualName fi
         pretty t@TmApp{} = prTerm2 t
         pretty (TmAbs fi tyT1 t2) = hcat ["λ", pretty (actualName fi), colon, pretty tyT1, dot, space, pretty t2]
-        pretty (TmTApp t1 tyT2) = prTerm1 t1 <> pretty tyT2
+        pretty (TmTApp t1 tyT2) = prTerm1 t1 <+> pretty tyT2
         pretty (TmTAbs fi knK1 t2) = hcat ["Λ", pretty (actualName fi), colon, pretty knK1, dot, space, pretty t2]
         pretty TmLet{} = undefined
         pretty (TmFix t) = "fix" <+> prTerm1 t

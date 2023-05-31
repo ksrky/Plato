@@ -29,17 +29,17 @@ product ts = TmRecord (map (dummyVN,) ts)
 productTy :: [Type] -> Type
 productTy tys = TyRecord (map (dummyVN,) tys)
 
-recursiveBinds :: [(Name, Term)] -> [(Ident, Type)] -> [(NameInfo, Term, Type)]
+recursiveBinds :: [(Name, Term)] -> [(Ident, Type)] -> [(NameInfo, (Term, Type))]
 recursiveBinds [] [] = []
 recursiveBinds bnds spcs =
         let spcs' = map (\(id, tyT) -> (nameIdent id, tyT)) spcs
             t = TmFix (TmAbs Dummy (TyRecord spcs') (TmRecord bnds))
-            rbnd = (Dummy, t, TyRecord spcs')
+            rbnd = (Dummy, (t, TyRecord spcs'))
          in reverse $
                 foldr
                         ( \(idi, tyTi) acc ->
                                 let i = length acc - 1
-                                 in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
+                                 in (mkInfo idi, (TmProj (TmVar i Dummy) i, shift i tyTi)) : acc
                         )
                         [rbnd]
                         spcs
