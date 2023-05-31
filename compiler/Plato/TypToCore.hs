@@ -9,6 +9,7 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import GHC.Stack
 
+import Data.List qualified
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -19,13 +20,20 @@ import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
+elabVar :: (MonadReader ctx m, HasCoreEnv ctx) => [(Ident, (Int, Ident))] -> Ident -> m C.Term
+elabVar dict var = case lookup var dict of
+        Just (j, id) -> do
+                i <- getVarIndex (nameIdent id)
+                return $ C.TmProj (C.TmVar i (C.mkInfo id)) j
+        Nothing -> do
+                i <- getVarIndex (nameIdent var)
+                return $ C.TmVar i (C.mkInfo var)
+
 elabExpr ::
         (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) =>
         T.Expr 'T.TcDone ->
         m C.Term
-elabExpr (T.VarE var) = do
-        i <- getVarIndex (nameIdent var)
-        return $ C.TmVar i (C.mkInfo var)
+elabExpr (T.VarE var) = elabVar [] var
 elabExpr (T.AppE fun arg) = C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsEok var ty body) = do
         tyT1 <- elabType ty
@@ -40,22 +48,28 @@ elabExpr (T.TAbsE qnts body) = do
         t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr body
         return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
 elabExpr (T.LetEok bnds spcs body) = do
-        -- TODO
-        bnds' <- mapM (\(id, exp) -> (nameIdent id,) <$> elabExpr (unLoc exp)) bnds
+        let proj :: Int -> C.Term
+            proj = C.TmProj (C.TmVar 0 C.Dummy)
+        bnds' <- forM bnds $ \(id, exp) -> case Data.List.findIndex ((== id) . fst) spcs of
+                Just i -> do
+                        t <- elabExpr (T.AbsEok id (unLoc $ snd (spcs !! i)) (unLoc exp))
+                        return (nameIdent id, C.TmApp t (proj i))
+                Nothing -> unreachable "function not defined"
         spcs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) spcs
         let rbnds = recursiveBinds bnds' spcs'
         t2 <- elabExpr (unLoc body)
         -- return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
         return $ foldr (\(xi, ti, tyTi) t -> C.TmApp (C.TmAbs xi tyTi t) ti) t2 rbnds
-elabExpr (T.CaseE match alts) = do
+elabExpr (T.CaseEok match ty alts) = do
         t <- elabExpr (unLoc match)
+        tyT <- elabType ty
         alts' <- forM alts $ \(pat, exp) -> case unLoc pat of
                 T.WildP -> unreachable ""
                 T.VarP{} -> unreachable ""
                 T.ConP c ps -> do
                         let xs = [nameIdent id | L _ (T.VarP id) <- ps]
                         (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
-        return $ C.TmCase t alts'
+        return $ C.TmCase (C.TmApp (C.TmUnfold tyT) t) alts'
 
 elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
 elabType (T.VarT tv) = do

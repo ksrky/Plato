@@ -128,7 +128,7 @@ executable plato
       Options
       Paths_Plato
   hs-source-dirs:
-      src/plato
+      driver/plato
   default-extensions:
       OverloadedStrings
       ImportQualifiedPost

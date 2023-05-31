@@ -64,7 +64,7 @@ library:
 executables:
   plato:
     main: Main.hs
-    source-dirs: src/plato
+    source-dirs: driver/plato
     ghc-options:
       - -threaded
       - -rtsopts

@@ -27,10 +27,11 @@ zonkExpr (LetEok bnds spcs body) = do
         spcs' <- mapM (\(id, ty) -> (id,) <$> zonkType `traverse` ty) spcs
         body' <- zonkExpr `traverse` body
         return $ LetEok bnds' spcs' body'
-zonkExpr (CaseE match alts) = do
+zonkExpr (CaseEok match ann alts) = do
         match' <- zonkExpr `traverse` match
+        ann' <- zonkType ann
         alts' <- mapM (\(pats, exp) -> (pats,) <$> zonkExpr `traverse` exp) alts
-        return $ CaseE match' alts'
+        return $ CaseEok match' ann' alts'
 
 zonkType :: MonadIO m => Type -> m Type
 zonkType (VarT tv) = return (VarT tv)

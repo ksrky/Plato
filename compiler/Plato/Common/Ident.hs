@@ -1,4 +1,11 @@
-module Plato.Common.Ident where
+module Plato.Common.Ident (
+        Ident (..),
+        ident,
+        fromIdent,
+        freshIdent,
+        IdentMap,
+        lookupIdent,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -37,10 +44,7 @@ fromIdent id = L (getLoc id) (nameIdent id)
 freshIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => NameSpace -> m Ident
 freshIdent ns = do
         u <- pickUniq =<< ask
-        return Ident{nameIdent = uniqName ns u, spanIdent = NoSpan, stamp = u}
-
-uniqName :: NameSpace -> Uniq -> Name
-uniqName ns = Name ns . uniq2text
+        return Ident{nameIdent = Name ns (uniq2text u), spanIdent = NoSpan, stamp = u}
 
 -- | Identifier Map
 type IdentMap a = M.Map Ident a

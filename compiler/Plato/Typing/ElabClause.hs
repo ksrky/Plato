@@ -49,8 +49,8 @@ subst exp id1 id2 = subst' <$> exp
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
         subst' (LetEok bnds sigs body) =
                 LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
-        subst' (CaseE match alts) =
-                CaseE (subst' <$> match) (map (\(id, exp) -> (id, subst' <$> exp)) alts)
+        subst' (CaseEok match ty alts) =
+                CaseEok (subst' <$> match) ty (map (\(id, exp) -> (id, subst' <$> exp)) alts)
 
 isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
@@ -67,7 +67,7 @@ match ::
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
-match [(var, ty)] [] = return $ noLoc (AbsEok var ty (CaseE (noLoc $ VarE var) []))
+match [(var, ty)] [] = return $ noLoc (AbsEok var ty (CaseEok (noLoc $ VarE var) ty []))
 match _ [] = throwError "sequence of absurd type"
 match [] (([], exp) : _) = return exp -- note: clauses should be singleton if not redundant
 match [] _ = unreachable "Number of variables and patterns are not same"
@@ -101,7 +101,7 @@ matchCon ::
 matchCon (var, ty) rest clauses = do
         constrs <- dataConsof ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ noLoc $ AbsEok var ty (CaseE (noLoc $ VarE var) alts)
+        return $ noLoc $ AbsEok var ty (CaseEok (noLoc $ VarE var) ty alts)
 
 matchClause ::
         (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>

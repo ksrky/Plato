@@ -32,7 +32,8 @@ data Expr (a :: TcFlag) where
         TAbsE :: [Quant] -> Expr 'TcDone -> Expr 'TcDone
         LetE :: [(Ident, [Clause 'TcUndone])] -> [(Ident, LType)] -> LExpr 'TcUndone -> Expr 'TcUndone
         LetEok :: [(Ident, LExpr 'TcDone)] -> [(Ident, LType)] -> LExpr 'TcDone -> Expr 'TcDone
-        CaseE :: LExpr a -> [(LPat, LExpr a)] -> Expr a
+        CaseE :: LExpr 'TcUndone -> [(LPat, LExpr 'TcUndone)] -> Expr 'TcUndone
+        CaseEok :: LExpr 'TcDone -> Type -> [(LPat, LExpr 'TcDone)] -> Expr 'TcDone
 
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
@@ -107,6 +108,16 @@ instance Pretty (Expr a) where
                 hsep
                         [ "case"
                         , pretty match
+                        , "of"
+                        , braces $
+                                concatWith
+                                        (surround $ semi <> space)
+                                        (map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts)
+                        ]
+        pretty (CaseEok match _ alts) =
+                hsep
+                        [ "case"
+                        , prExpr1 (unLoc match)
                         , "of"
                         , braces $
                                 concatWith

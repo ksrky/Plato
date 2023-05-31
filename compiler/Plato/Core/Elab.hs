@@ -36,8 +36,8 @@ recursiveBinds bnds spcs =
             t = TmFix (TmAbs Dummy (TyRecord spcs') (TmRecord bnds))
             rbnd = (Dummy, t, TyRecord spcs')
          in reverse $
-                foldl
-                        ( \acc (idi, tyTi) ->
+                foldr
+                        ( \(idi, tyTi) acc ->
                                 let i = length acc - 1
                                  in (mkInfo idi, TmProj (TmVar i Dummy) i, shift i tyTi) : acc
                         )

@@ -12,7 +12,7 @@ import Plato.Nicifier.OpParser
 import Plato.Nicifier.OpParser.Fixity
 import Plato.Syntax.Parsing
 
--- TODo: detect mutual recursion for both data types and functions
+-- TODO: detect mutual recursion for both data types and functions
 nicify :: MonadThrow m => Program -> m Program
 nicify tdecs = runReaderT (nicifyDecls tdecs) initFixityEnv
 
