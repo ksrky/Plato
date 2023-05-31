@@ -12,12 +12,14 @@ import Test.Hspec
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Core.Env
+import Plato.Core.Monad
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.Parsing.Parser
 import Plato.PsToTyp qualified as T
 import Plato.PsToTyp.Scoping
+import Plato.RunCore
 import Plato.TypToCore qualified as C
 import Plato.Typing
 import Plato.Typing.Monad
@@ -108,6 +110,7 @@ test_file fn =
                         typsyn <- T.ps2typ pssyn'
                         typsyn' <- typing typsyn
                         coresyn <- C.typ2core typsyn'
+                        liftIO $ unCore (checkCommands  coresyn) initCoreEnv
                         return $ map (show . pretty) coresyn
                 )
                 =<< initSession

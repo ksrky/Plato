@@ -92,19 +92,19 @@ elabFunDecls fbnds fspcs = do
                 Nothing -> unreachable "function not defined"
         return $ recursiveBinds fbnds' fspcs'
 
-elabDecls :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
+elabDecls :: forall ctx m. (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
 elabDecls decs = do
         let fbnds = [(id, exp) | T.BindDecl (T.FunBindok id exp) <- decs]
             domains = map fst fbnds
         (fspcs, rest) <- execWriterT $ forM decs $ \case
                 T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, ty)], [])
                 dec -> tell ([], [dec])
-        let elabDecls' :: (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
+        let elabDecls' :: [T.Decl 'T.TcDone] -> m [C.Command]
             elabDecls' (T.SpecDecl T.TypSpec{} : rest) = elabDecls' rest
             elabDecls' (T.BindDecl (T.DatBindok id kn params constrs) : rest) = do
                 let knK = elabKind kn
                 extendNameWith (nameIdent id) $ do
-                        let elabConstrs :: (MonadReader ctx m, HasCoreEnv ctx) => [(Ident, T.LType)] -> m [(Ident, C.Type)]
+                        let elabConstrs :: [(Ident, T.LType)] -> m [(Ident, C.Type)]
                             elabConstrs [] = return []
                             elabConstrs ((con, ty) : cs) = do
                                 c <- (con,) <$> elabType (T.AllT params ty)

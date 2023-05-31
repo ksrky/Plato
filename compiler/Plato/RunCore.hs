@@ -1,10 +1,17 @@
-module Plato.RunCore (runCore, printResult, prettyCommands) where
+module Plato.RunCore (
+        runCore,
+        checkCommands,
+        printResult,
+        prettyCommands,
+) where
 
 import Prettyprinter
 import Prettyprinter.Render.Text
 
 import Plato.Core.Env
 import Plato.Core.Eval
+import Plato.Core.Monad
+import Plato.Core.Typing
 import Plato.Driver.Monad
 import Plato.Syntax.Core
 
@@ -17,6 +24,13 @@ evalCommands env (Bind fi bind : cmds) = evalCommands (addBinding (actualName fi
 evalCommands env (Eval t : cmds) =
         let (res, env') = evalCommands env cmds
          in (eval env t : res, env')
+
+checkCommands :: CoreMonad env m => [Command] -> m ()
+checkCommands [] = return ()
+checkCommands (Bind fi bind : rest) = do
+        checkBinding bind
+        extendWith (actualName fi) bind (checkCommands rest)
+checkCommands (Eval _ : rest) = checkCommands rest
 
 printResult :: Term -> IO ()
 printResult = putDoc . pretty

@@ -14,8 +14,8 @@ class (MonadFail m, MonadReader env m, HasCoreEnv env) => CoreMonad env m
 type Core = ReaderT CoreEnv IO
 instance CoreMonad CoreEnv Core
 
-runCore :: Core a -> CoreEnv -> IO a
-runCore = runReaderT
+unCore :: Core a -> CoreEnv -> IO a
+unCore = runReaderT
 
 extendWith :: (MonadReader r m, HasCoreEnv r) => Name -> Binding -> m a -> m a
 extendWith x bind = local (modifyEnv $ addBinding x bind)

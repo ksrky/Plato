@@ -147,5 +147,5 @@ parseError (t : _) = fail $ "parse error at " ++ show t
 parse :: CoreEnv -> String -> IO [Command]
 parse env inp = do
         m <- parser $ alexScanTokens inp
-        runCore m env
+        unCore m env
 }

@@ -1,6 +1,8 @@
-module Plato.Core.Typing where
+module Plato.Core.Typing (typeof, kindof, checkBinding) where
 
 import Control.Monad.Reader
+import Prettyprinter
+
 import Plato.Common.Error
 import Plato.Common.Utils
 import Plato.Core.Calc
@@ -31,11 +33,10 @@ simplifyty :: CoreEnv -> Type -> Type
 simplifyty ctx tyT =
         let tyT' = case tyT of
                 TyApp tyT1 tyT2 -> TyApp (simplifyty ctx tyT1) tyT2
-                TyRec _ _ tyT2 -> simplifyty ctx (tyT |-> tyT2)
                 _ -> tyT
          in case computety ctx tyT' of
                 Just tyT' -> simplifyty ctx tyT'
-                Nothing -> tyT
+                Nothing -> tyT'
 
 tyeqv :: CoreMonad env m => Type -> Type -> m ()
 tyeqv tyS tyT = do
@@ -128,7 +129,7 @@ typeof (TmInj i tyT elims) = do
                                 return tyT
                         Just _ -> fail " record type required"
                         Nothing -> fail "label not found"
-                _ -> fail "sum type expected"
+                tyT' -> fail $ "sum type expected, got " ++ show (pretty tyT')
 typeof (TmCase t alts) = do
         env <- asks getEnv
         tyT <- typeof t
@@ -192,3 +193,12 @@ kindof tyT = case tyT of
         TySum fields -> do
                 mapM_ checkKnStar fields
                 return KnStar
+
+checkBinding :: CoreMonad env m => Binding -> m ()
+checkBinding (TyAbbBind tyT knK) = do
+        knK' <- kindof tyT
+        unless (knK == knK') $ fail "Kind of binding does not match declared kind"
+checkBinding (TmAbbBind t tyT) = do
+        tyT' <- typeof t
+        tyeqv tyT tyT'
+checkBinding _ = return ()
