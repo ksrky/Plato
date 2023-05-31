@@ -17,7 +17,7 @@ import Plato.Nicifier.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 linearize :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => LExpr -> m [Tok Expr]
-linearize (L _ (OpE lhs op rhs)) = do
+linearize (L _ (InfixE lhs op rhs)) = do
         lhs' <- linearize lhs
         rhs' <- linearize rhs
         fix <-
@@ -41,9 +41,9 @@ instance OpParser LExpr where
                 L sp <$> case exp of
                         VarE{} -> return exp
                         AppE fun arg -> AppE <$> opParse fun <*> opParse arg
-                        OpE{} -> do
+                        InfixE{} -> do
                                 toks <- linearize (L sp exp)
-                                unLoc <$> parse OpE toks
+                                unLoc <$> parse InfixE toks
                         LamE var exp -> LamE var <$> opParse exp
                         LetE decs body -> do
                                 decs' <- opParse decs

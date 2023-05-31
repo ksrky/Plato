@@ -157,7 +157,7 @@ atype       :: { LType }
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr op expr                         { sL $1 $3 (OpE $1 $2 $3) }
+            : lexpr op expr                         { sL $1 $3 (InfixE $1 $2 $3) }
             | lexpr                                 { $1 }
 
 lexpr       :: { LExpr }

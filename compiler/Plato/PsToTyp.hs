@@ -37,7 +37,7 @@ elabExpr ::
         m (T.Expr 'T.TcUndone)
 elabExpr (P.VarE id) = T.VarE <$> scoping id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
-elabExpr (P.OpE left op right) = do
+elabExpr (P.InfixE left op right) = do
         left' <- elabExpr `traverse` left
         op' <- scoping op
         right' <- elabExpr `traverse` right

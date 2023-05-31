@@ -20,7 +20,7 @@ type Clause = ([LPat], LExpr)
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
-        | OpE LExpr Ident LExpr
+        | InfixE LExpr Ident LExpr
         | LamE [LPat] LExpr
         | LetE [LFunDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
@@ -50,7 +50,7 @@ instance HasLoc Clause where
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
-        pretty (OpE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
+        pretty (InfixE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
         pretty (LamE vars body) = hsep [backslash <> hsep (map pretty vars), "->", pretty body]
         pretty (LetE decs body) =
                 hsep
