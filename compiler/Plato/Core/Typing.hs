@@ -63,7 +63,7 @@ tyeqv tyS tyT = do
                         zipWithM_ (\(_, tyS) (_, tyT) -> tyeqv tyS tyT) fields1 fields2
                 (TySum fields1, TySum fields2) -> do
                         zipWithM_ tyeqv fields1 fields2
-                _ -> fail "type mismatch: " -- ++ pretty env tyS ++ ", " ++ printty env tyT
+                _ -> fail $ "type mismatch, " ++ show (pretty tyS) ++ ", " ++ show (pretty tyT)
 
 ----------------------------------------------------------------
 -- Typing

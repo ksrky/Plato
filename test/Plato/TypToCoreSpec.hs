@@ -40,9 +40,9 @@ spec = do
         describe "Core elaboration of a file" $ do
                 it "test01.plt" $ do
                         test_file "test01.plt"
-                                `shouldReturn` [ "Bool = μBool:*. ({}|{})"
-                                               , "True = (fold [Bool]) inj_0[Bool]()"
-                                               , "False = (fold [Bool]) inj_1[Bool]()"
+                                `shouldReturn` [ "Bool = μBool:*. {}|{}"
+                                               , "True = (fold [Bool]) inj_0[{}|{}]()"
+                                               , "False = (fold [Bool]) inj_1[{}|{}]()"
                                                ]
                 it "test02.plt" $ do
                         test_file "test02.plt"
@@ -51,9 +51,9 @@ spec = do
                                                ]
                 it "test03.plt" $ do
                         test_file "test03.plt"
-                                `shouldReturn` [ "Nat = μNat:*. ({}|{?:Nat})"
-                                               , "Zero = (fold [Nat]) inj_0[Nat]()"
-                                               , "Succ = (fold [Nat]) (λ?:Nat. inj_1[Nat](?))"
+                                `shouldReturn` [ "Nat = μNat:*. {}|{?:Nat}"
+                                               , "Zero = (fold [Nat]) inj_0[{}|{?:Nat}]()"
+                                               , "Succ = λ?:Nat. (fold [Nat]) (inj_1[{}|{?:Nat}](?))"
                                                ]
                 it "test04.plt" $ do
                         test_file "test04.plt"
@@ -62,9 +62,9 @@ spec = do
                                                ]
                 it "test05.plt" $ do
                         test_file "test05.plt"
-                                `shouldReturn` [ "Bool = μBool:*. ({}|{})"
-                                               , "True = (fold [Bool]) inj_0[Bool]()"
-                                               , "False = (fold [Bool]) inj_1[Bool]()"
+                                `shouldReturn` [ "Bool = μBool:*. {}|{}"
+                                               , "True = (fold [Bool]) inj_0[{}|{}]()"
+                                               , "False = (fold [Bool]) inj_1[{}|{}]()"
                                                , "? = fix (λ?:{not:Bool->Bool}. {not=(λnot:Bool->Bool. λ$16:Bool. case ((unfold [Bool]) $16) {True -> False | False -> True}) (?.0)})"
                                                , "not = ?.0"
                                                ]
@@ -75,9 +75,9 @@ spec = do
                                                ]
                 it "test07.plt" $ do
                         test_file "test07.plt"
-                                `shouldReturn` [ "Bool = μBool:*. ({}|{})"
-                                               , "True = (fold [Bool]) inj_0[Bool]()"
-                                               , "False = (fold [Bool]) inj_1[Bool]()"
+                                `shouldReturn` [ "Bool = μBool:*. {}|{}"
+                                               , "True = (fold [Bool]) inj_0[{}|{}]()"
+                                               , "False = (fold [Bool]) inj_1[{}|{}]()"
                                                , "? = fix (λ?:{not:Bool->Bool}. {not=(λnot:Bool->Bool. λ$15:Bool. case ((unfold [Bool]) $15) {True -> False | False -> True}) (?.0)})"
                                                , "not = ?.0"
                                                ]
@@ -110,7 +110,7 @@ test_file fn =
                         typsyn <- T.ps2typ pssyn'
                         typsyn' <- typing typsyn
                         coresyn <- C.typ2core typsyn'
-                        liftIO $ unCore (checkCommands  coresyn) initCoreEnv
+                        liftIO $ unCore (checkCommands coresyn) initCoreEnv
                         return $ map (show . pretty) coresyn
                 )
                 =<< initSession

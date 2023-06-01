@@ -138,7 +138,7 @@ instance Pretty Type where
                         concatWith
                                 (surround $ comma <> space)
                                 (map (\(l, ty) -> hcat [pretty l, colon, pretty ty]) fields)
-        pretty (TySum fields) = parens $ concatWith (surround pipe) (map pretty fields)
+        pretty (TySum fields) = concatWith (surround pipe) (map pretty fields)
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
 

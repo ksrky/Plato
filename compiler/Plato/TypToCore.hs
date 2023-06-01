@@ -13,6 +13,7 @@ import Data.List qualified
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Core.Calc
 import Plato.Core.Elab
 import Plato.Core.Env
 import Plato.Core.Monad
@@ -114,9 +115,22 @@ elabDecls decs = do
                         var_constrs <- mapM (\(con, ty) -> (con,) <$> elabType (unLoc ty)) constrs
                         let params' = map (\(tv, kn) -> (C.mkInfo $ T.unTyVar tv, elabKind kn)) params
                             tyT_nonrec = foldr (uncurry C.TyAbs) (constrsToVariant var_constrs) params'
-                            tyT = C.TyRec (C.mkInfo id) knK tyT_nonrec
+                            tyT_rec = C.TyRec (C.mkInfo id) knK tyT_nonrec
                         rest' <- extendNameListWith (map (nameIdent . fst) constrs) $ elabDecls' rest
-                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : constrBinds id fun_constrs ++ rest'
+                        let constrBinds :: Int -> [(Ident, C.Type)] -> [C.Command]
+                            constrBinds _ [] = []
+                            constrBinds n_con ((con, tyT) : rest) =
+                                let walk :: Int -> C.Type -> C.Term
+                                    walk (-1) (C.TyAll x knK1 tyT2) = C.TmTAbs x knK1 (walk (-1) tyT2)
+                                    walk n_arg (C.TyFun tyT1 tyT2) = C.TmAbs C.Dummy tyT1 (walk (n_arg + 1) tyT2)
+                                    walk n_arg _ =
+                                        C.TmApp (C.TmFold (C.TyVar (n_con + n_arg + 1) (C.mkInfo id))) $
+                                                C.TmInj
+                                                        n_con
+                                                        (shift (n_con + n_arg + 1) tyT_nonrec)
+                                                        (map (\i -> C.TmVar (n_arg - i) C.Dummy) [0 .. n_arg])
+                                 in C.Bind (C.mkInfo con) (C.TmAbbBind (walk (-1) tyT) tyT) : constrBinds (n_con + 1) rest
+                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT_rec knK) : constrBinds 0 fun_constrs ++ rest'
             elabDecls' (T.BindDecl (T.TypBind id ty) : rest) = do
                 -- TODO: remove
                 tyT <- elabType (unLoc ty)

@@ -1,4 +1,4 @@
-module Plato.Core.Eval where
+module Plato.Core.Eval (eval) where
 
 import Control.Monad (forM)
 
@@ -7,9 +7,6 @@ import Plato.Core.Calc
 import Plato.Core.Env
 import Plato.Syntax.Core
 
-----------------------------------------------------------------
--- Evaluation
-----------------------------------------------------------------
 isval :: CoreEnv -> Term -> Bool
 isval env t = case t of
         TmVar i _ -> case getBinding i env of
