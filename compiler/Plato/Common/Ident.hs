@@ -3,6 +3,7 @@ module Plato.Common.Ident (
         ident,
         fromIdent,
         freshIdent,
+        ident2text,
         IdentMap,
         lookupIdent,
 ) where
@@ -11,6 +12,7 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Map.Strict qualified as M
+import Data.Text qualified as T
 import Prettyprinter
 import Prelude hiding (span)
 
@@ -45,6 +47,9 @@ freshIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => NameSpace -> m Iden
 freshIdent ns = do
         u <- pickUniq =<< ask
         return Ident{nameIdent = Name ns (uniq2text u), spanIdent = NoSpan, stamp = u}
+
+ident2text :: Ident -> T.Text
+ident2text id = nameText (nameIdent id) `T.append` T.pack ("_" ++ show (stamp id))
 
 -- | Identifier Map
 type IdentMap a = M.Map Ident a
