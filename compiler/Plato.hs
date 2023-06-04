@@ -8,7 +8,8 @@ import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.RunCore
+
+-- import Plato.RunCore
 import Plato.TypToCore
 import Plato.Typing
 
@@ -23,8 +24,10 @@ compile src = do
         typsyn' <- typing typsyn
         coresyn <- typ2core typsyn'
         liftIO $ putDoc $ prettyCommands coresyn
-        coresyn' <- runCore coresyn
-        liftIO $ mapM_ printResult coresyn'
+        undefined
+
+-- coresyn' <- runCore coresyn
+-- liftIO $ mapM_ printResult coresyn'
 
 {-repl :: [FilePath] -> IO ()
 repl files = do

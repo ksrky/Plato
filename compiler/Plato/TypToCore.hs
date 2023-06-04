@@ -12,11 +12,7 @@ import GHC.Stack
 import Data.List qualified
 import Plato.Common.Error
 import Plato.Common.Ident
-import Plato.Common.Location
-import Plato.Core.Calc
-import Plato.Core.Elab
-import Plato.Core.Env
-import Plato.Core.Monad
+import Plato.Common.Location 
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
@@ -27,7 +23,7 @@ elabExpr ::
         m C.Term
 elabExpr (T.VarE var) = do
         i <- getVarIndex (nameIdent var)
-        return $ C.TmVar i (C.mkInfo var)
+        return $ C.Var i (C.mkInfo var)
 elabExpr (T.AppE fun arg) = C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsEok var ty body) = do
         tyT1 <- elabType ty
