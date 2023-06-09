@@ -12,31 +12,29 @@ import GHC.Stack
 import Data.List qualified
 import Plato.Common.Error
 import Plato.Common.Ident
-import Plato.Common.Location 
+import Plato.Common.Location
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 
 elabExpr ::
-        (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) =>
+        (HasCallStack, MonadReader ctx m) =>
         T.Expr 'T.TcDone ->
         m C.Term
-elabExpr (T.VarE var) = do
-        i <- getVarIndex (nameIdent var)
-        return $ C.Var i (C.mkInfo var)
-elabExpr (T.AppE fun arg) = C.TmApp <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
+elabExpr (T.VarE var) = return $ C.Var (ident2text var)
+elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsEok var ty body) = do
         tyT1 <- elabType ty
         t2 <- extendNameWith (nameIdent var) $ elabExpr body
-        return $ C.TmAbs (C.mkInfo var) tyT1 t2
+        return $ C.Lam (name2text var, t2)
 elabExpr (T.TAppE fun argtys) = do
         t1 <- elabExpr fun
         tys2 <- mapM elabType argtys
-        return $ foldl C.TmTApp t1 tys2
+        return $ foldl C.App t1 tys2
 elabExpr (T.TAbsE qnts body) = do
         qnts' <- forM qnts $ \(tv, kn) -> return (T.unTyVar tv, elabKind kn)
         t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr body
-        return $ foldr (\(x, kn) -> C.TmTAbs (C.mkInfo x) kn) t1 qnts'
+        return $ foldr (\(id, _) -> C.Lam (ident2text id)) t1 qnts'
 elabExpr (T.LetEok bnds spcs body) = do
         rbnds <- elabFunDecls bnds spcs
         t2 <- extendNameListWith (map (C.actualName . fst) rbnds) $ elabExpr (unLoc body)

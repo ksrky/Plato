@@ -1,8 +1,7 @@
 module Plato.Syntax.Core where
 
 import Prettyprinter
-
-import Plato.Common.Name
+import qualified Data.Text as T
 
 -- *  Abstract syyntax
 
@@ -10,6 +9,8 @@ data Phrase
         = Prog Prog
         | Term Term
         deriving (Show, Eq)
+
+type Name = T.Text
 
 type Label = Name
 

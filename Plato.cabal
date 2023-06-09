@@ -32,15 +32,6 @@ library
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
-      Plato.Core.Calc
-      Plato.Core.Codegen
-      Plato.Core.Elab
-      Plato.Core.Env
-      Plato.Core.Eval
-      Plato.Core.Lexer
-      Plato.Core.Monad
-      Plato.Core.Parser
-      Plato.Core.Typing
       Plato.Driver.Monad
       Plato.Driver.Pipeline
       Plato.Nicifier
@@ -58,7 +49,6 @@ library
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
-      Plato.RunCore
       Plato.Syntax.Core
       Plato.Syntax.Core.Info
       Plato.Syntax.Parsing
