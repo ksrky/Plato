@@ -113,7 +113,7 @@ matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)
             vars' = zip params arg_tys ++ vars
-            clauses' = [(ps ++ ps', e) | (L _ (ConP _ ps') : ps, e) <- clauses]
+            clauses' = [(ps ++ ps', e) | (L _ (ConP _ ps) : ps', e) <- clauses]
         (pat,) <$> match vars' clauses'
 
 choose :: Ident -> [Clause 'TcDone] -> [Clause 'TcDone]
