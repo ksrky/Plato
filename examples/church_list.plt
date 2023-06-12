@@ -1,10 +1,11 @@
 import Plato.Base
 import Plato.List
 
-data ChurchList a = ChurchList ({r} (a -> r -> r) -> r -> r)
+data ChurchList a where
+    ChurchList : ({r} (a -> r -> r) -> r -> r) -> ChurchList a
 
 runList : {a} ChurchList a -> ({r} (a -> r -> r) -> r -> r)
-runList cl = case cl of ChurchList xs -> xs
+runList (ChurchList xs) = xs
 
 fromList : {a} List a -> ChurchList a
 fromList xs = ChurchList $ \k z -> foldr k z xs
