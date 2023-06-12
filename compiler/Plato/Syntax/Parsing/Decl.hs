@@ -1,3 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImpredicativeTypes #-}
+
 module Plato.Syntax.Parsing.Decl where
 
 import Prettyprinter
@@ -11,10 +15,13 @@ import Plato.Syntax.Parsing.Type
 -- Datas and types
 ----------------------------------------------------------------
 type LDecl = Located Decl
+type LTopDecl = LDecl
 
 data Decl
         = DataD Ident [Ident] [(Ident, LType)]
-        | FuncD [LFunDecl]
+        | FunBindD Ident [Clause]
+        | FunSpecD Ident LType
+        | FixityD Ident Fixity
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -31,4 +38,11 @@ instance Pretty Decl where
                                         (surround $ semi <> space)
                                         (map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs)
                         ]
-        pretty (FuncD fundecs) = concatWith (surround $ semi <> space) (map pretty fundecs)
+        pretty (FunBindD id clauses) =
+                hsep
+                        [ pretty id
+                        , "where"
+                        , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
+                        ]
+        pretty (FunSpecD id ty) = hsep [pretty id, colon, pretty ty]
+        pretty (FixityD id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]

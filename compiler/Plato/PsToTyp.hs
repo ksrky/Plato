@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.PsToTyp (
@@ -92,17 +93,18 @@ elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `tra
 
 elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
-        [P.LFunDecl] ->
+        [P.LDecl] ->
         m ([(Ident, [T.Clause 'T.TcUndone])], [(Ident, T.LType)])
 elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
-        L _ (P.FunSpec id ty) -> do
+        L _ (P.FunSpecD id ty) -> do
                 ty' <- elabType `traverse` ty
                 tell ([], [(id, ty')])
-        L _ (P.FunBind id clses) -> do
+        L _ (P.FunBindD id clses) -> do
                 id' <- scoping id
                 clses' <- mapM elabClause clses
                 tell ([(id', clses')], [])
-        L _ P.FixDecl{} -> unreachable "deleted by Nicifier"
+        L _ P.FixityD{} -> unreachable "deleted by Nicifier"
+        L _ P.DataD{} -> unreachable "Data declaration allowed only top-level"
 
 elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => P.Clause -> m (T.Clause 'T.TcUndone)
 elabClause (pats, exp) = do
@@ -111,9 +113,9 @@ elabClause (pats, exp) = do
         exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
-elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.Decl] -> m [T.Decl 'T.TcUndone]
+elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
 elabDecls [] = return []
-elabDecls (P.DataD id params constrs : rest) = do
+elabDecls (L _ (P.DataD id params constrs) : rest) = do
         paramNamesUnique params
         dataConUnique $ map fst constrs
         mapM_ (dataConType id) constrs
@@ -124,17 +126,20 @@ elabDecls (P.DataD id params constrs : rest) = do
         rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
         sig <- newKnVar
         return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
-elabDecls (P.FuncD fundecs : rest) = do
+elabDecls fundecs = do
+        -- Note: Nicifier ordered data decls to local decls
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
                 fundecs' <- bundleClauses fundecs
                 (bnds, spcs) <- elabFunDecls fundecs'
-                rest' <- elabDecls rest
                 let fundecs'' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
-                return $ fundecs'' ++ rest'
+                return fundecs''
 
-elabTopDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
-elabTopDecls tdecs = Data.List.sort <$> elabDecls (map unLoc tdecs)
+elabTopDecls ::
+        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        [P.LTopDecl] ->
+        m [T.Decl 'T.TcUndone]
+elabTopDecls tdecs = Data.List.sort <$> elabDecls tdecs
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 

@@ -27,17 +27,22 @@ type LType = Located Type
 type Quant = (TyVar, Kind)
 
 data Type
-        = VarT TyVar
-        | ConT Ident
-        | ArrT LType LType
-        | AllT [Quant] (Located Rho)
+        = -- | @τ, σ@
+          VarT TyVar
+        | -- | @τ, σ@
+          ConT Ident
+        | -- | @τ, ρ@
+          ArrT LType LType
+        | -- | @σ@
+          AllT [Quant] (Located Rho)
         | AppT LType LType
-        | MetaT MetaTv
+        | -- | @τ, σ@
+          MetaT MetaTv
         deriving (Eq, Show)
 
-type Sigma = Type
-type Rho = Type
-type Tau = Type
+type Sigma = Type -- ∀α. ρ
+type Rho = Type -- σ → ρ
+type Tau = Type -- τ
 
 data TyVar
         = BoundTv {unTyVar :: Ident}

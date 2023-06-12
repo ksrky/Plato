@@ -115,7 +115,7 @@ test_decls inp = do
         uniq <- initUniq
         decs <- runReaderT (parsePartial inp declsParser) uniq
         sc <- defScope uniq
-        runReaderT (elabDecls $ map unLoc decs) (Context uniq sc)
+        runReaderT (elabDecls decs) (Context uniq sc)
 
 test_scfile :: (MonadIO m, MonadThrow m) => String -> m (Program 'TcUndone)
 test_scfile fn =

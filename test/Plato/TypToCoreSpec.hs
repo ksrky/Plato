@@ -8,8 +8,7 @@ import Data.IORef
 import Data.Text qualified as T
 import Prettyprinter
 import Test.Hspec
-
-import Plato.Common.Location
+ 
 import Plato.Common.Uniq
 import Plato.Core.Env
 import Plato.Core.Monad
@@ -95,7 +94,7 @@ test_decls :: T.Text -> IO [String]
 test_decls inp = do
         uniq <- initUniq
         decs <- runReaderT (parsePartial inp declsParser) uniq
-        decs' <- runReaderT (T.elabDecls $ map unLoc decs) (Context uniq initScope)
+        decs' <- runReaderT (T.elabDecls  decs) (Context uniq initScope)
         ctx <- runReaderT initContext uniq
         decs'' <- runReaderT (typingDecls decs') ctx
         cmds <- runReaderT (C.elabDecls decs'') initCoreEnv
