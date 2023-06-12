@@ -5,6 +5,7 @@
 module Plato.Typing.ElabClause (elabClauses) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
@@ -36,12 +37,12 @@ dataConsof ty = do
             getTycon _ = unreachable "Not a variant type"
         find (getTycon ty) =<< getEnv =<< ask
 
-subst :: LExpr 'TcDone -> Ident -> Ident -> LExpr 'TcDone
-subst exp id1 id2 = subst' <$> exp
+subst :: LExpr 'TcDone -> Expr 'TcDone -> Ident -> LExpr 'TcDone
+subst exp replace id2 = subst' <$> exp
     where
         subst' :: Expr 'TcDone -> Expr 'TcDone
         subst' (VarE var)
-                | var == id2 = VarE id1
+                | var == id2 = replace
                 | otherwise = VarE var
         subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
         subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
@@ -85,7 +86,7 @@ matchVar (var, ty) rest clauses = do
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, L (getLoc exp) $ AbsEok var ty (unLoc exp))
                 (L _ (VarP varp) : pats, exp) ->
-                        (pats, L (getLoc exp) $ AbsEok var ty (unLoc $ subst exp var varp))
+                        (pats, L (getLoc exp) $ AbsEok var ty (unLoc $ subst exp (VarE var) varp))
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
@@ -113,7 +114,17 @@ matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)
             vars' = zip params arg_tys ++ vars
-            clauses' = [(ps ++ ps', e) | (L _ (ConP _ ps) : ps', e) <- clauses]
+        clauses' <- forM clauses $ \case
+                (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
+                (L _ (VarP v) : ps', e) -> do
+                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
+                        let con_exp :: Expr 'TcDone =
+                                foldl (AppE . noLoc) (VarE con) (map (noLoc . VarE) params)
+                        return (vps ++ ps', subst e con_exp v)
+                (L _ WildP : ps', e) -> do
+                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
+                        return (vps ++ ps', e)
+                ([], _) -> unreachable "empty patterns"
         (pat,) <$> match vars' clauses'
 
 choose :: Ident -> [Clause 'TcDone] -> [Clause 'TcDone]
