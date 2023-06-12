@@ -18,7 +18,7 @@ import Plato.Typing.Monad
 
 -- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::
-        (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         [Type] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
@@ -26,7 +26,7 @@ elabClauses tys clauses = do
         vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
         match vars clauses
 
-dataConsof :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m [(Ident, [Type])]
+dataConsof :: (MonadReader env m, HasTypEnv env, MonadThrow m) => Type -> m Constrs
 dataConsof ty = do
         let getTycon :: Type -> Ident
             getTycon (AllT _ ty) = getTycon (unLoc ty)
@@ -34,7 +34,7 @@ dataConsof ty = do
             getTycon (AppT fun _) = getTycon (unLoc fun)
             getTycon (ConT tc) = tc
             getTycon _ = unreachable "Not a variant type"
-        lookupIdent (getTycon ty) =<< getConEnv =<< ask
+        find (getTycon ty) =<< getEnv =<< ask
 
 subst :: LExpr 'TcDone -> Ident -> Ident -> LExpr 'TcDone
 subst exp id1 id2 = subst' <$> exp
@@ -63,7 +63,7 @@ isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
-        (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
@@ -76,7 +76,7 @@ match (u : us) clauses
         | otherwise = matchCon u us clauses
 
 matchVar ::
-        (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
@@ -93,7 +93,7 @@ matchVar (var, ty) rest clauses = do
 -- [(pats, subst exp var varp) | (L _ (VarP varp) : pats, exp) <- clauses]
 
 matchCon ::
-        (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
@@ -104,7 +104,7 @@ matchCon (var, ty) rest clauses = do
         return $ noLoc $ AbsEok var ty (CaseEok (noLoc $ VarE var) ty alts)
 
 matchClause ::
-        (MonadReader env m, HasUniq env, HasConEnv env, MonadIO m, MonadThrow m) =>
+        (MonadReader env m, HasTypEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
         [Clause 'TcDone] ->

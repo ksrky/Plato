@@ -1,14 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
+        Constrs,
         Binding (..),
         TypEnv,
         initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
-        ConEnv,
-        initConEnv,
-        HasConEnv (..),
         extendConEnv,
 ) where
 
@@ -21,9 +19,12 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
 
+type Constrs = [(Ident, [Type])]
+
 data Binding
         = ValBinding Type
         | TypBinding Kind
+        | ConBinding Constrs
         deriving (Eq, Show)
 
 type TypEnv = IdentMap Binding
@@ -54,40 +55,25 @@ instance EnvManager Type where
         find id env =
                 lookupIdent id env >>= \case
                         ValBinding ty -> return ty
-                        _ ->
-                                throwLocErr (getLoc id) $
-                                        hsep [squotes $ pretty id, "is not a term-level identifier"]
+                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a term-level identifier"]
 
 instance EnvManager Kind where
         extend id kn = M.insert id (TypBinding kn)
         find id env =
                 lookupIdent id env >>= \case
                         TypBinding kn -> return kn
-                        _ ->
-                                throwLocErr (getLoc id) $
-                                        hsep [squotes $ pretty id, "is not a type-level identifier"]
+                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
------------------------------------------------------------
--- Constructor Env
------------------------------------------------------------
+instance EnvManager Constrs where
+        extend id constrs = modifyEnv $ M.insert id (ConBinding constrs)
+        find id env =
+                lookupIdent id env >>= \case
+                        ConBinding constrs -> return constrs
+                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a constructor"]
 
--- | Mapping a type constructor to data constructors
-type ConEnv = IdentMap [(Ident, [Type])]
-
-initConEnv :: ConEnv
-initConEnv = M.empty
-
-class HasConEnv a where
-        getConEnv :: Monad m => a -> m ConEnv
-        modifyConEnv :: (ConEnv -> ConEnv) -> a -> a
-
-instance HasConEnv ConEnv where
-        getConEnv = return
-        modifyConEnv = id
-
-extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env
+extendConEnv :: HasTypEnv env => Ident -> [(Ident, LType)] -> env -> env
 extendConEnv id constrs =
-        modifyConEnv $ M.insert id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
+        modifyEnv $ extend id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
     where
         split :: [Sigma] -> Rho -> [Sigma]
         split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
