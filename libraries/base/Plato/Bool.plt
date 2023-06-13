@@ -10,8 +10,8 @@ True && y = y
 False && _ = False
 
 (||) : Bool -> Bool -> Bool
-True || _  =True
-False　|| y -> y
+True || _  = True
+False || y = y
 
 not : Bool -> Bool
 not True = False
