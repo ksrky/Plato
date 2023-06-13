@@ -30,6 +30,7 @@ import Plato.Typing.Env
 
 data Context = Context
         { ctx_typenv :: TypEnv
+        , ctx_conenv :: ConEnv
         , ctx_uniq :: IORef Uniq
         , ctx_currentLoc :: Span
         }
@@ -40,6 +41,7 @@ initContext = do
         return
                 Context
                         { ctx_typenv = initTypEnv
+                        , ctx_conenv = initConEnv
                         , ctx_uniq = uniq
                         , ctx_currentLoc = NoSpan
                         }
@@ -50,6 +52,10 @@ instance HasUniq Context where
 instance HasTypEnv Context where
         getEnv = getEnv . ctx_typenv
         modifyEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
+
+instance HasConEnv Context where
+        getConEnv = return . ctx_conenv
+        modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
 
 instance HasLoc Context where
         getLoc = ctx_currentLoc

@@ -1,12 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
-        Constrs,
         Binding (..),
         TypEnv,
         initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
+        Constrs,
+        ConEnv,
+        initConEnv,
+        HasConEnv (..),
         extendConEnv,
 ) where
 
@@ -19,12 +22,9 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
 
-type Constrs = [(Ident, [Type])]
-
 data Binding
         = ValBinding Type
         | TypBinding Kind
-        | ConBinding Constrs
         deriving (Eq, Show)
 
 type TypEnv = IdentMap Binding
@@ -64,16 +64,28 @@ instance EnvManager Kind where
                         TypBinding kn -> return kn
                         _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
-instance EnvManager Constrs where
-        extend id constrs = modifyEnv $ M.insert id (ConBinding constrs)
-        find id env =
-                lookupIdent id env >>= \case
-                        ConBinding constrs -> return constrs
-                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a constructor"]
+-----------------------------------------------------------
+-- Constructor Env
+-----------------------------------------------------------
+type Constrs = [(Ident, [Type])]
 
-extendConEnv :: HasTypEnv env => Ident -> [(Ident, LType)] -> env -> env
+-- | Mapping a type constructor to data constructors
+type ConEnv = IdentMap Constrs
+
+initConEnv :: ConEnv
+initConEnv = M.empty
+
+class HasConEnv a where
+        getConEnv :: Monad m => a -> m ConEnv
+        modifyConEnv :: (ConEnv -> ConEnv) -> a -> a
+
+instance HasConEnv ConEnv where
+        getConEnv = return
+        modifyConEnv = id
+
+extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env
 extendConEnv id constrs =
-        modifyEnv $ extend id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
+        modifyConEnv $ M.insert id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
     where
         split :: [Sigma] -> Rho -> [Sigma]
         split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)

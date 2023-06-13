@@ -52,7 +52,7 @@ elabExpr (P.LamE pats body) = do
             patlam e p = do
                 v <- newVarIdent -- tmp: wild card pattern
                 return $ sL p e $ T.AbsE v $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
-        unLoc <$> foldM patlam body' pats'
+        unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
         local (const env) $ do
