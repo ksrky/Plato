@@ -19,7 +19,7 @@ type AlexInput =
         ( PsPosn -- current position,
         , Char -- previous char
         , [Word8] -- rest of the bytes for the current char
-        , T.Text -- current input string
+        , T.Text -- current input text
         )
 
 alexGetByte :: AlexInput -> Maybe (Word8, AlexInput)

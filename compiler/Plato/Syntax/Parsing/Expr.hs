@@ -6,31 +6,24 @@ import Prettyprinter
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import {-# SOURCE #-} Plato.Syntax.Parsing.Decl
 import Plato.Syntax.Parsing.Pat
-import Plato.Syntax.Parsing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
 type LExpr = Located Expr
-type LFunDecl = Located FunDecl
 
 type Clause = ([LPat], LExpr)
 
 data Expr
         = VarE Ident
         | AppE LExpr LExpr
-        | OpE LExpr Ident LExpr
+        | InfixE LExpr Ident LExpr
         | LamE [LPat] LExpr
-        | LetE [LFunDecl] LExpr
+        | LetE [LDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
         | FactorE LExpr
-        deriving (Eq, Show)
-
-data FunDecl
-        = FunBind Ident [Clause]
-        | FunSpec Ident LType
-        | FixDecl Ident Fixity
         deriving (Eq, Show)
 
 type FixPrec = Int
@@ -50,7 +43,7 @@ instance HasLoc Clause where
 instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
-        pretty (OpE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
+        pretty (InfixE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
         pretty (LamE vars body) = hsep [backslash <> hsep (map pretty vars), "->", pretty body]
         pretty (LetE decs body) =
                 hsep
@@ -84,16 +77,6 @@ prExpr1 e = parens (pretty e)
 
 prClause :: Clause -> Doc ann
 prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
-
-instance Pretty FunDecl where
-        pretty (FunBind id clauses) =
-                hsep
-                        [ pretty id
-                        , "where"
-                        , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
-                        ]
-        pretty (FunSpec id ty) = hsep [pretty id, colon, pretty ty]
-        pretty (FixDecl id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
 
 instance Pretty FixDir where
         pretty Leftfix = "infixl"

@@ -1,5 +1,5 @@
 site_name: Plato
-site_url: https://ksrky.github.io/Plato/ja/
+site_url: https://ksrky.github.io/Plato/
 site_author: ksrk
 copyright: 2022 ksrk
 site_dir: ../../site/ja
@@ -25,14 +25,6 @@ nav:
 theme:
   name: material
   language: ja
-extra:
-  alternate:
-    - name: English
-      link: /en/
-      lang: en
-    - name: Japanese
-      link: /ja/
-      lang: ja
 markdown_extensions:
   - pymdownx.arithmatex
   - attr_list

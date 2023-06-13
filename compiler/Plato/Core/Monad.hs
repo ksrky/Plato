@@ -14,8 +14,8 @@ class (MonadFail m, MonadReader env m, HasCoreEnv env) => CoreMonad env m
 type Core = ReaderT CoreEnv IO
 instance CoreMonad CoreEnv Core
 
-runCore :: Core a -> CoreEnv -> IO a
-runCore = runReaderT
+unCore :: Core a -> CoreEnv -> IO a
+unCore = runReaderT
 
 extendWith :: (MonadReader r m, HasCoreEnv r) => Name -> Binding -> m a -> m a
 extendWith x bind = local (modifyEnv $ addBinding x bind)
@@ -47,4 +47,4 @@ getVarIndex x = do
         env <- asks getEnv
         case V.elemIndex x (V.map fst env) of
                 Just idx -> return idx
-                Nothing -> unreachable "Plato.Core.Env.getVarIndex"
+                Nothing -> unreachable $ "Unbound name, " ++ show x

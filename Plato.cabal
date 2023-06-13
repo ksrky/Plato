@@ -33,6 +33,7 @@ library
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Calc
+      Plato.Core.Codegen
       Plato.Core.Elab
       Plato.Core.Env
       Plato.Core.Eval
@@ -64,7 +65,6 @@ library
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
       Plato.Syntax.Parsing.Pat
-      Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
       Plato.Syntax.Typing
       Plato.Syntax.Typing.Base
@@ -127,7 +127,7 @@ executable plato
       Options
       Paths_Plato
   hs-source-dirs:
-      src/plato
+      driver/plato
   default-extensions:
       OverloadedStrings
       ImportQualifiedPost
@@ -165,6 +165,7 @@ test-suite Plato-test
       Plato.Parsing.ParserSpec
       Plato.PsToTypSpec
       Plato.TypingSpec
+      Plato.TypToCoreSpec
       Paths_Plato
   hs-source-dirs:
       test

@@ -75,23 +75,17 @@ digit                           { (mkLDigit -> Just $$) }
 %%
 
 program     :: { [LTopDecl] }
-            : ';' topdecls                          { $2 }
-
------------------------------------------------------------
--- Top declarations
------------------------------------------------------------
-topdecls    :: { [LTopDecl] }
-            : decls                                 { $1 }
+            : ';' decls                          { $2 }
 
 -----------------------------------------------------------
 -- Declarations
 -----------------------------------------------------------
-decls       :: { [LDecl] }
+decls       :: { [LTopDecl] }
             : decl ';' decls                        { $1 : $3 }
             | decl                                  { [$1] }
             | {- empty -}                           { [] }
 
-decl        :: { LDecl }
+decl        :: { LTopDecl }
             -- Data declaration
             : 'data' tycon tyvarseq datarhs
                                                     { sL $1 $4 (DataD $2 $3 (unLoc $4)) }
@@ -99,7 +93,8 @@ decl        :: { LDecl }
                                                     { sL $1 $5 (DataD $3 [$2, $4] (unLoc $5)) }
             | 'data' '(' tyconop ')' tyvarseq datarhs
                                                     { sL $1 $6 (DataD $3 $5 (unLoc $6)) }
-            | fundecl                               { L (getLoc $1) (FuncD [$1]) }
+            | fundecl                               { $1 }
+            | fixdecl                               { $1 }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -116,25 +111,26 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecls    :: { [LFunDecl] }
+fundecls    :: { [LDecl] }
             : fundecl ';' fundecls                  { $1 : $3 }
             | fundecl                               { [$1] }
             | {- empty -}                           { [] }
 
-fundecl     :: { LFunDecl }
+fundecl     :: { LDecl }
             -- Function signature
-            : var ':' type                        	{ sL $1 $3 (FunSpec $1 $3) }
-            | '(' varop ')' ':' type                { sL $1 $5 (FunSpec $2 $5) }
+            : var ':' type                        	{ sL $1 $3 (FunSpecD $1 $3) }
+            | '(' varop ')' ':' type                { sL $1 $5 (FunSpecD $2 $5) }
             -- Function definition
-            | var patseq '=' expr               	{ sL $1 $4 (FunBind $1 [($2, $4)]) }
-            | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBind $2 [($4, $6)]) }
-            | pat varop pat '=' expr                { sL $1 $5 (FunBind $2 [([$1, $3], $5)]) }             
+            | var patseq '=' expr               	{ sL $1 $4 (FunBindD $1 [($2, $4)]) }
+            | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBindD $2 [($4, $6)]) }
+            | pat varop pat '=' expr                { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
             | fixdecl                               { $1 }
 
-fixdecl     :: { LFunDecl }
-            : 'infix' digit op                      { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Nonfix)) }
-            | 'infixl' digit op                     { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Leftfix)) }
-            | 'infixr' digit op                     { sL $1 $3 (FixDecl $3 (Fixity (unLoc $2) Rightfix)) }
+-- | Fixity declaration
+fixdecl     :: { LDecl }
+            : 'infix' digit op                      { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Nonfix)) }
+            | 'infixl' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Leftfix)) }
+            | 'infixr' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Rightfix)) }
 
 -----------------------------------------------------------
 -- Types
@@ -157,7 +153,7 @@ atype       :: { LType }
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr op expr                         { sL $1 $3 (OpE $1 $2 $3) }
+            : lexpr op expr                         { sL $1 $3 (InfixE $1 $2 $3) }
             | lexpr                                 { $1 }
 
 lexpr       :: { LExpr }

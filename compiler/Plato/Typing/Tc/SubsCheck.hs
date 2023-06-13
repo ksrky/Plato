@@ -32,7 +32,7 @@ subsCheck sigma1 sigma2 = do
                         hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
--- | Subsumption checkking. Coersing sigma to rho.
+-- | Subsumption checking. Coersing sigma to rho.
 subsCheckRho ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
         Sigma ->
@@ -42,6 +42,10 @@ subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
         return (coercion2 <.> coercion1)
+subsCheckRho (AppT fun1 arg1) (AppT fun2 arg2) = do
+        coer_fun <- subsCheckRho (unLoc fun1) (unLoc fun2)
+        coer_arg <- subsCheck (unLoc arg1) (unLoc arg2)
+        return (coer_fun <.> coer_arg)
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)

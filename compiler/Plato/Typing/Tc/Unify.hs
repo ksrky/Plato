@@ -77,11 +77,11 @@ unifyFun tau = do
 unifyFuns :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Int -> Rho -> m ([Sigma], Rho)
 unifyFuns 0 rho = return ([], rho)
 unifyFuns n (ArrT arg res) = do
-        (args', res') <- unifyFuns (n - 1) (unLoc res)
-        return (unLoc arg : args', res')
+        (args, res') <- unifyFuns (n - 1) (unLoc res)
+        return (unLoc arg : args, res')
 unifyFuns n tau = do
-        arg_ty <- newTyVar
-        res_ty <- newTyVar
-        unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
-        (args', res') <- unifyFuns (n - 1) res_ty
-        return (arg_ty : args', res')
+        arg <- newTyVar
+        res <- newTyVar
+        unify tau (ArrT (noLoc arg) (noLoc res))
+        (args, res') <- unifyFuns (n - 1) res
+        return (arg : args, res')

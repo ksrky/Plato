@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Plato.PsToTyp.Utils (
         HasDomain (..),
 ) where
@@ -17,7 +19,8 @@ instance HasDomain LPat where
         getDomain (L _ (VarP id)) = [id]
         getDomain (L _ WildP) = []
 
-instance HasDomain LFunDecl where
-        getDomain (L _ (FunSpec id _)) = [id]
-        getDomain (L _ FunBind{}) = []
-        getDomain (L _ FixDecl{}) = []
+instance HasDomain LDecl where
+        getDomain (L _ (DataD id _ _)) = [id]
+        getDomain (L _ (FunSpecD id _)) = [id]
+        getDomain (L _ FunBindD{}) = []
+        getDomain (L _ FixityD{}) = []

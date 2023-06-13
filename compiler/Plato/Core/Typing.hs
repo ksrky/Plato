@@ -1,6 +1,8 @@
-module Plato.Core.Typing where
+module Plato.Core.Typing (typeof, kindof, checkBinding) where
 
 import Control.Monad.Reader
+import Prettyprinter
+
 import Plato.Common.Error
 import Plato.Common.Utils
 import Plato.Core.Calc
@@ -34,7 +36,7 @@ simplifyty ctx tyT =
                 _ -> tyT
          in case computety ctx tyT' of
                 Just tyT' -> simplifyty ctx tyT'
-                Nothing -> tyT
+                Nothing -> tyT'
 
 tyeqv :: CoreMonad env m => Type -> Type -> m ()
 tyeqv tyS tyT = do
@@ -61,82 +63,92 @@ tyeqv tyS tyT = do
                         zipWithM_ (\(_, tyS) (_, tyT) -> tyeqv tyS tyT) fields1 fields2
                 (TySum fields1, TySum fields2) -> do
                         zipWithM_ tyeqv fields1 fields2
-                _ -> fail "type mismatch: " -- ++ pretty env tyS ++ ", " ++ printty env tyT
+                _ -> fail $ "type mismatch, " ++ show (pretty tyS) ++ ", " ++ show (pretty tyT)
 
 ----------------------------------------------------------------
 -- Typing
 ----------------------------------------------------------------
 typeof :: CoreMonad env m => Term -> m Type
-typeof t = case t of
-        TmVar i _ -> getType i
-        TmApp t1 t2 -> do
-                tyT1 <- typeof t1
-                tyT2 <- typeof t2
-                case tyT1 of
-                        TyFun tyT11 tyT12 -> do
-                                tyeqv tyT2 tyT11
-                                return tyT12
-                        _ -> fail "arrow type expected"
-        TmAbs x tyT1 t2 -> do
-                checkKnStar tyT1
-                tyT2 <- extendWith (actualName x) (TmVarBind tyT1) $ typeof t2
-                return $ TyFun tyT1 (shift (-1) tyT2)
-        TmTApp t1 tyT2 -> do
-                knKT2 <- kindof tyT2
-                tyT1 <- typeof t1
-                env <- asks getEnv
-                case simplifyty env tyT1 of
-                        TyAll _ knK11 tyT12
-                                | knK11 == knKT2 -> return $ tyT2 |-> tyT12
-                                | otherwise -> fail "Type argument has wrong kind"
-                        _ -> fail "universal type expected"
-        TmTAbs tyX knK1 t2 -> do
-                tyT2 <- extendWith (actualName tyX) (TyVarBind knK1) $ typeof t2
-                return $ TyAll tyX knK1 tyT2
-        TmLet x t1 t2 -> do
-                tyT1 <- typeof t1
-                tyT2 <- extendWith (actualName x) (TmVarBind tyT1) $ typeof t2
-                return $ shift (-1) tyT2
-        TmFix t1 -> do
-                tyT1 <- typeof t1
-                env <- asks getEnv
-                case simplifyty env tyT1 of
-                        TyFun tyT11 tyT12 -> do
-                                tyeqv tyT12 tyT11
-                                return tyT12
-                        _ -> fail "arrow type expected"
-        TmProj t1 i -> do
-                tyT1 <- typeof t1
-                env <- asks getEnv
-                case simplifyty env tyT1 of
-                        TyRecord fieldtys -> case safeAt fieldtys i of
-                                Just (_, tyT) -> return tyT
-                                Nothing -> fail "label not found"
-                        _ -> fail "record type expected"
-        TmRecord fields -> do
-                fieldtys <- forM fields $ \(li, ti) -> do
-                        tyTi <- typeof ti
-                        return (li, tyTi)
-                return $ TyRecord fieldtys
-        TmInj i t1 tyT2 -> do
-                env <- asks getEnv
-                case simplifyty env tyT2 of
-                        TySum fields -> case safeAt fields i of
-                                Just tyTi -> do
-                                        tyT1 <- typeof t1
-                                        tyeqv tyT1 tyTi
-                                        return tyT2
-                                Nothing -> fail "label not found"
-                        _ -> fail "sum type expected"
-        TmCase t alts -> do
-                env <- asks getEnv
-                tyT <- typeof t
-                case simplifyty env tyT of
-                        TySum fields -> do
-                                when (length alts /= length fields) $ fail "field length not match"
-                                zipWithM_ (\(_, ti) tyTi -> checkType ti tyTi) alts fields
-                                return $ head fields -- tmp: fields null
-                        _ -> fail "sum type required"
+typeof (TmVar i _) = getType i
+typeof (TmApp t1 t2) = do
+        tyT1 <- typeof t1
+        tyT2 <- typeof t2
+        case tyT1 of
+                TyFun tyT11 tyT12 -> do
+                        tyeqv tyT2 tyT11
+                        return tyT12
+                _ -> fail "arrow type expected"
+typeof (TmAbs x tyT1 t2) = do
+        checkKnStar tyT1
+        tyT2 <- extendWith (actualName x) (TmVarBind tyT1) $ typeof t2
+        return $ TyFun tyT1 (shift (-1) tyT2)
+typeof (TmTApp t1 tyT2) = do
+        knKT2 <- kindof tyT2
+        tyT1 <- typeof t1
+        env <- asks getEnv
+        case simplifyty env tyT1 of
+                TyAll _ knK11 tyT12
+                        | knK11 == knKT2 -> return $ tyT2 |-> tyT12
+                        | otherwise -> fail "Type argument has wrong kind"
+                _ -> fail "universal type expected"
+typeof (TmTAbs tyX knK1 t2) = do
+        tyT2 <- extendWith (actualName tyX) (TyVarBind knK1) $ typeof t2
+        return $ TyAll tyX knK1 tyT2
+typeof (TmLet x t1 t2) = do
+        tyT1 <- typeof t1
+        tyT2 <- extendWith (actualName x) (TmVarBind tyT1) $ typeof t2
+        return $ shift (-1) tyT2
+typeof (TmFix t1) = do
+        tyT1 <- typeof t1
+        env <- asks getEnv
+        case simplifyty env tyT1 of
+                TyFun tyT11 tyT12 -> do
+                        tyeqv tyT12 tyT11
+                        return tyT12
+                _ -> fail "arrow type expected"
+typeof (TmProj t1 i) = do
+        tyT1 <- typeof t1
+        env <- asks getEnv
+        case simplifyty env tyT1 of
+                TyRecord fieldtys -> case safeAt fieldtys i of
+                        Just (_, tyT) -> return tyT
+                        Nothing -> fail "label not found"
+                _ -> fail "record type expected"
+typeof (TmRecord fields) = do
+        fieldtys <- forM fields $ \(li, ti) -> do
+                tyTi <- typeof ti
+                return (li, tyTi)
+        return $ TyRecord fieldtys
+typeof (TmInj i tyT elims) = do
+        env <- asks getEnv
+        case simplifyty env tyT of
+                TySum fields -> case safeAt fields i of
+                        Just (TyRecord ltys) -> do
+                                tyElims <- mapM typeof elims
+                                zipWithM_ tyeqv (map snd ltys) tyElims
+                                return tyT
+                        Just _ -> fail " record type required"
+                        Nothing -> fail "label not found"
+                tyT' -> fail $ "sum type expected, got " ++ show (pretty tyT')
+typeof (TmCase t alts) = do
+        env <- asks getEnv
+        tyT <- typeof t
+        case simplifyty env tyT of
+                TySum fields -> do
+                        when (length alts /= length fields) $ fail "field length not match"
+                        zipWithM_ (\(_, ti) tyTi -> checkType ti tyTi) alts fields
+                        return $ head fields -- tmp: fields null
+                _ -> fail "sum type required"
+typeof (TmFold tyT) = do
+        env <- asks getEnv
+        case simplifyty env tyT of
+                TyRec _ _ tyT2 -> return $ TyFun (tyT |-> tyT2) tyT
+                _ -> fail "recursive type expected"
+typeof (TmUnfold tyT) = do
+        env <- asks getEnv
+        case simplifyty env tyT of
+                TyRec _ _ tyT2 -> return $ TyFun tyT (tyT |-> tyT2)
+                _ -> fail "recursive type expected"
 
 checkType :: CoreMonad env m => Term -> Type -> m ()
 checkType t tyT = do
@@ -181,3 +193,12 @@ kindof tyT = case tyT of
         TySum fields -> do
                 mapM_ checkKnStar fields
                 return KnStar
+
+checkBinding :: CoreMonad env m => Binding -> m ()
+checkBinding (TyAbbBind tyT knK) = do
+        knK' <- kindof tyT
+        unless (knK == knK') $ fail "Kind of binding does not match declared kind"
+checkBinding (TmAbbBind t tyT) = do
+        tyT' <- typeof t
+        tyeqv tyT tyT'
+checkBinding _ = return ()

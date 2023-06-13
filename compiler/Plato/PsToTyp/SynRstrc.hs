@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.PsToTyp.SynRstrc (
@@ -69,31 +70,32 @@ dataConType id (con, ty) = loop1 ty
 {- | RULE 5: Bundling function clauses \\
 Checking number of arguments
 -}
-bundleClauses :: MonadThrow m => [LFunDecl] -> m [LFunDecl]
+bundleClauses :: MonadThrow m => [LDecl] -> m [LDecl]
 bundleClauses = classify . partition
 
-classify :: MonadThrow m => [[LFunDecl]] -> m [LFunDecl]
+classify :: MonadThrow m => [[LDecl]] -> m [LDecl]
 classify [] = return []
 classify ([] : rest) = classify rest
-classify (fspcs@(L _ FunSpec{} : _) : rest) = (fspcs ++) <$> classify rest
-classify (fbnds@(L sp (FunBind id [(pats, _)]) : _) : rest) = do
+classify (fspcs@(L _ FunSpecD{} : _) : rest) = (fspcs ++) <$> classify rest
+classify (fbnds@(L sp (FunBindD id [(pats, _)]) : _) : rest) = do
         clses <-
                 sequence
                         [ do
                                 when (length psi /= length pats) $ throwLocErr sp "Different number of arguments"
                                 return (psi, ei)
-                        | L sp (FunBind _ [(psi, ei)]) <- fbnds
+                        | L sp (FunBindD _ [(psi, ei)]) <- fbnds
                         ]
-        let spn = concatSpans $ sp : [spi | L spi FunBind{} <- fbnds]
-        (L spn (FunBind id clses) :) <$> classify rest
-classify ((L _ FunBind{} : _) : _) = unreachable "malformed clauses"
-classify ((L _ FixDecl{} : _) : _) = unreachable "deleted by Nicifier"
+        let spn = concatSpans $ sp : [spi | L spi FunBindD{} <- fbnds]
+        (L spn (FunBindD id clses) :) <$> classify rest
+classify ((L _ FunBindD{} : _) : _) = unreachable "malformed clauses"
+classify ((L _ FixityD{} : _) : _) = unreachable "deleted by Nicifier"
+classify ((L _ DataD{} : _) : _) = unreachable "Data declaration allowed only top-level"
 
-partition :: [LFunDecl] -> [[LFunDecl]]
+partition :: [LDecl] -> [[LDecl]]
 partition =
         Data.List.groupBy
                 ( curry $ \case
                         -- before scoping
-                        (L _ (FunBind id1 _), L _ (FunBind id2 _)) -> nameIdent id1 == nameIdent id2
+                        (L _ (FunBindD id1 _), L _ (FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
                         _ -> False
                 )

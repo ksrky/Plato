@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Nicifier.OpParser (opParse) where
@@ -7,9 +8,7 @@ import Control.Monad
 import Control.Monad.Reader.Class
 import Control.Monad.Trans.Writer
 import Data.Map.Strict qualified as M
-import Data.Maybe qualified as Maybe
 
-import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Nicifier.OpParser.Fixity
@@ -17,7 +16,7 @@ import Plato.Nicifier.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 linearize :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => LExpr -> m [Tok Expr]
-linearize (L _ (OpE lhs op rhs)) = do
+linearize (L _ (InfixE lhs op rhs)) = do
         lhs' <- linearize lhs
         rhs' <- linearize rhs
         fix <-
@@ -41,9 +40,9 @@ instance OpParser LExpr where
                 L sp <$> case exp of
                         VarE{} -> return exp
                         AppE fun arg -> AppE <$> opParse fun <*> opParse arg
-                        OpE{} -> do
+                        InfixE{} -> do
                                 toks <- linearize (L sp exp)
-                                unLoc <$> parse OpE toks
+                                unLoc <$> parse InfixE toks
                         LamE var exp -> LamE var <$> opParse exp
                         LetE decs body -> do
                                 decs' <- opParse decs
@@ -58,23 +57,13 @@ instance OpParser LExpr where
 instance OpParser Clause where
         opParse (pats, exp) = (pats,) <$> opParse exp
 
-instance OpParser [LFunDecl] where
-        opParse decs = local (modifyFixityEnv extendFixity) $ mapM opParserFunD rest
+instance OpParser [LDecl] where
+        opParse decs = local (modifyFixityEnv extendFixity) $ forM rest $ \case
+                L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
+                dec -> return dec
             where
-                defs = [id | L _ (FunSpec id _) <- decs]
-                extendDefault :: FixityEnv -> FixityEnv
-                extendDefault env = foldr (\id -> M.insert (nameIdent id) defaultFixity) env defs
-                addFixity :: Ident -> Fixity -> FixityEnv -> FixityEnv
-                addFixity id fix =
-                        M.alter
-                                (Maybe.maybe (throwLocErr (getLoc id) "Operator not in scope") (const $ Just fix))
-                                (nameIdent id)
                 (fixmap, rest) = execWriter $ forM decs $ \case
-                        L _ (FixDecl id fix) -> tell ([(id, fix)], [])
+                        L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
                         d -> tell ([], [d])
                 extendFixity :: FixityEnv -> FixityEnv
-                extendFixity env = foldr (uncurry addFixity) (extendDefault env) fixmap
-                opParserFunD :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => LFunDecl -> m LFunDecl
-                opParserFunD (L sp dec) = case dec of
-                        FunBind id clauses -> L sp <$> (FunBind id <$> mapM opParse clauses)
-                        _ -> return $ L sp dec
+                extendFixity env = foldr (uncurry M.insert) env fixmap

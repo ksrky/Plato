@@ -33,14 +33,14 @@ import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 checkType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         Type ->
         m (LExpr 'TcDone)
 checkType = checkSigma
 
 inferType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         m (LExpr 'TcDone, Type)
 inferType = inferSigma
@@ -114,7 +114,7 @@ instDataCon con = do
 
 -- | Type checking of Rho
 checkRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         Rho ->
         m (LExpr 'TcDone)
@@ -123,7 +123,7 @@ checkRho exp ty = do
         zonkExpr `traverse` exp'
 
 inferRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         m (LExpr 'TcDone, Rho)
 inferRho exp = do
@@ -134,7 +134,7 @@ inferRho exp = do
 
 tcRho ::
         forall ctx m.
-        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         Expected Rho ->
         m (LExpr 'TcDone)
@@ -175,11 +175,11 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (body', body_ty) <- local (modifyEnv $ extendList subst) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
-                return $ CaseE match' alts'
+                return $ CaseEok match' match_ty alts'
 
 -- | Type check of Sigma
 inferSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         m (LExpr 'TcDone, Sigma)
 inferSigma exp = do
@@ -189,7 +189,7 @@ inferSigma exp = do
         return ((genTrans tvs .>) <$> exp'', sigma)
 
 checkSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'TcUndone ->
         Sigma ->
         m (LExpr 'TcDone)
@@ -204,7 +204,7 @@ checkSigma exp sigma = do
 
 -- | Check clauses
 checkClauses ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, HasConEnv ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         [Clause 'TcUndone] ->
         Sigma ->
         m (LExpr 'TcDone)
