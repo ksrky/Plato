@@ -15,7 +15,6 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
-
 data Bind (a :: TcFlag) where
         -- ValBind Ident LExpr |
         FunBind :: Ident -> [Clause 'TcUndone] -> Bind 'TcUndone

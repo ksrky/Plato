@@ -6,6 +6,7 @@ module Plato.Typing.Env (
         initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
+        Constrs,
         ConEnv,
         initConEnv,
         HasConEnv (..),
@@ -54,25 +55,22 @@ instance EnvManager Type where
         find id env =
                 lookupIdent id env >>= \case
                         ValBinding ty -> return ty
-                        _ ->
-                                throwLocErr (getLoc id) $
-                                        hsep [squotes $ pretty id, "is not a term-level identifier"]
+                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a term-level identifier"]
 
 instance EnvManager Kind where
         extend id kn = M.insert id (TypBinding kn)
         find id env =
                 lookupIdent id env >>= \case
                         TypBinding kn -> return kn
-                        _ ->
-                                throwLocErr (getLoc id) $
-                                        hsep [squotes $ pretty id, "is not a type-level identifier"]
+                        _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
 -----------------------------------------------------------
 -- Constructor Env
 -----------------------------------------------------------
+type Constrs = [(Ident, [Type])]
 
 -- | Mapping a type constructor to data constructors
-type ConEnv = IdentMap [(Ident, [Type])]
+type ConEnv = IdentMap Constrs
 
 initConEnv :: ConEnv
 initConEnv = M.empty

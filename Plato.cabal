@@ -55,7 +55,6 @@ library
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
       Plato.Syntax.Parsing.Pat
-      Plato.Syntax.Parsing.TopDecl
       Plato.Syntax.Parsing.Type
       Plato.Syntax.Typing
       Plato.Syntax.Typing.Base

@@ -9,7 +9,6 @@ import Data.Text qualified as T
 import Prettyprinter
 import Test.Hspec
 
-import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
@@ -48,6 +47,8 @@ spec = do
                         test_file "test09.plt" `shouldReturn` ()
                 it "test10.plt" $ do
                         test_file "test10.plt" `shouldReturn` ()
+                it "test15.plt" $ do
+                        test_file "test15.plt" `shouldReturn` ()
         describe "Uniq rewrited?" $ do
                 it "test01.plt" $ do
                         test_uniq "test01.plt" >>= (`shouldSatisfy` isSorted)
@@ -67,7 +68,7 @@ test_decls :: T.Text -> IO ()
 test_decls inp = do
         uniq <- initUniq
         decs <- runReaderT (parsePartial inp declsParser) uniq
-        decs' <- runReaderT (elabDecls $ map unLoc decs) (Context uniq initScope)
+        decs' <- runReaderT (elabDecls decs) (Context uniq initScope)
         ctx <- runReaderT initContext uniq
         void $ runReaderT (typingDecls decs') ctx
 

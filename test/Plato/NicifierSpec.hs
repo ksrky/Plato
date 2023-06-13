@@ -33,12 +33,22 @@ spec = do
                 it "test05.plt" $ do
                         test_file "test05.plt"
                                 `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
-                                               , "not : Bool -> Bool; not where {b -> case b of {True -> False; False -> True}}"
+                                               , "not : Bool -> Bool"
+                                               , "not where {b -> case b of {True -> False; False -> True}}"
                                                ]
                 it "test07.plt" $ do
                         test_file "test07.plt"
                                 `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
-                                               , "not : Bool -> Bool; not where {True -> False}; not where {False -> True}"
+                                               , "not : Bool -> Bool"
+                                               , "not where {True -> False}"
+                                               , "not where {False -> True}"
+                                               ]
+                it "test14.plt" $ do
+                        test_file "test14.plt"
+                                `shouldReturn` [ "data List a where {Nil : List a; :: : a -> List a -> List a}"
+                                               , "data T where {T1 : T; T2 : T; T3 : T}"
+                                               , "f : List T"
+                                               , "f where {-> (T1 :: (T2 :: (T3 :: Nil)))}"
                                                ]
 
 fixityEnv :: FixityEnv
