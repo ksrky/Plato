@@ -63,11 +63,11 @@ str2tyconName = tyconName . T.pack
 str2genName :: String -> Name
 str2genName = genName . T.pack
 
-dummyVN :: Name
-dummyVN = str2varName "?"
+dummyName :: Name
+dummyName = str2genName "?"
 
-wildcard :: Name
-wildcard = str2varName "_"
+wcName :: Name
+wcName = str2genName "_"
 
 ----------------------------------------------------------------
 -- Name Env

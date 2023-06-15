@@ -22,4 +22,4 @@ mkInfoFromName = NameInfo NoSpan
 
 actualName :: NameInfo -> Name
 actualName (NameInfo _ x) = x
-actualName Dummy = dummyVN
+actualName Dummy = dummyName
