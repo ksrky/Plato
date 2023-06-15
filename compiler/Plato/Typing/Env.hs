@@ -21,6 +21,7 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
+import Plato.Typing.Utils
 
 data Binding
         = ValBinding Type
@@ -85,8 +86,4 @@ instance HasConEnv ConEnv where
 
 extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env
 extendConEnv id constrs =
-        modifyConEnv $ M.insert id (map (\(con, ty) -> (con, split [] (unLoc ty))) constrs)
-    where
-        split :: [Sigma] -> Rho -> [Sigma]
-        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
-        split acc _ = acc
+        modifyConEnv $ M.insert id (map (\(con, ty) -> (con, fst $ splitConstrTy (unLoc ty))) constrs)
