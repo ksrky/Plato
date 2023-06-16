@@ -7,6 +7,7 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Nicifier.OpParser.Fixity
 import Plato.Syntax.Parsing
 
 data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
@@ -17,15 +18,15 @@ instance HasLoc (Tok a) where
 
 parse :: forall a m. (HasCallStack, MonadThrow m) => (Located a -> Ident -> Located a -> a) -> [Tok a] -> m (Located a)
 parse infixtm toks = do
-        (result, rest) <- parseTerm (Fixity (-1) Nonfix) toks
+        (result, rest) <- parseTerm (Fixity (minPrec - 1) Nonfix) toks
         unless (null rest) $ unreachable "Token stack remained"
         return result
     where
-        parseTerm :: HasCallStack => Fixity -> [Tok a] -> m (Located a, [Tok a])
+        parseTerm :: Fixity -> [Tok a] -> m (Located a, [Tok a])
         parseTerm fix (TTerm lhs : rest) = parseOp fix lhs rest
         parseTerm _ _ = unreachable "malformed infix expression"
 
-        parseOp :: HasCallStack => Fixity -> Located a -> [Tok a] -> m (Located a, [Tok a])
+        parseOp :: Fixity -> Located a -> [Tok a] -> m (Located a, [Tok a])
         parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op fix@(Fixity prec dir)) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
