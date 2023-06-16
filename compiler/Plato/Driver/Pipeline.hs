@@ -20,8 +20,8 @@ compile src = do
         typsyn' <- typing typsyn
         isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
-        isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
-        undefiend
+        -- isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
+        undefined
 
 -- coresyn' <- runCore coresyn
 -- liftIO $ mapM_ printResult coresyn'

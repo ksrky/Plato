@@ -1,7 +1,8 @@
 module Plato.Syntax.Core where
 
 import Prettyprinter
-import qualified Data.Text as T
+
+import Plato.Common.Name
 
 -- *  Abstract syyntax
 
@@ -9,8 +10,6 @@ data Phrase
         = Prog Prog
         | Term Term
         deriving (Show, Eq)
-
-type Name = T.Text
 
 type Label = Name
 
@@ -34,8 +33,8 @@ data Term
         = Var Name
         | Let Prog Term
         | Type
-        | Q PiSigma (Type, Bind Type)
-        | Lam (Bind Term)
+        | Q PiSigma (Bind Type) Type
+        | Lam (Bind Type) Term
         | App Term Term
         | Pair Term Term
         | Split Term (Bind (Bind Term))
@@ -47,7 +46,7 @@ data Term
         | Force Term
         | Rec Term
         | Fold Term
-        | Unfold Term (Bind Term)
+        | Unfold (Bind Term) Term
         deriving (Show, Eq)
 
 instance Pretty Term

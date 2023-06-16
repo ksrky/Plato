@@ -2,145 +2,83 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (elabDecls, typ2core) where
+module Plato.TypToCore where
 
-import Control.Monad
-import Control.Monad.Reader
-import Control.Monad.Writer
-import GHC.Stack
-
-import Data.List qualified
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
+import Plato.Core.Utils
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
+import Plato.Typing.Utils
 
-elabExpr ::
-        (HasCallStack, MonadReader ctx m) =>
-        T.Expr 'T.TcDone ->
-        m C.Term
-elabExpr (T.VarE var) = return $ C.Var (ident2text var)
-elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
-elabExpr (T.AbsEok var ty body) = do
-        tyT1 <- elabType ty
-        t2 <- extendNameWith (nameIdent var) $ elabExpr body
-        return $ C.Lam (name2text var, t2)
-elabExpr (T.TAppE fun argtys) = do
-        t1 <- elabExpr fun
-        tys2 <- mapM elabType argtys
-        return $ foldl C.App t1 tys2
-elabExpr (T.TAbsE qnts body) = do
-        qnts' <- forM qnts $ \(tv, kn) -> return (T.unTyVar tv, elabKind kn)
-        t1 <- extendNameListWith (map (nameIdent . fst) qnts') $ elabExpr body
-        return $ foldr (\(id, _) -> C.Lam (ident2text id)) t1 qnts'
-elabExpr (T.LetEok bnds spcs body) = do
-        rbnds <- elabFunDecls bnds spcs
-        t2 <- extendNameListWith (map (C.actualName . fst) rbnds) $ elabExpr (unLoc body)
-        -- return $ foldr (\(xi, ti, _) -> C.TmLet xi ti) t2 rbnds
-        return $ foldr (\(xi, (ti, tyTi)) t -> C.TmApp (C.TmAbs xi tyTi t) ti) t2 rbnds
-elabExpr (T.CaseEok match ty alts) = do
-        t <- elabExpr (unLoc match)
-        tyT <- elabType ty
-        alts' <- forM alts $ \(pat, exp) -> case unLoc pat of
-                T.WildP -> unreachable ""
-                T.VarP{} -> unreachable ""
-                T.ConP c ps -> do
-                        let xs = [nameIdent id | L _ (T.VarP id) <- ps]
-                        (nameIdent c,) <$> extendNameListWith xs (elabExpr (unLoc exp))
-        return $ C.TmCase (C.TmApp (C.TmUnfold tyT) t) alts'
+elabExpr :: T.Expr 'T.TcDone -> C.Term
+elabExpr (T.VarE id) = C.Var (nameIdent id)
+elabExpr (T.AppE fun arg) = C.App (elabExpr $ unLoc fun) (elabExpr $ unLoc arg)
+elabExpr (T.AbsEok id ty exp) = C.Lam (nameIdent id, elabType ty) (elabExpr exp)
+elabExpr (T.TAppE fun tyargs) = foldl C.App (elabExpr fun) (map elabType tyargs)
+elabExpr (T.TAbsE qnts exp) =
+        foldr (\(tv, kn) t -> C.Lam (nameIdent $ T.unTyVar tv, elabKind kn) t) (elabExpr exp) qnts
+elabExpr (T.LetEok fbnds fspcs body) = C.Let (elabFunDecls fbnds fspcs) (elabExpr $ unLoc body)
+elabExpr (T.CaseEok match _ alts) =
+        let x = genName "x"
+            y = genName "y"
+         in C.Split
+                (elabExpr $ unLoc match)
+                ( x
+                ,
+                        ( y
+                        , C.Case
+                                (C.Var x)
+                                ( (`map` alts) $ \(pat, exp) ->
+                                        let (con, vars) = elabPat (unLoc pat)
+                                         in (con, mkSplits (mkUnfold $ C.Var y) vars (elabExpr (unLoc exp)))
+                                )
+                        )
+                )
 
-elabType :: (HasCallStack, MonadReader ctx m, HasCoreEnv ctx) => T.Type -> m C.Type
-elabType (T.VarT tv) = do
-        i <- getVarIndex (nameIdent $ T.unTyVar tv)
-        return $ C.TyVar i (C.mkInfo $ T.unTyVar tv)
-elabType (T.ConT tc) = do
-        i <- getVarIndex (nameIdent tc)
-        return $ C.TyVar i (C.mkInfo tc)
-elabType (T.ArrT ty1 ty2) = C.TyFun <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType (T.AllT qnts ty) = do
-        args <- forM qnts $ \(tv, kn) -> return (T.unTyVar tv, elabKind kn)
-        tyT2 <- extendNameListWith (map (nameIdent . fst) args) $ elabType (unLoc ty)
-        return $ foldr (\(x, knK1) -> C.TyAll (C.mkInfo x) knK1) tyT2 args
-elabType (T.AppT ty1 ty2) = C.TyApp <$> elabType (unLoc ty1) <*> elabType (unLoc ty2)
-elabType T.MetaT{} = unreachable "Zonking failed"
+elabPat :: T.Pat -> (C.Label, [Name])
+elabPat (T.ConP con pats) =
+        let vars = (`map` pats) $ \case
+                L _ (T.VarP id) -> nameIdent id
+                _ -> unreachable "allowed only variable patterns"
+         in (nameIdent con, vars)
+elabPat _ = unreachable "allowed only constructor pattern"
 
-elabKind :: HasCallStack => T.Kind -> C.Kind
-elabKind T.StarK = C.KnStar
-elabKind (T.ArrK kn1 kn2) = C.KnFun (elabKind kn1) (elabKind kn2)
-elabKind T.MetaK{} = unreachable "elabKind passed T.MetaK"
+elabType :: T.Type -> C.Type
+elabType (T.VarT tv) = C.Var (nameIdent $ T.unTyVar tv)
+elabType (T.ConT tc) = C.Var (nameIdent tc)
+elabType (T.ArrT arg res) = mkArr (elabType $ unLoc arg) (elabType $ unLoc res)
+elabType (T.AllT qnts body) =
+        mkPis (map (\(tv, kn) -> (nameIdent $ T.unTyVar tv, elabKind kn)) qnts) (elabType $ unLoc body)
+elabType (T.AppT fun arg) = C.App (elabType $ unLoc fun) (elabType $ unLoc arg)
+elabType T.MetaT{} = unreachable ""
 
-elabFunDecls ::
-        (MonadReader ctx m, HasCoreEnv ctx) =>
-        [(Ident, T.LExpr 'T.TcDone)] ->
-        [(Ident, T.LType)] ->
-        m [(C.NameInfo, (C.Term, C.Type))]
-elabFunDecls fbnds fspcs = do
-        let proj :: Int -> C.Term
-            proj = C.TmProj (C.TmVar 0 C.Dummy)
-        fspcs' <- mapM (\(id, ty) -> (id,) <$> elabType (unLoc ty)) fspcs
-        fbnds' <- forM fbnds $ \(id, exp) -> case Data.List.findIndex ((== id) . fst) fspcs of
-                Just i -> do
-                        t <- elabExpr (T.AbsEok id (unLoc $ snd (fspcs !! i)) (unLoc exp))
-                        return (nameIdent id, C.TmApp t (proj i))
-                Nothing -> unreachable "function not defined"
-        return $ recursiveBinds fbnds' fspcs'
+elabKind :: T.Kind -> C.Type
+elabKind T.StarK = C.Type
+elabKind (T.ArrK arg res) = C.Q C.Pi (wcName, elabKind arg) (elabKind res)
+elabKind T.MetaK{} = unreachable ""
 
-elabDecls :: forall ctx m. (MonadReader ctx m, HasCoreEnv ctx) => [T.Decl 'T.TcDone] -> m [C.Command]
-elabDecls decs = do
-        let fbnds = [(id, exp) | T.BindDecl (T.FunBindok id exp) <- decs]
-            domains = map fst fbnds
-        (fspcs, rest) <- execWriterT $ forM decs $ \case
-                T.SpecDecl (T.ValSpec id ty) | id `elem` domains -> tell ([(id, ty)], [])
-                dec -> tell ([], [dec])
-        let elabDecls' :: [T.Decl 'T.TcDone] -> m [C.Command]
-            elabDecls' (T.SpecDecl T.TypSpec{} : rest) = elabDecls' rest
-            elabDecls' (T.BindDecl (T.DatBindok id kn params constrs) : rest) = do
-                let knK = elabKind kn
-                extendNameWith (nameIdent id) $ do
-                        let elabConstrs :: [(Ident, T.LType)] -> m [(Ident, C.Type)]
-                            elabConstrs [] = return []
-                            elabConstrs ((con, ty) : cs) = do
-                                c <- (con,) <$> elabType (T.AllT params ty)
-                                cs' <- extendNameWith (nameIdent con) $ elabConstrs cs
-                                return $ c : cs'
-                        fun_constrs <- elabConstrs constrs
-                        var_constrs <- mapM (\(con, ty) -> (con,) <$> elabType (unLoc ty)) constrs
-                        let params' = map (\(tv, kn) -> (C.mkInfo $ T.unTyVar tv, elabKind kn)) params
-                            tyT_nonrec = foldr (uncurry C.TyAbs) (constrsToVariant var_constrs) params'
-                            tyT_rec = C.TyRec (C.mkInfo id) knK tyT_nonrec
-                        rest' <- extendNameListWith (map (nameIdent . fst) constrs) $ elabDecls' rest
-                        let constrBinds :: Int -> [(Ident, C.Type)] -> [C.Command]
-                            constrBinds _ [] = []
-                            constrBinds n_con ((con, tyT) : rest) =
-                                let walk :: Int -> C.Type -> C.Term
-                                    walk (-1) (C.TyAll x knK1 tyT2) = C.TmTAbs x knK1 (walk (-1) tyT2)
-                                    walk n_arg (C.TyFun tyT1 tyT2) = C.TmAbs C.Dummy tyT1 (walk (n_arg + 1) tyT2)
-                                    walk n_arg _ =
-                                        C.TmApp (C.TmFold (C.TyVar (n_con + n_arg + 1) (C.mkInfo id))) $
-                                                C.TmInj
-                                                        n_con
-                                                        (shift (n_con + n_arg + 1) tyT_nonrec)
-                                                        (map (\i -> C.TmVar (n_arg - i) C.Dummy) [0 .. n_arg])
-                                 in C.Bind (C.mkInfo con) (C.TmAbbBind (walk (-1) tyT) tyT) : constrBinds (n_con + 1) rest
-                        return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT_rec knK) : constrBinds 0 fun_constrs ++ rest'
-            elabDecls' (T.BindDecl (T.TypBind id ty) : rest) = do
-                -- TODO: remove
-                tyT <- elabType (unLoc ty)
-                knK <- getKind =<< getVarIndex (nameIdent id)
-                rest' <- elabDecls' rest
-                return $ C.Bind (C.mkInfo id) (C.TyAbbBind tyT knK) : rest'
-            elabDecls' (T.SpecDecl (T.ValSpec id ty) : rest) = do
-                tyT <- elabType (unLoc ty)
-                rest' <- extendWith (nameIdent id) (C.TmVarBind tyT) $ elabDecls' rest
-                return $ C.Bind (C.mkInfo id) (C.TmVarBind tyT) : rest'
-            elabDecls' _ = do
-                rbnds <- elabFunDecls fbnds fspcs
-                return $ map (\(id, (t, tyT)) -> C.Bind id (C.TmAbbBind t tyT)) rbnds
-        elabDecls' rest
+elabFunDecls :: [(Ident, T.LExpr 'T.TcDone)] -> [(Ident, T.LType)] -> C.Prog
+elabFunDecls fbnds fspcs =
+        map (\(id, ty) -> C.Decl (nameIdent id) (elabType $ unLoc ty)) fspcs
+                ++ map (\(id, exp) -> C.Defn (nameIdent id) (elabExpr $ unLoc exp)) fbnds
 
-typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Command]
-typ2core decs = do
-        let cmds = runReader (elabDecls decs) initCoreEnv
-        return cmds
+elabDecl :: T.Decl 'T.TcDone -> [C.Entry]
+elabDecl (T.SpecDecl (T.TypSpec id kn)) = [C.Decl (nameIdent id) (elabKind kn)]
+elabDecl (T.SpecDecl (T.ValSpec id ty)) = [C.Decl (nameIdent id) (elabType $ unLoc ty)]
+elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
+        let labBinds :: (Name, C.Term) = (genName "l", C.Enum (map (nameIdent . fst) constrs))
+            caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) ->
+                (nameIdent con, C.Rec $ C.Box $ mkTTuple $ map elabType (fst $ splitConstrTy $ unLoc ty))
+            dataBind :: C.Term = C.Q C.Sigma labBinds (C.Case (C.Var $ genName "l") caseAlts)
+            constrDefns :: [C.Entry] =
+                map (\(con, ty) -> C.Defn (nameIdent con) (elabType (T.AllT params ty))) constrs
+         in C.Defn (nameIdent id) dataBind : constrDefns
+elabDecl (T.BindDecl (T.TypBind id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
+elabDecl (T.BindDecl (T.FunBindok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
+
+typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Entry]
+typ2core = return . concatMap elabDecl
