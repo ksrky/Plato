@@ -1,27 +1,39 @@
 # Writing documentation
 
-## Setting up environment
+## MkDocs
+
+### Setting up environment
+
+```
+$ pip install -r requirements.txt
+```
+
+or
 
 ```
 $ pipenv install
 ```
 
-## Creating new documentation
+### Creating new documentation
 
 ```
 $ mkdocs new <name>
 ```
 
-## Bulding Web server
+### Building Web server
 
 ```
-$ mkdocs build
+$ mkdocs serve
 ```
 
-## Deploying docs
+### Deploying docs
 
 ```
 $ mkdocs build -f en/mkdocs.yml
 $ cd site
 $ mkdocs gh-deploy --config-file en/mkdocs.yml --remote-branch master
 ```
+
+### More info
+
+For full documentation visit [mkdocs.org](https://www.mkdocs.org).
