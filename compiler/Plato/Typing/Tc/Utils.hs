@@ -38,12 +38,14 @@ metaTvs (MetaT tv) = S.singleton tv
 getFreeTvs :: MonadIO m => Type -> m (S.Set TyVar)
 getFreeTvs ty = do
         ty' <- zonkType ty
-        return (freeTvs ty')
+        return $ runReader (freeTvs ty') S.empty
 
-freeTvs :: HasCallStack => Type -> S.Set TyVar
-freeTvs (VarT tv) = S.singleton tv
-freeTvs ConT{} = S.empty
-freeTvs (ArrT arg res) = freeTvs (unLoc arg) `S.union` freeTvs (unLoc res)
-freeTvs (AllT tvs ty) = S.fromList (map fst tvs) `S.union` freeTvs (unLoc ty)
-freeTvs (AppT fun arg) = freeTvs (unLoc fun) `S.union` freeTvs (unLoc arg)
-freeTvs MetaT{} = S.empty
+freeTvs :: HasCallStack => Type -> Reader (S.Set TyVar) (S.Set TyVar)
+freeTvs (VarT tv) = do
+        bounded <- asks (\bound -> tv `elem` bound) -- bounded TyVar must be BoundTv
+        if bounded then return S.empty else return $ S.singleton tv
+freeTvs ConT{} = return S.empty
+freeTvs (ArrT arg res) = S.union <$> freeTvs (unLoc arg) <*> freeTvs (unLoc res)
+freeTvs (AllT qnts body) = local ((flip . foldr) (S.insert . fst) qnts) $ freeTvs (unLoc body)
+freeTvs (AppT fun arg) = S.union <$> freeTvs (unLoc fun) <*> freeTvs (unLoc arg)
+freeTvs MetaT{} = return S.empty

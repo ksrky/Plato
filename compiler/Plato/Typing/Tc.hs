@@ -30,6 +30,7 @@ import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.SubsCheck
 import Plato.Typing.Tc.Unify
 import Plato.Typing.Tc.Utils
+import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 checkType ::
@@ -106,11 +107,7 @@ instDataCon ::
 instDataCon con = do
         sigma <- zonkType =<< find con =<< getEnv =<< ask
         (_, rho) <- instantiate sigma
-        return $ split [] rho
-    where
-        split :: [Sigma] -> Rho -> ([Sigma], Tau)
-        split acc (ArrT sigma rho) = split (unLoc sigma : acc) (unLoc rho)
-        split acc tau = (reverse acc, tau)
+        return $ splitConstrTy rho
 
 -- | Type checking of Rho
 checkRho ::

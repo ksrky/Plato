@@ -13,10 +13,13 @@ import Prettyprinter
 
 -- | Uniq
 newtype Uniq = Uniq Word
-        deriving (Eq, Show, Ord, Num)
+        deriving (Eq, Ord, Num)
 
 uniq2text :: Uniq -> T.Text
 uniq2text (Uniq w) = T.pack $ "$" ++ show w
+
+instance Show Uniq where
+        show (Uniq w) = show w
 
 instance Pretty Uniq where
         pretty (Uniq w) = viaShow w

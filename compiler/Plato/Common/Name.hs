@@ -30,6 +30,7 @@ data NameSpace
         | ConName
         | TyvarName
         | TyconName
+        | GenName
         deriving (Eq, Ord, Show)
 
 varName :: T.Text -> Name
@@ -44,6 +45,9 @@ tyvarName = Name TyvarName
 tyconName :: T.Text -> Name
 tyconName = Name TyconName
 
+genName :: T.Text -> Name
+genName = Name GenName
+
 str2varName :: String -> Name
 str2varName = varName . T.pack
 
@@ -56,11 +60,14 @@ str2tyvarName = tyvarName . T.pack
 str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
 
-dummyVN :: Name
-dummyVN = str2varName "?"
+str2genName :: String -> Name
+str2genName = genName . T.pack
 
-wildcard :: Name
-wildcard = str2varName "_"
+dummyName :: Name
+dummyName = str2genName "?"
+
+wcName :: Name
+wcName = str2genName "_"
 
 ----------------------------------------------------------------
 -- Name Env

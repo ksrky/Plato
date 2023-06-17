@@ -1,4 +1,4 @@
-module Plato.Syntax.Parsing.Type where
+module Plato.Syntax.Parsing.Type (LType, Type (..)) where
 
 import Prettyprinter
 
@@ -16,6 +16,8 @@ data Type
         | ArrT LType LType
         | AllT [Ident] LType
         | AppT LType LType
+        | InfixT LType Ident LType
+        | FactorT LType
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -27,12 +29,16 @@ instance Pretty Type where
         pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
         pretty (ArrT arg res) = prty ArrPrec (unLoc arg) <+> "->" <+> prty TopPrec (unLoc res)
         pretty (AllT vars body) = braces (hsep (map pretty vars)) <+> pretty body
+        pretty (InfixT lhs op rhs) = prty AppPrec (unLoc lhs) <+> pretty op <+> prty AppPrec (unLoc rhs)
+        pretty (FactorT ty) = parens $ pretty ty
 
 data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
 
 precOf :: Type -> Prec
 precOf AllT{} = TopPrec
 precOf ArrT{} = ArrPrec
+precOf AppT{} = AppPrec
+precOf InfixT{} = AppPrec
 precOf _ = AtomPrec
 
 prty :: Prec -> Type -> Doc ann

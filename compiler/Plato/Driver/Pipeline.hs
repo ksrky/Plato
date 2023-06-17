@@ -8,7 +8,6 @@ import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.RunCore
 import Plato.TypToCore
 import Plato.Typing
 
@@ -21,9 +20,11 @@ compile src = do
         typsyn' <- typing typsyn
         isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
-        isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
-        coresyn' <- runCore coresyn
-        liftIO $ mapM_ printResult coresyn'
+        -- isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
+        undefined
+
+-- coresyn' <- runCore coresyn
+-- liftIO $ mapM_ printResult coresyn'
 
 {-dynCompile :: MonadIO m => T.Text -> PlatoT m ()
 dynCompile inp = do
