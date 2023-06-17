@@ -54,15 +54,15 @@ spec = do
                         test_file "test16.plt"
                                 `shouldReturn` [ "data :,: a b where {:,: : a -> b -> a :,: b}"
                                                , "fst : {a b} a :,: b -> a"
-                                               , "fst where {(:,: x _) -> x}"
+                                               , "fst where {(x :,: _) -> x}"
                                                , "snd : {a b} a :,: b -> b"
-                                               , "snd where {(:,: _ y) -> y}"
+                                               , "snd where {(_ :,: y) -> y}"
                                                , "curry : {a b c} (a :,: b -> c) -> a -> b -> c"
                                                , "curry where {f x y -> f ((x :,: y))}"
                                                , "uncurry : {a b c} (a -> b -> c) -> a :,: b -> c"
-                                               , "uncurry where {f (:,: x y) -> f x y}"
+                                               , "uncurry where {f (x :,: y) -> f x y}"
                                                , "swap : {a b} a :,: b -> b :,: a"
-                                               , "swap where {(:,: x y) -> (y :,: x)}"
+                                               , "swap where {(x :,: y) -> (y :,: x)}"
                                                ]
 
 fixityEnv :: FixityEnv

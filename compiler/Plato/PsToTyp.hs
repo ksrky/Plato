@@ -77,8 +77,17 @@ elabPat (P.ConP con pats) = do
         return $ T.ConP con' pats'
 elabPat (P.VarP var) = return $ T.VarP var
 elabPat P.WildP = return T.WildP
+elabPat (P.InfixP left op right) = do
+        left' <- elabPat `traverse` left
+        op' <- scoping op
+        right' <- elabPat `traverse` right
+        return $ T.ConP op' [left', right']
+elabPat  P.FactorP{} = unreachable "fixity resolution failed"
 
-elabType :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => P.Type -> m T.Type
+elabType ::
+        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        P.Type ->
+        m T.Type
 elabType (P.VarT var) = do
         var' <- scoping var
         return $ T.VarT (T.BoundTv var')
@@ -112,14 +121,20 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
         L _ P.FixityD{} -> unreachable "deleted by Nicifier"
         L _ P.DataD{} -> unreachable "Data declaration allowed only top-level"
 
-elabClause :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => P.Clause -> m (T.Clause 'T.TcUndone)
+elabClause ::
+        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        P.Clause ->
+        m (T.Clause 'T.TcUndone)
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
         exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
-elabDecls :: (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) => [P.LTopDecl] -> m [T.Decl 'T.TcUndone]
+elabDecls ::
+        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        [P.LTopDecl] ->
+        m [T.Decl 'T.TcUndone]
 elabDecls [] = return []
 elabDecls (L _ (P.DataD id params constrs) : rest) = do
         paramNamesUnique params
@@ -138,7 +153,9 @@ elabDecls fundecs = do
         local (const env) $ do
                 fundecs' <- bundleClauses fundecs
                 (bnds, spcs) <- elabFunDecls fundecs'
-                let fundecs'' = map (T.SpecDecl . uncurry T.ValSpec) spcs ++ map (T.BindDecl . uncurry T.FunBind) bnds
+                let fundecs'' =
+                        map (T.SpecDecl . uncurry T.ValSpec) spcs
+                                ++ map (T.BindDecl . uncurry T.FunBind) bnds
                 return fundecs''
 
 elabTopDecls ::

@@ -209,8 +209,7 @@ clause      :: { Clause }
 -- Patterns
 -----------------------------------------------------------
 pat         :: { LPat }
-            : lpat conop pat                        { sL $1 $3 (ConP $2 [$1, $3]) }
-            -- TODO: infix pattern resolution 
+            : lpat conop pat                        { sL $1 $3 (InfixP $1 $2 $3) } 
             | lpat                                  { $1 }
 
 lpat 		:: { LPat }
@@ -222,7 +221,7 @@ apats       :: { [LPat] }
             | apat                                  { [$1] }
 
 apat        :: { LPat }
-            : '(' pat ')'                         	{ $2 }
+            : '(' pat ')'                         	{ L (combineSpans $1 $3) (FactorP $2) }
             | con                               	{ L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }

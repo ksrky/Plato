@@ -35,6 +35,22 @@ instance Linearize Expr where
                 exp' <- opParse exp
                 return [TTerm exp']
 
+instance Linearize Pat where
+        linearize (L _ (InfixP lhs op rhs)) = do
+                lhs' <- linearize lhs
+                rhs' <- linearize rhs
+                fix <-
+                        asks getFixityEnv
+                                >>= ( \case
+                                        Just op' -> return op'
+                                        Nothing -> return defaultFixity
+                                    )
+                                        . M.lookup (nameIdent op)
+                return $ lhs' ++ [TOp op fix] ++ rhs'
+        linearize pat = do
+                pat' <- opParse pat
+                return [TTerm pat']
+
 instance Linearize Type where
         linearize (L _ (InfixT lhs op rhs)) = do
                 lhs' <- linearize lhs
@@ -63,19 +79,32 @@ instance OpParser LExpr where
                         InfixE{} -> do
                                 toks <- linearize (L sp exp)
                                 unLoc <$> parse InfixE toks
-                        LamE var exp -> LamE var <$> opParse exp
+                        LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
                                 decs' <- opParse decs
                                 body' <- opParse body
                                 return $ LetE decs' body'
                         CaseE match alts -> do
                                 match' <- opParse match
-                                alts' <- mapM (\(p, e) -> (p,) <$> opParse e) alts
+                                alts' <- mapM (\(p, e) -> (,) <$> opParse p <*> opParse e) alts
                                 return $ CaseE match' alts'
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where
-        opParse (pats, exp) = (pats,) <$> opParse exp
+        opParse (pats, exp) = (,) <$> mapM opParse pats <*> opParse exp
+
+instance OpParser LPat where
+        opParse (L sp pat) =
+                L sp <$> case pat of
+                        ConP con pats -> do
+                                pats' <- mapM opParse pats
+                                return $ ConP con pats'
+                        VarP{} -> return pat
+                        WildP -> return WildP
+                        InfixP{} -> do
+                                toks <- linearize (L sp pat)
+                                unLoc <$> parse InfixP toks
+                        FactorP p -> unLoc <$> opParse p
 
 instance OpParser LType where
         opParse (L sp ty) =

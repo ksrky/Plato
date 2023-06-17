@@ -1,4 +1,4 @@
-module Plato.Syntax.Parsing.Type where
+module Plato.Syntax.Parsing.Type (LType, Type (..)) where
 
 import Prettyprinter
 

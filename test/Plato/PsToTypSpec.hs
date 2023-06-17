@@ -19,6 +19,8 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
+import Plato.Nicifier.OpParser
+import Plato.Nicifier.OpParser.Fixity
 import Plato.Parsing
 import Plato.Parsing.Parser
 import Plato.PsToTyp
@@ -120,8 +122,9 @@ test_scexpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'TcUndone)
 test_scexpr inp = do
         uniq <- initUniq
         exp <- runReaderT (parsePartial inp exprParser) uniq
+        exp' <- runReaderT (opParse exp) initFixityEnv
         sc <- defScope uniq
-        runReaderT (elabExpr (unLoc exp)) (Context uniq sc)
+        runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
 
 test_decls :: (MonadIO m, MonadThrow m) => T.Text -> m [Decl 'TcUndone]
 test_decls inp = do

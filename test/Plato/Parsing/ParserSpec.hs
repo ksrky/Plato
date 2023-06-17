@@ -54,7 +54,7 @@ spec = do
                                                , "infixr 5 ::"
                                                , "++ : {a} List a -> List a -> List a"
                                                , "++ where {Nil m -> m}"
-                                               , "++ where {(:: x xs) m -> (x :: (xs ++ m))}"
+                                               , "++ where {((x :: xs)) m -> (x :: (xs ++ m))}"
                                                , "infixr 5 ++"
                                                ]
                 it "test10.plt" $ do
@@ -62,7 +62,7 @@ spec = do
                                 `shouldReturn` [ "infixr 5 ::"
                                                , "data List a where {Nil : List a; :: : a -> List a -> List a}"
                                                , "reverse : {a} List a -> List a"
-                                               , "reverse where {l -> let {rev : {a} List a -> List a -> List a; rev where {Nil a -> a}; rev where {(:: x xs) a -> rev xs ((x :: a))}} in rev l Nil}"
+                                               , "reverse where {l -> let {rev : {a} List a -> List a -> List a; rev where {Nil a -> a}; rev where {((x :: xs)) a -> rev xs ((x :: a))}} in rev l Nil}"
                                                ]
 
 test_expr :: T.Text -> IO String
