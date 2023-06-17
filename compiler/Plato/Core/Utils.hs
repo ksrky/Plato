@@ -3,11 +3,11 @@ module Plato.Core.Utils where
 import Plato.Common.Name
 import Plato.Syntax.Core
 
-empty :: Term
-empty = Enum []
+unit :: Term
+unit = Label (genName "unit")
 
-tEmpty :: Type
-tEmpty = Type
+tUnit :: Type
+tUnit = Enum [genName "unit"]
 
 mkLam :: [Bind Type] -> Term -> Term
 mkLam [] t = t
@@ -25,8 +25,13 @@ mkPis = mkQ Pi
 mkSigmas :: [Bind Type] -> Type -> Type
 mkSigmas = mkQ Sigma
 
+mkProduct :: [Term] -> Term
+mkProduct [] = unit
+mkProduct [t] = t
+mkProduct ts = foldr1 Pair ts
+
 mkTTuple :: [Type] -> Type
-mkTTuple [] = tEmpty
+mkTTuple [] = tUnit
 mkTTuple tys = foldr1 (\ty -> Q Sigma (wcName, ty)) tys
 
 mkSplits :: Term -> [Name] -> Term -> Term

@@ -74,9 +74,15 @@ elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
             caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) ->
                 (nameIdent con, C.Rec $ C.Box $ mkTTuple $ map elabType (fst $ splitConstrTy $ unLoc ty))
             dataBind :: C.Term = C.Q C.Sigma labBinds (C.Case (C.Var $ genName "l") caseAlts)
-            constrDefns :: [C.Entry] =
-                map (\(con, ty) -> C.Defn (nameIdent con) (elabType (T.AllT params ty))) constrs
-         in C.Defn (nameIdent id) dataBind : constrDefns
+            constrDefn :: (Ident, T.LType) -> C.Entry
+            constrDefn (con, ty) =
+                let walk :: Int -> T.Type -> C.Term
+                    walk 0 (T.AllT qnts body) = foldr (\(tv, kn) -> C.Lam (nameIdent (T.unTyVar tv), elabKind kn)) (walk 0 $ unLoc body) qnts
+                    walk n_arg (T.ArrT fun arg) = C.Lam (str2genName $ show n_arg, elabType $ unLoc fun) (walk (n_arg + 1) $ unLoc arg)
+                    walk 0 _ = C.Pair (C.Label (nameIdent con)) unit
+                    walk n_arg _ = C.Pair (C.Label (nameIdent con)) (C.Fold $ foldr1 C.Pair (map (C.Var . str2genName . show) [0 .. n_arg - 1]))
+                 in C.Defn (nameIdent con) (walk (-1) (T.AllT params ty))
+         in C.Defn (nameIdent id) dataBind : map constrDefn constrs
 elabDecl (T.BindDecl (T.TypBind id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
 elabDecl (T.BindDecl (T.FunBindok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
 
