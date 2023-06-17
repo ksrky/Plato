@@ -55,7 +55,7 @@ instance Pretty Entry where
 
 instance Pretty Term where
         pretty (Var x) = pretty x
-        pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), pretty t]
+        pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), "in", pretty t]
         pretty Type = "Type"
         pretty (Q Pi (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "->", pretty t]
         pretty (Q Sigma (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "*", pretty t]

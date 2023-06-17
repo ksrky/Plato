@@ -71,8 +71,9 @@ elabDecl (T.SpecDecl (T.TypSpec id kn)) = [C.Decl (nameIdent id) (elabKind kn)]
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = [C.Decl (nameIdent id) (elabType $ unLoc ty)]
 elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
         let labBinds :: (Name, C.Term) = (genName "l", C.Enum (map (nameIdent . fst) constrs))
-            caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) ->
-                (nameIdent con, C.Rec $ C.Box $ mkTTuple $ map elabType (fst $ splitConstrTy $ unLoc ty))
+            caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) -> case map elabType (fst $ splitConstrTy $ unLoc ty) of
+                [] -> (nameIdent con, tUnit)
+                tys -> (nameIdent con, C.Rec $ C.Box $ mkTTuple tys)
             dataBind :: C.Term = C.Q C.Sigma labBinds (C.Case (C.Var $ genName "l") caseAlts)
             constrDefn :: (Ident, T.LType) -> C.Entry
             constrDefn (con, ty) =

@@ -25,7 +25,8 @@ elabClauses ::
         m (LExpr 'TcDone)
 elabClauses tys clauses = do
         vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
-        match vars clauses
+        exp <- match vars clauses
+        return $ L (getLoc exp) $ foldr (uncurry AbsEok) (unLoc exp) vars
 
 dataConsof :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m Constrs
 dataConsof ty = do
@@ -68,7 +69,7 @@ match ::
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
-match [(var, ty)] [] = return $ noLoc (AbsEok var ty (CaseEok (noLoc $ VarE var) ty []))
+match [(var, ty)] [] = return $ noLoc (CaseEok (noLoc $ VarE var) ty [])
 match _ [] = throwError "sequence of absurd type"
 match [] (([], exp) : _) = return exp -- note: clauses should be singleton if not redundant
 match [] _ = unreachable "Number of variables and patterns are not same"
@@ -82,11 +83,11 @@ matchVar ::
         [(Ident, Type)] ->
         [Clause 'TcDone] ->
         m (LExpr 'TcDone)
-matchVar (var, ty) rest clauses = do
+matchVar (var, _) rest clauses = do
         let clauses' = (`map` clauses) $ \case
-                (L _ WildP : pats, exp) -> (pats, L (getLoc exp) $ AbsEok var ty (unLoc exp))
+                (L _ WildP : pats, exp) -> (pats, exp)
                 (L _ (VarP varp) : pats, exp) ->
-                        (pats, L (getLoc exp) $ AbsEok var ty (unLoc $ subst exp (VarE var) varp))
+                        (pats, subst exp (VarE var) varp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
@@ -102,7 +103,7 @@ matchCon ::
 matchCon (var, ty) rest clauses = do
         constrs <- dataConsof ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ noLoc $ AbsEok var ty (CaseEok (noLoc $ VarE var) ty alts)
+        return $ noLoc $ CaseEok (noLoc $ VarE var) ty alts
 
 matchClause ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
