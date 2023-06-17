@@ -1,0 +1,25 @@
+site_name: Plato
+site_url: https://ksrky.github.io/Plato/
+site_author: ksrk
+copyright: 2023 ksrk
+site_dir: ../../site/en
+repo_url: https://github.com/ksrky/Plato/
+edit_uri: blob/master/docs/en/docs
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+  - Implementation notes:
+      - Compiler structure: implementation-notes/compiler-structure.md
+      - Type checking: implementation-notes/type-checking.md
+      - Core language: implementation-notes/core-language.md
+theme:
+  name: material
+  language: en
+markdown_extensions:
+  - pymdownx.arithmatex
+  - attr_list
+  - md_in_html
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML
