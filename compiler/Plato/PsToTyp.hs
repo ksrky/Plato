@@ -90,6 +90,12 @@ elabType (P.AllT vars body) = do
         body' <- local (extendListScope vars) $ elabType `traverse` body
         return $ T.AllT qnts body'
 elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
+elabType (P.InfixT left op right) = do
+        left' <- elabType `traverse` left
+        op' <- scoping op
+        right' <- elabType `traverse` right
+        return $ T.AppT (sL left' op $ T.AppT (L (getLoc op) (T.ConT op')) left') right'
+elabType P.FactorT{} = unreachable "fixity resolution failed"
 
 elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>

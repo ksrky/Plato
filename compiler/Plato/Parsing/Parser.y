@@ -137,7 +137,11 @@ fixdecl     :: { LDecl }
 -----------------------------------------------------------
 type        :: { LType }
             : '{' tyvarseq1 '}' type                { sL $1 $4 (AllT $2 $4) }
-            | btype '->' type                       { sL $1 $3 (ArrT $1 $3) }
+            | ctype '->' type                       { sL $1 $3 (ArrT $1 $3) }
+            | ctype                                 { $1 }
+
+ctype       :: { LType }
+            : btype tyconop ctype                   { sL $1 $3 (InfixT $1 $2 $3) }
             | btype                                 { $1 }
 
 btype       :: { LType }
@@ -145,7 +149,7 @@ btype       :: { LType }
             | atype                                 { $1 }
 
 atype       :: { LType }
-            : '(' type ')'                          { $2 }
+            : '(' type ')'                          { L (combineSpans $1 $3) (FactorT $2) }
             | tycon                                 { L (getLoc $1) (ConT $1) }  -- tmp: ? something wrong
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
@@ -174,7 +178,7 @@ fexpr       :: { LExpr }
 
 aexpr       :: { LExpr }
             : '(' op ')'                            { L (combineSpans $1 $3) (VarE $2) }
-            | '(' expr ')'                          { $2 }
+            | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 
