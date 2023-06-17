@@ -81,7 +81,7 @@ elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
                     walk n_arg (T.ArrT fun arg) = C.Lam (str2genName $ show n_arg, elabType $ unLoc fun) (walk (n_arg + 1) $ unLoc arg)
                     walk 0 _ = C.Pair (C.Label (nameIdent con)) unit
                     walk n_arg _ = C.Pair (C.Label (nameIdent con)) (C.Fold $ foldr1 C.Pair (map (C.Var . str2genName . show) [0 .. n_arg - 1]))
-                 in C.Defn (nameIdent con) (walk (-1) (T.AllT params ty))
+                 in C.Defn (nameIdent con) (walk 0 (T.AllT params ty))
          in C.Defn (nameIdent id) dataBind : map constrDefn constrs
 elabDecl (T.BindDecl (T.TypBind id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
 elabDecl (T.BindDecl (T.FunBindok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]

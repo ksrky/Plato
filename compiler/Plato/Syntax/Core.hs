@@ -4,7 +4,7 @@ import Prettyprinter
 
 import Plato.Common.Name
 
--- *  Abstract syyntax
+-- *  Abstract syntax
 
 data Phrase
         = Prog Prog
@@ -49,4 +49,42 @@ data Term
         | Unfold (Bind Term) Term
         deriving (Show, Eq)
 
-instance Pretty Term
+instance Pretty Entry where
+        pretty (Decl x ty) = hsep [pretty x, colon, pretty ty]
+        pretty (Defn x t) = hsep [pretty x, equals, pretty t]
+
+instance Pretty Term where
+        pretty (Var x) = pretty x
+        pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), pretty t]
+        pretty Type = "Type"
+        pretty (Q Pi (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "->", pretty t]
+        pretty (Q Sigma (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "*", pretty t]
+        pretty (Lam (x, ty) t) = hsep ["\\", pretty x, colon, pretty ty, dot, pretty t]
+        pretty (App t u) = pretty t <+> pretty u
+        pretty (Pair t u) = parens (pretty t <> comma <+> pretty u)
+        pretty (Split t (x, (y, u))) =
+                hsep
+                        [ "split"
+                        , pretty t
+                        , "with"
+                        , parens (pretty x <> comma <+> pretty y)
+                        , "->"
+                        , pretty u
+                        ]
+        pretty (Enum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
+        pretty (Label lab) = "`" <> pretty lab
+        pretty (Case t alts) =
+                hsep
+                        [ "case"
+                        , pretty t
+                        , braces $
+                                concatWith
+                                        (surround (semi <> space))
+                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) alts)
+                        ]
+        pretty (Lift t) = "^" <> pretty t
+        pretty (Box t) = brackets $ pretty t
+        pretty (Force t) = "!" <> pretty t
+        pretty (Rec t) = "Rec" <+> pretty t
+        pretty (Fold t) = "fold" <+> pretty t
+        pretty (Unfold (x, t) u) = hsep ["unfold", pretty t, "as", pretty x, "->", pretty u]
