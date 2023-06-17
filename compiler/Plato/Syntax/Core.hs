@@ -60,12 +60,12 @@ instance Pretty Term where
         pretty (Q Pi (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "->", pretty t]
         pretty (Q Sigma (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "*", pretty t]
         pretty (Lam (x, ty) t) = hsep ["\\", pretty x, colon, pretty ty, dot, pretty t]
-        pretty (App t u) = pretty t <+> pretty u
+        pretty (App t u) = ppr TopPrec t <+> ppr AppPrec u
         pretty (Pair t u) = parens (pretty t <> comma <+> pretty u)
         pretty (Split t (x, (y, u))) =
                 hsep
                         [ "split"
-                        , pretty t
+                        , ppr TopPrec t
                         , "with"
                         , parens (pretty x <> comma <+> pretty y)
                         , "->"
@@ -76,7 +76,7 @@ instance Pretty Term where
         pretty (Case t alts) =
                 hsep
                         [ "case"
-                        , pretty t
+                        , ppr TopPrec t
                         , braces $
                                 concatWith
                                         (surround (semi <> space))
@@ -87,4 +87,25 @@ instance Pretty Term where
         pretty (Force t) = "!" <> pretty t
         pretty (Rec t) = "Rec" <+> pretty t
         pretty (Fold t) = "fold" <+> pretty t
-        pretty (Unfold (x, t) u) = hsep ["unfold", pretty t, "as", pretty x, "->", pretty u]
+        pretty (Unfold (x, t) u) = hsep ["unfold", ppr TopPrec t, "as", pretty x, "->", pretty u]
+
+data Prec = TopPrec | AppPrec | AtomPrec deriving (Enum)
+
+precOf :: Type -> Prec
+precOf Var{} = AtomPrec
+precOf Type{} = AtomPrec
+precOf Enum{} = AtomPrec
+precOf Pair{} = AtomPrec
+precOf Label{} = AtomPrec
+precOf App{} = AppPrec
+precOf Lift{} = AppPrec
+precOf Box{} = AppPrec
+precOf Force{} = AppPrec
+precOf Rec{} = AppPrec
+precOf Fold{} = AppPrec
+precOf _ = TopPrec
+
+ppr :: Prec -> Term -> Doc ann
+ppr p t
+        | fromEnum p >= fromEnum (precOf t) = parens (pretty t)
+        | otherwise = pretty t
