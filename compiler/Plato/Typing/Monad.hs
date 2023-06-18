@@ -48,6 +48,7 @@ initContext = do
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
+        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
 
 instance HasTypEnv Context where
         getEnv = getEnv . ctx_typenv

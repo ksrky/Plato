@@ -192,9 +192,11 @@ setIndentLevels lev = do
 -- Uniq ------------------------------------------
 instance HasUniq PsUserState where
         getUniq = getUniq . ust_uniq
+        setUniq uniq ust = setUniq uniq (ust_uniq ust)
 
 instance HasUniq PsState where
         getUniq = getUniq . parser_ust
+        setUniq uniq pst = setUniq uniq (parser_ust pst)
 
 freshUniq :: MonadIO m => ParserT m Uniq
 freshUniq = do

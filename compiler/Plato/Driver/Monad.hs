@@ -50,6 +50,9 @@ instance HasUniq Session where
         getUniq (Session ref) = do
                 env <- liftIO $ readIORef ref
                 liftIO $ newIORef $ plt_uniq env
+        setUniq uniq (Session ref) = do
+                env <- liftIO $ readIORef ref
+                liftIO $ writeIORef ref env{plt_uniq = uniq}
 
 instance HasInfo Session where
         getEntryPath (Session ref) = do
@@ -75,11 +78,11 @@ class (MonadReader Session m, MonadIO m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
 
-setUniq :: PlatoMonad m => IORef Uniq -> m ()
+{-setUniq :: PlatoMonad m => IORef Uniq -> m ()
 setUniq ref = do
         env <- getSession
         uniq <- liftIO $ readIORef ref
-        setSession env{plt_uniq = uniq}
+        setSession env{plt_uniq = uniq-}
 
 setFlag :: PlatoMonad m => String -> Bool -> m ()
 setFlag flag val = do

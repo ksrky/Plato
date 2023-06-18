@@ -57,5 +57,6 @@ typing :: (PlatoMonad m, MonadCatch m) => Program 'TcUndone -> m (Program 'TcDon
 typing decs = do
         ctx <- initContext
         prog <- runReaderT (typingDecls decs) ctx
-        setUniq =<< getUniq ctx
+        uniq <- liftIO $ readUniq ctx
+        setUniq uniq =<< ask
         return prog

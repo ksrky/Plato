@@ -16,9 +16,10 @@ import Plato.Syntax.Parsing
 parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
 parseFile src = do
         inp <- liftIO $ T.readFile src
-        uniq <- getUniq =<< ask
-        (prog, _) <- runReaderT (liftIO $ parse src uniq inp parser) uniq
-        setUniq uniq
+        uref <- getUniq =<< ask
+        (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
+        uniq <- readUniq uref
+        setUniq uniq =<< ask
         processInstrs prog
 
 processInstrs :: PlatoMonad m => [LInstr] -> m [LTopDecl]

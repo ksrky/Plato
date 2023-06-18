@@ -168,6 +168,7 @@ data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
+        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
 
 instance HasScope Context where
         getScope (Context _ sc) = sc
@@ -175,7 +176,8 @@ instance HasScope Context where
 
 ps2typ :: (PlatoMonad m, MonadThrow m) => [P.LTopDecl] -> m (T.Program 'T.TcUndone)
 ps2typ tdecs = do
-        uniq <- getUniq =<< ask
-        prog <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)
-        setUniq uniq
+        uref <- getUniq =<< ask
+        prog <- runReaderT (elabTopDecls tdecs) (Context uref initScope)
+        uniq <- readUniq uref
+        setUniq uniq =<< ask
         return prog
