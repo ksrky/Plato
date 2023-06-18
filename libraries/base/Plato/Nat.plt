@@ -1,25 +1,25 @@
-import Plato.Bool
+import Bool
 
-data Nat = Zero | Succ Nat
+data Nat where
+    Zero : Nat
+    Succ : Nat -> Nat
 
 infixl 6 +
 infixl 6 -
 infixl 7 *
 
 (+) : Nat -> Nat -> Nat
-(+) m n = case m of
-    Zero -> n
-    Succ m' -> Succ (m' + n)
+Zero + n = n
+Succ m + n = Succ (m + n)
 
 (-) : Nat -> Nat -> Nat
-(-) m n = case m of
-    Zero -> n
-    Succ m' -> Succ (m' + n)
+Zero - n = Zero
+m - Zero = m
+Succ m - Succ n = m - n
 
 (*) : Nat -> Nat -> Nat
-(*) m n = case m of
-    Zero -> Zero
-    Succ m' -> n + m' * n  
+Zero * n = Zero
+Succ m * n = n + m * n  
 
 infix 4 ==
 infix 4 <
@@ -28,46 +28,25 @@ infix 4 >
 infix 4 >=
 
 (==) : Nat -> Nat -> Bool
-(==) m n = case m of
-    Succ m' -> case n of
-        Succ n' -> m' == n'
-        Zero -> False
-    Zero -> case n of
-        Succ _ -> False
-        Zero -> True
+Succ m == Succ n = m == n
+Succ _ == Zero = False
+Zero == Succ _ = False
+Zero == Zero = True
 
 (<) : Nat -> Nat -> Bool
-(<) m n = case n of
-    Succ n' -> case m of
-        Succ m' -> m' < n'
-        Zero -> True
-    Zero -> False
+Succ m < Succ n = m < n
+Zero < Succ _ = True
+_ < Zero = False
 
 (<=) : Nat -> Nat -> Bool
-(<=) m n = case m of
-    Succ m' -> m' < n
-    Zero -> True
+Succ m <= n = m < n
+Zero <= n = True
 
 (>) : Nat -> Nat -> Bool
-(>) m n = case m of
-    Succ m' -> case n of
-        Succ n' -> m' > n'
-        Zero -> True
-    Zero -> False
+Succ m > Succ n =  m > n
+Succ _ > Zero = True
+Zero > n = False
 
 (>=) : Nat -> Nat -> Bool
-(>=) m n = case n of
-    Succ n' -> m > n'
-    Zero -> True
-
-one : Nat
-one = Succ Zero
-
-two : Nat
-two = Succ (Succ Zero)
-
-three : Nat
-three = Succ (Succ (Succ Zero))
-
-four : Nat
-four = Succ (Succ (Succ (Succ Zero)))
+m >= (Succ n) = m > n
+m >= Zero = True

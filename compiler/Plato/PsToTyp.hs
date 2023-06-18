@@ -82,7 +82,7 @@ elabPat (P.InfixP left op right) = do
         op' <- scoping op
         right' <- elabPat `traverse` right
         return $ T.ConP op' [left', right']
-elabPat  P.FactorP{} = unreachable "fixity resolution failed"
+elabPat P.FactorP{} = unreachable "fixity resolution failed"
 
 elabType ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
@@ -173,7 +173,7 @@ instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m (T.Program 'T.TcUndone)
+ps2typ :: (PlatoMonad m, MonadThrow m) => [P.LTopDecl] -> m (T.Program 'T.TcUndone)
 ps2typ tdecs = do
         uniq <- getUniq =<< ask
         prog <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)

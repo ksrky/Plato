@@ -74,8 +74,25 @@ digit                           { (mkLDigit -> Just $$) }
 
 %%
 
-program     :: { [LTopDecl] }
-            : ';' decls                          { $2 }
+program     :: { Program }
+            : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
+            | ';' topdecls                          { [$2] }
+
+-----------------------------------------------------------
+-- Imports
+-----------------------------------------------------------
+impdecls    :: { [LInstr] }
+            : impdecls ';' impdecl                  { $3 : $1 } -- Note: throws error unless tail recursion
+            | impdecl                               { [$1] }
+
+impdecl     :: { LInstr }
+            : 'import' conid                        { sL $1 $2 (ImpDecl $2) }
+
+-----------------------------------------------------------
+-- TopDecls
+-----------------------------------------------------------
+topdecls    :: { LInstr }
+            : decls                                 { L (concatSpans (map getLoc $1)) (TopDecls $1) }
 
 -----------------------------------------------------------
 -- Declarations
@@ -123,7 +140,7 @@ fundecl     :: { LDecl }
             -- Function definition
             | var patseq '=' expr               	{ sL $1 $4 (FunBindD $1 [($2, $4)]) }
             | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBindD $2 [($4, $6)]) }
-            | pat varop pat '=' expr                { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
+            | lpat varop lpat '=' expr              { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
             | fixdecl                               { $1 }
 
 -- | Fixity declaration

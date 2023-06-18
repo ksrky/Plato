@@ -33,6 +33,8 @@ library
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Utils
+      Plato.Driver.Import
+      Plato.Driver.Info
       Plato.Driver.Monad
       Plato.Driver.Pipeline
       Plato.Nicifier

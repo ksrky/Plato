@@ -21,7 +21,7 @@ compile src = do
         isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
         -- isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
-        undefined
+        liftIO $ print $ pretty coresyn
 
 -- coresyn' <- runCore coresyn
 -- liftIO $ mapM_ printResult coresyn'
