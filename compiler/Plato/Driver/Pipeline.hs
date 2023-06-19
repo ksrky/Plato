@@ -4,6 +4,7 @@ import Control.Monad.IO.Class
 import Prettyprinter
 import Prettyprinter.Render.Text
 
+import Plato.Driver.Flag
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing

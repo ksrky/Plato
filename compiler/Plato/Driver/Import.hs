@@ -3,9 +3,12 @@ module Plato.Driver.Import where
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader 
+import Control.Monad.Reader
+import Control.Monad.Writer
 import Data.Set qualified as S
 import Data.Text qualified as T
+import Prettyprinter
+import System.Directory
 import System.FilePath
 
 import Plato.Common.Error
@@ -45,7 +48,7 @@ checkCyclicImport (L sp filename) = do
         when (filename `S.member` impngSet) $ throwLocErr sp "Cyclic dependencies"
 
 unlessImported ::
-        (MonadReader env m, HasInfo env, HasImported env, MonadIO m, Monoid a) =>
+        (MonadReader env m, HasInfo env, HasImported env, MonadIO m, MonadThrow m, Monoid a) =>
         Located T.Text ->
         (FilePath -> m a) ->
         ReaderT Importing m a
@@ -54,7 +57,19 @@ unlessImported (L _ filename) parse = do
         if filename `S.member` impedSet
                 then return mempty
                 else do
-                        dirpath <- getDirectoryPath =<< lift ask
-                        res <- local (extendImporting filename) $ lift $ parse (joinPath [dirpath, T.unpack filename ++ ".plt"])
+                        filepath <- lift $ getImportPath filename
+                        res <- local (extendImporting filename) (lift $ parse filepath)
                         lift $ extendImported filename =<< ask
                         return res
+
+getImportPath :: (MonadReader env m, HasInfo env, MonadIO m, MonadThrow m) => T.Text -> m FilePath
+getImportPath filename = do
+        curpath <- getDirectoryPath =<< ask
+        libpaths <- getLibraryPaths =<< ask
+        filepaths <- execWriterT $ forM (curpath : libpaths) $ \dirpath -> do
+                let filepath = joinPath [dirpath, T.unpack filename ++ ".plt"]
+                flag <- liftIO $ doesFileExist filepath
+                when flag $ tell [filepath]
+        case filepaths of
+                [] -> throwError $ hsep ["Couldn't import", pretty filename]
+                p : _ -> return p

@@ -1,13 +1,13 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Options where
 
 import Config
 import Options.Applicative
 
-type Package = String
-
 data Options
         = REPL [FilePath]
-        | Run FilePath
+        | Run FilePath [FilePath]
         | Version String
         deriving (Eq, Show)
 
@@ -15,7 +15,7 @@ repl :: Parser Options
 repl = REPL <$> many (argument str (metavar "FILES..."))
 
 run :: Parser Options
-run = Run <$> argument str (metavar "FILE...")
+run = Run <$> argument str (metavar "FILE...") <*> libraryPaths
 
 version :: Parser Options
 version =
@@ -25,6 +25,19 @@ version =
                         <> short 'v'
                         <> help "print version"
                 )
+
+libraryPaths :: Parser [FilePath]
+libraryPaths =
+        -- tmp
+        (\case Just x -> [x]; Nothing -> [])
+                <$> optional
+                        ( strOption
+                                ( long "libs"
+                                        <> short 'l'
+                                        <> metavar "PATHS..."
+                                        <> help "setting library paths"
+                                )
+                        )
 
 opts :: Parser Options
 opts =
