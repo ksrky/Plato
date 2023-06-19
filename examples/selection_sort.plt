@@ -1,3 +1,5 @@
+-- https://softwarefoundations.cis.upenn.edu/vfa-current/Sort.html
+
 import Nat
 import List
 import Pair
@@ -5,15 +7,12 @@ import Pair
 select : Nat -> List Nat -> Nat :,: List Nat 
 select x Nil = x :,: Nil
 select x (h :: t) = case x <= h of
-    True ->
-        let j :,: l = select x t
-         in j :,: h :: l
-    False ->
-        let j :,: l = select h t
-         in j :,: x :: l
+    True -> case select x t of
+        j :,: l -> j :,: h :: l
+    False -> case select h t of
+        j :,: l -> j :,: x :: l
 
 selsort : List Nat -> List Nat
-selsort [] = []
-selsort (x :: r) =
-    let y :,: r = select x r
-     in y :: selsort r
+selsort Nil = Nil
+selsort (x :: r) = case select x r of
+    y :,: r -> y :: selsort r

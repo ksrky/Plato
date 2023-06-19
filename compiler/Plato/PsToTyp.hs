@@ -46,7 +46,8 @@ elabExpr (P.InfixE left op right) = do
 elabExpr (P.LamE pats body) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        body' <- local (extendListScope (getDomain pats)) $ elabExpr `traverse` body
+        env <- extendScopeFromSeq pats
+        body' <- local (const env) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.TcUndone -> T.LPat -> m (T.LExpr 'T.TcUndone)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
@@ -128,7 +129,8 @@ elabClause ::
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
+        env <- extendScopeFromSeq pats
+        exp' <- local (const env) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecls ::

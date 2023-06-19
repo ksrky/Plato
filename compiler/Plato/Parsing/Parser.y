@@ -128,11 +128,6 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecls    :: { [LDecl] }
-            : fundecl ';' fundecls                  { $1 : $3 }
-            | fundecl                               { [$1] }
-            | {- empty -}                           { [] }
-
 fundecl     :: { LDecl }
             -- Function signature
             : var ':' type                        	{ sL $1 $3 (FunSpecD $1 $3) }
@@ -181,8 +176,8 @@ lexpr       :: { LExpr }
             -- | Lambda expression
             : '\\' patseq1 '->' expr                { sL $1 $4 (LamE $2 $4) }
             -- | Let expression
-            | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
-            | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
+            | 'let' '{' letdecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
+            | 'let' 'v{' letdecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
             -- | Case expression
             | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
             | 'case' expr 'of' 'v{' alts 'v}'       { sL $1 $6 (CaseE $2 $5) }
@@ -198,6 +193,12 @@ aexpr       :: { LExpr }
             | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
+
+-- | Let declaration
+letdecls    :: { [LDecl] }
+            : fundecl ';' letdecls                  { $1 : $3 }
+            | fundecl                               { [$1] }
+            | {- empty -}                           { [] }
 
 -- | Alternatives
 alts        :: { [(LPat, LExpr)] }

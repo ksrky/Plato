@@ -19,8 +19,8 @@ type LTopDecl = LDecl
 
 data Decl
         = DataD Ident [Ident] [(Ident, LType)]
-        | FunBindD Ident [Clause]
         | FunSpecD Ident LType
+        | FunBindD Ident [Clause]
         | FixityD Ident Fixity
         deriving (Eq, Show)
 
@@ -38,11 +38,11 @@ instance Pretty Decl where
                                         (surround $ semi <> space)
                                         (map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs)
                         ]
+        pretty (FunSpecD id ty) = hsep [pretty id, colon, pretty ty]
         pretty (FunBindD id clauses) =
                 hsep
                         [ pretty id
                         , "where"
                         , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
                         ]
-        pretty (FunSpecD id ty) = hsep [pretty id, colon, pretty ty]
         pretty (FixityD id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
