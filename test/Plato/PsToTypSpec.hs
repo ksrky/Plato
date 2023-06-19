@@ -61,7 +61,7 @@ spec = do
                         test_decls "id : {a} a -> a; id x = x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                [_, BindDecl (FunBind _ [([L _ (VarP x)], L _ (VarE x'))])] -> check [(x, x')]
+                                                [_, DefnDecl (FunDefn _ [([L _ (VarP x)], L _ (VarE x'))])] -> check [(x, x')]
                                                 _ -> False
                                         )
                                     )
@@ -70,7 +70,7 @@ spec = do
                         test_scfile "test04.plt"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                [_, BindDecl (FunBind _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])] ->
+                                                [_, DefnDecl (FunDefn _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])] ->
                                                         check [(f, f'), (x, x')]
                                                 _ -> False
                                         )

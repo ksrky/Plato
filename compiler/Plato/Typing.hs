@@ -29,7 +29,7 @@ typingDecls' [] = return []
 typingDecls' (SpecDecl (TypSpec id kn) : decs) = do
         decs' <- local (modifyEnv $ extend id kn) $ typingDecls' decs
         return $ SpecDecl (TypSpec id kn) : decs'
-typingDecls' (BindDecl (DatBind id params constrs) : decs) = do
+typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
         let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
@@ -37,21 +37,21 @@ typingDecls' (BindDecl (DatBind id params constrs) : decs) = do
                 local (modifyEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
                         local (extendConEnv id constrs) $
                                 typingDecls' decs
-        return $ BindDecl (DatBindok id kn params constrs) : decs'
-typingDecls' (BindDecl (TypBind id ty) : decs) = do
+        return $ DefnDecl (DatDefnok id kn params constrs) : decs'
+typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
         kn <- zonkKind =<< find id =<< getEnv =<< ask
         checkKind ty kn
         decs' <- typingDecls' decs
-        return $ BindDecl (TypBind id ty) : decs'
+        return $ DefnDecl (TypDefn id ty) : decs'
 typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         checkKindStar ty
         decs' <- local (modifyEnv $ extend id ty) $ typingDecls' decs
         return $ SpecDecl (ValSpec id ty) : decs'
-typingDecls' (BindDecl (FunBind id clauses) : decs) = do
+typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         sigma <- zonkType =<< find id =<< getEnv =<< ask
         exp <- checkClauses clauses sigma
         decs' <- typingDecls' decs
-        return $ BindDecl (FunBindok id exp) : decs'
+        return $ DefnDecl (FunDefnok id exp) : decs'
 
 typing :: (PlatoMonad m, MonadCatch m) => Program 'TcUndone -> m (Program 'TcDone)
 typing decs = do

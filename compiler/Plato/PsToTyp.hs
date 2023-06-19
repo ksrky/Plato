@@ -146,16 +146,16 @@ elabDecls (L _ (P.DataD id params constrs) : rest) = do
                         mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
         rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
         sig <- newKnVar
-        return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
+        return $ T.SpecDecl (T.TypSpec id sig) : T.DefnDecl (T.DatDefn id qnts constrs') : rest'
 elabDecls fundecs = do
-        -- Note: Nicifier ordered data decls to local decls
+        -- Note: Nicifier ordered from data decls to local decls
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
                 fundecs' <- bundleClauses fundecs
                 (bnds, spcs) <- elabFunDecls fundecs'
                 let fundecs'' =
                         map (T.SpecDecl . uncurry T.ValSpec) spcs
-                                ++ map (T.BindDecl . uncurry T.FunBind) bnds
+                                ++ map (T.DefnDecl . uncurry T.FunDefn) bnds
                 return fundecs''
 
 elabTopDecls ::

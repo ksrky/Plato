@@ -69,12 +69,12 @@ elabFunDecls fbnds fspcs =
 elabDecl :: T.Decl 'T.TcDone -> [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = [C.Decl (nameIdent id) (elabKind kn)]
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = [C.Decl (nameIdent id) (elabType $ unLoc ty)]
-elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
-        let labBinds :: (Name, C.Term) = (genName "l", C.Enum (map (nameIdent . fst) constrs))
+elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) =
+        let labDefns :: (Name, C.Term) = (genName "l", C.Enum (map (nameIdent . fst) constrs))
             caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) -> case map elabType (fst $ splitConstrTy $ unLoc ty) of
                 [] -> (nameIdent con, tUnit)
                 tys -> (nameIdent con, C.Rec $ C.Box $ mkTTuple tys)
-            dataBind :: C.Term = C.Q C.Sigma labBinds (C.Case (C.Var $ genName "l") caseAlts)
+            dataDefn :: C.Term = C.Q C.Sigma labDefns (C.Case (C.Var $ genName "l") caseAlts)
             constrDefn :: (Ident, T.LType) -> C.Entry
             constrDefn (con, ty) =
                 let walk :: Int -> T.Type -> C.Term
@@ -83,9 +83,9 @@ elabDecl (T.BindDecl (T.DatBindok id _ params constrs)) =
                     walk 0 _ = C.Pair (C.Label (nameIdent con)) unit
                     walk n_arg _ = C.Pair (C.Label (nameIdent con)) (C.Fold $ foldr1 C.Pair (map (C.Var . str2genName . show) [0 .. n_arg - 1]))
                  in C.Defn (nameIdent con) (walk 0 (T.AllT params ty))
-         in C.Defn (nameIdent id) dataBind : map constrDefn constrs
-elabDecl (T.BindDecl (T.TypBind id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
-elabDecl (T.BindDecl (T.FunBindok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
+         in C.Defn (nameIdent id) dataDefn : map constrDefn constrs
+elabDecl (T.DefnDecl (T.TypDefn id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
+elabDecl (T.DefnDecl (T.FunDefnok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
 
 typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Entry]
 typ2core = return . concatMap elabDecl

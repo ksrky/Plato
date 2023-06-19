@@ -67,13 +67,13 @@ zonkKind (MetaK kv) = do
                         writeMetaKv kv kn'
                         return kn'
 
-zonkBind :: MonadIO m => Bind 'TcDone -> m (Bind 'TcDone)
--- zonkBind (ValBind id exp) = ValBind id <$> zonkExpr `traverse` exp
-zonkBind (FunBindok id exp) =
-        FunBindok id <$> zonkExpr `traverse` exp
-zonkBind (TypBind id ty) = TypBind id <$> zonkType `traverse` ty
-zonkBind (DatBindok id sig params constrs) =
-        DatBindok id
+zonkDefn :: MonadIO m => Defn 'TcDone -> m (Defn 'TcDone)
+-- zonkDefn (ValDefn id exp) = ValDefn id <$> zonkExpr `traverse` exp
+zonkDefn (FunDefnok id exp) =
+        FunDefnok id <$> zonkExpr `traverse` exp
+zonkDefn (TypDefn id ty) = TypDefn id <$> zonkType `traverse` ty
+zonkDefn (DatDefnok id sig params constrs) =
+        DatDefnok id
                 <$> zonkKind sig
                 <*> mapM (\(p, kn) -> (p,) <$> zonkKind kn) params
                 <*> mapM (\(con, ty) -> (con,) <$> zonkType `traverse` ty) constrs
@@ -83,5 +83,5 @@ zonkSpec (ValSpec id ty) = ValSpec id <$> zonkType `traverse` ty
 zonkSpec (TypSpec id kn) = TypSpec id <$> zonkKind kn
 
 zonkDecl :: MonadIO m => Decl 'TcDone -> m (Decl 'TcDone)
-zonkDecl (BindDecl bnd) = BindDecl <$> zonkBind bnd
+zonkDecl (DefnDecl def) = DefnDecl <$> zonkDefn def
 zonkDecl (SpecDecl spc) = SpecDecl <$> zonkSpec spc
