@@ -16,7 +16,7 @@ import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Utils
 
-elabExpr :: T.Expr 'T.TcDone -> C.Term
+elabExpr :: T.Expr 'T.Typed -> C.Term
 elabExpr (T.VarE id) = C.Var (nameIdent id)
 elabExpr (T.AppE fun arg) = C.App (elabExpr $ unLoc fun) (elabExpr $ unLoc arg)
 elabExpr (T.AbsEok id ty exp) = C.Lam (nameIdent id, elabType ty) (elabExpr exp)
@@ -63,12 +63,12 @@ elabKind T.StarK = C.Type
 elabKind (T.ArrK arg res) = C.Q C.Pi (wcName, elabKind arg) (elabKind res)
 elabKind T.MetaK{} = unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: [(Ident, T.LExpr 'T.TcDone)] -> [(Ident, T.LType)] -> C.Prog
+elabFunDecls :: [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> C.Prog
 elabFunDecls fbnds fspcs =
         map (\(id, ty) -> C.Decl (nameIdent id) (elabType $ unLoc ty)) fspcs
                 ++ map (\(id, exp) -> C.Defn (nameIdent id) (elabExpr $ unLoc exp)) fbnds
 
-elabDecl :: T.Decl 'T.TcDone -> [C.Entry]
+elabDecl :: T.Decl 'T.Typed -> [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = [C.Decl (nameIdent id) (elabKind kn)]
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = [C.Decl (nameIdent id) (elabType $ unLoc ty)]
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) =
@@ -89,5 +89,5 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) =
 elabDecl (T.DefnDecl (T.TypDefn id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
 elabDecl (T.DefnDecl (T.FunDefnok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
 
-typ2core :: PlatoMonad m => T.Program 'T.TcDone -> m [C.Entry]
+typ2core :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
 typ2core = return . concatMap elabDecl

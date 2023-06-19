@@ -14,7 +14,7 @@ import Control.Monad.IO.Class
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
 
-zonkExpr :: MonadIO m => Expr 'TcDone -> m (Expr 'TcDone)
+zonkExpr :: MonadIO m => Expr 'Typed -> m (Expr 'Typed)
 zonkExpr (VarE n) = return (VarE n)
 zonkExpr (AppE fun arg) = AppE <$> zonkExpr `traverse` fun <*> zonkExpr `traverse` arg
 zonkExpr (AbsEok var ty body) = AbsEok var <$> zonkType ty <*> zonkExpr body
@@ -67,7 +67,7 @@ zonkKind (MetaK kv) = do
                         writeMetaKv kv kn'
                         return kn'
 
-zonkDefn :: MonadIO m => Defn 'TcDone -> m (Defn 'TcDone)
+zonkDefn :: MonadIO m => Defn 'Typed -> m (Defn 'Typed)
 -- zonkDefn (ValDefn id exp) = ValDefn id <$> zonkExpr `traverse` exp
 zonkDefn (FunDefnok id exp) =
         FunDefnok id <$> zonkExpr `traverse` exp
@@ -82,6 +82,6 @@ zonkSpec :: MonadIO m => Spec -> m Spec
 zonkSpec (ValSpec id ty) = ValSpec id <$> zonkType `traverse` ty
 zonkSpec (TypSpec id kn) = TypSpec id <$> zonkKind kn
 
-zonkDecl :: MonadIO m => Decl 'TcDone -> m (Decl 'TcDone)
+zonkDecl :: MonadIO m => Decl 'Typed -> m (Decl 'Typed)
 zonkDecl (DefnDecl def) = DefnDecl <$> zonkDefn def
 zonkDecl (SpecDecl spc) = SpecDecl <$> zonkSpec spc

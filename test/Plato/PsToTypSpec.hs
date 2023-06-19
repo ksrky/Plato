@@ -119,7 +119,7 @@ instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-test_scexpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'TcUndone)
+test_scexpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uniq <- initUniq
         exp <- runReaderT (parsePartial inp exprParser) uniq
@@ -127,14 +127,14 @@ test_scexpr inp = do
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
 
-test_decls :: (MonadIO m, MonadThrow m) => T.Text -> m [Decl 'TcUndone]
+test_decls :: (MonadIO m, MonadThrow m) => T.Text -> m [Decl 'Untyped]
 test_decls inp = do
         uniq <- initUniq
         decs <- runReaderT (parsePartial inp declsParser) uniq
         sc <- defScope uniq
         runReaderT (elabDecls decs) (Context uniq sc)
 
-test_scfile :: (MonadIO m, MonadThrow m) => String -> m (Program 'TcUndone)
+test_scfile :: (MonadIO m, MonadThrow m) => String -> m (Program 'Untyped)
 test_scfile fn =
         runReaderT
                 ( do

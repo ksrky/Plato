@@ -35,15 +35,15 @@ import Plato.Typing.Zonking
 
 checkType ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Type ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkType = checkSigma
 
 inferType ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Type)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Type)
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
@@ -112,17 +112,17 @@ instDataCon con = do
 -- | Type checking of Rho
 checkRho ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Rho ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkRho exp ty = do
         exp' <- tcRho exp (Check ty)
         zonkExpr `traverse` exp'
 
 inferRho ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Rho)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Rho)
 inferRho exp = do
         ref <- newMIORef (unreachable "inferRho: empty result")
         exp' <- tcRho exp (Infer ref)
@@ -132,12 +132,12 @@ inferRho exp = do
 tcRho ::
         forall ctx m.
         (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Expected Rho ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
     where
-        tcRho' :: Expr 'TcUndone -> Expected Rho -> m (Expr 'TcDone)
+        tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
                 sigma <- zonkType =<< find var =<< getEnv =<< ask
                 coercion <- catchesTcErr sp (instSigma sigma exp_ty)
@@ -177,8 +177,8 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
 -- | Type check of Sigma
 inferSigma ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Sigma)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
@@ -187,9 +187,9 @@ inferSigma exp = do
 
 checkSigma ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Sigma ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         exp' <- checkRho exp rho
@@ -202,9 +202,9 @@ checkSigma exp sigma = do
 -- | Check clauses
 checkClauses ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        [Clause 'TcUndone] ->
+        [Clause 'Untyped] ->
         Sigma ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- unifyFuns (length (fst $ head clauses)) rho_ty

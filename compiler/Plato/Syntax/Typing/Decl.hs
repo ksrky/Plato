@@ -17,11 +17,11 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 data Defn (a :: TcFlag) where
         -- ValDefn Ident LExpr |
-        FunDefn :: Ident -> [Clause 'TcUndone] -> Defn 'TcUndone
-        FunDefnok :: Ident -> LExpr 'TcDone -> Defn 'TcDone
+        FunDefn :: Ident -> [Clause 'Untyped] -> Defn 'Untyped
+        FunDefnok :: Ident -> LExpr 'Typed -> Defn 'Typed
         TypDefn :: Ident -> LType -> Defn a
-        DatDefn :: Ident -> [Quant] -> [(Ident, LType)] -> Defn 'TcUndone
-        DatDefnok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Defn 'TcDone
+        DatDefn :: Ident -> [Quant] -> [(Ident, LType)] -> Defn 'Untyped
+        DatDefnok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Defn 'Typed
 
 data Spec
         = ValSpec Ident LType

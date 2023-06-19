@@ -1,3 +1,3 @@
 module Plato.Syntax.Typing.Base where
 
-data TcFlag = TcDone | TcUndone
+data TcFlag = Typed | Untyped

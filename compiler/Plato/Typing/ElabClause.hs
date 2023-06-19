@@ -21,8 +21,8 @@ import Plato.Typing.Monad
 elabClauses ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         [Type] ->
-        [Clause 'TcDone] ->
-        m (LExpr 'TcDone)
+        [Clause 'Typed] ->
+        m (LExpr 'Typed)
 elabClauses tys clauses = do
         vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
         exp <- match vars clauses
@@ -38,10 +38,10 @@ dataConsof ty = do
             getTycon _ = unreachable "Not a variant type"
         lookupIdent (getTycon ty) =<< getConEnv =<< ask
 
-subst :: LExpr 'TcDone -> Expr 'TcDone -> Ident -> LExpr 'TcDone
+subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
 subst exp replace id2 = subst' <$> exp
     where
-        subst' :: Expr 'TcDone -> Expr 'TcDone
+        subst' :: Expr 'Typed -> Expr 'Typed
         subst' (VarE var)
                 | var == id2 = replace
                 | otherwise = VarE var
@@ -67,8 +67,8 @@ isVarorSameCon _ _ = True
 match ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         [(Ident, Type)] ->
-        [Clause 'TcDone] ->
-        m (LExpr 'TcDone)
+        [Clause 'Typed] ->
+        m (LExpr 'Typed)
 match [(var, ty)] [] = return $ noLoc (CaseEok (noLoc $ VarE var) ty [])
 match _ [] = throwError "sequence of absurd type"
 match [] (([], exp) : _) = return exp -- note: clauses should be singleton if not redundant
@@ -81,8 +81,8 @@ matchVar ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
-        [Clause 'TcDone] ->
-        m (LExpr 'TcDone)
+        [Clause 'Typed] ->
+        m (LExpr 'Typed)
 matchVar (var, _) rest clauses = do
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
@@ -98,8 +98,8 @@ matchCon ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
-        [Clause 'TcDone] ->
-        m (LExpr 'TcDone)
+        [Clause 'Typed] ->
+        m (LExpr 'Typed)
 matchCon (var, ty) rest clauses = do
         constrs <- dataConsof ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
@@ -109,8 +109,8 @@ matchClause ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
-        [Clause 'TcDone] ->
-        m (LPat, LExpr 'TcDone)
+        [Clause 'Typed] ->
+        m (LPat, LExpr 'Typed)
 matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)
@@ -119,7 +119,7 @@ matchClause (con, arg_tys) vars clauses = do
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        let con_exp :: Expr 'TcDone =
+                        let con_exp :: Expr 'Typed =
                                 foldl (AppE . noLoc) (VarE con) (map (noLoc . VarE) params)
                         return (vps ++ ps', subst e con_exp v)
                 (L _ WildP : ps', e) -> do
@@ -128,5 +128,5 @@ matchClause (con, arg_tys) vars clauses = do
                 ([], _) -> unreachable "empty patterns"
         (pat,) <$> match vars' clauses'
 
-choose :: Ident -> [Clause 'TcDone] -> [Clause 'TcDone]
+choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]

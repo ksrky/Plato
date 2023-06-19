@@ -21,7 +21,6 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Ident
-import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
