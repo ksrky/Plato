@@ -180,7 +180,7 @@ lexpr       :: { LExpr }
             | 'let' 'v{' letdecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
             -- | Case expression
             | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
-            | 'case' expr 'of' 'v{' alts 'v}'       { sL $1 $6 (CaseE $2 $5) }
+            | 'case' expr 'of' 'v{' alts close      { sL $1 $6 (CaseE $2 $5) }
             -- | Function application
             | fexpr                                 { $1 }
 
@@ -213,7 +213,7 @@ alt         :: { (LPat, LExpr) }
 -- | Clauses
 clauses     :: { [Clause] }
             : 'where' '{' clauses_ '}'              { $3 }
-            | 'where' 'v{' clauses_ 'v}'            { $3 }
+            | 'where' 'v{' clauses_ close           { $3 }
 
 clauses_    :: { [Clause] }
             : clause ';' clauses_                   { $1 : $3 }
@@ -230,17 +230,17 @@ pat         :: { LPat }
             : lpat conop pat                        { sL $1 $3 (InfixP $1 $2 $3) } 
             | lpat                                  { $1 }
 
-lpat 		:: { LPat }
-			: con apats                             { sL $1 $2 (ConP $1 $2) }
-            | apat									{ $1 }	
+lpat        :: { LPat }
+            : con apats                             { sL $1 $2 (ConP $1 $2) }
+            | apat                                  { $1 }	
 
 apats       :: { [LPat] }
             : apat apats                            { $1 : $2 }
             | apat                                  { [$1] }
 
 apat        :: { LPat }
-            : '(' pat ')'                         	{ L (combineSpans $1 $3) (FactorP $2) }
-            | con                               	{ L (getLoc $1) (ConP $1 []) }
+            : '(' pat ')'                           { L (combineSpans $1 $3) (FactorP $2) }
+            | con                                   { L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }
 
