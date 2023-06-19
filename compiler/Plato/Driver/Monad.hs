@@ -67,7 +67,7 @@ instance HasInfo Session where
         getEntryPath (Session ref) = do
                 env <- liftIO $ readIORef ref
                 return $ plt_entryPath env
-        getDirectoryPath (Session ref) = do
+        getCurrentDirPath (Session ref) = do
                 env <- liftIO $ readIORef ref
                 return $ plt_directoryPath env
         getLibraryPaths (Session ref) = do

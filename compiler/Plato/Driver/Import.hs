@@ -64,10 +64,10 @@ unlessImported (L _ filename) parse = do
 
 getImportPath :: (MonadReader env m, HasInfo env, MonadIO m, MonadThrow m) => T.Text -> m FilePath
 getImportPath filename = do
-        curpath <- getDirectoryPath =<< ask
+        curpath <- getCurrentDirPath =<< ask
         libpaths <- getLibraryPaths =<< ask
         filepaths <- execWriterT $ forM (curpath : libpaths) $ \dirpath -> do
-                let filepath = joinPath [dirpath, T.unpack filename ++ ".plt"]
+                let filepath = joinPath [dirpath, T.unpack filename ++ platoExt]
                 flag <- liftIO $ doesFileExist filepath
                 when flag $ tell [filepath]
         case filepaths of

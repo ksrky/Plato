@@ -98,7 +98,7 @@ instPatSigma ::
         Expected Sigma ->
         m Coercion
 instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return Id
-instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
+instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
 
 instDataCon ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>

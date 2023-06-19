@@ -4,6 +4,8 @@
 
 module Plato.TypToCore where
 
+import GHC.Stack
+
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -39,7 +41,7 @@ elabExpr (T.CaseEok match _ alts) =
                         )
                 )
 
-elabPat :: T.Pat -> (C.Label, [Name])
+elabPat :: HasCallStack => T.Pat -> (C.Label, [Name])
 elabPat (T.ConP con pats) =
         let vars = (`map` pats) $ \case
                 L _ (T.VarP id) -> nameIdent id
@@ -47,19 +49,19 @@ elabPat (T.ConP con pats) =
          in (nameIdent con, vars)
 elabPat _ = unreachable "allowed only constructor pattern"
 
-elabType :: T.Type -> C.Type
+elabType :: HasCallStack => T.Type -> C.Type
 elabType (T.VarT tv) = C.Var (nameIdent $ T.unTyVar tv)
 elabType (T.ConT tc) = C.Var (nameIdent tc)
 elabType (T.ArrT arg res) = mkArr (elabType $ unLoc arg) (elabType $ unLoc res)
 elabType (T.AllT qnts body) =
         mkPis (map (\(tv, kn) -> (nameIdent $ T.unTyVar tv, elabKind kn)) qnts) (elabType $ unLoc body)
 elabType (T.AppT fun arg) = C.App (elabType $ unLoc fun) (elabType $ unLoc arg)
-elabType T.MetaT{} = unreachable ""
+elabType T.MetaT{} = unreachable "Plato.TypToCore received MetaT"
 
-elabKind :: T.Kind -> C.Type
+elabKind :: HasCallStack => T.Kind -> C.Type
 elabKind T.StarK = C.Type
 elabKind (T.ArrK arg res) = C.Q C.Pi (wcName, elabKind arg) (elabKind res)
-elabKind T.MetaK{} = unreachable ""
+elabKind T.MetaK{} = unreachable "Plato.TypToCore received MetaK"
 
 elabFunDecls :: [(Ident, T.LExpr 'T.TcDone)] -> [(Ident, T.LType)] -> C.Prog
 elabFunDecls fbnds fspcs =
