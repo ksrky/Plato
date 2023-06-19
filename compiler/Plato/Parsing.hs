@@ -1,5 +1,6 @@
 module Plato.Parsing (parseFile, parsePartial) where
 
+import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
@@ -13,18 +14,19 @@ import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
-parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
+parseFile :: (PlatoMonad m, MonadThrow m) => FilePath -> m [LTopDecl]
 parseFile src = do
         inp <- liftIO $ T.readFile src
         uref <- getUniq =<< ask
         (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
         uniq <- readUniq uref
         setUniq uniq =<< ask
-        processInstrs prog
+        runReaderT (processInstrs prog) emptyImporting
 
-processInstrs :: PlatoMonad m => [LInstr] -> m [LTopDecl]
+processInstrs :: (PlatoMonad m, MonadThrow m) => [LInstr] -> ReaderT Importing m [LTopDecl]
 processInstrs [] = return []
 processInstrs (L _ (ImpDecl filename) : rest) = do
+        checkCyclicImport filename
         tdecs <- unlessImported filename parseFile
         tdecs' <- processInstrs rest
         return (tdecs ++ tdecs')
