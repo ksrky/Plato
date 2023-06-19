@@ -69,12 +69,6 @@ filter : {a} (a -> Bool) -> List a -> List a
 filter f Nil = Nil
 filter f (x :: xs) = ifThenElse (f x) (x :: filter f xs) (filter f xs)
 
-{-
--- Scoped type variables
 foldr : {a b} (a -> b -> b) -> b -> List a -> b
-foldr {a b} k z = 
-    let go : List a -> b 
-        go Nil = z
-        go (y :: ys) = k y (go ys)
-     in go
--}
+foldr k z Nil = z
+foldr k z (y :: ys) = k y (foldr k z ys)

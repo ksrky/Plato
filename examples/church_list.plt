@@ -1,5 +1,5 @@
-import Plato.Base
-import Plato.List
+import Base
+import List
 
 data ChurchList a where
     ChurchList : ({r} (a -> r -> r) -> r -> r) -> ChurchList a
