@@ -7,7 +7,7 @@ module Plato.Typing.Tc (
         checkClauses,
 ) where
 
-import Control.Exception.Safe (Handler (Handler), MonadCatch, MonadThrow, catches)
+import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (ask, local))
@@ -23,6 +23,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env
+import Plato.Typing.Error
 import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
@@ -47,22 +48,6 @@ inferType ::
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
-
-catchesTcErr :: MonadCatch m => Span -> m a -> m a
-catchesTcErr sp m =
-        catches
-                m
-                [ Handler $ \(UnificationError tau_actual tau_exp) ->
-                        throwLocErr sp $
-                                vsep
-                                        [ "Couldn't match type."
-                                        , "Expected type:" <+> pretty tau_exp
-                                        , "  Actual type:" <+> pretty tau_actual
-                                        ]
-                , Handler $ \(InfiniteTypeError ty1 ty2) ->
-                        throwLocErr sp $
-                                hsep ["Infinite type:", squotes $ pretty ty1, "~", squotes $ pretty ty2]
-                ]
 
 -- | Type checking of patterns
 checkPat ::
@@ -89,7 +74,7 @@ tcPat (L sp (ConP con pats)) exp_ty = do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
         subst <- concat <$> zipWithM checkPat pats arg_tys
-        _ <- catchesTcErr sp (instPatSigma res_ty exp_ty)
+        _ <- apInstSigma sp instPatSigma res_ty exp_ty
         return subst
 
 instPatSigma ::
@@ -140,16 +125,16 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
                 sigma <- zonkType =<< find var =<< getEnv =<< ask
-                coercion <- catchesTcErr sp (instSigma sigma exp_ty)
+                coercion <- apInstSigma sp instSigma sigma exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- catchesTcErr sp (unifyFun fun_ty)
+                (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                coercion <- catchesTcErr sp (instSigma res_ty exp_ty)
+                coercion <- apInstSigma sp instSigma res_ty exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
-                (var_ty, body_ty) <- catchesTcErr sp (unifyFun exp_ty)
+                (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
@@ -207,8 +192,7 @@ checkClauses ::
         m (LExpr 'Typed)
 checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
-        (pat_tys, res_ty) <- unifyFuns (length (fst $ head clauses)) rho_ty
-        -- let (pat_tys, res_ty) = split [] rho_ty
+        (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 subst <- concat <$> zipWithM checkPat pats pat_tys
                 body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
@@ -227,3 +211,29 @@ instSigma sigma (Infer r) = do
         (coercion, rho) <- instantiate sigma
         writeMIORef r rho
         return coercion
+
+-----------------------------------------------------------
+-- Applying a function with catching errors
+-----------------------------------------------------------
+apInstSigma ::
+        (MonadIO m, MonadCatch m) =>
+        Span ->
+        (Type -> Expected Type -> m a) ->
+        Type ->
+        Expected Type ->
+        m a
+apInstSigma sp inst ty_exp expty@(Check ty_sup) = do
+        ty_exp' <- zonkType ty_exp
+        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
+apInstSigma sp inst ty_exp expty@(Infer ref) = do
+        ty_exp' <- zonkType ty_exp
+        ty_sup <- readMIORef ref
+        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
+
+apUnifyFun ::
+        MonadCatch m =>
+        Span ->
+        (Rho -> m (a, Rho)) ->
+        Rho ->
+        m (a, Rho)
+apUnifyFun sp unifun rho = catches (unifun rho) (unifunErrHandler sp rho)

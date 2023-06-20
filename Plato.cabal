@@ -69,6 +69,7 @@ library
       Plato.Typing
       Plato.Typing.ElabClause
       Plato.Typing.Env
+      Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils

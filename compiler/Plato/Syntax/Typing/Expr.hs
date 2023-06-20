@@ -35,8 +35,14 @@ data Expr (a :: TcFlag) where
         CaseE :: LExpr 'Untyped -> [(LPat, LExpr 'Untyped)] -> Expr 'Untyped
         CaseEok :: LExpr 'Typed -> Type -> [(LPat, LExpr 'Typed)] -> Expr 'Typed
 
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
+
+instance HasLoc (Clause a) where
+        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
 
 ----------------------------------------------------------------
 -- Pretty printing
