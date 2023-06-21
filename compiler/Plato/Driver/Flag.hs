@@ -1,25 +1,27 @@
 module Plato.Driver.Flag where
 
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Reader.Class
+import Data.IORef
 
-import Plato.Common.Error
-import Plato.Driver.Monad
+data Flag = FDebug | DumpParsed | DumpTyped deriving (Eq)
 
 class HasFlags a where
-        getFlags :: a -> [(String, Bool)]
+        getFlags :: MonadIO m => a -> m [Flag]
+        setFlag :: MonadIO m => Flag -> a -> m ()
+        isFlagOn :: MonadIO m => Flag -> a -> m Bool
+        isFlagOn flag env = do
+                flags <- getFlags env
+                return $ flag `elem` flags
 
-instance HasFlags PlatoEnv where
-        getFlags = plt_flags
+instance HasFlags (IORef [Flag]) where
+        getFlags = liftIO . readIORef
+        setFlag flag ref = do
+                flags <- liftIO $ readIORef ref
+                liftIO $ writeIORef ref (flag : flags)
 
-setFlag :: PlatoMonad m => String -> Bool -> m ()
-setFlag flag val = do
-        env <- getSession
-        setSession env{plt_flags = (flag, val) : plt_flags env}
-
-isFlagOn :: PlatoMonad m => String -> m a -> m ()
-isFlagOn flag action = do
-        env <- getSession
-        case lookup flag (getFlags env) of
-                Just True -> void action
-                Just False -> return ()
-                Nothing -> unreachable $ "flag not found '" ++ flag ++ "'"
+whenFlagOn :: (MonadReader env m, HasFlags env, MonadIO m) => Flag -> m a -> m ()
+whenFlagOn flag action = do
+        flagOn <- isFlagOn flag =<< ask
+        when flagOn $ void action

@@ -14,7 +14,6 @@ import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
-import Plato.Driver.Logger
 import Prettyprinter
 import System.Log.Logger
 
@@ -22,6 +21,7 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env

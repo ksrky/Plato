@@ -4,12 +4,12 @@ import Options
 import Plato
 
 main :: IO ()
-main = processOptions =<< runWithOptions
+main = processCommands =<< runWithCommand
 
-processOptions :: Options -> IO ()
-processOptions (REPL _files) = error "not implemented"
-processOptions (Run src libs mblog) = do
+processCommands :: Command -> IO ()
+processCommands (REPL _files _opts) = error "not implemented"
+processCommands (Run src opts) = do
         session <- initSession
-        setInfo src libs mblog session
+        setInfo src (libraryPaths opts) (logPath opts) session
         runPlato src session
-processOptions (Version version) = putStrLn $ "Plato version " ++ version
+processCommands (Version version) = putStrLn $ "Plato version " ++ version

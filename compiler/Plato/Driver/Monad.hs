@@ -23,6 +23,7 @@ import Plato.Common.Uniq (
         Uniq,
         uniqZero,
  )
+import Plato.Driver.Flag
 import Plato.Driver.Import
 import Plato.Driver.Info
 
@@ -35,7 +36,7 @@ data PlatoEnv = PlatoEnv
         , plt_logPath :: !FilePath
         , plt_uniq :: !Uniq
         , plt_imported :: !Imported
-        , plt_flags :: [(String, Bool)]
+        , plt_flags :: [Flag]
         }
 
 initPlatoEnv :: PlatoEnv
@@ -46,7 +47,7 @@ initPlatoEnv =
                 , plt_logPath = ""
                 , plt_uniq = uniqZero
                 , plt_imported = S.empty
-                , plt_flags = [("ddump-parsing", False), ("ddump-core", False)]
+                , plt_flags = []
                 }
 
 ----------------------------------------------------------------
@@ -93,6 +94,14 @@ instance HasImported Session where
         setImported impedSet (Session ref) = do
                 env <- liftIO $ readIORef ref
                 liftIO $ writeIORef ref env{plt_imported = impedSet}
+
+instance HasFlags Session where
+        getFlags (Session ref) = do
+                env <- liftIO $ readIORef ref
+                return $ plt_flags env
+        setFlag flag (Session ref) = do
+                env <- liftIO $ readIORef ref
+                liftIO $ writeIORef ref env{plt_flags = flag : plt_flags env}
 
 class (MonadReader Session m, MonadIO m) => PlatoMonad m where
         getSession :: m PlatoEnv

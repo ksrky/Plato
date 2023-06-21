@@ -16,10 +16,10 @@ compile :: FilePath -> Plato ()
 compile src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
-        isFlagOn "ddump-parsing" $ liftIO $ putDoc $ pretty pssyn'
+        whenFlagOn DumpParsed $ liftIO $ putDoc $ pretty pssyn'
         typsyn <- ps2typ pssyn'
         typsyn' <- typing typsyn
-        isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
+        whenFlagOn DumpTyped $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
         -- isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
         liftIO $ print $ pretty coresyn
