@@ -36,6 +36,7 @@ library
       Plato.Driver.Flag
       Plato.Driver.Import
       Plato.Driver.Info
+      Plato.Driver.Logger
       Plato.Driver.Monad
       Plato.Driver.Pipeline
       Plato.Nicifier
@@ -105,6 +106,7 @@ library
     , directory
     , filepath
     , haskeline
+    , hslogger
     , hspec
     , mtl
     , optparse-applicative
@@ -141,6 +143,7 @@ executable plato
     , directory
     , filepath
     , haskeline
+    , hslogger
     , hspec
     , mtl
     , optparse-applicative
@@ -182,6 +185,7 @@ test-suite Plato-test
     , directory
     , filepath
     , haskeline
+    , hslogger
     , hspec
     , hspec-discover
     , mtl

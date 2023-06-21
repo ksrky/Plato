@@ -6,6 +6,7 @@ module Plato.Driver.Monad (
         PlatoT,
         unPlato,
         Plato,
+        getFileName,
         -- PLato.Driver.Info
         HasInfo (..),
 ) where
@@ -13,7 +14,9 @@ module Plato.Driver.Monad (
 import Control.Monad.RWS
 import Control.Monad.Reader
 import Data.IORef
+import Data.Maybe
 import Data.Set qualified as S
+import System.FilePath
 
 import Plato.Common.Uniq (
         HasUniq (getUniq, setUniq),
@@ -22,15 +25,14 @@ import Plato.Common.Uniq (
  )
 import Plato.Driver.Import
 import Plato.Driver.Info
-import System.FilePath
 
 ----------------------------------------------------------------
 -- Plato Env
 ----------------------------------------------------------------
 data PlatoEnv = PlatoEnv
         { plt_entryPath :: !FilePath
-        , plt_directoryPath :: !FilePath
         , plt_libraryPaths :: ![FilePath]
+        , plt_logPath :: !FilePath
         , plt_uniq :: !Uniq
         , plt_imported :: !Imported
         , plt_flags :: [(String, Bool)]
@@ -40,8 +42,8 @@ initPlatoEnv :: PlatoEnv
 initPlatoEnv =
         PlatoEnv
                 { plt_entryPath = ""
-                , plt_directoryPath = ""
                 , plt_libraryPaths = []
+                , plt_logPath = ""
                 , plt_uniq = uniqZero
                 , plt_imported = S.empty
                 , plt_flags = [("ddump-parsing", False), ("ddump-core", False)]
@@ -67,19 +69,20 @@ instance HasInfo Session where
         getEntryPath (Session ref) = do
                 env <- liftIO $ readIORef ref
                 return $ plt_entryPath env
-        getCurrentDirPath (Session ref) = do
-                env <- liftIO $ readIORef ref
-                return $ plt_directoryPath env
+        getCurrentDirPath session = takeDirectory <$> getEntryPath session
         getLibraryPaths (Session ref) = do
                 env <- liftIO $ readIORef ref
                 return $ plt_libraryPaths env
-        setInfo path libs (Session ref) = do
+        getLogPath (Session ref) = do
+                env <- liftIO $ readIORef ref
+                return $ plt_logPath env
+        setInfo entryPath libPaths logPath (Session ref) = do
                 env <- liftIO $ readIORef ref
                 let env' =
                         env
-                                { plt_entryPath = path
-                                , plt_directoryPath = takeDirectory path
-                                , plt_libraryPaths = libs
+                                { plt_entryPath = entryPath
+                                , plt_libraryPaths = libPaths
+                                , plt_logPath = fromMaybe entryPath logPath
                                 }
                 liftIO $ writeIORef ref env'
 
@@ -95,10 +98,6 @@ class (MonadReader Session m, MonadIO m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
 
----------------------------------------------------------------
--- Plato
-----------------------------------------------------------------
-
 type PlatoT m = ReaderT Session m
 
 unPlato :: PlatoT m a -> Session -> m a
@@ -113,3 +112,9 @@ instance MonadIO m => PlatoMonad (PlatoT m) where
                 liftIO $ writeIORef ref env
 
 type Plato = PlatoT IO
+
+---------------------------------------------------------------
+-- Utilities
+----------------------------------------------------------------
+getFileName :: PlatoMonad m => m String
+getFileName = takeBaseName <$> (getEntryPath =<< ask)

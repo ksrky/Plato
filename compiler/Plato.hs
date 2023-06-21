@@ -6,7 +6,6 @@ module Plato (
 import Control.Monad.IO.Class
 import Prettyprinter
 
-import Plato.Common.Error
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
@@ -15,7 +14,7 @@ import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> Session -> IO ()
-runPlato src session = catchError $ unPlato (compile src) session
+runPlato = unPlato . compile
 
 compile :: FilePath -> Plato ()
 compile src = do
