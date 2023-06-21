@@ -6,10 +6,12 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader)
 import Data.Set qualified as S
 import Prettyprinter
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
@@ -23,6 +25,7 @@ subsCheck ::
         Sigma ->
         m Coercion
 subsCheck sigma1 sigma2 = do
+        liftIO $ debugM platoLog $ "Subsumption check: " ++ show sigma1 ++ " ≦ " ++ show sigma2
         (coercion1, skol_tvs, rho2) <- skolemise sigma2
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
@@ -39,20 +42,25 @@ subsCheckRho ::
         Rho ->
         m Coercion
 subsCheckRho sigma1@AllT{} rho2 = do
+        liftIO $ debugM platoLog $ "SubsCheckRho: " ++ show sigma1 ++ " ≦ " ++ show rho2
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
         return (coercion2 <.> coercion1)
-subsCheckRho (AppT fun1 arg1) (AppT fun2 arg2) = do
+subsCheckRho rho1@(AppT fun1 arg1) rho2@(AppT fun2 arg2) = do
+        liftIO $ debugM platoLog $ "SubsCheckRho: " ++ show rho1 ++ " ≦ " ++ show rho2
         coer_fun <- subsCheckRho (unLoc fun1) (unLoc fun2)
         coer_arg <- subsCheck (unLoc arg1) (unLoc arg2)
         return (coer_fun <.> coer_arg)
-subsCheckRho rho1 (ArrT a2 r2) = do
+subsCheckRho rho1 rho2@(ArrT a2 r2) = do
+        liftIO $ debugM platoLog $ "SubsCheckRho: " ++ show rho1 ++ " ≦ " ++ show rho2
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
-subsCheckRho (ArrT a1 r1) rho2 = do
+subsCheckRho rho1@(ArrT a1 r1) rho2 = do
+        liftIO $ debugM platoLog $ "SubsCheckRho: " ++ show rho1 ++ " ≦ " ++ show rho2
         (a2, r2) <- unifyFun rho2
         subsCheckFun (unLoc a1) (unLoc r1) a2 r2
 subsCheckRho tau1 tau2 = do
+        liftIO $ debugM platoLog $ "SubsCheckRho: " ++ show tau1 ++ " ≦ " ++ show tau2
         unify tau1 tau2
         return Id
 

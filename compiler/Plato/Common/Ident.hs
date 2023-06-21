@@ -23,7 +23,9 @@ import Plato.Common.Uniq
 
 -- | Identifier
 data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
-        deriving (Show)
+
+instance Show Ident where
+        show (Ident name _ uniq) = show name ++ "_" ++ show uniq
 
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2

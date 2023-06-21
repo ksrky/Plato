@@ -24,7 +24,7 @@ getEnvTypes = do
 
 getMetaTvs :: MonadIO m => Type -> m (S.Set MetaTv)
 getMetaTvs ty = do
-        ty' <- zonkType ty
+        ty' <- zonk ty
         return (metaTvs ty')
 
 metaTvs :: HasCallStack => Type -> S.Set MetaTv
@@ -37,7 +37,7 @@ metaTvs (MetaT tv) = S.singleton tv
 
 getFreeTvs :: MonadIO m => Type -> m (S.Set TyVar)
 getFreeTvs ty = do
-        ty' <- zonkType ty
+        ty' <- zonk ty
         return $ runReader (freeTvs ty') S.empty
 
 freeTvs :: HasCallStack => Type -> Reader (S.Set TyVar) (S.Set TyVar)

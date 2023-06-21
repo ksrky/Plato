@@ -8,8 +8,10 @@ data Loc
                 !FilePath -- file name
                 !Int -- line number
                 !Int -- column number
-        deriving (Eq, Ord, Show)
+        deriving (Eq, Ord)
 
+instance Show Loc where
+        show (Loc f l c) = show f ++ ":" ++ show l ++ ":" ++ show c
 instance Pretty Loc where
         pretty (Loc f l c) = hcat [pretty f, colon, pretty l, colon, pretty c]
 
@@ -19,10 +21,14 @@ data Span
                 !Loc -- start loc
                 !Loc -- end loc
         | NoSpan
-        deriving (Eq, Ord, Show)
+        deriving (Eq, Ord)
+
+instance Show Span where
+        show NoSpan = "NoSpan"
+        show (Span s (Loc _ l c)) = show s ++ "-" ++ show l ++ ":" ++ show c
 
 instance Pretty Span where
-        pretty (Span s (Loc _ el ec)) = hcat [pretty s, "-", pretty el, colon, pretty ec]
+        pretty (Span s (Loc _ l c)) = hcat [pretty s, "-", pretty l, colon, pretty c]
         pretty NoSpan = emptyDoc
 
 -- | Combining spans
