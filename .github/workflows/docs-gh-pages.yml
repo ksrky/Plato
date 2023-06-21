@@ -19,9 +19,6 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs/en
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -35,8 +32,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+        working-directory: docs
       - name: Build MkDocs
         run: mkdocs build
+        working-directory: docs/en
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
 
