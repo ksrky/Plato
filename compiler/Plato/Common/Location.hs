@@ -44,7 +44,10 @@ concatSpans [sp] = sp
 concatSpans (sp : sps) = combineSpans sp (concatSpans sps)
 
 data Located a = L {_span :: !Span, unLoc :: a}
-        deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+        deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+instance Show a => Show (Located a) where
+        show = show . unLoc
 
 noLoc :: a -> Located a
 noLoc = L NoSpan

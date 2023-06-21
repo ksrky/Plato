@@ -1,8 +1,9 @@
-module Plato.Driver.Logger where
+module Plato.Driver.Logger (
+        platoLog,
+        initLogger,
+) where
 
 import Control.Monad.IO.Class
-import Control.Monad.Reader.Class
-import Plato.Driver.Monad
 import System.FilePath
 import System.IO
 import System.Log
@@ -11,30 +12,34 @@ import System.Log.Handler (setFormatter)
 import System.Log.Handler.Simple
 import System.Log.Logger
 
-debugLogPath :: PlatoMonad m => m FilePath
-debugLogPath = do
-        path <- getEntryPath =<< ask
+import Plato.Driver.Info
+
+getDebugLogPath :: (HasInfo env, MonadIO m) => env -> m FilePath
+getDebugLogPath env = do
+        path <- getEntryPath env
         return $ replaceExtension path ".debug.log"
 
-userLogPath :: PlatoMonad m => m FilePath
-userLogPath = do
-        path <- getLogPath =<< ask
+getUserLogPath :: (HasInfo env, MonadIO m) => env -> m FilePath
+getUserLogPath env = do
+        path <- getLogPath env
         return $ replaceExtension path ".log"
 
 platoLog :: String
 platoLog = "PlatoLog"
 
-initLogger :: PlatoMonad m => m ()
-initLogger = do
-        logPath <- getLogPath =<< ask
-        debugLogHandler <- liftIO $ withFormatter <$> fileHandler logPath DEBUG
-        userLogHandler <- liftIO $ withFormatter <$> fileHandler logPath WARNING
+initLogger :: (HasInfo env, MonadIO m) => env -> m ()
+initLogger env = do
+        debugLogPath <- getDebugLogPath env
+        userLogPath <- getUserLogPath env
+        debugLogHandler <- liftIO $ withFormatter <$> fileHandler debugLogPath DEBUG
+        userLogHandler <- liftIO $ withFormatter <$> fileHandler userLogPath WARNING
+        errorStreamHandler <- liftIO $ streamHandler stderr ERROR
         liftIO $
                 updateGlobalLogger
                         platoLog
-                        (setLevel DEBUG . setHandlers [debugLogHandler, userLogHandler])
+                        (setLevel DEBUG . setHandlers [debugLogHandler, userLogHandler, errorStreamHandler])
 
 withFormatter :: GenericHandler Handle -> GenericHandler Handle
 withFormatter handler = setFormatter handler formatter
     where
-        formatter = simpleLogFormatter "[$time $loggername $prio] $msg"
+        formatter = simpleLogFormatter "[$loggername $prio] $msg"

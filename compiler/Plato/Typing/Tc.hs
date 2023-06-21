@@ -122,7 +122,9 @@ tcRho ::
         LExpr 'Untyped ->
         Expected Rho ->
         m (LExpr 'Typed)
-tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
+tcRho (L sp exp) exp_ty = do
+        liftIO $ debugM platoLog $ "tcRho: " ++ show exp
+        L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do

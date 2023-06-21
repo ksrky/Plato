@@ -25,7 +25,7 @@ subsCheck ::
         Sigma ->
         m Coercion
 subsCheck sigma1 sigma2 = do
-        liftIO $ debugM platoLog $ "Subsumption check: " ++ show sigma1 ++ " ≦ " ++ show sigma2
+        liftIO $ debugM platoLog $ "SubsCheck: " ++ show sigma1 ++ " ≦ " ++ show sigma2
         (coercion1, skol_tvs, rho2) <- skolemise sigma2
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2

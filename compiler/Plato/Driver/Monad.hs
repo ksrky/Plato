@@ -9,6 +9,8 @@ module Plato.Driver.Monad (
         getFileName,
         -- PLato.Driver.Info
         HasInfo (..),
+        -- Plato.Driver.Logger
+        initLogger,
 ) where
 
 import Control.Monad.RWS
@@ -26,6 +28,7 @@ import Plato.Common.Uniq (
 import Plato.Driver.Flag
 import Plato.Driver.Import
 import Plato.Driver.Info
+import Plato.Driver.Logger
 
 ----------------------------------------------------------------
 -- Plato Env
