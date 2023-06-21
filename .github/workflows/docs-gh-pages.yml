@@ -4,20 +4,9 @@ on:
   push:
     branches: ["master"]
 
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  # Build job
-  build:
+  # Build & deploy job
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,15 +25,6 @@ jobs:
       - name: Build MkDocs
         run: mkdocs build
         working-directory: docs/en
-
-  # Deployment job
-  deploy:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs/en
-    needs: build
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
         run: mkdocs gh-pages
+        working-directory: docs/en
