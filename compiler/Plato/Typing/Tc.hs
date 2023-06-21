@@ -14,7 +14,9 @@ import Control.Monad.Reader.Class (MonadReader (ask, local))
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
+import Plato.Driver.Logger
 import Prettyprinter
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -70,7 +72,7 @@ tcPat (L _ (VarP var)) (Infer ref) = do
 tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
-        unless (length pats == length arg_tys) $
+        unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
         subst <- concat <$> zipWithM checkPat pats arg_tys
@@ -90,7 +92,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- zonkType =<< find con =<< getEnv =<< ask
+        sigma <- zonk =<< find con =<< getEnv =<< ask
         (_, rho) <- instantiate sigma
         return $ splitConstrTy rho
 
@@ -102,7 +104,7 @@ checkRho ::
         m (LExpr 'Typed)
 checkRho exp ty = do
         exp' <- tcRho exp (Check ty)
-        zonkExpr `traverse` exp'
+        zonk `traverse` exp'
 
 inferRho ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
@@ -111,7 +113,7 @@ inferRho ::
 inferRho exp = do
         ref <- newMIORef (unreachable "inferRho: empty result")
         exp' <- tcRho exp (Infer ref)
-        exp'' <- zonkExpr `traverse` exp'
+        exp'' <- zonk `traverse` exp'
         (exp'',) <$> readMIORef ref
 
 tcRho ::
@@ -124,7 +126,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
-                sigma <- zonkType =<< find var =<< getEnv =<< ask
+                sigma <- zonk =<< find var =<< getEnv =<< ask
                 coercion <- apInstSigma sp instSigma sigma exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
@@ -144,7 +146,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sigma <- zonkType =<< find id =<< getEnv =<< ask
+                        sigma <- zonk =<< find id =<< getEnv =<< ask
                         exp' <- checkClauses clauses sigma
                         return (id, exp')
                 body' <- tcRho body exp_ty
@@ -167,7 +169,7 @@ inferSigma ::
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
-        exp'' <- zonkExpr `traverse` exp'
+        exp'' <- zonk `traverse` exp'
         return ((genTrans tvs .>) <$> exp'', sigma)
 
 checkSigma ::
@@ -181,7 +183,9 @@ checkSigma exp sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ do
+                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
+                throwError "Type not polymorphic enough"
         return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
 
 -- | Check clauses
@@ -201,7 +205,9 @@ checkClauses clauses sigma_ty = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ do
+                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
+                throwError "Type not polymorphic enough"
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
 
 -- | Instantiation of Sigma
@@ -223,10 +229,10 @@ apInstSigma ::
         Expected Type ->
         m a
 apInstSigma sp inst ty_exp expty@(Check ty_sup) = do
-        ty_exp' <- zonkType ty_exp
+        ty_exp' <- zonk ty_exp
         catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
 apInstSigma sp inst ty_exp expty@(Infer ref) = do
-        ty_exp' <- zonkType ty_exp
+        ty_exp' <- zonk ty_exp
         ty_sup <- readMIORef ref
         catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
 

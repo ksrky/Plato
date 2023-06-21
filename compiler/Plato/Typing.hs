@@ -7,6 +7,7 @@ import Control.Exception.Safe
 import Control.Monad.Reader
 
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -14,12 +15,13 @@ import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc
 import Plato.Typing.Zonking
+import System.Log.Logger
 
 typingDecls ::
         (MonadReader env m, HasTypEnv env, HasConEnv env, HasUniq env, MonadCatch m, MonadIO m) =>
         [Decl 'Untyped] ->
         m [Decl 'Typed]
-typingDecls decs = typingDecls' decs >>= mapM zonkDecl
+typingDecls decs = typingDecls' decs >>= mapM zonk
 
 typingDecls' ::
         (MonadReader env m, HasTypEnv env, HasConEnv env, HasUniq env, MonadCatch m, MonadIO m) =>
@@ -39,7 +41,7 @@ typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
                                 typingDecls' decs
         return $ DefnDecl (DatDefnok id kn params constrs) : decs'
 typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
-        kn <- zonkKind =<< find id =<< getEnv =<< ask
+        kn <- zonk =<< find id =<< getEnv =<< ask
         checkKind ty kn
         decs' <- typingDecls' decs
         return $ DefnDecl (TypDefn id ty) : decs'
@@ -48,7 +50,8 @@ typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         decs' <- local (modifyEnv $ extend id ty) $ typingDecls' decs
         return $ SpecDecl (ValSpec id ty) : decs'
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
-        sigma <- zonkType =<< find id =<< getEnv =<< ask
+        liftIO $ debugM platoLog $ "Start type checking of function '" ++ show id ++ "'"
+        sigma <- zonk =<< find id =<< getEnv =<< ask
         exp <- checkClauses clauses sigma
         decs' <- typingDecls' decs
         return $ DefnDecl (FunDefnok id exp) : decs'
