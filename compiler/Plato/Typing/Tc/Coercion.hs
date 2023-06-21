@@ -10,7 +10,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Monad
 
-data Coercion = Id | Coer (Expr 'TcDone -> Expr 'TcDone)
+data Coercion = Id | Coer (Expr 'Typed -> Expr 'Typed)
 
 instance Eq Coercion where
         Id == Id = True
@@ -18,7 +18,7 @@ instance Eq Coercion where
 
 infixr 9 .>, <.>
 
-(.>) :: Coercion -> Expr 'TcDone -> Expr 'TcDone
+(.>) :: Coercion -> Expr 'Typed -> Expr 'Typed
 Id .> e = e
 Coer f .> e = f e
 

@@ -110,7 +110,7 @@ endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth
         sp <- mkSpan pos inp len
-        when (depth <= 0) $ lift $ throwPsErr sp "block comment terminated without starting"
+        when (depth <= 0) $ lift $ throwLocErr sp "block comment terminated without starting"
         setCommentDepth (depth - 1)
         when (depth == 1) $ setStartCode code
         alexMonadScan

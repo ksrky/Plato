@@ -91,6 +91,7 @@ data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
+        setUniq uniq ref = setUniq uniq (ctx_uniq ref)
 
 instance HasScope Context where
         getScope (Context _ sc) = sc

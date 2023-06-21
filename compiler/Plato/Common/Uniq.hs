@@ -26,6 +26,9 @@ instance Pretty Uniq where
 
 class HasUniq a where
         getUniq :: MonadIO m => a -> m (IORef Uniq)
+        setUniq :: MonadIO m => Uniq -> a -> m ()
+        readUniq :: MonadIO m => a -> m Uniq
+        readUniq env = liftIO $ readIORef =<< getUniq env
         pickUniq :: MonadIO m => a -> m Uniq
         pickUniq env = do
                 ref <- getUniq env
@@ -35,6 +38,7 @@ class HasUniq a where
 
 instance HasUniq (IORef Uniq) where
         getUniq = return
+        setUniq uniq ref = liftIO $ writeIORef ref uniq
 
 uniqZero :: Uniq
 uniqZero = 0

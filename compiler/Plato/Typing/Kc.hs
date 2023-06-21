@@ -21,7 +21,7 @@ import Plato.Typing.Kc.Unify
 import Plato.Typing.Monad
 import Plato.Typing.Zonking
 
--- asks . (Env.find @Kind) >=> zonkKind
+-- asks . (Env.find @Kind) >=> zonk
 
 inferDataKind ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
@@ -33,7 +33,7 @@ inferDataKind params constrs = do
                 kv <- newKnVar
                 return (x, kv)
         local (modifyEnv $ extendList bnds) $ forM_ constrs $ \(_, body) -> checkKindStar body
-        bnds' <- mapM (\(x, kn) -> (x,) <$> zonkKind kn) bnds
+        bnds' <- mapM (\(x, kn) -> (x,) <$> zonk kn) bnds
         let qnts = map (\(id, kn) -> (BoundTv id, kn)) bnds'
             constrs'' = map (\(con, body) -> (con, AllT qnts body)) constrs
         return constrs''
@@ -49,8 +49,8 @@ inferKind ::
 inferKind ty = do
         exp_kn <- newKnVar
         checkKind ty exp_kn
-        ty' <- zonkType `traverse` ty
-        res_kn <- zonkKind exp_kn
+        ty' <- zonk `traverse` ty
+        res_kn <- zonk exp_kn
         return (ty', res_kn)
 
 checkKind ::
@@ -60,11 +60,11 @@ checkKind ::
         m ()
 checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
-                kn <- zonkKind =<< find id =<< getEnv =<< ask
+                kn <- zonk =<< find id =<< getEnv =<< ask
                 unify sp kn exp_kn
         VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
         ConT tc -> do
-                kn <- zonkKind =<< find tc =<< getEnv =<< ask
+                kn <- zonk =<< find tc =<< getEnv =<< ask
                 unify sp kn exp_kn
         ArrT arg res -> do
                 checkKindStar arg

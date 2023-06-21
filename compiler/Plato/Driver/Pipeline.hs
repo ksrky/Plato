@@ -4,6 +4,7 @@ import Control.Monad.IO.Class
 import Prettyprinter
 import Prettyprinter.Render.Text
 
+import Plato.Driver.Flag
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
@@ -15,13 +16,13 @@ compile :: FilePath -> Plato ()
 compile src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
-        isFlagOn "ddump-parsing" $ liftIO $ putDoc $ pretty pssyn'
+        whenFlagOn DumpParsed $ liftIO $ putDoc $ pretty pssyn'
         typsyn <- ps2typ pssyn'
         typsyn' <- typing typsyn
-        isFlagOn "ddump-typing" $ liftIO $ putDoc $ pretty typsyn'
+        whenFlagOn DumpTyped $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typ2core typsyn'
         -- isFlagOn "ddump-core" $ liftIO $ putDoc $ prettyCommands coresyn
-        undefined
+        liftIO $ print $ pretty coresyn
 
 -- coresyn' <- runCore coresyn
 -- liftIO $ mapM_ printResult coresyn'

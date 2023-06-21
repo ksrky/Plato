@@ -42,13 +42,17 @@ type Tau = Type -- τ
 data TyVar
         = BoundTv {unTyVar :: Ident}
         | SkolemTv {unTyVar :: Ident}
-        deriving (Show, Ord)
+        deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
 
 ----------------------------------------------------------------
 -- Basic interfaces
 ----------------------------------------------------------------
+instance Show TyVar where
+        show (BoundTv id) = "(BoundTv " ++ show id ++ ")"
+        show (SkolemTv id) = "(SkolemTv " ++ show id ++ ")"
+
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
         (SkolemTv id1) == (SkolemTv id2) = id1 == id2
@@ -58,7 +62,7 @@ instance Eq MetaTv where
         (MetaTv u1 _) == (MetaTv u2 _) = u1 == u2
 
 instance Show MetaTv where
-        show (MetaTv u _) = "MetaTv " ++ show u
+        show (MetaTv u _) = show u
 
 instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2

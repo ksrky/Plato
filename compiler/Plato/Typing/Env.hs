@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
-        Binding (..),
+        Bind (..),
         TypEnv,
         initTypEnv,
         HasTypEnv (..),
@@ -23,12 +23,12 @@ import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Typing.Utils
 
-data Binding
-        = ValBinding Type
-        | TypBinding Kind
+data Bind
+        = ValBind Type
+        | TypBind Kind
         deriving (Eq, Show)
 
-type TypEnv = IdentMap Binding
+type TypEnv = IdentMap Bind
 
 initTypEnv :: TypEnv
 initTypEnv = M.empty
@@ -52,17 +52,17 @@ instance EnvManager a => EnvManager (Located a) where
         find = ((noLoc <$>) .) . find
 
 instance EnvManager Type where
-        extend id ty = M.insert id (ValBinding ty)
+        extend id ty = M.insert id (ValBind ty)
         find id env =
                 lookupIdent id env >>= \case
-                        ValBinding ty -> return ty
+                        ValBind ty -> return ty
                         _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a term-level identifier"]
 
 instance EnvManager Kind where
-        extend id kn = M.insert id (TypBinding kn)
+        extend id kn = M.insert id (TypBind kn)
         find id env =
                 lookupIdent id env >>= \case
-                        TypBinding kn -> return kn
+                        TypBind kn -> return kn
                         _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
 -----------------------------------------------------------

@@ -15,13 +15,13 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
-data Bind (a :: TcFlag) where
-        -- ValBind Ident LExpr |
-        FunBind :: Ident -> [Clause 'TcUndone] -> Bind 'TcUndone
-        FunBindok :: Ident -> LExpr 'TcDone -> Bind 'TcDone
-        TypBind :: Ident -> LType -> Bind a
-        DatBind :: Ident -> [Quant] -> [(Ident, LType)] -> Bind 'TcUndone
-        DatBindok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Bind 'TcDone
+data Defn (a :: TcFlag) where
+        -- ValDefn Ident LExpr |
+        FunDefn :: Ident -> [Clause 'Untyped] -> Defn 'Untyped
+        FunDefnok :: Ident -> LExpr 'Typed -> Defn 'Typed
+        TypDefn :: Ident -> LType -> Defn a
+        DatDefn :: Ident -> [Quant] -> [(Ident, LType)] -> Defn 'Untyped
+        DatDefnok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Defn 'Typed
 
 data Spec
         = ValSpec Ident LType
@@ -29,24 +29,24 @@ data Spec
         deriving (Eq, Show)
 
 data Decl a
-        = BindDecl (Bind a)
+        = DefnDecl (Defn a)
         | SpecDecl Spec
 
 ----------------------------------------------------------------
 -- Basic instances
 ----------------------------------------------------------------
-deriving instance Eq (Bind a)
-deriving instance Show (Bind a)
+deriving instance Eq (Defn a)
+deriving instance Show (Defn a)
 deriving instance Eq (Decl a)
 deriving instance Show (Decl a)
 instance Numbered (Decl a) where
         toNumber (SpecDecl TypSpec{}) = 0
-        toNumber (BindDecl DatBind{}) = 1
-        toNumber (BindDecl DatBindok{}) = 1
-        toNumber (BindDecl TypBind{}) = 2
+        toNumber (DefnDecl DatDefn{}) = 1
+        toNumber (DefnDecl DatDefnok{}) = 1
+        toNumber (DefnDecl TypDefn{}) = 2
         toNumber (SpecDecl ValSpec{}) = 3
-        toNumber (BindDecl FunBind{}) = 4
-        toNumber (BindDecl FunBindok{}) = 4
+        toNumber (DefnDecl FunDefn{}) = 4
+        toNumber (DefnDecl FunDefnok{}) = 4
 
 instance Ord (Decl a) where
         compare x y = compare (toNumber x) (toNumber y)
@@ -54,16 +54,16 @@ instance Ord (Decl a) where
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty (Bind a) where
-        pretty (FunBind id clauses) =
+instance Pretty (Defn a) where
+        pretty (FunDefn id clauses) =
                 hsep
                         [ pretty id
                         , "where"
                         , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
                         ]
-        pretty (FunBindok id exp) = hsep [pretty id, equals, pretty exp]
-        pretty (TypBind id ty) = hsep [pretty id, equals, pretty ty]
-        pretty (DatBind id params constrs) =
+        pretty (FunDefnok id exp) = hsep [pretty id, equals, pretty exp]
+        pretty (TypDefn id ty) = hsep [pretty id, equals, pretty ty]
+        pretty (DatDefn id params constrs) =
                 hsep
                         [ "data"
                         , hsep (pretty id : map (parens . prQuant) params)
@@ -73,12 +73,12 @@ instance Pretty (Bind a) where
                                         (surround (semi <> space))
                                         (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
                         ]
-        pretty (DatBindok id _ params constrs) = pretty (DatBind id params constrs)
+        pretty (DatDefnok id _ params constrs) = pretty (DatDefn id params constrs)
 
 instance Pretty Spec where
         pretty (ValSpec id ty) = hsep [pretty id, colon, pretty ty]
         pretty (TypSpec id kn) = hsep [pretty id, colon, pretty kn]
 
 instance Pretty (Decl a) where
-        pretty (BindDecl bnd) = pretty bnd
+        pretty (DefnDecl def) = pretty def
         pretty (SpecDecl spc) = pretty spc

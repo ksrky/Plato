@@ -35,7 +35,7 @@ elabExpr ::
         forall env m.
         (HasCallStack, MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         P.Expr ->
-        m (T.Expr 'T.TcUndone)
+        m (T.Expr 'T.Untyped)
 elabExpr (P.VarE id) = T.VarE <$> scoping id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
 elabExpr (P.InfixE left op right) = do
@@ -46,8 +46,9 @@ elabExpr (P.InfixE left op right) = do
 elabExpr (P.LamE pats body) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        body' <- local (extendListScope (getDomain pats)) $ elabExpr `traverse` body
-        let patlam :: T.LExpr 'T.TcUndone -> T.LPat -> m (T.LExpr 'T.TcUndone)
+        env <- extendScopeFromSeq pats
+        body' <- local (const env) $ elabExpr `traverse` body
+        let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
                 v <- newVarIdent -- tmp: wild card pattern
@@ -82,7 +83,7 @@ elabPat (P.InfixP left op right) = do
         op' <- scoping op
         right' <- elabPat `traverse` right
         return $ T.ConP op' [left', right']
-elabPat  P.FactorP{} = unreachable "fixity resolution failed"
+elabPat P.FactorP{} = unreachable "fixity resolution failed"
 
 elabType ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
@@ -109,7 +110,7 @@ elabType P.FactorT{} = unreachable "fixity resolution failed"
 elabFunDecls :: -- tmp: type signature in let binding
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LDecl] ->
-        m ([(Ident, [T.Clause 'T.TcUndone])], [(Ident, T.LType)])
+        m ([(Ident, [T.Clause 'T.Untyped])], [(Ident, T.LType)])
 elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
         L _ (P.FunSpecD id ty) -> do
                 ty' <- elabType `traverse` ty
@@ -124,17 +125,18 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
 elabClause ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         P.Clause ->
-        m (T.Clause 'T.TcUndone)
+        m (T.Clause 'T.Untyped)
 elabClause (pats, exp) = do
         paramPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
-        exp' <- local (extendListScope $ getDomain pats) $ elabExpr `traverse` exp
+        env <- extendScopeFromSeq pats
+        exp' <- local (const env) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
-        m [T.Decl 'T.TcUndone]
+        m [T.Decl 'T.Untyped]
 elabDecls [] = return []
 elabDecls (L _ (P.DataD id params constrs) : rest) = do
         paramNamesUnique params
@@ -146,36 +148,38 @@ elabDecls (L _ (P.DataD id params constrs) : rest) = do
                         mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
         rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
         sig <- newKnVar
-        return $ T.SpecDecl (T.TypSpec id sig) : T.BindDecl (T.DatBind id qnts constrs') : rest'
+        return $ T.SpecDecl (T.TypSpec id sig) : T.DefnDecl (T.DatDefn id qnts constrs') : rest'
 elabDecls fundecs = do
-        -- Note: Nicifier ordered data decls to local decls
+        -- Note: Nicifier ordered from data decls to local decls
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
                 fundecs' <- bundleClauses fundecs
                 (bnds, spcs) <- elabFunDecls fundecs'
                 let fundecs'' =
                         map (T.SpecDecl . uncurry T.ValSpec) spcs
-                                ++ map (T.BindDecl . uncurry T.FunBind) bnds
+                                ++ map (T.DefnDecl . uncurry T.FunDefn) bnds
                 return fundecs''
 
 elabTopDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
-        m [T.Decl 'T.TcUndone]
+        m [T.Decl 'T.Untyped]
 elabTopDecls tdecs = Data.List.sort <$> elabDecls tdecs
 
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
+        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
 
 instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-ps2typ :: (PlatoMonad m, MonadThrow m) => P.Program -> m (T.Program 'T.TcUndone)
+ps2typ :: (PlatoMonad m, MonadThrow m) => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 ps2typ tdecs = do
-        uniq <- getUniq =<< ask
-        prog <- runReaderT (elabTopDecls tdecs) (Context uniq initScope)
-        setUniq uniq
+        uref <- getUniq =<< ask
+        prog <- runReaderT (elabTopDecls tdecs) (Context uref initScope)
+        uniq <- readUniq uref
+        setUniq uniq =<< ask
         return prog

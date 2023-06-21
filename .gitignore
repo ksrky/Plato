@@ -9,6 +9,3 @@ stack.yaml.lock
 # documentation
 /site
 static
-
-# Executable file
-src/Main

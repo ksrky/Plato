@@ -7,7 +7,7 @@ module Plato.Typing.Tc (
         checkClauses,
 ) where
 
-import Control.Exception.Safe (Handler (Handler), MonadCatch, MonadThrow, catches)
+import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (ask, local))
@@ -15,14 +15,17 @@ import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
 import Prettyprinter
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env
+import Plato.Typing.Error
 import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
@@ -35,34 +38,18 @@ import Plato.Typing.Zonking
 
 checkType ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Type ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkType = checkSigma
 
 inferType ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Type)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Type)
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
-
-catchesTcErr :: MonadCatch m => Span -> m a -> m a
-catchesTcErr sp m =
-        catches
-                m
-                [ Handler $ \(UnificationError tau_actual tau_exp) ->
-                        throwLocErr sp $
-                                vsep
-                                        [ "Couldn't match type."
-                                        , "Expected type:" <+> pretty tau_exp
-                                        , "  Actual type:" <+> pretty tau_actual
-                                        ]
-                , Handler $ \(InfiniteTypeError ty1 ty2) ->
-                        throwLocErr sp $
-                                hsep ["Infinite type:", squotes $ pretty ty1, "~", squotes $ pretty ty2]
-                ]
 
 -- | Type checking of patterns
 checkPat ::
@@ -85,11 +72,11 @@ tcPat (L _ (VarP var)) (Infer ref) = do
 tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
-        unless (length pats == length arg_tys) $
+        unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
         subst <- concat <$> zipWithM checkPat pats arg_tys
-        _ <- catchesTcErr sp (instPatSigma res_ty exp_ty)
+        _ <- apInstSigma sp instPatSigma res_ty exp_ty
         return subst
 
 instPatSigma ::
@@ -98,58 +85,60 @@ instPatSigma ::
         Expected Sigma ->
         m Coercion
 instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return Id
-instPatSigma pat_ty (Check exp_ty) = subsCheck exp_ty pat_ty
+instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
 
 instDataCon ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- zonkType =<< find con =<< getEnv =<< ask
+        sigma <- zonk =<< find con =<< getEnv =<< ask
         (_, rho) <- instantiate sigma
         return $ splitConstrTy rho
 
 -- | Type checking of Rho
 checkRho ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Rho ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkRho exp ty = do
         exp' <- tcRho exp (Check ty)
-        zonkExpr `traverse` exp'
+        zonk `traverse` exp'
 
 inferRho ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Rho)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Rho)
 inferRho exp = do
         ref <- newMIORef (unreachable "inferRho: empty result")
         exp' <- tcRho exp (Infer ref)
-        exp'' <- zonkExpr `traverse` exp'
+        exp'' <- zonk `traverse` exp'
         (exp'',) <$> readMIORef ref
 
 tcRho ::
         forall ctx m.
         (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Expected Rho ->
-        m (LExpr 'TcDone)
-tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
+        m (LExpr 'Typed)
+tcRho (L sp exp) exp_ty = do
+        liftIO $ debugM platoLog $ "tcRho: " ++ show exp
+        L sp <$> tcRho' exp exp_ty
     where
-        tcRho' :: Expr 'TcUndone -> Expected Rho -> m (Expr 'TcDone)
+        tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
-                sigma <- zonkType =<< find var =<< getEnv =<< ask
-                coercion <- catchesTcErr sp (instSigma sigma exp_ty)
+                sigma <- zonk =<< find var =<< getEnv =<< ask
+                coercion <- apInstSigma sp instSigma sigma exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- catchesTcErr sp (unifyFun fun_ty)
+                (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                coercion <- catchesTcErr sp (instSigma res_ty exp_ty)
+                coercion <- apInstSigma sp instSigma res_ty exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
-                (var_ty, body_ty) <- catchesTcErr sp (unifyFun exp_ty)
+                (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
                 body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
@@ -159,7 +148,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sigma <- zonkType =<< find id =<< getEnv =<< ask
+                        sigma <- zonk =<< find id =<< getEnv =<< ask
                         exp' <- checkClauses clauses sigma
                         return (id, exp')
                 body' <- tcRho body exp_ty
@@ -177,38 +166,39 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
 -- | Type check of Sigma
 inferSigma ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
-        m (LExpr 'TcDone, Sigma)
+        LExpr 'Untyped ->
+        m (LExpr 'Typed, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
-        exp'' <- zonkExpr `traverse` exp'
+        exp'' <- zonk `traverse` exp'
         return ((genTrans tvs .>) <$> exp'', sigma)
 
 checkSigma ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        LExpr 'TcUndone ->
+        LExpr 'Untyped ->
         Sigma ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkSigma exp sigma = do
         (coercion, skol_tvs, rho) <- skolemise sigma
         exp' <- checkRho exp rho
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ do
+                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
+                throwError "Type not polymorphic enough"
         return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
 
 -- | Check clauses
 checkClauses ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
-        [Clause 'TcUndone] ->
+        [Clause 'Untyped] ->
         Sigma ->
-        m (LExpr 'TcDone)
+        m (LExpr 'Typed)
 checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
-        (pat_tys, res_ty) <- unifyFuns (length (fst $ head clauses)) rho_ty
-        -- let (pat_tys, res_ty) = split [] rho_ty
+        (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 subst <- concat <$> zipWithM checkPat pats pat_tys
                 body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
@@ -217,7 +207,9 @@ checkClauses clauses sigma_ty = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ do
+                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
+                throwError "Type not polymorphic enough"
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
 
 -- | Instantiation of Sigma
@@ -227,3 +219,29 @@ instSigma sigma (Infer r) = do
         (coercion, rho) <- instantiate sigma
         writeMIORef r rho
         return coercion
+
+-----------------------------------------------------------
+-- Applying a function with catching errors
+-----------------------------------------------------------
+apInstSigma ::
+        (MonadIO m, MonadCatch m) =>
+        Span ->
+        (Type -> Expected Type -> m a) ->
+        Type ->
+        Expected Type ->
+        m a
+apInstSigma sp inst ty_exp expty@(Check ty_sup) = do
+        ty_exp' <- zonk ty_exp
+        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
+apInstSigma sp inst ty_exp expty@(Infer ref) = do
+        ty_exp' <- zonk ty_exp
+        ty_sup <- readMIORef ref
+        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
+
+apUnifyFun ::
+        MonadCatch m =>
+        Span ->
+        (Rho -> m (a, Rho)) ->
+        Rho ->
+        m (a, Rho)
+apUnifyFun sp unifun rho = catches (unifun rho) (unifunErrHandler sp rho)

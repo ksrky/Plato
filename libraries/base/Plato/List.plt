@@ -15,7 +15,7 @@ data List a where
 
 head : {a} List a -> Maybe a
 head Nil = Nothing
-head (hd :: _) -> Just hd
+head (hd :: _) = Just hd
 
 last : {a} List a -> Maybe a
 last Nil = Nothing
@@ -29,7 +29,7 @@ tail (_ :: tl) = tl
 {-
 init : {a} List a -> List a
 init Nil = Nil
-init (x :: xs) ->
+init (x :: xs) =
     let init' : {a} a -> List a -> List a -- error : Scoped type variables
         init' y Nil = Nil
         init' y (z :: zs) -> y :: init' z zs
@@ -55,7 +55,7 @@ length (x :: xs) = Succ (length xs)
 
 map : {a b} (a -> b) -> List a -> List b
 map f Nil = Nil
-map f (x :: xs) f x :: map f xs
+map f (x :: xs) = f x :: map f xs
 
 reverse : {a} List a -> List a
 reverse l =
@@ -67,11 +67,8 @@ reverse l =
 
 filter : {a} (a -> Bool) -> List a -> List a
 filter f Nil = Nil
-filter f (x :: xs) -> ifThenElse (f x) (x :: filter f xs) (filter f xs)
+filter f (x :: xs) = ifThenElse (f x) (x :: filter f xs) (filter f xs)
 
 foldr : {a b} (a -> b -> b) -> b -> List a -> b
-foldr {a b} k z = 
-    let go : List a -> b 
-        go Nil = z
-        go (y :: ys) = k y (go ys)
-     in go
+foldr k z Nil = z
+foldr k z (y :: ys) = k y (foldr k z ys)

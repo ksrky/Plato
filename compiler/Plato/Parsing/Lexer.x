@@ -80,7 +80,7 @@ tokens :-
 <0, code> \}                    { rightBrace }
 <0, code> \)                    { symbol SymRParen }
 <0, code> \;                    { symbol SymSemicolon }
-<code> \_                       { symbol SymUScore }
+<0, code> \_                    { symbol SymUScore }
 
 <code> @varsym                  { varsym }
 

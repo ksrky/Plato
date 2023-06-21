@@ -26,7 +26,7 @@ instance Eq MetaKv where
         (MetaKv u1 _) == (MetaKv u2 _) = u1 == u2
 
 instance Show MetaKv where
-        show (MetaKv u _) = "MetaKv " ++ show u
+        show (MetaKv u _) = show u
 
 instance Ord MetaKv where
         MetaKv u1 _ `compare` MetaKv u2 _ = u1 `compare` u2

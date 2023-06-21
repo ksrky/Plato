@@ -26,17 +26,23 @@ type Clause a = ([LPat], LExpr a)
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr a -> LExpr a -> Expr a
-        AbsE :: Ident -> LExpr 'TcUndone -> Expr 'TcUndone
-        AbsEok :: Ident -> Type -> Expr 'TcDone -> Expr 'TcDone
-        TAppE :: Expr 'TcDone -> [Type] -> Expr 'TcDone
-        TAbsE :: [Quant] -> Expr 'TcDone -> Expr 'TcDone
-        LetE :: [(Ident, [Clause 'TcUndone])] -> [(Ident, LType)] -> LExpr 'TcUndone -> Expr 'TcUndone
-        LetEok :: [(Ident, LExpr 'TcDone)] -> [(Ident, LType)] -> LExpr 'TcDone -> Expr 'TcDone
-        CaseE :: LExpr 'TcUndone -> [(LPat, LExpr 'TcUndone)] -> Expr 'TcUndone
-        CaseEok :: LExpr 'TcDone -> Type -> [(LPat, LExpr 'TcDone)] -> Expr 'TcDone
+        AbsE :: Ident -> LExpr 'Untyped -> Expr 'Untyped
+        AbsEok :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
+        TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
+        TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
+        LetE :: [(Ident, [Clause 'Untyped])] -> [(Ident, LType)] -> LExpr 'Untyped -> Expr 'Untyped
+        LetEok :: [(Ident, LExpr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
+        CaseE :: LExpr 'Untyped -> [(LPat, LExpr 'Untyped)] -> Expr 'Untyped
+        CaseEok :: LExpr 'Typed -> Type -> [(LPat, LExpr 'Typed)] -> Expr 'Typed
 
+----------------------------------------------------------------
+-- Basic instances
+----------------------------------------------------------------
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
+
+instance HasLoc (Clause a) where
+        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -44,7 +50,7 @@ deriving instance Show (Expr a)
 prClause :: Clause a -> Doc ann
 prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
 
-prBinds :: [(Ident, [Clause 'TcUndone])] -> Doc ann
+prBinds :: [(Ident, [Clause 'Untyped])] -> Doc ann
 prBinds bnds =
         concatWith
                 (surround $ semi <> space)
@@ -59,7 +65,7 @@ prBinds bnds =
                         bnds
                 )
 
-prBinds' :: [(Ident, LExpr 'TcDone)] -> Doc ann
+prBinds' :: [(Ident, LExpr 'Typed)] -> Doc ann
 prBinds' bnds =
         concatWith
                 (surround $ semi <> space)

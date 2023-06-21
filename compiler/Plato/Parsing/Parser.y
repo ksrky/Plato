@@ -74,8 +74,25 @@ digit                           { (mkLDigit -> Just $$) }
 
 %%
 
-program     :: { [LTopDecl] }
-            : ';' decls                          { $2 }
+program     :: { Program }
+            : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
+            | ';' topdecls                          { [$2] }
+
+-----------------------------------------------------------
+-- Imports
+-----------------------------------------------------------
+impdecls    :: { [LInstr] }
+            : impdecls ';' impdecl                  { $3 : $1 } -- Note: throws error unless tail recursion
+            | impdecl                               { [$1] }
+
+impdecl     :: { LInstr }
+            : 'import' conid                        { sL $1 $2 (ImpDecl $2) }
+
+-----------------------------------------------------------
+-- TopDecls
+-----------------------------------------------------------
+topdecls    :: { LInstr }
+            : decls                                 { L (concatSpans (map getLoc $1)) (TopDecls $1) }
 
 -----------------------------------------------------------
 -- Declarations
@@ -111,11 +128,6 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecls    :: { [LDecl] }
-            : fundecl ';' fundecls                  { $1 : $3 }
-            | fundecl                               { [$1] }
-            | {- empty -}                           { [] }
-
 fundecl     :: { LDecl }
             -- Function signature
             : var ':' type                        	{ sL $1 $3 (FunSpecD $1 $3) }
@@ -123,7 +135,7 @@ fundecl     :: { LDecl }
             -- Function definition
             | var patseq '=' expr               	{ sL $1 $4 (FunBindD $1 [($2, $4)]) }
             | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBindD $2 [($4, $6)]) }
-            | pat varop pat '=' expr                { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
+            | lpat varop lpat '=' expr              { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
             | fixdecl                               { $1 }
 
 -- | Fixity declaration
@@ -164,11 +176,11 @@ lexpr       :: { LExpr }
             -- | Lambda expression
             : '\\' patseq1 '->' expr                { sL $1 $4 (LamE $2 $4) }
             -- | Let expression
-            | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
-            | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
+            | 'let' '{' letdecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
+            | 'let' 'v{' letdecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
             -- | Case expression
             | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
-            | 'case' expr 'of' 'v{' alts 'v}'       { sL $1 $6 (CaseE $2 $5) }
+            | 'case' expr 'of' 'v{' alts close      { sL $1 $6 (CaseE $2 $5) }
             -- | Function application
             | fexpr                                 { $1 }
 
@@ -181,6 +193,12 @@ aexpr       :: { LExpr }
             | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
+
+-- | Let declaration
+letdecls    :: { [LDecl] }
+            : fundecl ';' letdecls                  { $1 : $3 }
+            | fundecl                               { [$1] }
+            | {- empty -}                           { [] }
 
 -- | Alternatives
 alts        :: { [(LPat, LExpr)] }
@@ -195,7 +213,7 @@ alt         :: { (LPat, LExpr) }
 -- | Clauses
 clauses     :: { [Clause] }
             : 'where' '{' clauses_ '}'              { $3 }
-            | 'where' 'v{' clauses_ 'v}'            { $3 }
+            | 'where' 'v{' clauses_ close           { $3 }
 
 clauses_    :: { [Clause] }
             : clause ';' clauses_                   { $1 : $3 }
@@ -212,17 +230,17 @@ pat         :: { LPat }
             : lpat conop pat                        { sL $1 $3 (InfixP $1 $2 $3) } 
             | lpat                                  { $1 }
 
-lpat 		:: { LPat }
-			: con apats                             { sL $1 $2 (ConP $1 $2) }
-            | apat									{ $1 }	
+lpat        :: { LPat }
+            : con apats                             { sL $1 $2 (ConP $1 $2) }
+            | apat                                  { $1 }	
 
 apats       :: { [LPat] }
             : apat apats                            { $1 : $2 }
             | apat                                  { [$1] }
 
 apat        :: { LPat }
-            : '(' pat ')'                         	{ L (combineSpans $1 $3) (FactorP $2) }
-            | con                               	{ L (getLoc $1) (ConP $1 []) }
+            : '(' pat ')'                           { L (combineSpans $1 $3) (FactorP $2) }
+            | con                                   { L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }
 

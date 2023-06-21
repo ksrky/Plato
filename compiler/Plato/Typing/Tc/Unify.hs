@@ -15,17 +15,15 @@ import Data.Set qualified as S
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Typing.Error
 import Plato.Typing.Monad
 import Plato.Typing.Tc.Utils
-
-data UnificationError = UnificationError Tau Tau deriving (Show)
-data InfiniteTypeError = InfiniteTypeError Tau Tau deriving (Show)
-
-instance Exception UnificationError
-instance Exception InfiniteTypeError
+import System.Log.Logger
 
 unify :: (MonadReader ctx m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = throw (UnificationError ty1 ty2)
+unify ty1 ty2 | badType ty1 || badType ty2 = do
+        liftIO $ errorM rootLoggerName $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
+        throw UnificationError
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
 unify (ArrT arg1 res1) (ArrT arg2 res2) = do
@@ -37,12 +35,15 @@ unify (AppT fun1 arg1) (AppT fun2 arg2) = do
 unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
 unify ty (MetaT tv) = unifyVar tv ty
-unify ty1 ty2 = throw (UnificationError ty1 ty2)
+unify ty1 ty2 = do
+        liftIO $ errorM rootLoggerName $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
+        throw UnificationError
 
 unifyVar :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 unifyVar tv1 ty2@(MetaT tv2) = do
         mb_ty1 <- readMetaTv tv1
         mb_ty2 <- readMetaTv tv2
+        liftIO $ debugM rootLoggerName $ "UnifyVar: " ++ show mb_ty1 ++ ", " ++ show mb_ty2
         case (mb_ty1, mb_ty2) of
                 (Just ty1, _) -> unify ty1 ty2
                 (Nothing, Just ty2) -> unify (MetaT tv1) ty2
@@ -54,10 +55,8 @@ unifyVar tv1 ty2 = do
 occursCheck :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
-        when (tv1 `S.member` tvs2) $ do
-                mb_ty1 <- readMetaTv tv1
-                let ty1 = case mb_ty1 of Just ty1 -> ty1; Nothing -> MetaT tv1
-                throw $ InfiniteTypeError ty1 ty2
+        liftIO $ errorM rootLoggerName $ "Unification: " ++ show tv1 ++ ", " ++ show ty2
+        when (tv1 `S.member` tvs2) $ throw InfiniteTypeError
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True

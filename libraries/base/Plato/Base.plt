@@ -12,7 +12,7 @@ id : {a} a -> a
 id x = x
 
 const : {a b} a -> b -> a
-const x y = x
+const x _ = x
 
 flip : {a b c}  (a -> b -> c) -> b -> a -> c
 flip f x y = f y x

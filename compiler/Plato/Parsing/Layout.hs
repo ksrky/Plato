@@ -9,7 +9,7 @@ import Plato.Common.Error
 import Plato.Common.Location
 
 import Control.Monad.State
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 ----------------------------------------------------------------
 -- Layout
@@ -90,7 +90,7 @@ rightBrace (pos, _, _, inp) len = do
                 _ -> do
                         -- note: Layout rule
                         -- L (} : ts) ms           = parse-error
-                        lift $ throwPsErr sp "missing an opening brace before closing"
+                        lift $ throwLocErr sp "missing an opening brace before closing"
 
 leftBrace :: Action
 leftBrace (pos, _, _, inp) len = do
@@ -111,4 +111,4 @@ popLayoutLevel (L sp _) = do
                         -- L (t : ts) (m : ms)     = }  :  (L (t : ts) ms)             if m≠0 and parse-error(t)
                         setIndentLevels ms
                         return sp -- tmp: sp0
-                _ -> lift $ throwPsErr sp "parse error"
+                _ -> lift $ throwLocErr sp "parse error"
