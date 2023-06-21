@@ -23,8 +23,7 @@ jobs:
           pip install -r requirements.txt
         working-directory: docs
       - name: Build MkDocs
-        run: mkdocs build
+        run: mkdocs build --config-file en/mkdocs.yml
         working-directory: docs/en
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-pages
-        working-directory: docs/en
+        run: mkdocs gh-deploy --config-file en/mkdocs.yml
