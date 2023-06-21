@@ -30,7 +30,7 @@ parse infixtm toks = do
         parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op fix@(Fixity prec dir)) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
-                        throwPsErr
+                        throwLocErr
                                 (combineSpans (getLoc lhs) (getLoc tokop))
                                 "Error at parsing infix expression"
                 | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest)
