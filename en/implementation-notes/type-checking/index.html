@@ -326,9 +326,40 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Type checking
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         Type checking
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#typing-language" class="md-nav__link">
+    Typing language
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -375,6 +406,21 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#typing-language" class="md-nav__link">
+    Typing language
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -392,6 +438,55 @@
 
 
 <h1 id="type-checking">Type checking</h1>
+<h2 id="typing-language">Typing language</h2>
+<p>| variable | <span class="arithmatex"><span class="MathJax_Preview">x</span><script type="math/tex">x</script></span> | data constructor | <span class="arithmatex"><span class="MathJax_Preview">K</span><script type="math/tex">K</script></span> |
+| type variable | <span class="arithmatex"><span class="MathJax_Preview">\alpha</span><script type="math/tex">\alpha</script></span> | type constructor | <span class="arithmatex"><span class="MathJax_Preview">T</span><script type="math/tex">T</script></span> |</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>terms</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">t</span><script type="math/tex">t</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">x</span><script type="math/tex">x</script></span> | <span class="arithmatex"><span class="MathJax_Preview">t\ t</span><script type="math/tex">t\ t</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\lambda x\langle\colon\tau\rangle.\ t</span><script type="math/tex">\lambda x\langle\colon\tau\rangle.\ t</script></span> | <span class="arithmatex"><span class="MathJax_Preview">t\ \overline{\tau}</span><script type="math/tex">t\ \overline{\tau}</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\Lambda \overline{\alpha\colon\kappa}.\ t</span><script type="math/tex">\Lambda \overline{\alpha\colon\kappa}.\ t</script></span> |<br><span class="arithmatex"><span class="MathJax_Preview">\texttt{let}\ \Gamma \ \texttt{in}\ t</span><script type="math/tex">\texttt{let}\ \Gamma \ \texttt{in}\ t</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\texttt{case}\ t\langle\colon \tau\rangle\ \{ \overline{p \rightarrow t}\}</span><script type="math/tex">\texttt{case}\ t\langle\colon \tau\rangle\ \{ \overline{p \rightarrow t}\}</script></span></td>
+</tr>
+<tr>
+<td>patterns</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">p</span><script type="math/tex">p</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">x</span><script type="math/tex">x</script></span> | _ | <span class="arithmatex"><span class="MathJax_Preview">K\ \overline{p}</span><script type="math/tex">K\ \overline{p}</script></span></td>
+</tr>
+<tr>
+<td>types</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\tau</span><script type="math/tex">\tau</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\alpha</span><script type="math/tex">\alpha</script></span> | <span class="arithmatex"><span class="MathJax_Preview">T</span><script type="math/tex">T</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\tau\rightarrow\tau</span><script type="math/tex">\tau\rightarrow\tau</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\forall \overline{\alpha\langle\colon \kappa\rangle}.\ \tau</span><script type="math/tex">\forall \overline{\alpha\langle\colon \kappa\rangle}.\ \tau</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\tau\ \tau</span><script type="math/tex">\tau\ \tau</script></span></td>
+</tr>
+<tr>
+<td>kinds</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\kappa</span><script type="math/tex">\kappa</script></span></td>
+<td>* | <span class="arithmatex"><span class="MathJax_Preview">\kappa\rightarrow\kappa</span><script type="math/tex">\kappa\rightarrow\kappa</script></span></td>
+</tr>
+<tr>
+<td>definitions</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\Delta</span><script type="math/tex">\Delta</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\texttt{fun}\ x\,\texttt{=}\,\{\overline{\overline{p}\,\texttt{-&gt;}\,t}\}</span><script type="math/tex">\texttt{fun}\ x\,\texttt{=}\,\{\overline{\overline{p}\,\texttt{->}\,t}\}</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\texttt{data}\ T\ \overline{\alpha\langle\colon\kappa\rangle}\,\texttt{=}\,\{\overline{K\colon\tau}\}</span><script type="math/tex">\texttt{data}\ T\ \overline{\alpha\langle\colon\kappa\rangle}\,\texttt{=}\,\{\overline{K\colon\tau}\}</script></span></td>
+</tr>
+<tr>
+<td>specificaion</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\Sigma</span><script type="math/tex">\Sigma</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\texttt{fun}\ x\colon\tau</span><script type="math/tex">\texttt{fun}\ x\colon\tau</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\texttt{data}\ T\colon\kappa</span><script type="math/tex">\texttt{data}\ T\colon\kappa</script></span></td>
+</tr>
+<tr>
+<td>context</td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\Gamma</span><script type="math/tex">\Gamma</script></span></td>
+<td><span class="arithmatex"><span class="MathJax_Preview">\varepsilon</span><script type="math/tex">\varepsilon</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\Delta,\ \Gamma</span><script type="math/tex">\Delta,\ \Gamma</script></span> | <span class="arithmatex"><span class="MathJax_Preview">\Sigma,\ \Gamma</span><script type="math/tex">\Sigma,\ \Gamma</script></span></td>
+</tr>
+</tbody>
+</table>
 
 
 
