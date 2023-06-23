@@ -5,7 +5,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.IORef
 
-data Flag = FDebug | DumpParsed | DumpTyped deriving (Eq)
+data Flag = FDebug | FDumpParsed | FDumpTyped | FDumpCore
+        deriving (Eq, Show)
 
 class HasFlags a where
         getFlags :: MonadIO m => a -> m [Flag]

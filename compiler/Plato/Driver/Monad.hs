@@ -11,6 +11,9 @@ module Plato.Driver.Monad (
         HasInfo (..),
         -- Plato.Driver.Logger
         initLogger,
+        -- Plato.Driver.Flag
+        HasFlags(..),
+        Flag(..),
 ) where
 
 import Control.Monad.RWS
@@ -113,7 +116,7 @@ class (MonadReader Session m, MonadIO m) => PlatoMonad m where
 type PlatoT m = ReaderT Session m
 
 unPlato :: PlatoT m a -> Session -> m a
-unPlato = runReaderT
+unPlato =  runReaderT
 
 instance MonadIO m => PlatoMonad (PlatoT m) where
         getSession = do

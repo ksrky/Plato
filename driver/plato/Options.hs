@@ -2,8 +2,9 @@
 
 module Options where
 
-import Config
 import Options.Applicative
+
+import Config
 
 data Options = Options
         { libraryPaths :: [FilePath]

@@ -3,9 +3,8 @@ module Plato (
         module Plato.Driver.Monad,
 ) where
 
-import Control.Monad.IO.Class
-import Prettyprinter
 
+import Plato.Common.Error
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
@@ -17,10 +16,10 @@ runPlato :: FilePath -> Session -> IO ()
 runPlato = unPlato . compile
 
 compile :: FilePath -> Plato ()
-compile src = do
+compile src = catchError $ do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'
         typsyn' <- typing typsyn
-        coresyn <- typ2core typsyn'
-        liftIO $ print $ pretty coresyn
+        _coresyn <- typ2core typsyn'
+        return ()

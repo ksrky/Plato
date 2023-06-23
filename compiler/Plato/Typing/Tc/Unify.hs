@@ -55,8 +55,9 @@ unifyVar tv1 ty2 = do
 occursCheck :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
-        liftIO $ errorM rootLoggerName $ "Unification: " ++ show tv1 ++ ", " ++ show ty2
-        when (tv1 `S.member` tvs2) $ throw InfiniteTypeError
+        when (tv1 `S.member` tvs2) $ do
+                liftIO $ errorM rootLoggerName $ "Unification: " ++ show tv1 ++ ", " ++ show ty2
+                throw InfiniteTypeError
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True

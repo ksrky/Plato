@@ -3,7 +3,6 @@ module Plato.Common.Error where
 import Control.Exception.Safe (
         Exception,
         Handler (Handler),
-        IOException,
         MonadCatch,
         MonadThrow,
         SomeException,
@@ -25,13 +24,21 @@ import Prettyprinter.Render.String (renderString)
 
 import Plato.Common.Location
 
-continueError :: (MonadCatch m, MonadIO m) => m a -> m a -> m a
-continueError cont =
+catchError :: (MonadCatch m, MonadIO m) => m () -> m ()
+catchError =
         ( `catches`
-                [ Handler $ \e@LocErr{} -> liftIO (print e) >> cont
-                , Handler $ \e@PlainErr{} -> liftIO (print e) >> cont
-                , Handler $ \(e :: IOException) -> liftIO (print e) >> cont
-                , Handler $ \(e :: SomeException) -> liftIO (print e) >> cont
+                [ Handler $ \e@LocErr{} -> liftIO (print e)
+                , Handler $ \e@PlainErr{} -> liftIO (print e)
+                , Handler $ \(e :: SomeException) -> liftIO (print e)
+                ]
+        )
+
+continueError :: (MonadCatch m, MonadIO m) => m a -> m a -> m a
+continueError action =
+        ( `catches`
+                [ Handler $ \e@LocErr{} -> liftIO (print e) >> action
+                , Handler $ \e@PlainErr{} -> liftIO (print e) >> action
+                , Handler $ \(e :: SomeException) -> liftIO (print e) >> action
                 ]
         )
 
