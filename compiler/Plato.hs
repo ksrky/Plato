@@ -3,7 +3,6 @@ module Plato (
         module Plato.Driver.Monad,
 ) where
 
-import Plato.Common.Error
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
@@ -15,7 +14,7 @@ runPlato :: FilePath -> Session -> IO ()
 runPlato = unPlato . compile
 
 compile :: FilePath -> Plato ()
-compile src = catchError $ do
+compile src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         typsyn <- ps2typ pssyn'

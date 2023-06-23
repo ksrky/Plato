@@ -32,6 +32,10 @@ library
       Plato.Common.Name
       Plato.Common.Uniq
       Plato.Common.Utils
+      Plato.Core.Data
+      Plato.Core.Eval
+      Plato.Core.Monad
+      Plato.Core.Scope
       Plato.Core.Utils
       Plato.Driver.Flag
       Plato.Driver.Import
