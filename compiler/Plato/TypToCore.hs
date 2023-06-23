@@ -30,37 +30,19 @@ elabExpr (T.TAppE fun tyargs) = do
         tys <- mapM elabType tyargs
         return $ foldl C.App t tys
 elabExpr (T.TAbsE qnts exp) = do
-        exp' <- elabExpr exp
-        foldM
-                ( \t (tv, kn) -> do
-                        kn' <- elabKind kn
-                        return $ C.Lam (T.unTyVar tv, kn') t
-                )
-                exp'
-                qnts
+        t <- elabExpr exp
+        foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) t qnts
 elabExpr (T.LetEok fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
 elabExpr (T.CaseEok match _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
-        tmcase <-
-                C.Case
-                        (C.Var idX)
-                        <$> forM
-                                alts
-                                ( \(pat, exp) -> do
-                                        (con, vars) <- elabPat (unLoc pat)
-                                        t <- mkUnfold $ C.Var idY
-                                        (con,) <$> (mkSplits t vars =<< elabExpr (unLoc exp))
-                                )
+        alts <- forM alts $ \(pat, exp) -> do
+                (con, vars) <- elabPat (unLoc pat)
+                t <- mkUnfold $ C.Var idY
+                (con,) <$> (mkSplits t vars =<< elabExpr (unLoc exp))
         C.Split
                 <$> elabExpr (unLoc match)
-                <*> pure
-                        ( idX
-                        ,
-                                ( idY
-                                , tmcase
-                                )
-                        )
+                <*> pure (idX, (idY, C.Case (C.Var idX) alts))
 
 elabPat :: (HasCallStack, MonadIO m) => T.Pat -> m (C.Label, [Ident])
 elabPat (T.ConP con pats) = do
@@ -97,11 +79,11 @@ elabFunDecls fbnds fspcs = do
 
 elabDecl :: forall ctx m. (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
-        liftIO $ debugM platoLog $ "elaborate TypSpecDecl: " ++ show id
+        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show kn
         kn' <- elabKind kn
         return [C.Decl id kn']
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate ValSpecDecl: " ++ show id
+        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Decl id ty']
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
@@ -132,11 +114,11 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate TypDefnDecl: " ++ show id
+        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Defn id ty']
 elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
-        liftIO $ debugM platoLog $ "elaborate FunDefnDecl: " ++ show id
+        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show exp
         exp' <- elabExpr $ unLoc exp
         return [C.Defn id exp']
 

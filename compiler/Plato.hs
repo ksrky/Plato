@@ -3,7 +3,6 @@ module Plato (
         module Plato.Driver.Monad,
 ) where
 
-
 import Plato.Common.Error
 import Plato.Driver.Monad
 import Plato.Nicifier

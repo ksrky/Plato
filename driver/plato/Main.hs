@@ -12,8 +12,8 @@ processCommands :: Command -> IO ()
 processCommands (REPL _files _opts) = error "not implemented"
 processCommands (Run src opts) = do
         session <- initSession
+        when (isDebug opts) $ setFlag FDebug session
         setInfo src (libraryPaths opts) (logPath opts) session
         initLogger session
-        when (isDebug opts) $ setFlag FDebug session
         runPlato src session
 processCommands (Version version) = putStrLn $ "Plato version " ++ version

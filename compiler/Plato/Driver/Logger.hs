@@ -31,6 +31,7 @@ platoLog = "PlatoLog"
 
 initLogger :: (HasInfo env, HasFlags env, MonadIO m) => env -> m ()
 initLogger env = do
+        liftIO removeAllHandlers
         isDebug <- isFlagOn FDebug env
         when isDebug $ initDebugLogger env
 
@@ -39,12 +40,9 @@ initDebugLogger env = do
         debugLogPath <- getDebugLogPath env
         userLogPath <- getUserLogPath env
         debugLogHandler <- liftIO $ withFormatter <$> fileHandler debugLogPath DEBUG
-        _userLogHandler <- liftIO $ withFormatter <$> fileHandler userLogPath WARNING
-        let handlers = [debugLogHandler]
-        liftIO $
-                updateGlobalLogger
-                        platoLog
-                        (setLevel DEBUG . setHandlers handlers)
+        userLogHandler <- liftIO $ withFormatter <$> fileHandler userLogPath WARNING
+        let handlers :: [GenericHandler Handle] = [debugLogHandler, userLogHandler]
+        liftIO $ updateGlobalLogger platoLog (setLevel DEBUG . setHandlers handlers)
 
 withFormatter :: GenericHandler Handle -> GenericHandler Handle
 withFormatter handler = setFormatter handler formatter
