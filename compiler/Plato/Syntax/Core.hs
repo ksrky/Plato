@@ -2,6 +2,7 @@ module Plato.Syntax.Core where
 
 import Prettyprinter
 
+import Plato.Common.Ident
 import Plato.Common.Name
 
 -- *  Abstract syntax
@@ -14,15 +15,15 @@ data Phrase
 type Label = Name
 
 data Entry
-        = Decl Name Type
-        | Defn Name Term
+        = Decl Ident Type
+        | Defn Ident Term
         deriving (Show, Eq)
 
 type Prog = [Entry]
 
 type Type = Term
 
-type Bind a = (Name, a)
+type Bind a = (Ident, a)
 
 data PiSigma
         = Pi
@@ -30,7 +31,7 @@ data PiSigma
         deriving (Show, Eq)
 
 data Term
-        = Var Name
+        = Var Ident
         | Let Prog Term
         | Type
         | Q PiSigma (Bind Type) Type
@@ -38,7 +39,7 @@ data Term
         | App Term Term
         | Pair Term Term
         | Split Term (Bind (Bind Term))
-        | Enum [Name]
+        | Enum [Label]
         | Label Label
         | Case Term [(Label, Term)]
         | Lift Term

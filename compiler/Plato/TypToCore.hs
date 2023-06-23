@@ -4,90 +4,137 @@
 
 module Plato.TypToCore where
 
+import Control.Monad.Reader
+import Data.Foldable
 import GHC.Stack
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Common.Uniq
 import Plato.Core.Utils
+import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Utils
 
-elabExpr :: T.Expr 'T.Typed -> C.Term
-elabExpr (T.VarE id) = C.Var (nameIdent id)
-elabExpr (T.AppE fun arg) = C.App (elabExpr $ unLoc fun) (elabExpr $ unLoc arg)
-elabExpr (T.AbsEok id ty exp) = C.Lam (nameIdent id, elabType ty) (elabExpr exp)
-elabExpr (T.TAppE fun tyargs) = foldl C.App (elabExpr fun) (map elabType tyargs)
-elabExpr (T.TAbsE qnts exp) =
-        foldr (\(tv, kn) t -> C.Lam (nameIdent $ T.unTyVar tv, elabKind kn) t) (elabExpr exp) qnts
-elabExpr (T.LetEok fbnds fspcs body) = C.Let (elabFunDecls fbnds fspcs) (elabExpr $ unLoc body)
-elabExpr (T.CaseEok match _ alts) =
-        let x = genName "x"
-            y = genName "y"
-         in C.Split
-                (elabExpr $ unLoc match)
-                ( x
-                ,
-                        ( y
-                        , C.Case
-                                (C.Var x)
-                                ( (`map` alts) $ \(pat, exp) ->
-                                        let (con, vars) = elabPat (unLoc pat)
-                                         in (con, mkSplits (mkUnfold $ C.Var y) vars (elabExpr (unLoc exp)))
+elabExpr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Expr 'T.Typed -> m C.Term
+elabExpr (T.VarE id) = return $ C.Var id
+elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
+elabExpr (T.AbsEok id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
+elabExpr (T.TAppE fun tyargs) = do
+        t <- elabExpr fun
+        tys <- mapM elabType tyargs
+        return $ foldl C.App t tys
+elabExpr (T.TAbsE qnts exp) = do
+        exp' <- elabExpr exp
+        foldM
+                ( \t (tv, kn) -> do
+                        kn' <- elabKind kn
+                        return $ C.Lam (T.unTyVar tv, kn') t
+                )
+                exp'
+                qnts
+elabExpr (T.LetEok fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
+elabExpr (T.CaseEok match _ alts) = do
+        idX <- freshIdent $ genName "x"
+        idY <- freshIdent $ genName "y"
+        tmcase <-
+                C.Case
+                        (C.Var idX)
+                        <$> forM
+                                alts
+                                ( \(pat, exp) -> do
+                                        (con, vars) <- elabPat (unLoc pat)
+                                        t <- mkUnfold $ C.Var idY
+                                        (con,) <$> (mkSplits t vars =<< elabExpr (unLoc exp))
+                                )
+        C.Split
+                <$> elabExpr (unLoc match)
+                <*> pure
+                        ( idX
+                        ,
+                                ( idY
+                                , tmcase
                                 )
                         )
-                )
 
-elabPat :: HasCallStack => T.Pat -> (C.Label, [Name])
-elabPat (T.ConP con pats) =
-        let vars = (`map` pats) $ \case
-                L _ (T.VarP id) -> nameIdent id
-                _ -> unreachable "allowed only variable patterns"
-         in (nameIdent con, vars)
+elabPat :: (HasCallStack, MonadIO m) => T.Pat -> m (C.Label, [Ident])
+elabPat (T.ConP con pats) = do
+        let vars = [id | L _ (T.VarP id) <- pats]
+        unless (length pats == length vars) $ unreachable "allowed only variable patterns"
+        return (nameIdent con, vars)
 elabPat _ = unreachable "allowed only constructor pattern"
 
-elabType :: HasCallStack => T.Type -> C.Type
-elabType (T.VarT tv) = C.Var (nameIdent $ T.unTyVar tv)
-elabType (T.ConT tc) = C.Var (nameIdent tc)
-elabType (T.ArrT arg res) = mkArr (elabType $ unLoc arg) (elabType $ unLoc res)
+elabType :: (HasCallStack, MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Type -> m C.Type
+elabType (T.VarT tv) = return $ C.Var (T.unTyVar tv)
+elabType (T.ConT tc) = return $ C.Var tc
+elabType (T.ArrT arg res) = join $ mkArr <$> elabType (unLoc arg) <*> elabType (unLoc res)
 elabType (T.AllT qnts body) =
-        mkPis (map (\(tv, kn) -> (nameIdent $ T.unTyVar tv, elabKind kn)) qnts) (elabType $ unLoc body)
-elabType (T.AppT fun arg) = C.App (elabType $ unLoc fun) (elabType $ unLoc arg)
-elabType T.MetaT{} = unreachable "Plato.TypToCore received MetaT"
+        mkPis <$> mapM (\(tv, kn) -> (T.unTyVar tv,) <$> elabKind kn) qnts <*> elabType (unLoc body)
+elabType (T.AppT fun arg) = C.App <$> elabType (unLoc fun) <*> elabType (unLoc arg)
+elabType ty@T.MetaT{} = do
+        liftIO $ errorM platoLog $ "elabKind: " ++ show ty
+        unreachable "Plato.TypToCore received MetaT"
 
-elabKind :: HasCallStack => T.Kind -> C.Type
-elabKind T.StarK = C.Type
-elabKind (T.ArrK arg res) = C.Q C.Pi (wcName, elabKind arg) (elabKind res)
-elabKind T.MetaK{} = unreachable "Plato.TypToCore received MetaK"
+elabKind :: (HasCallStack, MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Kind -> m C.Type
+elabKind T.StarK = return C.Type
+elabKind (T.ArrK arg res) = do
+        idWC <- freshIdent wcName
+        C.Q C.Pi <$> ((idWC,) <$> elabKind arg) <*> elabKind res
+elabKind kn@T.MetaK{} = do
+        liftIO $ errorM platoLog $ "elabKind: " ++ show kn
+        unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> C.Prog
-elabFunDecls fbnds fspcs =
-        map (\(id, ty) -> C.Decl (nameIdent id) (elabType $ unLoc ty)) fspcs
-                ++ map (\(id, exp) -> C.Defn (nameIdent id) (elabExpr $ unLoc exp)) fbnds
+elabFunDecls :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
+elabFunDecls fbnds fspcs = do
+        fspcs' <- mapM (\(id, ty) -> C.Decl id <$> elabType (unLoc ty)) fspcs
+        fbnds' <- mapM (\(id, exp) -> C.Defn id <$> elabExpr (unLoc exp)) fbnds
+        return $ fspcs' ++ fbnds'
 
-elabDecl :: T.Decl 'T.Typed -> [C.Entry]
-elabDecl (T.SpecDecl (T.TypSpec id kn)) = [C.Decl (nameIdent id) (elabKind kn)]
-elabDecl (T.SpecDecl (T.ValSpec id ty)) = [C.Decl (nameIdent id) (elabType $ unLoc ty)]
+elabDecl :: forall ctx m. (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
+elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
+        liftIO $ debugM platoLog $ "elabDecl: " ++ show id
+        kn' <- elabKind kn
+        return [C.Decl id kn']
+elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
+        ty' <- elabType $ unLoc ty
+        return [C.Decl id ty']
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) =
-        let labDefns :: (Name, C.Term) = (genName "l", C.Enum (map (nameIdent . fst) constrs))
-            caseAlts :: [(Name, C.Type)] = (`map` constrs) $ \(con, ty) -> case map elabType (fst $ splitConstrTy $ unLoc ty) of
-                [] -> (nameIdent con, tUnit)
-                tys -> (nameIdent con, C.Rec $ C.Box $ mkTTuple tys)
-            dataDefn :: C.Term = C.Q C.Sigma labDefns (C.Case (C.Var $ genName "l") caseAlts)
-            constrDefn :: (Ident, T.LType) -> C.Entry
-            constrDefn (con, ty) =
-                let walk :: Int -> T.Type -> C.Term
-                    walk 0 (T.AllT qnts body) = foldr (\(tv, kn) -> C.Lam (nameIdent (T.unTyVar tv), elabKind kn)) (walk 0 $ unLoc body) qnts
-                    walk n_arg (T.ArrT fun arg) = C.Lam (str2genName $ show n_arg, elabType $ unLoc fun) (walk (n_arg + 1) $ unLoc arg)
-                    walk 0 _ = C.Pair (C.Label (nameIdent con)) unit
-                    walk n_arg _ = C.Pair (C.Label (nameIdent con)) (C.Fold $ foldr1 C.Pair (map (C.Var . str2genName . show) [0 .. n_arg - 1]))
-                 in C.Defn (nameIdent con) (walk 0 (T.AllT params ty))
-         in C.Defn (nameIdent id) dataDefn : map constrDefn constrs
-elabDecl (T.DefnDecl (T.TypDefn id ty)) = [C.Defn (nameIdent id) (elabType $ unLoc ty)]
-elabDecl (T.DefnDecl (T.FunDefnok id exp)) = [C.Defn (nameIdent id) (elabExpr $ unLoc exp)]
+        (:) <$> (C.Defn id <$> dataDefn) <*> mapM constrDefn constrs
+    where
+        labDefns :: m (Ident, C.Type) = do
+                idL <- freshIdent $ genName "l"
+                return (idL, C.Enum (map (nameIdent . fst) constrs))
+        caseAlts :: m [(Name, C.Type)] = forM constrs $ \(con, ty) -> do
+                mapM elabType (fst $ splitConstrTy $ unLoc ty) >>= \case
+                        [] -> return (nameIdent con, tUnit)
+                        tys -> (nameIdent con,) . C.Rec . C.Box <$> mkTTuple tys
+        dataDefn :: m C.Term = do
+                idL <- fst <$> labDefns
+                C.Q C.Sigma <$> labDefns <*> (C.Case (C.Var idL) <$> caseAlts)
+        constrDefn :: (Ident, T.LType) -> m C.Entry
+        constrDefn (con, ty) = do
+                let walk :: [Ident] -> T.Type -> m C.Term
+                    walk [] (T.AllT qnts body) = do
+                        body' <- walk [] $ unLoc body
+                        foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) body' qnts
+                    walk args (T.ArrT fun arg) = do
+                        id <- freshIdent $ str2genName $ show (length args)
+                        C.Lam <$> ((id,) <$> elabType (unLoc fun)) <*> walk (id : args) (unLoc arg)
+                    walk [] _ = return $ C.Pair (C.Label $ nameIdent con) unit
+                    walk args _ = do
+                        return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
+                C.Defn con <$> walk [] (T.AllT params ty)
+elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
+        ty' <- elabType $ unLoc ty
+        return [C.Defn id ty']
+elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
+        exp' <- elabExpr $ unLoc exp
+        return [C.Defn id exp']
 
 typ2core :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
-typ2core = return . concatMap elabDecl
+typ2core decs = concat <$> mapM elabDecl decs

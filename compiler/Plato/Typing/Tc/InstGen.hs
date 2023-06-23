@@ -9,9 +9,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Set qualified as S
 
-import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -61,7 +59,7 @@ quantify ::
         m ([Quant], Sigma)
 quantify [] ty = return ([], ty)
 quantify tvs ty = do
-        new_bndrs <- mapM (const $ BoundTv <$> freshIdent TyvarName) tvs
+        new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
         ty' <- zonk ty
         qnts <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs

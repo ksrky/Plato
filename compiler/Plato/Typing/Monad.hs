@@ -70,7 +70,7 @@ newUniq = pickUniq =<< ask
 
 -- | Variable generation
 newVarIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Ident
-newVarIdent = freshIdent VarName
+newVarIdent = freshIdent $ genName "$"
 
 -- | Type variable generation
 newTyVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Type

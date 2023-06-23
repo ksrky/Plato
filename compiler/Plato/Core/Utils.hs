@@ -1,6 +1,10 @@
 module Plato.Core.Utils where
 
+import Control.Monad.IO.Class
+import Control.Monad.Reader.Class
+import Plato.Common.Ident
 import Plato.Common.Name
+import Plato.Common.Uniq
 import Plato.Syntax.Core
 
 unit :: Term
@@ -13,8 +17,10 @@ mkLam :: [Bind Type] -> Term -> Term
 mkLam [] t = t
 mkLam ((x, ty) : rest) t = Lam (x, ty) (mkLam rest t)
 
-mkArr :: Type -> Type -> Type
-mkArr ty = Q Pi (wcName, ty)
+mkArr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Type -> Type -> m Type
+mkArr arg res = do
+        idWC <- freshIdent wcName
+        return $ Q Pi (idWC, arg) res
 
 mkQ :: PiSigma -> [Bind Type] -> Type -> Type
 mkQ pisigma binds body = foldr (Q pisigma) body binds
@@ -30,18 +36,32 @@ mkProduct [] = unit
 mkProduct [t] = t
 mkProduct ts = foldr1 Pair ts
 
-mkTTuple :: [Type] -> Type
-mkTTuple [] = tUnit
-mkTTuple tys = foldr1 (\ty -> Q Sigma (wcName, ty)) tys
+mkTTuple :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [Type] -> m Type
+mkTTuple [] = return tUnit
+mkTTuple [ty] = return ty
+mkTTuple (ty : tys) = do
+        idWC <- freshIdent wcName
+        Q Sigma (idWC, ty) <$> mkTTuple tys
 
-mkSplits :: Term -> [Name] -> Term -> Term
+mkSplits ::
+        forall ctx m.
+        (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
+        Term ->
+        [Ident] ->
+        Term ->
+        m Term
 mkSplits t vars body = loop t (reverse vars)
     where
-        loop :: Term -> [Name] -> Term
-        loop _ [] = body
-        loop t [x] = Let [Defn x t] body
-        loop t (x : [y]) = Split t (x, (y, body))
-        loop t (x : xs) = let yz = genName "yz" in Split t (x, (yz, loop (Var yz) xs))
+        loop :: Term -> [Ident] -> m Term
+        loop _ [] = return body
+        loop t [x] = return $ Let [Defn x t] body
+        loop t (x : [y]) = return $ Split t (x, (y, body))
+        loop t (x : xs) = do
+                idYZ <- freshIdent $ genName "yz"
+                u <- loop (Var idYZ) xs
+                return $ Split t (x, (idYZ, u))
 
-mkUnfold :: Term -> Term
-mkUnfold t = let x = genName "x" in Unfold (x, t) (Var x)
+mkUnfold :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Term -> m Term
+mkUnfold t = do
+        idX <- freshIdent $ genName "x"
+        return $ Unfold (idX, t) (Var idX)
