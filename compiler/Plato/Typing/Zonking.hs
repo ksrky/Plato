@@ -20,10 +20,8 @@ instance Zonking a => Zonking (Located a) where
 instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
-
-
 instance Zonking (Expr 'Typed) where
-        zonk (VarE n) = return (VarE n)
+        zonk (VarE id) = return (VarE id)
         zonk (AppE fun arg) = AppE <$> zonk fun <*> zonk arg
         zonk (AbsEok var ty body) = AbsEok var <$> zonk ty <*> zonk body
         zonk (TAppE exp tys) = TAppE <$> zonk exp <*> mapM zonk tys

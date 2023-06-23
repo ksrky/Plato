@@ -51,6 +51,10 @@ inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
 
+instance Show a => Show (Expected a) where
+        show Infer{} = "{tyref}"
+        show (Check ty) = show ty
+
 -- | Type checking of patterns
 checkPat ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
@@ -75,9 +79,10 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        subst <- concat <$> zipWithM checkPat pats arg_tys
-        _ <- apInstSigma sp instPatSigma res_ty exp_ty
-        return subst
+        binds <- concat <$> zipWithM checkPat pats arg_tys
+        res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+        _ <- apInstSigma sp instPatSigma res_ty' exp_ty
+        return binds
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -123,7 +128,7 @@ tcRho ::
         Expected Rho ->
         m (LExpr 'Typed)
 tcRho (L sp exp) exp_ty = do
-        liftIO $ debugM platoLog $ "tcRho: " ++ show exp
+        liftIO $ debugM platoLog $ "tcRho: " ++ show exp ++ " : " ++ show exp_ty
         L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
@@ -133,9 +138,11 @@ tcRho (L sp exp) exp_ty = do
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
+                liftIO $ debugM platoLog $ "tcRho': " ++ show fun' ++ " : " ++ show fun_ty
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                coercion <- apInstSigma sp instSigma res_ty exp_ty
+                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                coercion <- apInstSigma sp instSigma res_ty' exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
@@ -157,8 +164,8 @@ tcRho (L sp exp) exp_ty = do
         tcRho' (CaseE match alts) exp_ty = do
                 (match', match_ty) <- inferRho match
                 alts' <- forM alts $ \(pat, body) -> do
-                        subst <- checkPat pat match_ty
-                        (body', body_ty) <- local (modifyEnv $ extendList subst) $ inferRho body
+                        binds <- checkPat pat match_ty
+                        (body', body_ty) <- local (modifyEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
                 return $ CaseEok match' match_ty alts'
@@ -200,8 +207,8 @@ checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
-                subst <- concat <$> zipWithM checkPat pats pat_tys
-                body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
+                binds <- concat <$> zipWithM checkPat pats pat_tys
+                body' <- local (modifyEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'
         env_tys <- getEnvTypes
