@@ -176,10 +176,15 @@ instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-ps2typ :: (PlatoMonad m, MonadThrow m) => [P.LTopDecl] -> m (T.Program 'T.Untyped)
+ps2typ :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 ps2typ tdecs = do
         uref <- getUniq =<< ask
-        prog <- runReaderT (elabTopDecls tdecs) (Context uref initScope)
+        prog <-
+                runReaderT (elabTopDecls tdecs) (Context uref initScope)
+                        `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
+                                  , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
+                                  , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
+                                  ]
         uniq <- readUniq uref
         setUniq uniq =<< ask
         return prog

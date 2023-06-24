@@ -16,8 +16,8 @@ getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError ""
 
-lookupIndex :: (MonadReader env m, CoreEnv env) => Index -> m EnvEntry
-lookupIndex = asks . getE
+lookupIndex :: (MonadReader env m, CoreEnv env, MonadIO m) => Index -> m EnvEntry
+lookupIndex i = getE i =<< ask
 
 evalIndex :: (MonadReader env m, CoreEnv env, MonadThrow m, MonadIO m) => Index -> m Val
 evalIndex i =
@@ -101,7 +101,7 @@ eval (Unfold (x, t) u, sc) = unfold (x, (u, sc)) =<< eval (t, sc)
         unfold _ _ = throwError "Fold expected"
 
 evalProg :: (MonadReader e m, CoreEnv e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
-evalProg ([], s) = return s
+evalProg ([], sc) = return sc
 evalProg ((Decl id _) : tel, sc) = do
         (_, sc') <- decl id (PrtInfo id False) sc Nothing
         evalProg (tel, sc')

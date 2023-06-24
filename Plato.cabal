@@ -37,12 +37,15 @@ library
       Plato.Core.Monad
       Plato.Core.Scope
       Plato.Core.Utils
+      Plato.Driver.Context
       Plato.Driver.Flag
       Plato.Driver.Import
       Plato.Driver.Info
       Plato.Driver.Logger
       Plato.Driver.Monad
       Plato.Driver.Pipeline
+      Plato.Interpreter
+      Plato.Interpreter.Core
       Plato.Nicifier
       Plato.Nicifier.OpParser
       Plato.Nicifier.OpParser.Fixity
@@ -126,6 +129,7 @@ executable plato
   other-modules:
       Config
       Options
+      REPL
       Paths_Plato
   hs-source-dirs:
       driver/plato

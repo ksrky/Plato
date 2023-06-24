@@ -24,6 +24,7 @@ import Data.Maybe
 import Data.Set qualified as S
 import System.FilePath
 
+import Control.Exception.Safe
 import Plato.Common.Uniq (
         HasUniq (getUniq, setUniq),
         Uniq,
@@ -110,7 +111,7 @@ instance HasFlags Session where
                 env <- liftIO $ readIORef ref
                 liftIO $ writeIORef ref env{plt_flags = flag : plt_flags env}
 
-class (MonadReader Session m, MonadIO m) => PlatoMonad m where
+class (MonadReader Session m, MonadIO m, MonadCatch m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
 
@@ -119,7 +120,7 @@ type PlatoT m = ReaderT Session m
 unPlato :: PlatoT m a -> Session -> m a
 unPlato = runReaderT
 
-instance MonadIO m => PlatoMonad (PlatoT m) where
+instance (MonadIO m, MonadCatch m) => PlatoMonad (PlatoT m) where
         getSession = do
                 Session ref <- ask
                 liftIO $ readIORef ref

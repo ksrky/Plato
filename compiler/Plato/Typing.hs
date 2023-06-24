@@ -5,7 +5,9 @@ module Plato.Typing (typingDecls, typing) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
+import System.Log.Logger
 
+import Plato.Common.Error
 import Plato.Common.Uniq
 import Plato.Driver.Logger
 import Plato.Driver.Monad
@@ -15,7 +17,6 @@ import Plato.Typing.Kc
 import Plato.Typing.Monad
 import Plato.Typing.Tc
 import Plato.Typing.Zonking
-import System.Log.Logger
 
 typingDecls ::
         (MonadReader env m, HasTypEnv env, HasConEnv env, HasUniq env, MonadCatch m, MonadIO m) =>
@@ -56,10 +57,15 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         decs' <- typingDecls' decs
         return $ DefnDecl (FunDefnok id exp) : decs'
 
-typing :: (PlatoMonad m, MonadCatch m) => Program 'Untyped -> m (Program 'Typed)
+typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
 typing decs = do
         ctx <- initContext
-        prog <- runReaderT (typingDecls decs) ctx
+        prog <-
+                runReaderT (typingDecls decs) ctx
+                        `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
+                                  , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
+                                  , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
+                                  ]
         uniq <- liftIO $ readUniq ctx
         setUniq uniq =<< ask
         return prog

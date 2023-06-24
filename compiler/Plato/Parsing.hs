@@ -6,6 +6,7 @@ import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import
@@ -14,16 +15,23 @@ import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
-parseFile :: (PlatoMonad m, MonadThrow m) => FilePath -> m [LTopDecl]
-parseFile src = do
-        inp <- liftIO $ T.readFile src
-        uref <- getUniq =<< ask
-        (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
-        uniq <- readUniq uref
-        setUniq uniq =<< ask
-        runReaderT (processInstrs prog) emptyImporting
+parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
+parseFile src = ( `catches`
+                        [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
+                        , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
+                        , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
+                        ]
+                )
+        $ do
+                inp <- liftIO $ T.readFile src
+                uref <- getUniq =<< ask
+                (prog, _) <-
+                        runReaderT (liftIO $ parse src uref inp parser) uref
+                uniq <- readUniq uref
+                setUniq uniq =<< ask
+                runReaderT (processInstrs prog) emptyImporting
 
-processInstrs :: (PlatoMonad m, MonadThrow m) => [LInstr] -> ReaderT Importing m [LTopDecl]
+processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
 processInstrs [] = return []
 processInstrs (L _ (ImpDecl filename) : rest) = do
         checkCyclicImport filename
