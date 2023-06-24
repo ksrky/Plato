@@ -20,7 +20,7 @@ compileToCore :: FilePath -> Plato ()
 compileToCore src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
-        typsyn <- ps2typ pssyn'
+        typsyn <- psToTyp pssyn'
         typsyn' <- typing typsyn
-        _coresyn <- typ2core typsyn'
+        _coresyn <- typToCore typsyn'
         return ()

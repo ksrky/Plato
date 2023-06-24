@@ -9,7 +9,7 @@ module Plato.PsToTyp (
         elabType,
         elabDecls,
         elabTopDecls,
-        ps2typ,
+        psToTyp,
 ) where
 
 import Control.Exception.Safe
@@ -166,6 +166,9 @@ elabTopDecls ::
         m [T.Decl 'T.Untyped]
 elabTopDecls tdecs = Data.List.sort <$> elabDecls tdecs
 
+-----------------------------------------------------------
+--
+-----------------------------------------------------------
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
 instance HasUniq Context where
@@ -176,8 +179,8 @@ instance HasScope Context where
         getScope (Context _ sc) = sc
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
-ps2typ :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
-ps2typ tdecs = do
+psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
+psToTyp tdecs = do
         uref <- getUniq =<< ask
         runReaderT (elabTopDecls tdecs) (Context uref initScope)
                 `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []

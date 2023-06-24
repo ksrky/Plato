@@ -75,7 +75,7 @@ spec = do
                                                 _ -> False
                                         )
                                     )
-        describe "Test ps2typ" $ do
+        describe "Test psToTyp" $ do
                 it "test10.plt" $ do
                         test_file "test10.plt"
                                 `shouldReturn` [ "List : $48"
@@ -140,7 +140,7 @@ test_scfile fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        ps2typ pssyn'
+                        psToTyp pssyn'
                 )
                 =<< initSession
 
@@ -150,7 +150,7 @@ test_file fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        typsyn <- ps2typ pssyn'
+                        typsyn <- psToTyp pssyn'
                         return $ map (show . pretty) typsyn
                 )
                 =<< initSession

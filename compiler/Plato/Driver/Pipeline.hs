@@ -17,9 +17,9 @@ compile src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         whenFlagOn FDumpParsed $ liftIO $ putDoc $ pretty pssyn'
-        typsyn <- ps2typ pssyn'
+        typsyn <- psToTyp pssyn'
         typsyn' <- typing typsyn
         whenFlagOn FDumpTyped $ liftIO $ putDoc $ pretty typsyn'
-        coresyn <- typ2core typsyn'
+        coresyn <- typToCore typsyn'
         whenFlagOn FDumpCore $ liftIO $ putDoc $ pretty coresyn
         return ()

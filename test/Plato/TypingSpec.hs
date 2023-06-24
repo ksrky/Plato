@@ -81,7 +81,7 @@ test_file fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        typsyn <- ps2typ pssyn'
+                        typsyn <- psToTyp pssyn'
                         typsyn' <- typing typsyn
                         liftIO $ print $ map (show . pretty) typsyn'
                 )
@@ -95,7 +95,7 @@ test_uniq fn =
                         uniq1 <- liftIO . readIORef =<< getUniq =<< ask
                         pssyn' <- nicify pssyn
                         uniq2 <- liftIO . readIORef =<< getUniq =<< ask
-                        typsyn <- ps2typ pssyn'
+                        typsyn <- psToTyp pssyn'
                         uniq3 <- liftIO . readIORef =<< getUniq =<< ask
                         _ <- typing typsyn
                         uniq4 <- liftIO . readIORef =<< getUniq =<< ask

@@ -122,5 +122,5 @@ elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
         exp' <- elabExpr $ unLoc exp
         return [C.Defn id exp']
 
-typ2core :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
-typ2core decs = concat <$> mapM elabDecl decs
+typToCore :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
+typToCore decs = concat <$> mapM elabDecl decs
