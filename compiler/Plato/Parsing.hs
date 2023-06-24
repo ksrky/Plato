@@ -20,8 +20,6 @@ parseFile src = catchPsErrors $ do
         uref <- getUniq =<< ask
         (prog, _) <-
                 runReaderT (liftIO $ parse src uref inp parser) uref
-        uniq <- readUniq uref
-        setUniq uniq =<< ask
         runReaderT (processInstrs prog) emptyImporting
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
@@ -37,6 +35,6 @@ processInstrs (L _ (TopDecls tdecs) : rest) = do
 
 parsePartial :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> Parser a -> m a
 parsePartial inp parser = do
-        uniq <- getUniq =<< ask
-        (ast, _) <- liftIO $ parseLine uniq inp parser
+        uref <- getUniq =<< ask
+        (ast, _) <- liftIO $ parseLine uref inp parser
         return ast

@@ -60,12 +60,8 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
 typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
 typing decs = do
         ctx <- initContext
-        prog <-
-                runReaderT (typingDecls decs) ctx
-                        `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
-                                  , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
-                                  , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
-                                  ]
-        uniq <- liftIO $ readUniq ctx
-        setUniq uniq =<< ask
-        return prog
+        runReaderT (typingDecls decs) ctx
+                `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
+                          , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
+                          , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
+                          ]

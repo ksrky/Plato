@@ -134,7 +134,7 @@ test_decls inp = do
         sc <- defScope uniq
         runReaderT (elabDecls decs) (Context uniq sc)
 
-test_scfile :: (MonadIO m, MonadThrow m) => String -> m (Program 'Untyped)
+test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Program 'Untyped)
 test_scfile fn =
         runReaderT
                 ( do
@@ -144,7 +144,7 @@ test_scfile fn =
                 )
                 =<< initSession
 
-test_file :: (MonadIO m, MonadThrow m) => String -> m [String]
+test_file :: (MonadIO m, MonadCatch m) => String -> m [String]
 test_file fn =
         runReaderT
                 ( do

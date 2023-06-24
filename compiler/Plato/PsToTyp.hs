@@ -32,8 +32,8 @@ import Plato.Syntax.Typing qualified as T
 import Plato.Typing.Monad
 
 elabExpr ::
-        forall env m.
-        (HasCallStack, MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        forall e m.
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Expr ->
         m (T.Expr 'T.Untyped)
 elabExpr (P.VarE id) = T.VarE <$> scoping id
@@ -86,7 +86,7 @@ elabPat (P.InfixP left op right) = do
 elabPat P.FactorP{} = unreachable "fixity resolution failed"
 
 elabType ::
-        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Type ->
         m T.Type
 elabType (P.VarT var) = do
@@ -179,12 +179,8 @@ instance HasScope Context where
 ps2typ :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 ps2typ tdecs = do
         uref <- getUniq =<< ask
-        prog <-
-                runReaderT (elabTopDecls tdecs) (Context uref initScope)
-                        `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
-                                  , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
-                                  , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
-                                  ]
-        uniq <- readUniq uref
-        setUniq uniq =<< ask
-        return prog
+        runReaderT (elabTopDecls tdecs) (Context uref initScope)
+                `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
+                          , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
+                          , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
+                          ]

@@ -60,6 +60,7 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
+      Plato.PsToTyp.Error
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils

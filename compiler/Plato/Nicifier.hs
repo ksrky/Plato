@@ -18,15 +18,15 @@ import Plato.Syntax.Parsing
 
 -- TODO: detect mutual recursion for both data types and functions
 nicify :: PlatoMonad m => [LTopDecl] -> m [LTopDecl]
-nicify tdecs = catchFixResolError $ runReaderT (nicifyDecls tdecs) initFixityEnv
+nicify tdecs = catchFixResolError $ nicifyDecls tdecs initFixityEnv
 
-nicifyDecls :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => [LTopDecl] -> m [LTopDecl]
-nicifyDecls decs = do
-        decs' <- opParse decs
+nicifyDecls :: (HasFixityEnv e, MonadThrow m) => [LDecl] -> e -> m [LDecl]
+nicifyDecls decs env = do
+        decs' <- runReaderT (opParse decs) (getFixityEnv env)
         let (tds, lds) = groupingDecl decs'
         return $ tds ++ lds
 
-groupingDecl :: [LTopDecl] -> ([LTopDecl], [LDecl])
+groupingDecl :: [LDecl] -> ([LDecl], [LDecl])
 groupingDecl decs = execWriter $ forM decs $ \dec -> case dec of
         L _ DataD{} -> tell ([dec], [])
         _ -> tell ([], [dec])

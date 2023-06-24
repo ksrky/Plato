@@ -42,21 +42,23 @@ data PlatoEnv = PlatoEnv
         { plt_entryPath :: !FilePath
         , plt_libraryPaths :: ![FilePath]
         , plt_logPath :: !FilePath
-        , plt_uniq :: !Uniq
+        , plt_uniq :: !(IORef Uniq)
         , plt_imported :: !Imported
         , plt_flags :: [Flag]
         }
 
-initPlatoEnv :: PlatoEnv
-initPlatoEnv =
-        PlatoEnv
-                { plt_entryPath = ""
-                , plt_libraryPaths = []
-                , plt_logPath = ""
-                , plt_uniq = uniqZero
-                , plt_imported = S.empty
-                , plt_flags = []
-                }
+initPlatoEnv :: IO PlatoEnv
+initPlatoEnv = do
+        uref <- newIORef uniqZero
+        return
+                PlatoEnv
+                        { plt_entryPath = ""
+                        , plt_libraryPaths = []
+                        , plt_logPath = ""
+                        , plt_uniq = uref
+                        , plt_imported = S.empty
+                        , plt_flags = []
+                        }
 
 ----------------------------------------------------------------
 -- Plato Monad
@@ -64,15 +66,15 @@ initPlatoEnv =
 data Session = Session {unSession :: !(IORef PlatoEnv)}
 
 initSession :: MonadIO m => m Session
-initSession = liftIO $ Session <$> newIORef initPlatoEnv
+initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
 
 instance HasUniq Session where
         getUniq (Session ref) = do
                 env <- liftIO $ readIORef ref
-                liftIO $ newIORef $ plt_uniq env
+                return $ plt_uniq env
         setUniq uniq (Session ref) = do
                 env <- liftIO $ readIORef ref
-                liftIO $ writeIORef ref env{plt_uniq = uniq}
+                liftIO $ writeIORef (plt_uniq env) uniq
 
 instance HasInfo Session where
         getEntryPath (Session ref) = do

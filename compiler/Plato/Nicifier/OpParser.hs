@@ -4,10 +4,11 @@
 module Plato.Nicifier.OpParser (opParse) where
 
 import Control.Exception.Safe
-import Control.Monad
-import Control.Monad.Reader.Class
+import Control.Monad 
+import Control.Monad.Reader
 import Control.Monad.Trans.Writer
 import Data.Map.Strict qualified as M
+import Data.Maybe
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -17,19 +18,14 @@ import Plato.Nicifier.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 class Linearize a where
-        linearize :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => Located a -> m [Tok a]
+        linearize :: MonadThrow m => Located a -> ReaderT FixityEnv m [Tok a]
 
 instance Linearize Expr where
         linearize (L _ (InfixE lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                fix <-
-                        asks getFixityEnv
-                                >>= ( \case
-                                        Just op' -> return op'
-                                        Nothing -> return defaultFixity
-                                    )
-                                        . M.lookup (nameIdent op)
+                env <- ask
+                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
         linearize exp = do
                 exp' <- opParse exp
@@ -39,13 +35,8 @@ instance Linearize Pat where
         linearize (L _ (InfixP lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                fix <-
-                        asks getFixityEnv
-                                >>= ( \case
-                                        Just op' -> return op'
-                                        Nothing -> return defaultFixity
-                                    )
-                                        . M.lookup (nameIdent op)
+                env <- ask
+                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
         linearize pat = do
                 pat' <- opParse pat
@@ -55,13 +46,9 @@ instance Linearize Type where
         linearize (L _ (InfixT lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                fix <-
-                        asks getFixityEnv
-                                >>= ( \case
-                                        Just op' -> return op'
-                                        Nothing -> return defaultFixity
-                                    )
-                                        . M.lookup (nameIdent op){nameSpace = ConName} -- infix declaration does not distinguish ConOp or TyConOp
+                env <- ask
+                -- TODO: infix declaration does not distinguish ConOp or TyConOp
+                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op){nameSpace = ConName} env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
         linearize ty = do
                 ty' <- opParse ty
@@ -69,7 +56,7 @@ instance Linearize Type where
 
 -- | Operator parser
 class OpParser a where
-        opParse :: (MonadReader env m, HasFixityEnv env, MonadThrow m) => a -> m a
+        opParse :: MonadThrow m => a -> ReaderT FixityEnv m a
 
 instance OpParser LExpr where
         opParse (L sp exp) =
@@ -120,7 +107,7 @@ instance OpParser LType where
                         FactorT ty -> unLoc <$> opParse ty
 
 instance OpParser [LDecl] where
-        opParse decs = local (modifyFixityEnv extendFixity) $ forM rest $ \case
+        opParse decs = local (\env -> foldr (uncurry M.insert) env fixmap) $ forM rest $ \case
                 L sp (DataD id params constrs) ->
                         L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
                 L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
@@ -130,5 +117,3 @@ instance OpParser [LDecl] where
                 (fixmap, rest) = execWriter $ forM decs $ \case
                         L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
                         d -> tell ([], [d])
-                extendFixity :: FixityEnv -> FixityEnv
-                extendFixity env = foldr (uncurry M.insert) env fixmap

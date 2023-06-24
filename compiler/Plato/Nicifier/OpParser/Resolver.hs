@@ -2,8 +2,8 @@ module Plato.Nicifier.OpParser.Resolver where
 
 import Control.Exception.Safe
 import Control.Monad
-
 import GHC.Stack
+
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location

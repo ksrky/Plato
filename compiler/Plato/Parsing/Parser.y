@@ -345,7 +345,7 @@ token       :: { Token }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
-parseError (L sp tok) = throwPsErr sp tok
+parseError (L sp tok) = throwPsError sp tok
 
 ----------------------------------------------------------------
 -- mk Located
