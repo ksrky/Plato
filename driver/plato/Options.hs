@@ -2,9 +2,8 @@
 
 module Options where
 
+import Info
 import Options.Applicative
-
-import Config
 
 data Options = Options
         { libraryPaths :: [FilePath]
@@ -61,7 +60,7 @@ pRun = Run <$> argument str (metavar "FILE...") <*> pOptions
 pVersion :: Parser Command
 pVersion =
         flag'
-                (Version (cfg_version config))
+                (Version infoVersion)
                 ( long "version"
                         <> short 'v'
                         <> help "print version"
@@ -82,5 +81,5 @@ runWithCommand =
                         (pCommand <**> helper)
                         ( fullDesc
                                 <> progDesc "Compile Plato program and evaluate it on the core language."
-                                <> header ("Plato version " ++ cfg_version config ++ ", Copyright ksrk (c) 2022.")
+                                <> header ("Plato version " ++ infoVersion ++ ", Copyright ksrk (c) 2022.")
                         )

@@ -28,6 +28,7 @@ description: Please see the README on GitHub at <https://github.com/ksrky/Plato#
 
 dependencies:
   - base >= 4.7 && < 5
+  - aeson
   - array
   - bytestring
   - containers
@@ -40,6 +41,7 @@ dependencies:
   - optparse-applicative
   - prettyprinter
   - safe-exceptions
+  - template-haskell
   - transformers
   - text
   - vector

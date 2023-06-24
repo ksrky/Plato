@@ -106,7 +106,8 @@ library
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
-      array
+      aeson
+    , array
     , base >=4.7 && <5
     , bytestring
     , containers
@@ -119,6 +120,7 @@ library
     , optparse-applicative
     , prettyprinter
     , safe-exceptions
+    , template-haskell
     , text
     , transformers
     , vector
@@ -127,7 +129,8 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
-      Config
+      Info
+      Info.TH
       Options
       REPL
       Paths_Plato
@@ -144,6 +147,7 @@ executable plato
       hspec-discover:hspec-discover
   build-depends:
       Plato
+    , aeson
     , array
     , base >=4.7 && <5
     , bytestring
@@ -157,6 +161,7 @@ executable plato
     , optparse-applicative
     , prettyprinter
     , safe-exceptions
+    , template-haskell
     , text
     , transformers
     , vector
@@ -186,6 +191,7 @@ test-suite Plato-test
       hspec-discover:hspec-discover
   build-depends:
       Plato
+    , aeson
     , array
     , base >=4.7 && <5
     , bytestring
@@ -200,6 +206,7 @@ test-suite Plato-test
     , optparse-applicative
     , prettyprinter
     , safe-exceptions
+    , template-haskell
     , text
     , transformers
     , vector
