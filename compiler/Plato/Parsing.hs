@@ -1,12 +1,10 @@
 module Plato.Parsing (parseFile, parsePartial) where
 
-import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 
-import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import

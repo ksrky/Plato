@@ -9,6 +9,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Nicifier.OpParser.Fixity
 import Plato.Syntax.Parsing
+import Plato.Nicifier.Error
 
 data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
 
@@ -30,7 +31,7 @@ parse infixtm toks = do
         parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op fix@(Fixity prec dir)) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
-                        throwLocErr
+                        throwFixResolError
                                 (combineSpans (getLoc lhs) (getLoc tokop))
                                 "Error at parsing infix expression"
                 | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest)
