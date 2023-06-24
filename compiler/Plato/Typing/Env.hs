@@ -34,12 +34,12 @@ initTypEnv :: TypEnv
 initTypEnv = M.empty
 
 class HasTypEnv a where
-        getEnv :: Monad m => a -> m TypEnv
-        modifyEnv :: (TypEnv -> TypEnv) -> a -> a
+        getTypEnv :: a -> TypEnv
+        modifyTypEnv :: (TypEnv -> TypEnv) -> a -> a
 
 instance HasTypEnv TypEnv where
-        getEnv = return
-        modifyEnv = id
+        getTypEnv = id
+        modifyTypEnv = id
 
 class EnvManager a where
         extend :: Ident -> a -> TypEnv -> TypEnv
@@ -77,11 +77,11 @@ initConEnv :: ConEnv
 initConEnv = M.empty
 
 class HasConEnv a where
-        getConEnv :: Monad m => a -> m ConEnv
+        getConEnv :: a -> ConEnv
         modifyConEnv :: (ConEnv -> ConEnv) -> a -> a
 
 instance HasConEnv ConEnv where
-        getConEnv = return
+        getConEnv = id
         modifyConEnv = id
 
 extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env

@@ -1,6 +1,5 @@
 module Plato.Typing.Error where
 
-import Control.Exception hiding (Handler, catches)
 import Control.Exception.Safe
 import Prettyprinter
 

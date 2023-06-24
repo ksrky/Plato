@@ -48,7 +48,6 @@ library
       Plato.Interpreter.Core
       Plato.Nicifier
       Plato.Nicifier.OpParser
-      Plato.Nicifier.OpParser.Fixity
       Plato.Nicifier.OpParser.Resolver
       Plato.Parsing
       Plato.Parsing.Action

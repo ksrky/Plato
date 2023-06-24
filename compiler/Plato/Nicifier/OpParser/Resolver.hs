@@ -7,7 +7,6 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Nicifier.OpParser.Fixity
 import Plato.Syntax.Parsing
 
 data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
@@ -15,6 +14,13 @@ data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
 instance HasLoc (Tok a) where
         getLoc (TTerm tm) = getLoc tm
         getLoc (TOp op _) = getLoc op
+
+maxPrec, minPrec :: FixPrec
+maxPrec = 9
+minPrec = 0
+
+defaultFixity :: Fixity
+defaultFixity = Fixity maxPrec Leftfix
 
 parse :: forall a m. (HasCallStack, MonadThrow m) => (Located a -> Ident -> Located a -> a) -> [Tok a] -> m (Located a)
 parse infixtm toks = do

@@ -7,8 +7,7 @@ import Test.Hspec
 
 import Plato.Common.Uniq
 import Plato.Driver.Monad
-import Plato.Parsing
-import Plato.Parsing.Parser
+import Plato.Parsing 
 
 spec :: Spec
 spec = do
@@ -67,7 +66,7 @@ spec = do
 
 test_expr :: T.Text -> IO String
 test_expr inp = do
-        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
+        exp <- runReaderT (parseExpr inp) =<< initUniq
         return $ show (pretty exp)
 
 test_file :: FilePath -> IO [String]

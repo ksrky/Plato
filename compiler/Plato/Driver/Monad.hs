@@ -2,6 +2,7 @@ module Plato.Driver.Monad (
         PlatoEnv (..),
         Session (..),
         initSession,
+        getContext,
         PlatoMonad (..),
         PlatoT,
         unPlato,
@@ -17,6 +18,7 @@ module Plato.Driver.Monad (
         whenFlagOn,
 ) where
 
+import Control.Exception.Safe
 import Control.Monad.RWS
 import Control.Monad.Reader
 import Data.IORef
@@ -24,12 +26,8 @@ import Data.Maybe
 import Data.Set qualified as S
 import System.FilePath
 
-import Control.Exception.Safe
-import Plato.Common.Uniq (
-        HasUniq (getUniq, setUniq),
-        Uniq,
-        uniqZero,
- )
+import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Flag
 import Plato.Driver.Import
 import Plato.Driver.Info
@@ -42,20 +40,20 @@ data PlatoEnv = PlatoEnv
         { plt_entryPath :: !FilePath
         , plt_libraryPaths :: ![FilePath]
         , plt_logPath :: !FilePath
-        , plt_uniq :: !(IORef Uniq)
+        , plt_context :: !Context
         , plt_imported :: !Imported
         , plt_flags :: [Flag]
         }
 
 initPlatoEnv :: IO PlatoEnv
 initPlatoEnv = do
-        uref <- newIORef uniqZero
+        ctx <- initContext
         return
                 PlatoEnv
                         { plt_entryPath = ""
                         , plt_libraryPaths = []
                         , plt_logPath = ""
-                        , plt_uniq = uref
+                        , plt_context = ctx
                         , plt_imported = S.empty
                         , plt_flags = []
                         }
@@ -68,13 +66,14 @@ data Session = Session {unSession :: !(IORef PlatoEnv)}
 initSession :: MonadIO m => m Session
 initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
 
+getContext :: MonadIO m => Session -> m Context
+getContext (Session ref) = liftIO $ plt_context <$> readIORef ref
+
 instance HasUniq Session where
-        getUniq (Session ref) = do
-                env <- liftIO $ readIORef ref
-                return $ plt_uniq env
-        setUniq uniq (Session ref) = do
-                env <- liftIO $ readIORef ref
-                liftIO $ writeIORef (plt_uniq env) uniq
+        getUniq session = ctx_uniq <$> getContext session
+        setUniq uniq session = do
+                ctx <- getContext session
+                liftIO $ writeIORef (ctx_uniq ctx) uniq
 
 instance HasInfo Session where
         getEntryPath (Session ref) = do
@@ -113,6 +112,9 @@ instance HasFlags Session where
                 env <- liftIO $ readIORef ref
                 liftIO $ writeIORef ref env{plt_flags = flag : plt_flags env}
 
+-----------------------------------------------------------
+-- Plato Monad
+-----------------------------------------------------------
 class (MonadReader Session m, MonadIO m, MonadCatch m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()

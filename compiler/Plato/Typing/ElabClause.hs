@@ -36,7 +36,7 @@ dataConsof ty = do
             getTycon (AppT fun _) = getTycon (unLoc fun)
             getTycon (ConT tc) = tc
             getTycon _ = unreachable "Not a variant type"
-        lookupIdent (getTycon ty) =<< getConEnv =<< ask
+        lookupIdent (getTycon ty) =<< asks getConEnv
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
 subst exp replace id2 = subst' <$> exp

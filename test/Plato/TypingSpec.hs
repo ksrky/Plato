@@ -13,11 +13,10 @@ import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
-import Plato.Parsing.Parser
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
 import Plato.Typing
-import Plato.Typing.Utils
+import Plato.Typing.Env
 
 spec :: Spec
 spec = do
@@ -57,22 +56,35 @@ spec = do
                 it "test02.plt" $ do
                         test_uniq "test02.plt" >>= (`shouldSatisfy` isSorted)
 
-data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
+data Context = Context
+        { ctx_uniq :: IORef Uniq
+        , ctx_scope :: Scope
+        , ctx_typEnv :: TypEnv
+        , ctx_conEnv :: ConEnv
+        }
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
         setUniq uniq ref = setUniq uniq (ctx_uniq ref)
 
 instance HasScope Context where
-        getScope (Context _ sc) = sc
+        getScope = ctx_scope
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
+
+instance HasTypEnv Context where
+        getTypEnv = ctx_typEnv
+        modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
+
+instance HasConEnv Context where
+        getConEnv = ctx_conEnv
+        modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
 
 test_decls :: T.Text -> IO ()
 test_decls inp = do
-        uniq <- initUniq
-        decs <- runReaderT (parsePartial inp declsParser) uniq
-        decs' <- runReaderT (elabDecls decs) (Context uniq initScope)
-        ctx <- runReaderT initContext uniq
+        uref <- initUniq
+        let ctx = Context uref initScope initTypEnv initConEnv
+        decs <- runReaderT (parseDecls inp) ctx
+        decs' <- runReaderT (elabDecls decs) ctx
         void $ runReaderT (typingDecls decs') ctx
 
 test_file :: FilePath -> IO ()

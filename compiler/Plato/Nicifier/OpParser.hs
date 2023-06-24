@@ -1,10 +1,15 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Nicifier.OpParser (opParse) where
+module Plato.Nicifier.OpParser (
+        FixityEnv,
+        initFixityEnv,
+        HasFixityEnv (..),
+        opParse,
+) where
 
 import Control.Exception.Safe
-import Control.Monad 
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Writer
 import Data.Map.Strict qualified as M
@@ -13,9 +18,21 @@ import Data.Maybe
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
-import Plato.Nicifier.OpParser.Fixity
 import Plato.Nicifier.OpParser.Resolver
 import Plato.Syntax.Parsing
+
+type FixityEnv = M.Map Name Fixity
+
+initFixityEnv :: FixityEnv
+initFixityEnv = M.empty
+
+class HasFixityEnv a where
+        getFixityEnv :: a -> FixityEnv
+        modifyFixityEnv :: (FixityEnv -> FixityEnv) -> a -> a
+
+instance HasFixityEnv FixityEnv where
+        getFixityEnv = id
+        modifyFixityEnv = id
 
 class Linearize a where
         linearize :: MonadThrow m => Located a -> ReaderT FixityEnv m [Tok a]

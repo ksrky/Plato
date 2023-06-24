@@ -19,10 +19,8 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
-import Plato.Nicifier.OpParser
-import Plato.Nicifier.OpParser.Fixity
-import Plato.Parsing
-import Plato.Parsing.Parser
+import Plato.Nicifier.OpParser 
+import Plato.Parsing 
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
 import Plato.Syntax.Typing hiding (Spec)
@@ -122,7 +120,7 @@ instance HasScope Context where
 test_scexpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uniq <- initUniq
-        exp <- runReaderT (parsePartial inp exprParser) uniq
+        exp <- runReaderT (parseExpr inp  ) uniq
         exp' <- runReaderT (opParse exp) initFixityEnv
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
@@ -130,7 +128,7 @@ test_scexpr inp = do
 test_decls :: (MonadIO m, MonadThrow m) => T.Text -> m [Decl 'Untyped]
 test_decls inp = do
         uniq <- initUniq
-        decs <- runReaderT (parsePartial inp declsParser) uniq
+        decs <- runReaderT (parseDecls inp ) uniq
         sc <- defScope uniq
         runReaderT (elabDecls decs) (Context uniq sc)
 

@@ -12,10 +12,8 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
-import Plato.Nicifier.OpParser
-import Plato.Nicifier.OpParser.Fixity
-import Plato.Parsing
-import Plato.Parsing.Parser
+import Plato.Nicifier.OpParser 
+import Plato.Parsing 
 import Plato.Syntax.Parsing
 
 spec :: Spec
@@ -77,7 +75,7 @@ fixityEnv =
 
 test :: T.Text -> IO String
 test inp = do
-        exp <- runReaderT (parsePartial inp exprParser) =<< initUniq
+        exp <- runReaderT (parseExpr inp ) =<< initUniq
         exp' <- runReaderT (opParse exp) fixityEnv
         return $ show $ pretty exp'
 

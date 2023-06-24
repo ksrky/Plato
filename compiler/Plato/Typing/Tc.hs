@@ -10,7 +10,7 @@ module Plato.Typing.Tc (
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.Reader.Class (MonadReader (ask, local))
+import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
@@ -96,7 +96,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- zonk =<< find con =<< getEnv =<< ask
+        sigma <- zonk =<< find con =<< asks getTypEnv
         (_, rho) <- instantiate sigma
         return $ splitConstrTy rho
 
@@ -132,7 +132,7 @@ tcRho (L sp exp) exp_ty = do
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
-                sigma <- zonk =<< find var =<< getEnv =<< ask
+                sigma <- zonk =<< find var =<< asks getTypEnv
                 coercion <- apInstSigma sp instSigma sigma exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
@@ -145,16 +145,16 @@ tcRho (L sp exp) exp_ty = do
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
-                body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
+                body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
                 var_ty <- newTyVar
-                (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
+                (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsEok var var_ty (unLoc body')
-        tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
+        tcRho' (LetE bnds spcs body) exp_ty = local (modifyTypEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sigma <- zonk =<< find id =<< getEnv =<< ask
+                        sigma <- zonk =<< find id =<< asks getTypEnv
                         exp' <- checkClauses clauses sigma
                         return (id, exp')
                 body' <- tcRho body exp_ty
@@ -164,7 +164,7 @@ tcRho (L sp exp) exp_ty = do
                 (match', match_ty) <- inferRho match
                 alts' <- forM alts $ \(pat, body) -> do
                         binds <- checkPat pat match_ty
-                        (body', body_ty) <- local (modifyEnv $ extendList binds) $ inferRho body
+                        (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
                 return $ CaseEok match' match_ty alts'
@@ -207,7 +207,7 @@ checkClauses clauses sigma_ty = do
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 binds <- concat <$> zipWithM checkPat pats pat_tys
-                body' <- local (modifyEnv $ extendList binds) $ checkSigma body res_ty
+                body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'
         env_tys <- getEnvTypes

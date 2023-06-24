@@ -30,29 +30,29 @@ typingDecls' ::
         m [Decl 'Typed]
 typingDecls' [] = return []
 typingDecls' (SpecDecl (TypSpec id kn) : decs) = do
-        decs' <- local (modifyEnv $ extend id kn) $ typingDecls' decs
+        decs' <- local (modifyTypEnv $ extend id kn) $ typingDecls' decs
         return $ SpecDecl (TypSpec id kn) : decs'
 typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
         let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
-        local (modifyEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
+        local (modifyTypEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         decs' <-
-                local (modifyEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
+                local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
                         local (extendConEnv id constrs) $
                                 typingDecls' decs
         return $ DefnDecl (DatDefnok id kn params constrs) : decs'
 typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
-        kn <- zonk =<< find id =<< getEnv =<< ask
+        kn <- zonk =<< find id =<< asks getTypEnv
         checkKind ty kn
         decs' <- typingDecls' decs
         return $ DefnDecl (TypDefn id ty) : decs'
 typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         checkKindStar ty
-        decs' <- local (modifyEnv $ extend id ty) $ typingDecls' decs
+        decs' <- local (modifyTypEnv $ extend id ty) $ typingDecls' decs
         return $ SpecDecl (ValSpec id ty) : decs'
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         liftIO $ debugM platoLog $ "Start type checking of function '" ++ show id ++ "'"
-        sigma <- zonk =<< find id =<< getEnv =<< ask
+        sigma <- zonk =<< find id =<< asks getTypEnv
         exp <- checkClauses clauses sigma
         decs' <- typingDecls' decs
         return $ DefnDecl (FunDefnok id exp) : decs'
@@ -60,33 +60,35 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
 -----------------------------------------------------------
 -- typing
 -----------------------------------------------------------
-data Context = Context
+data TypContext = TypContext
         { ctx_typenv :: TypEnv
         , ctx_conenv :: ConEnv
         , ctx_uniq :: !(IORef Uniq)
         }
 
-initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
-initContext = do
+initTypContext :: PlatoMonad m => m TypContext
+initTypContext = do
         uref <- getUniq =<< ask
+        typenv <- getTypEnv <$> (getContext =<< ask)
+        conenv <- getConEnv <$> (getContext =<< ask)
         return
-                Context
-                        { ctx_typenv = initTypEnv
-                        , ctx_conenv = initConEnv
+                TypContext
+                        { ctx_typenv = typenv
+                        , ctx_conenv = conenv
                         , ctx_uniq = uref
                         }
 
-instance HasUniq Context where
+instance HasUniq TypContext where
         getUniq = return . ctx_uniq
         setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
 
-instance HasTypEnv Context where
-        getEnv = getEnv . ctx_typenv
-        modifyEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
+instance HasTypEnv TypContext where
+        getTypEnv = getTypEnv . ctx_typenv
+        modifyTypEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
 
-instance HasConEnv Context where
-        getConEnv = return . ctx_conenv
+instance HasConEnv TypContext where
+        getConEnv = ctx_conenv
         modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
 
 typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
-typing decs = catchErrors $ runReaderT (typingDecls decs) =<< initContext
+typing decs = catchErrors $ runReaderT (typingDecls decs) =<< initTypContext

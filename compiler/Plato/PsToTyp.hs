@@ -182,4 +182,5 @@ instance HasScope Context where
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 psToTyp tdecs = do
         uref <- getUniq =<< ask
-        catchErrors $ runReaderT (elabTopDecls tdecs) (Context uref initScope)
+        sc <- getScope <$> (getContext =<< ask)
+        catchErrors $ runReaderT (elabTopDecls tdecs) (Context uref sc)
