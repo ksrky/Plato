@@ -1,4 +1,9 @@
-module Plato.Parsing (parseFile, parsePartial) where
+module Plato.Parsing (
+        parseFile,
+        parsePartial,
+        parseExpr,
+        parseDecls,
+) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -18,8 +23,7 @@ parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
 parseFile src = catchPsErrors $ do
         inp <- liftIO $ T.readFile src
         uref <- getUniq =<< ask
-        (prog, _) <-
-                runReaderT (liftIO $ parse src uref inp parser) uref
+        (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
         runReaderT (processInstrs prog) emptyImporting
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
@@ -33,8 +37,14 @@ processInstrs (L _ (TopDecls tdecs) : rest) = do
         tdecs' <- processInstrs rest
         return (tdecs ++ tdecs')
 
-parsePartial :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> Parser a -> m a
-parsePartial inp parser = do
+parsePartial :: (MonadReader env m, HasUniq env, MonadIO m) => Parser a -> T.Text -> m a
+parsePartial parser inp = do
         uref <- getUniq =<< ask
         (ast, _) <- liftIO $ parseLine uref inp parser
         return ast
+
+parseExpr :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m LExpr
+parseExpr = parsePartial exprParser
+
+parseDecls :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m [LDecl]
+parseDecls = parsePartial declsParser

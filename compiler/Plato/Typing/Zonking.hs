@@ -9,7 +9,7 @@ import Control.Monad.IO.Class
 
 import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 class Zonking a where
         zonk :: MonadIO m => a -> m a

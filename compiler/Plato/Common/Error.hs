@@ -29,11 +29,11 @@ defaultHandler = Handler $ \(e :: SomeException) -> do
         liftIO (do putStrLn "Compiler bug:"; print e)
         return mempty
 
-catchError :: (MonadCatch m, MonadIO m) => m () -> m ()
-catchError =
+catchErrors :: (MonadCatch m, MonadIO m, Monoid a) => m a -> m a
+catchErrors =
         ( `catches`
-                [ Handler $ \e@LocErr{} -> liftIO (print e)
-                , Handler $ \e@PlainErr{} -> liftIO (print e)
+                [ Handler $ \e@LocErr{} -> liftIO (print e) >> return mempty
+                , Handler $ \e@PlainErr{} -> liftIO (print e) >> return mempty
                 , defaultHandler
                 ]
         )

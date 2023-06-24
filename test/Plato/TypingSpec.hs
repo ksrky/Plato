@@ -17,7 +17,7 @@ import Plato.Parsing.Parser
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
 import Plato.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 spec :: Spec
 spec = do

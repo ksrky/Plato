@@ -5,6 +5,7 @@ module Plato.Typing (typingDecls, typing) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
+import Data.IORef
 import System.Log.Logger
 
 import Plato.Common.Error
@@ -14,7 +15,6 @@ import Plato.Driver.Monad
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Kc
-import Plato.Typing.Monad
 import Plato.Typing.Tc
 import Plato.Typing.Zonking
 
@@ -57,11 +57,36 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         decs' <- typingDecls' decs
         return $ DefnDecl (FunDefnok id exp) : decs'
 
+-----------------------------------------------------------
+-- typing
+-----------------------------------------------------------
+data Context = Context
+        { ctx_typenv :: TypEnv
+        , ctx_conenv :: ConEnv
+        , ctx_uniq :: !(IORef Uniq)
+        }
+
+initContext :: (MonadReader env m, HasUniq env, MonadIO m) => m Context
+initContext = do
+        uref <- getUniq =<< ask
+        return
+                Context
+                        { ctx_typenv = initTypEnv
+                        , ctx_conenv = initConEnv
+                        , ctx_uniq = uref
+                        }
+
+instance HasUniq Context where
+        getUniq = return . ctx_uniq
+        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
+
+instance HasTypEnv Context where
+        getEnv = getEnv . ctx_typenv
+        modifyEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
+
+instance HasConEnv Context where
+        getConEnv = return . ctx_conenv
+        modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
+
 typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
-typing decs = do
-        ctx <- initContext
-        runReaderT (typingDecls decs) ctx
-                `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
-                          , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
-                          , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
-                          ]
+typing decs = catchErrors $ runReaderT (typingDecls decs) =<< initContext

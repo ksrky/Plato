@@ -8,7 +8,7 @@ import Control.Monad.Reader.Class
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 data Coercion = Id | Coer (Expr 'Typed -> Expr 'Typed)
 

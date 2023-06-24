@@ -123,4 +123,6 @@ elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
         return [C.Defn id exp']
 
 typToCore :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
-typToCore decs = concat <$> mapM elabDecl decs
+typToCore decs = do
+        uref <- getUniq =<< ask
+        runReaderT (concat <$> mapM elabDecl decs) uref

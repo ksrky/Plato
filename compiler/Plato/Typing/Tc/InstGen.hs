@@ -13,10 +13,10 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
-import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.Subst
 import Plato.Typing.Tc.Utils
+import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 -- | Instantiation

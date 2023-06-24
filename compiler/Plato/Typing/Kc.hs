@@ -18,7 +18,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Kc.Unify
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 -- asks . (Env.find @Kind) >=> zonk

@@ -9,16 +9,16 @@ import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Writer
 
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Driver.Monad
-import Plato.Nicifier.Error
 import Plato.Nicifier.OpParser
 import Plato.Nicifier.OpParser.Fixity
 import Plato.Syntax.Parsing
 
 -- TODO: detect mutual recursion for both data types and functions
 nicify :: PlatoMonad m => [LTopDecl] -> m [LTopDecl]
-nicify tdecs = catchFixResolError $ nicifyDecls tdecs initFixityEnv
+nicify tdecs = catchErrors $ nicifyDecls tdecs initFixityEnv
 
 nicifyDecls :: (HasFixityEnv e, MonadThrow m) => [LDecl] -> e -> m [LDecl]
 nicifyDecls decs env = do

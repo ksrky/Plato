@@ -15,7 +15,7 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 -- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::

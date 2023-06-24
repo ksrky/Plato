@@ -5,7 +5,6 @@
 module Plato.Parsing.Lexer where
 
 import Control.Monad (when)
-import Control.Monad.State (lift)
 
 import Plato.Parsing.Action
 import Plato.Parsing.Error

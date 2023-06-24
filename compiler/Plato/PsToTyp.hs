@@ -29,7 +29,7 @@ import Plato.PsToTyp.SynRstrc
 import Plato.PsToTyp.Utils
 import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 elabExpr ::
         forall e m.
@@ -167,7 +167,7 @@ elabTopDecls ::
 elabTopDecls tdecs = Data.List.sort <$> elabDecls tdecs
 
 -----------------------------------------------------------
---
+-- psToTyp
 -----------------------------------------------------------
 data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
 
@@ -182,8 +182,4 @@ instance HasScope Context where
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 psToTyp tdecs = do
         uref <- getUniq =<< ask
-        runReaderT (elabTopDecls tdecs) (Context uref initScope)
-                `catches` [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
-                          , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
-                          , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
-                          ]
+        catchErrors $ runReaderT (elabTopDecls tdecs) (Context uref initScope)

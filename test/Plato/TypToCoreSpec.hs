@@ -27,7 +27,7 @@ import Plato.PsToTyp.Scoping
 import Plato.RunCore
 import Plato.TypToCore qualified as C
 import Plato.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 spec :: Spec
 spec = do
