@@ -9,11 +9,11 @@ module Plato.Parsing.Parser (
     tokenParser,
 ) where
 
-import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 
+import Plato.Parsing.Error
 import Plato.Parsing.Layout
 import Plato.Parsing.Lexer
 import Plato.Parsing.Monad
@@ -345,7 +345,7 @@ token       :: { Token }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
-parseError (L sp tok) = lift $ throwLocErr sp $ sep ["parse error at", pretty tok]
+parseError (L sp tok) = throwPsErr sp tok
 
 ----------------------------------------------------------------
 -- mk Located

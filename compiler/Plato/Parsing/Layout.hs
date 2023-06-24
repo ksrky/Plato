@@ -1,15 +1,13 @@
 module Plato.Parsing.Layout where
 
+import Data.Text qualified as T
+
+import Plato.Common.Location
 import Plato.Parsing.Action
+import Plato.Parsing.Error
 import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
-
-import Plato.Common.Error
-import Plato.Common.Location
-
-import Control.Monad.State
-import Data.Text qualified as T
 
 ----------------------------------------------------------------
 -- Layout
@@ -90,7 +88,7 @@ rightBrace (pos, _, _, inp) len = do
                 _ -> do
                         -- note: Layout rule
                         -- L (} : ts) ms           = parse-error
-                        lift $ throwLocErr sp "missing an opening brace before closing"
+                        throwLexError sp "missing an opening brace before closing"
 
 leftBrace :: Action
 leftBrace (pos, _, _, inp) len = do
@@ -103,7 +101,7 @@ leftBrace (pos, _, _, inp) len = do
         return $ L sp (TokSymbol SymLBrace)
 
 popLayoutLevel :: Located Token -> Parser Span
-popLayoutLevel (L sp _) = do
+popLayoutLevel (L sp tok) = do
         lev <- getIndentLevels
         case lev of
                 m : ms | m /= 0 -> do
@@ -111,4 +109,4 @@ popLayoutLevel (L sp _) = do
                         -- L (t : ts) (m : ms)     = }  :  (L (t : ts) ms)             if m≠0 and parse-error(t)
                         setIndentLevels ms
                         return sp -- tmp: sp0
-                _ -> lift $ throwLocErr sp "parse error"
+                _ -> throwPsError sp tok

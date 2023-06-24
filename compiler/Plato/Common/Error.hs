@@ -24,12 +24,17 @@ import Prettyprinter.Render.String (renderString)
 
 import Plato.Common.Location
 
+defaultHandler :: (MonadIO m, Monoid a) => Handler m a
+defaultHandler = Handler $ \(e :: SomeException) -> do
+        liftIO (do putStrLn "Compiler bug:"; print e)
+        return mempty
+
 catchError :: (MonadCatch m, MonadIO m) => m () -> m ()
 catchError =
         ( `catches`
                 [ Handler $ \e@LocErr{} -> liftIO (print e)
                 , Handler $ \e@PlainErr{} -> liftIO (print e)
-                , Handler $ \(e :: SomeException) -> liftIO (print e)
+                , defaultHandler
                 ]
         )
 
@@ -48,6 +53,12 @@ unreachable s = error $ "unreachable: " ++ s
 ----------------------------------------------------------------
 -- Error type
 ----------------------------------------------------------------
+
+locatedErrorMessage :: Span -> Doc ann -> String
+locatedErrorMessage NoSpan msg =
+        "<no location info>: " ++ renderString (layoutPretty defaultLayoutOptions msg)
+locatedErrorMessage sp msg =
+        renderString (layoutPretty defaultLayoutOptions $ hcat [pretty sp, colon, space, msg])
 
 -- | Error with location
 data LocatedError = forall ann. LocErr Span (Doc ann)

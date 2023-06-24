@@ -11,25 +11,20 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import
 import Plato.Driver.Monad
+import Plato.Parsing.Error
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
 parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
-parseFile src = ( `catches`
-                        [ Handler $ \e@LocErr{} -> liftIO (print e) >> return []
-                        , Handler $ \e@PlainErr{} -> liftIO (print e) >> return []
-                        , Handler $ \(e :: SomeException) -> liftIO (print e) >> return []
-                        ]
-                )
-        $ do
-                inp <- liftIO $ T.readFile src
-                uref <- getUniq =<< ask
-                (prog, _) <-
-                        runReaderT (liftIO $ parse src uref inp parser) uref
-                uniq <- readUniq uref
-                setUniq uniq =<< ask
-                runReaderT (processInstrs prog) emptyImporting
+parseFile src = catchPsErrors $ do
+        inp <- liftIO $ T.readFile src
+        uref <- getUniq =<< ask
+        (prog, _) <-
+                runReaderT (liftIO $ parse src uref inp parser) uref
+        uniq <- readUniq uref
+        setUniq uniq =<< ask
+        runReaderT (processInstrs prog) emptyImporting
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
 processInstrs [] = return []
