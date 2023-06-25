@@ -12,7 +12,7 @@ import Plato.Syntax.Core
 
 data CoreEnv = CoreEnv (IORef EnvEntries) Scope
 
-initCoreEnv :: IO CoreEnv
+initCoreEnv :: (MonadReader e m, HasCoreEnv e)=> m CoreEnv
 initCoreEnv = do
         eref <- newIORef []
         return $ CoreEnv eref emptyScope

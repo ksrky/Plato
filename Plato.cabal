@@ -34,7 +34,6 @@ library
       Plato.Common.Utils
       Plato.Core.Data
       Plato.Core.Eval
-      Plato.Core.Monad
       Plato.Core.Scope
       Plato.Core.Utils
       Plato.Driver.Context
@@ -43,7 +42,6 @@ library
       Plato.Driver.Info
       Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Interpreter
       Plato.Interpreter.Core
       Plato.Nicifier
       Plato.Nicifier.OpParser

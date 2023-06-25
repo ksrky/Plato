@@ -5,30 +5,6 @@ import GHC.IORef
 import Plato.Common.Ident
 import Plato.Syntax.Core
 
-{-type CoreEnv = EnvEntries
-
-class HasCoreEnv e where
-        getCoreEnv :: MonadIO m => e -> m CoreEnv
-        setCoreEnv :: MonadIO m => e -> CoreEnv -> m ()
-
-instance HasCoreEnv (IORef CoreEnv) where
-        getCoreEnv = liftIO . readIORef
-        setCoreEnv ref = liftIO . writeIORef ref
-
-extE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => PrtInfo -> m Index
-extE fi = do
-        env <- getCoreEnv =<< ask
-        undefined
-
-setE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Index -> EnvEntry -> m ()
-setE i v = do
-        env <- getCoreEnv =<< ask
-        let fi = snd (env !! i)
-        flip setCoreEnv (set env i (v, fi)) =<< ask
-
-getE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Index -> m EnvEntry
-getE i = fst . (!! i) <$> (getCoreEnv =<< ask)
--}
 class Env e where
         emptyE :: MonadIO m => m e
         extendE :: MonadIO m => PrtInfo -> e -> m Index
@@ -65,16 +41,43 @@ newtype Boxed = Boxed (Clos Term) deriving (Eq, Show)
 data Val
         = Ne Ne
         | VType
-        | VQ PiSigma (Clos (Type, Bind Type))
+        | VQ PiSigma (Clos (Bind Type)) (Clos Type)
         | VLift (Clos Type)
         | VLam (Bind (Clos Term))
-        | VPair (Clos (Term, Term))
+        | VPair (Clos Term) (Clos Term)
         | VEnum [Label]
         | VLabel Label
         | VBox Boxed
         | VRec (Clos Type)
         | VFold (Clos Term)
         deriving (Eq, Show)
+
+instance Pretty (Clos t) where
+        pretty (t, _) = pretty t
+
+instance Pretty Boxed where
+        pretty (Boxed t) = brackets $ pretty t
+
+instance Pretty Val where
+        pretty (Ne ne) = pretty ne
+        pretty VType = "*"
+        pretty (VQ Pi bind ty) = hsep [parens (pretty bind), "->", pretty ty]
+        pretty (VQ Sigma bind ty) = hsep [parens (pretty bind), "*", pretty ty]
+        pretty (VLam bind t) = hsep ["\\", pretty bind, dot, pretty t]
+        pretty (VPair t u) = parens (pretty t <> comma <+> pretty u)
+        pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
+        pretty (VLabel lab) = "`" <> pretty lab
+        pretty (VBox box) = pretty box
+        pretty (VRec ty) = "Rec" <+> pretty ty
+        pretty (VFold t) = "fold" <+> pretty t
+
+instance Pretty Ne where
+        pretty (NVar i) = pretty i
+        pretty (ne :.. t) = hsep [pretty ne, ":..", pretty t]
+        pretty (NSplit ne (x, y, t)) = "<not yet>" 
+        pretty (NCase ne lts) = "<not yet>"
+        pretty (NForce ne) = "<not yet>"
+        pretty (NUnfold ne bind) = "<not yet>"
 
 -- | Neutral terms.
 data Ne
