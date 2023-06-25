@@ -6,16 +6,21 @@ import Data.Text qualified as T
 
 import Plato.Common.Location
 import Plato.Driver.Monad
-import Plato.Nicifier.OpParser
+import Plato.Nicifier
 import Plato.Parsing
-import Plato.Parsing.Parser
-import Plato.PsToTyp as T
+import Plato.PsToTyp
 import Plato.Syntax.Core
-import Plato.TypToCore as C
-import Plato.Typing.Tc
+import Plato.TypToCore
+import Plato.Typing
 
-interpret :: PlatoMonad m => T.Text -> m ()
-interpret inp = undefined
+interpretExpr :: PlatoMonad m => T.Text -> m b
+interpretExpr inp = do
+        pssyn <- parseExpr inp
+        pssyn' <- nicifyExpr pssyn
+        typsyn <- psToTypExpr pssyn'
+        typsyn' <- typingExpr typsyn
+        coresyn <- typToCoreExpr typsyn'
+        undefined
 
 class Interpreter e where
         enter :: (MonadIO m, MonadThrow m) => e -> Prog -> m ()

@@ -6,6 +6,7 @@ module Plato.Syntax.Typing.Decl where
 import Prettyprinter
 
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Utils
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
@@ -15,6 +16,8 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
+type LDecl a = Located (Decl a)
+
 data Defn (a :: TcFlag) where
         -- ValDefn Ident LExpr |
         FunDefn :: Ident -> [Clause 'Untyped] -> Defn 'Untyped

@@ -5,6 +5,11 @@ module Plato (
         module Plato.Interpreter,
 ) where
 
+import Control.Monad.IO.Class
+import Data.Text qualified as T
+import Prettyprinter
+import Prettyprinter.Render.Text
+
 import Plato.Driver.Monad
 import Plato.Interpreter
 import Plato.Nicifier
@@ -16,11 +21,22 @@ import Plato.Typing
 runPlato :: FilePath -> Session -> IO ()
 runPlato = unPlato . compileToCore
 
-compileToCore :: FilePath -> Plato ()
+compileToCore :: PlatoMonad m => FilePath -> m ()
 compileToCore src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
+        whenFlagOn FDumpParsed $ liftIO $ putDoc $ pretty pssyn'
         typsyn <- psToTyp pssyn'
         typsyn' <- typing typsyn
-        _coresyn <- typToCore typsyn'
-        return ()
+        whenFlagOn FDumpTyped $ liftIO $ putDoc $ pretty typsyn'
+        coresyn <- typToCore typsyn'
+        whenFlagOn FDumpCore $ liftIO $ putDoc $ pretty coresyn
+
+interpretExpr :: PlatoMonad m => T.Text -> m ()
+interpretExpr inp = do
+        pssyn <- parseExpr inp
+        pssyn' <- nicifyExpr pssyn
+        typsyn <- psToTypExpr pssyn'
+        typsyn' <- typingExpr typsyn
+        coresyn <- typToCoreExpr typsyn'
+        undefined

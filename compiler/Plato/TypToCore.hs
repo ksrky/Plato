@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore where
+module Plato.TypToCore (typToCore, typToCoreExpr) where
 
 import Control.Monad.Reader
 import Data.Foldable
@@ -126,3 +126,8 @@ typToCore :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
 typToCore decs = do
         uref <- getUniq =<< ask
         runReaderT (concat <$> mapM elabDecl decs) uref
+
+typToCoreExpr :: PlatoMonad m => T.LExpr 'T.Typed -> m C.Term
+typToCoreExpr exp = do
+        uref <- getUniq =<< ask
+        runReaderT (elabExpr $ unLoc exp) uref

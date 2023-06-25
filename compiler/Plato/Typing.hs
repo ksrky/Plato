@@ -1,13 +1,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing (typingDecls, typing) where
+module Plato.Typing (
+        typingDecls,
+        typing,
+        typingExpr,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
 import Data.IORef
 import System.Log.Logger
 
+import Control.Monad.Writer
 import Plato.Common.Error
 import Plato.Common.Uniq
 import Plato.Driver.Logger
@@ -19,43 +24,44 @@ import Plato.Typing.Tc
 import Plato.Typing.Zonking
 
 typingDecls ::
-        (MonadReader env m, HasTypEnv env, HasConEnv env, HasUniq env, MonadCatch m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         [Decl 'Untyped] ->
-        m [Decl 'Typed]
-typingDecls decs = typingDecls' decs >>= mapM zonk
+        m ([Decl 'Typed], e)
+typingDecls decs = do
+        (env, decs) <- runWriterT $ typingDecls' decs
+        (,env) <$> mapM zonk decs
 
 typingDecls' ::
-        (MonadReader env m, HasTypEnv env, HasConEnv env, HasUniq env, MonadCatch m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         [Decl 'Untyped] ->
-        m [Decl 'Typed]
-typingDecls' [] = return []
+        WriterT [Decl 'Typed] m e
+typingDecls' [] = ask
 typingDecls' (SpecDecl (TypSpec id kn) : decs) = do
-        decs' <- local (modifyTypEnv $ extend id kn) $ typingDecls' decs
-        return $ SpecDecl (TypSpec id kn) : decs'
+        tell [SpecDecl (TypSpec id kn)]
+        local (modifyTypEnv $ extend id kn) $ typingDecls' decs
 typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
         let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
-        decs' <-
-                local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
-                        local (extendConEnv id constrs) $
-                                typingDecls' decs
-        return $ DefnDecl (DatDefnok id kn params constrs) : decs'
+        tell [DefnDecl (DatDefnok id kn params constrs)]
+        local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
+                local (extendConEnv id constrs) $
+                        typingDecls' decs
 typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
         kn <- zonk =<< find id =<< asks getTypEnv
         checkKind ty kn
-        decs' <- typingDecls' decs
-        return $ DefnDecl (TypDefn id ty) : decs'
+        tell [DefnDecl (TypDefn id ty)]
+        typingDecls' decs
 typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         checkKindStar ty
-        decs' <- local (modifyTypEnv $ extend id ty) $ typingDecls' decs
-        return $ SpecDecl (ValSpec id ty) : decs'
+        tell [SpecDecl (ValSpec id ty)]
+        local (modifyTypEnv $ extend id ty) $ typingDecls' decs
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         liftIO $ debugM platoLog $ "Start type checking of function '" ++ show id ++ "'"
         sigma <- zonk =<< find id =<< asks getTypEnv
         exp <- checkClauses clauses sigma
-        decs' <- typingDecls' decs
-        return $ DefnDecl (FunDefnok id exp) : decs'
+        tell [DefnDecl (FunDefnok id exp)]
+        typingDecls' decs
 
 -----------------------------------------------------------
 -- typing
@@ -91,4 +97,11 @@ instance HasConEnv TypContext where
         modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
 
 typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
-typing decs = catchErrors $ runReaderT (typingDecls decs) =<< initTypContext
+typing decs = catchErrors $ do
+        (decs, env) <- runReaderT (typingDecls decs) =<< initTypContext
+        ctx <- getContext =<< ask
+        setContext (setTypEnv (getTypEnv env) ctx) =<< ask
+        return decs
+
+typingExpr :: PlatoMonad m => LExpr 'Untyped -> m (LExpr 'Typed)
+typingExpr exp = fst <$> (runReaderT (inferType exp) =<< initTypContext)

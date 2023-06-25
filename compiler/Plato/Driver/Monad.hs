@@ -3,6 +3,7 @@ module Plato.Driver.Monad (
         Session (..),
         initSession,
         getContext,
+        setContext,
         PlatoMonad (..),
         PlatoT,
         unPlato,
@@ -68,6 +69,11 @@ initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
 
 getContext :: MonadIO m => Session -> m Context
 getContext (Session ref) = liftIO $ plt_context <$> readIORef ref
+
+setContext :: MonadIO m => Context -> Session -> m ()
+setContext ctx (Session ref) = do
+        env <- liftIO $ readIORef ref
+        liftIO $ writeIORef ref env{plt_context = ctx}
 
 instance HasUniq Session where
         getUniq session = ctx_uniq <$> getContext session

@@ -1,30 +1,47 @@
 module Plato.Core.Data where
 
 import Control.Monad.IO.Class
-import Data.IORef
-
+import Control.Monad.Reader.Class
+import GHC.IORef
 import Plato.Common.Ident
 import Plato.Syntax.Core
 
+{-type CoreEnv = EnvEntries
+
+class HasCoreEnv e where
+        getCoreEnv :: MonadIO m => e -> m CoreEnv
+        setCoreEnv :: MonadIO m => e -> CoreEnv -> m ()
+
+instance HasCoreEnv (IORef CoreEnv) where
+        getCoreEnv = liftIO . readIORef
+        setCoreEnv ref = liftIO . writeIORef ref
+
+extE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => PrtInfo -> m Index
+extE fi = do
+        env <- getCoreEnv =<< ask
+        undefined
+
+setE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Index -> EnvEntry -> m ()
+setE i v = do
+        env <- getCoreEnv =<< ask
+        let fi = snd (env !! i)
+        flip setCoreEnv (set env i (v, fi)) =<< ask
+
+getE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Index -> m EnvEntry
+getE i = fst . (!! i) <$> (getCoreEnv =<< ask)
+
+set :: [a] -> Int -> a -> [a]
+set [] _ _ = error "list is empty"
+set (_ : as) 0 b = b : as
+set (a : as) i b = a : set as (i - 1) b-}
 class CoreEnv e where
-        emptyE :: MonadIO m => m e
+        emptyE :: e
         extendE :: MonadIO m => PrtInfo -> e -> m Index
         getE :: MonadIO m => Index -> e -> m EnvEntry
         setE :: MonadIO m => Index -> EnvEntry -> e -> m ()
 
-instance CoreEnv (IORef EnvEntries) where
-        {-emptyE = liftIO $ newIORef []
-        extendE fi env = do
-                let i = length env
-                env ++ [(Id i, fi)]
-                return i
-        getE i ref = do
-                env <- liftIO $ readIORef ref
-                case env !! i of (v, _) -> return v
-        setE i v ref = do
-                env <- liftIO $ readIORef ref
-                case env !! i of (_, fi) -> liftIO $ writeIORef (env !! i) (v, fi)-}
-                
+instance CoreEnv EnvEntries
+
 type Index = Int
 
 newtype Scope = Scope [(Ident, (Index, Maybe (Clos Type)))] deriving (Eq, Show)

@@ -29,6 +29,8 @@ initFixityEnv = M.empty
 class HasFixityEnv a where
         getFixityEnv :: a -> FixityEnv
         modifyFixityEnv :: (FixityEnv -> FixityEnv) -> a -> a
+        setFixityEnv :: FixityEnv -> a -> a
+        setFixityEnv = modifyFixityEnv . const
 
 instance HasFixityEnv FixityEnv where
         getFixityEnv = id
@@ -75,6 +77,9 @@ instance Linearize Type where
 class OpParser a where
         opParse :: MonadThrow m => a -> ReaderT FixityEnv m a
 
+instance OpParser FixityEnv where
+        opParse _ = ask
+
 instance OpParser LExpr where
         opParse (L sp exp) =
                 L sp <$> case exp of
@@ -85,8 +90,7 @@ instance OpParser LExpr where
                                 unLoc <$> parse InfixE toks
                         LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
-                                decs' <- opParse decs
-                                body' <- opParse body
+                                (decs', body') <- opParse (decs, body)
                                 return $ LetE decs' body'
                         CaseE match alts -> do
                                 match' <- opParse match
@@ -130,6 +134,21 @@ instance OpParser [LDecl] where
                 L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
                 L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
                 dec -> return dec
+            where
+                (fixmap, rest) = execWriter $ forM decs $ \case
+                        L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
+                        d -> tell ([], [d])
+
+instance OpParser a => OpParser ([LDecl], a) where
+        opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
+                rest' <- forM rest $ \case
+                        L sp (DataD id params constrs) ->
+                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
+                        L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
+                        L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
+                        dec -> return dec
+                t' <- opParse t
+                return (rest', t')
             where
                 (fixmap, rest) = execWriter $ forM decs $ \case
                         L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])

@@ -36,6 +36,8 @@ initTypEnv = M.empty
 class HasTypEnv a where
         getTypEnv :: a -> TypEnv
         modifyTypEnv :: (TypEnv -> TypEnv) -> a -> a
+        setTypEnv :: TypEnv -> a -> a
+        setTypEnv = modifyTypEnv . const
 
 instance HasTypEnv TypEnv where
         getTypEnv = id

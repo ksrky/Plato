@@ -22,6 +22,8 @@ type Scope = M.Map Name Ident
 class HasScope a where
         getScope :: a -> Scope
         modifyScope :: (Scope -> Scope) -> a -> a
+        setScope :: Scope -> a -> a
+        setScope = modifyScope . const
         extendScope :: Ident -> a -> a
         extendScope id = modifyScope (M.insert (nameIdent id) id)
         extendListScope :: [Ident] -> a -> a

@@ -10,6 +10,7 @@ module Plato.PsToTyp (
         elabDecls,
         elabTopDecls,
         psToTyp,
+        psToTypExpr,
 ) where
 
 import Control.Exception.Safe
@@ -182,5 +183,18 @@ instance HasScope Context where
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
 psToTyp tdecs = do
         uref <- getUniq =<< ask
-        sc <- getScope <$> (getContext =<< ask)
-        catchErrors $ runReaderT (elabTopDecls tdecs) (Context uref sc)
+        ctx <- getContext =<< ask
+        (decs, sc) <-
+                catchErrors $
+                        (`runReaderT` Context uref (getScope ctx)) $ do
+                                decs <- elabTopDecls tdecs
+                                env <- extendScopeFromSeq tdecs
+                                return (decs, ctx_scope env)
+        setContext (setScope sc ctx) =<< ask
+        return decs
+
+psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
+psToTypExpr exp = do
+        uref <- getUniq =<< ask
+        ctx <- getContext =<< ask
+        runReaderT (elabExpr `traverse` exp) (Context uref (getScope ctx))

@@ -3,6 +3,7 @@
 
 module Plato.Parsing.Parser (
     parser,
+    instrParser,
     exprParser,
     typeParser,
     declsParser,
@@ -33,6 +34,7 @@ import Prettyprinter
 %error { parseError }
 
 %name parser program
+%name instrParser instr
 %name exprParser expr
 %name typeParser type
 %name declsParser decls
@@ -77,6 +79,13 @@ digit                           { (mkLDigit -> Just $$) }
 program     :: { Program }
             : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
             | ';' topdecls                          { [$2] }
+
+-----------------------------------------------------------
+-- Instructions
+-----------------------------------------------------------
+instr       :: { LInstr }
+            : topdecls                              { $1 }
+            | expr                                  { L (getLoc $1) (EvalExpr $1) }
 
 -----------------------------------------------------------
 -- Imports
