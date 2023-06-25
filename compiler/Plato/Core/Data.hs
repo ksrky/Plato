@@ -1,7 +1,6 @@
 module Plato.Core.Data where
 
 import Control.Monad.IO.Class
-import Control.Monad.Reader.Class
 import GHC.IORef
 import Plato.Common.Ident
 import Plato.Syntax.Core
@@ -29,18 +28,31 @@ setE i v = do
 
 getE :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Index -> m EnvEntry
 getE i = fst . (!! i) <$> (getCoreEnv =<< ask)
-
-set :: [a] -> Int -> a -> [a]
-set [] _ _ = error "list is empty"
-set (_ : as) 0 b = b : as
-set (a : as) i b = a : set as (i - 1) b-}
-class CoreEnv e where
-        emptyE :: e
+-}
+class Env e where
+        emptyE :: MonadIO m => m e
         extendE :: MonadIO m => PrtInfo -> e -> m Index
         getE :: MonadIO m => Index -> e -> m EnvEntry
         setE :: MonadIO m => Index -> EnvEntry -> e -> m ()
 
-instance CoreEnv EnvEntries
+set :: [a] -> Int -> a -> [a]
+set [] _ _ = error "list is empty"
+set (_ : as) 0 b = b : as
+set (a : as) i b = a : set as (i - 1) b
+
+instance Env (IORef EnvEntries) where
+        emptyE = liftIO $ newIORef []
+        extendE fi ref = do
+                env <- liftIO $ readIORef ref
+                let i = length env
+                liftIO $ writeIORef ref (env ++ [(Index i, fi)])
+                return i
+        getE i ref = do
+                env <- liftIO $ readIORef ref
+                return $ fst $ env !! i
+        setE i v ref = do
+                env <- liftIO $ readIORef ref
+                liftIO $ writeIORef ref (set env i (v, snd (env !! i)))
 
 type Index = Int
 

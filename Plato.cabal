@@ -43,7 +43,6 @@ library
       Plato.Driver.Info
       Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Driver.Pipeline
       Plato.Interpreter
       Plato.Interpreter.Core
       Plato.Nicifier

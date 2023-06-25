@@ -1,23 +1,30 @@
 module Plato.Interpreter.Core where
 
-import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+import Data.IORef
 
+import Control.Exception.Safe
 import Plato.Core.Data
 import Plato.Core.Eval
-import Plato.Interpreter
+import Plato.Core.Scope
 import Plato.Syntax.Core
 
-data Env = Env EnvEntries Scope
+data CoreEnv = CoreEnv (IORef EnvEntries) Scope
 
-instance CoreEnv Env
+initCoreEnv :: IO CoreEnv
+initCoreEnv = do
+        eref <- newIORef []
+        return $ CoreEnv eref emptyScope
 
-instance Interpreter (Env, Scope) where
-        enter = undefined
-        interp (env, sc) t = do
-                val <- runReaderT (eval (t, sc)) env
-                liftIO $ print val
+class HasCoreEnv e where
+        getCoreEnv :: e -> CoreEnv
+        modifyCoreEnv :: (CoreEnv -> CoreEnv) -> e -> e
+        setCoreEnv :: CoreEnv -> e -> e
+        setCoreEnv = modifyCoreEnv . const
 
-runCore :: (CoreEnv e, MonadThrow m, MonadIO m) => e -> Scope -> Term -> m Val
-runCore env sc t = runReaderT (eval (t, sc)) env
+runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Term -> m ()
+runCore t = do
+        CoreEnv env sc <- asks getCoreEnv
+        val <- runReaderT (eval (t, sc)) env
+        liftIO $ print val

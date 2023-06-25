@@ -4,6 +4,7 @@ import Control.Monad.IO.Class
 import Data.IORef
 
 import Plato.Common.Uniq
+import Plato.Interpreter.Core
 import Plato.Nicifier.OpParser
 import Plato.PsToTyp.Scoping
 import Plato.Typing.Env
@@ -14,11 +15,13 @@ data Context = Context
         , ctx_scope :: Scope
         , ctx_typEnv :: TypEnv
         , ctx_conEnv :: ConEnv
+        , ctx_coreEnv :: CoreEnv
         }
 
 initContext :: IO Context
 initContext = do
         uref <- initUniq
+        coreenv <- initCoreEnv
         return $
                 Context
                         { ctx_uniq = uref
@@ -26,6 +29,7 @@ initContext = do
                         , ctx_scope = initScope
                         , ctx_typEnv = initTypEnv
                         , ctx_conEnv = initConEnv
+                        , ctx_coreEnv = coreenv
                         }
 
 instance HasUniq Context where
