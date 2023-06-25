@@ -167,7 +167,7 @@ tcRho (L sp exp) exp_ty = do
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
-                return $ CaseEok match' match_ty alts'
+                elabCase $ CaseEok match' match_ty alts'
 
 -- | Type check of Sigma
 inferSigma ::

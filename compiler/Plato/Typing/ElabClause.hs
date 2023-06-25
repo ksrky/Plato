@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Typing.ElabClause (elabClauses) where
+module Plato.Typing.ElabClause (elabClauses, elabCase) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -19,7 +19,7 @@ import Plato.Typing.Utils
 
 -- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
         [Clause 'Typed] ->
         m (LExpr 'Typed)
@@ -28,6 +28,17 @@ elabClauses tys clauses = do
         exp <- match vars clauses
         return $ L (getLoc exp) $ foldr (uncurry AbsEok) (unLoc exp) vars
 
+elabCase ::
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        Expr 'Typed ->
+        m (Expr 'Typed)
+elabCase (CaseEok exp ty alts) = do
+        var <- newVarIdent
+        let clauses :: [Clause 'Typed] = map (\(p, e) -> ([p], e)) alts
+        altsexp <- match [(var, ty)] clauses
+        return $ AppE (AbsEok var ty <$> altsexp) exp
+elabCase _ = unreachable "Expected case expression"
+
 dataConsof :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m Constrs
 dataConsof ty = do
         let getTycon :: Type -> Ident
@@ -35,7 +46,7 @@ dataConsof ty = do
             getTycon (ArrT _ res) = getTycon (unLoc res)
             getTycon (AppT fun _) = getTycon (unLoc fun)
             getTycon (ConT tc) = tc
-            getTycon _ = unreachable "Not a variant type"
+            getTycon _ = unreachable $ "Not a variant type "
         lookupIdent (getTycon ty) =<< asks getConEnv
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
@@ -65,7 +76,7 @@ isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [(Ident, Type)] ->
         [Clause 'Typed] ->
         m (LExpr 'Typed)
