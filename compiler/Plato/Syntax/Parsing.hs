@@ -21,6 +21,7 @@ import Plato.Syntax.Parsing.Type
 data Instr
         = ImpDecl (Located T.Text)
         | TopDecls [LTopDecl]
+        | EvalExpr LExpr
         deriving (Eq, Show)
 
 type LInstr = Located Instr

@@ -3,7 +3,6 @@ module Plato.Common.Error where
 import Control.Exception.Safe (
         Exception,
         Handler (Handler),
-        IOException,
         MonadCatch,
         MonadThrow,
         SomeException,
@@ -25,13 +24,26 @@ import Prettyprinter.Render.String (renderString)
 
 import Plato.Common.Location
 
-continueError :: (MonadCatch m, MonadIO m) => m a -> m a -> m a
-continueError cont =
+defaultHandler :: (MonadIO m, Monoid a) => Handler m a
+defaultHandler = Handler $ \(e :: SomeException) -> do
+        liftIO (do putStrLn "Compiler bug:"; print e)
+        return mempty
+
+catchErrors :: (MonadCatch m, MonadIO m, Monoid a) => m a -> m a
+catchErrors =
         ( `catches`
-                [ Handler $ \e@LocErr{} -> liftIO (print e) >> cont
-                , Handler $ \e@PlainErr{} -> liftIO (print e) >> cont
-                , Handler $ \(e :: IOException) -> liftIO (print e) >> cont
-                , Handler $ \(e :: SomeException) -> liftIO (print e) >> cont
+                [ Handler $ \e@LocErr{} -> liftIO (print e) >> return mempty
+                , Handler $ \e@PlainErr{} -> liftIO (print e) >> return mempty
+                , defaultHandler
+                ]
+        )
+
+continueError :: (MonadCatch m, MonadIO m) => m a -> m a -> m a
+continueError action =
+        ( `catches`
+                [ Handler $ \e@LocErr{} -> liftIO (print e) >> action
+                , Handler $ \e@PlainErr{} -> liftIO (print e) >> action
+                , Handler $ \(e :: SomeException) -> liftIO (print e) >> action
                 ]
         )
 
@@ -41,6 +53,12 @@ unreachable s = error $ "unreachable: " ++ s
 ----------------------------------------------------------------
 -- Error type
 ----------------------------------------------------------------
+
+locatedErrorMessage :: Span -> Doc ann -> String
+locatedErrorMessage NoSpan msg =
+        "<no location info>: " ++ renderString (layoutPretty defaultLayoutOptions msg)
+locatedErrorMessage sp msg =
+        renderString (layoutPretty defaultLayoutOptions $ hcat [pretty sp, colon, space, msg])
 
 -- | Error with location
 data LocatedError = forall ann. LocErr Span (Doc ann)

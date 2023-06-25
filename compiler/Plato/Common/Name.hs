@@ -13,7 +13,9 @@ data Name = Name
         }
 
 instance Eq Name where
-        n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
+        n1 == n2
+                | nameSpace n1 == GenName = False
+                | otherwise = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
 
 instance Ord Name where
         compare n1 n2 = compare (nameText n1) (nameText n2) <> compare (nameSpace n1) (nameSpace n2)

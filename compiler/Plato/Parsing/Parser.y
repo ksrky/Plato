@@ -3,17 +3,18 @@
 
 module Plato.Parsing.Parser (
     parser,
+    instrParser,
     exprParser,
     typeParser,
     declsParser,
     tokenParser,
 ) where
 
-import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 
+import Plato.Parsing.Error
 import Plato.Parsing.Layout
 import Plato.Parsing.Lexer
 import Plato.Parsing.Monad
@@ -33,6 +34,7 @@ import Prettyprinter
 %error { parseError }
 
 %name parser program
+%name instrParser instr
 %name exprParser expr
 %name typeParser type
 %name declsParser decls
@@ -77,6 +79,13 @@ digit                           { (mkLDigit -> Just $$) }
 program     :: { Program }
             : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
             | ';' topdecls                          { [$2] }
+
+-----------------------------------------------------------
+-- Instructions
+-----------------------------------------------------------
+instr       :: { LInstr }
+            : topdecls                              { $1 }
+            | expr                                  { L (getLoc $1) (EvalExpr $1) }
 
 -----------------------------------------------------------
 -- Imports
@@ -345,7 +354,7 @@ token       :: { Token }
 
 {
 parseError :: MonadThrow m => Located Token -> ParserT m a
-parseError (L sp tok) = lift $ throwLocErr sp $ sep ["parse error at", pretty tok]
+parseError (L sp tok) = throwPsError sp tok
 
 ----------------------------------------------------------------
 -- mk Located

@@ -9,7 +9,7 @@ import Control.Monad.IO.Class
 
 import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 class Zonking a where
         zonk :: MonadIO m => a -> m a
@@ -19,8 +19,9 @@ instance Zonking a => Zonking (Located a) where
 
 instance Zonking a => Zonking [a] where
         zonk = mapM zonk
+
 instance Zonking (Expr 'Typed) where
-        zonk (VarE n) = return (VarE n)
+        zonk (VarE id) = return (VarE id)
         zonk (AppE fun arg) = AppE <$> zonk fun <*> zonk arg
         zonk (AbsEok var ty body) = AbsEok var <$> zonk ty <*> zonk body
         zonk (TAppE exp tys) = TAppE <$> zonk exp <*> mapM zonk tys
@@ -73,17 +74,16 @@ instance Zonking Kind where
                                 return kn'
 
 instance Zonking (Defn 'Typed) where
-        zonk (FunDefnok id exp) =
-                FunDefnok id <$> zonk `traverse` exp
-        zonk (TypDefn id ty) = TypDefn id <$> zonk `traverse` ty
+        zonk (FunDefnok id exp) = FunDefnok id <$> zonk exp
+        zonk (TypDefn id ty) = TypDefn id <$> zonk ty
         zonk (DatDefnok id sig params constrs) =
                 DatDefnok id
                         <$> zonk sig
                         <*> mapM (\(p, kn) -> (p,) <$> zonk kn) params
-                        <*> mapM (\(con, ty) -> (con,) <$> zonk `traverse` ty) constrs
+                        <*> mapM (\(con, ty) -> (con,) <$> zonk ty) constrs
 
 instance Zonking Spec where
-        zonk (ValSpec id ty) = ValSpec id <$> zonk `traverse` ty
+        zonk (ValSpec id ty) = ValSpec id <$> zonk ty
         zonk (TypSpec id kn) = TypSpec id <$> zonk kn
 
 instance Zonking (Decl 'Typed) where

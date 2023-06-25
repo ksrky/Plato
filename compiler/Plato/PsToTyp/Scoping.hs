@@ -22,6 +22,8 @@ type Scope = M.Map Name Ident
 class HasScope a where
         getScope :: a -> Scope
         modifyScope :: (Scope -> Scope) -> a -> a
+        setScope :: Scope -> a -> a
+        setScope = modifyScope . const
         extendScope :: Ident -> a -> a
         extendScope id = modifyScope (M.insert (nameIdent id) id)
         extendListScope :: [Ident] -> a -> a
@@ -34,13 +36,12 @@ instance HasScope Scope where
 initScope :: Scope
 initScope = M.empty
 
-scoping :: (MonadReader r m, HasScope r, MonadThrow m) => Ident -> m Ident
+scoping :: (MonadReader e m, HasScope e, MonadThrow m) => Ident -> m Ident
 scoping id = do
         sc <- asks getScope
         case M.lookup (nameIdent id) sc of
                 Just id' -> return id{stamp = stamp id'}
-                Nothing ->
-                        throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]
+                Nothing -> throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]
 
 extendScopeFromSeq :: (MonadReader env m, HasScope env, HasDomain a) => [a] -> m env
 extendScopeFromSeq seq = asks (extendListScope (getDomain seq))

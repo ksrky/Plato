@@ -27,7 +27,7 @@ import Plato.PsToTyp.Scoping
 import Plato.RunCore
 import Plato.TypToCore qualified as C
 import Plato.Typing
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 
 spec :: Spec
 spec = do
@@ -113,9 +113,9 @@ test_file fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         pssyn' <- nicify pssyn
-                        typsyn <- T.ps2typ pssyn'
+                        typsyn <- T.psToTyp pssyn'
                         typsyn' <- typing typsyn
-                        coresyn <- C.typ2core typsyn'
+                        coresyn <- C.typToCore typsyn'
                         liftIO $ unCore (checkCommands coresyn) initCoreEnv
                         return $ map (show . pretty) coresyn
                 )

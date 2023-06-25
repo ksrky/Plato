@@ -1,16 +1,27 @@
 module Main where
 
+import Control.Monad
+
 import Options
 import Plato
+import REPL
 
 main :: IO ()
 main = processCommands =<< runWithCommand
 
 processCommands :: Command -> IO ()
-processCommands (REPL _files _opts) = error "not implemented"
+processCommands (REPL files opts) = do
+        session <- initSession
+        processOptions opts session
+        repl files session
 processCommands (Run src opts) = do
         session <- initSession
         setInfo src (libraryPaths opts) (logPath opts) session
-        initLogger session
+        processOptions opts session
         runPlato src session
 processCommands (Version version) = putStrLn $ "Plato version " ++ version
+
+processOptions :: Options -> Session -> IO ()
+processOptions opts session = do
+        when (isDebug opts) $ setFlag FDebug session
+        initLogger session

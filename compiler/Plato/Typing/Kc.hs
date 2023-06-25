@@ -18,7 +18,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Kc.Unify
-import Plato.Typing.Monad
+import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 -- asks . (Env.find @Kind) >=> zonk
@@ -32,7 +32,7 @@ inferDataKind params constrs = do
         bnds <- forM params $ \x -> do
                 kv <- newKnVar
                 return (x, kv)
-        local (modifyEnv $ extendList bnds) $ forM_ constrs $ \(_, body) -> checkKindStar body
+        local (modifyTypEnv $ extendList bnds) $ forM_ constrs $ \(_, body) -> checkKindStar body
         bnds' <- mapM (\(x, kn) -> (x,) <$> zonk kn) bnds
         let qnts = map (\(id, kn) -> (BoundTv id, kn)) bnds'
             constrs'' = map (\(con, body) -> (con, AllT qnts body)) constrs
@@ -60,18 +60,18 @@ checkKind ::
         m ()
 checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
-                kn <- zonk =<< find id =<< getEnv =<< ask
+                kn <- zonk =<< find id =<< asks getTypEnv
                 unify sp kn exp_kn
         VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
         ConT tc -> do
-                kn <- zonk =<< find tc =<< getEnv =<< ask
+                kn <- zonk =<< find tc =<< asks getTypEnv
                 unify sp kn exp_kn
         ArrT arg res -> do
                 checkKindStar arg
                 checkKindStar res
                 unify sp exp_kn StarK
         AllT qnts body ->
-                local (modifyEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
+                local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
                         checkKind body exp_kn
         AppT fun arg -> do
                 arg_kn <- newKnVar

@@ -2,6 +2,7 @@ module Plato.Syntax.Core where
 
 import Prettyprinter
 
+import Plato.Common.Ident
 import Plato.Common.Name
 
 -- *  Abstract syntax
@@ -14,15 +15,15 @@ data Phrase
 type Label = Name
 
 data Entry
-        = Decl Name Type
-        | Defn Name Term
+        = Decl Ident Type
+        | Defn Ident Term
         deriving (Show, Eq)
 
 type Prog = [Entry]
 
 type Type = Term
 
-type Bind a = (Name, a)
+type Bind a = (Ident, a)
 
 data PiSigma
         = Pi
@@ -30,7 +31,7 @@ data PiSigma
         deriving (Show, Eq)
 
 data Term
-        = Var Name
+        = Var Ident
         | Let Prog Term
         | Type
         | Q PiSigma (Bind Type) Type
@@ -38,7 +39,7 @@ data Term
         | App Term Term
         | Pair Term Term
         | Split Term (Bind (Bind Term))
-        | Enum [Name]
+        | Enum [Label]
         | Label Label
         | Case Term [(Label, Term)]
         | Lift Term
@@ -53,13 +54,16 @@ instance Pretty Entry where
         pretty (Decl x ty) = hsep [pretty x, colon, pretty ty]
         pretty (Defn x t) = hsep [pretty x, equals, pretty t]
 
+prettyBind :: Pretty a => Bind a -> Doc ann
+prettyBind (id, ty) = hsep [pretty id, colon, pretty ty]
+
 instance Pretty Term where
         pretty (Var x) = pretty x
         pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), "in", pretty t]
         pretty Type = "Type"
-        pretty (Q Pi (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "->", pretty t]
-        pretty (Q Sigma (x, ty) t) = hsep [parens (hsep [pretty x, colon, pretty ty]), "*", pretty t]
-        pretty (Lam (x, ty) t) = hsep ["\\", pretty x, colon, pretty ty, dot, pretty t]
+        pretty (Q Pi bind ty) = hsep [parens (prettyBind bind), "->", pretty ty]
+        pretty (Q Sigma bind ty) = hsep [parens (prettyBind bind), "*", pretty ty]
+        pretty (Lam bind t) = hsep ["\\", prettyBind bind, dot, pretty t]
         pretty (App t u) = ppr TopPrec t <+> ppr AppPrec u
         pretty (Pair t u) = parens (pretty t <> comma <+> pretty u)
         pretty (Split t (x, (y, u))) =

@@ -25,4 +25,4 @@ semi :: Token
 semi = TokSymbol SymSemicolon
 
 parseTokens :: T.Text -> IO [Token]
-parseTokens inp = runReaderT (parsePartial inp tokenParser) =<< initUniq
+parseTokens inp = runReaderT (parsePartial tokenParser inp) =<< initUniq

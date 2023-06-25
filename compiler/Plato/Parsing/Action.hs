@@ -6,6 +6,7 @@ import GHC.Stack
 
 import Plato.Common.Error
 import Plato.Common.Location
+import Plato.Parsing.Error
 import {-# SOURCE #-} Plato.Parsing.Lexer
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
@@ -110,7 +111,7 @@ endComment :: Action
 endComment (pos, _, _, inp) len = do
         depth <- getCommentDepth
         sp <- mkSpan pos inp len
-        when (depth <= 0) $ lift $ throwLocErr sp "block comment terminated without starting"
+        when (depth <= 0) $ throwLexError sp "block comment terminated without starting"
         setCommentDepth (depth - 1)
         when (depth == 1) $ setStartCode code
         alexMonadScan

@@ -10,7 +10,7 @@ module Plato.Typing.Tc (
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.Reader.Class (MonadReader (ask, local))
+import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
@@ -27,7 +27,6 @@ import Plato.Typing.ElabClause
 import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Kc
-import Plato.Typing.Monad
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.SubsCheck
@@ -50,6 +49,10 @@ inferType ::
 inferType = inferSigma
 
 data Expected a = Infer (IORef a) | Check a
+
+instance Show a => Show (Expected a) where
+        show Infer{} = "{tyref}"
+        show (Check ty) = show ty
 
 -- | Type checking of patterns
 checkPat ::
@@ -75,9 +78,10 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        subst <- concat <$> zipWithM checkPat pats arg_tys
-        _ <- apInstSigma sp instPatSigma res_ty exp_ty
-        return subst
+        binds <- concat <$> zipWithM checkPat pats arg_tys
+        res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+        _ <- apInstSigma sp instPatSigma res_ty' exp_ty
+        return binds
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -92,7 +96,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- zonk =<< find con =<< getEnv =<< ask
+        sigma <- zonk =<< find con =<< asks getTypEnv
         (_, rho) <- instantiate sigma
         return $ splitConstrTy rho
 
@@ -123,32 +127,34 @@ tcRho ::
         Expected Rho ->
         m (LExpr 'Typed)
 tcRho (L sp exp) exp_ty = do
-        liftIO $ debugM platoLog $ "tcRho: " ++ show exp
+        liftIO $ debugM platoLog $ "tcRho: " ++ show exp ++ " : " ++ show exp_ty
         L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
-                sigma <- zonk =<< find var =<< getEnv =<< ask
+                sigma <- zonk =<< find var =<< asks getTypEnv
                 coercion <- apInstSigma sp instSigma sigma exp_ty
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
+                liftIO $ debugM platoLog $ "tcRho': " ++ show fun' ++ " : " ++ show fun_ty
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                coercion <- apInstSigma sp instSigma res_ty exp_ty
+                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                coercion <- apInstSigma sp instSigma res_ty' exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
-                body' <- local (modifyEnv $ extend var var_ty) (checkRho body body_ty)
+                body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var body) (Infer ref) = do
                 var_ty <- newTyVar
-                (body', body_ty) <- local (modifyEnv $ extend var var_ty) (inferRho body)
+                (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsEok var var_ty (unLoc body')
-        tcRho' (LetE bnds spcs body) exp_ty = local (modifyEnv $ extendList spcs) $ do
+        tcRho' (LetE bnds spcs body) exp_ty = local (modifyTypEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
-                        sigma <- zonk =<< find id =<< getEnv =<< ask
+                        sigma <- zonk =<< find id =<< asks getTypEnv
                         exp' <- checkClauses clauses sigma
                         return (id, exp')
                 body' <- tcRho body exp_ty
@@ -157,11 +163,11 @@ tcRho (L sp exp) exp_ty = do
         tcRho' (CaseE match alts) exp_ty = do
                 (match', match_ty) <- inferRho match
                 alts' <- forM alts $ \(pat, body) -> do
-                        subst <- checkPat pat match_ty
-                        (body', body_ty) <- local (modifyEnv $ extendList subst) $ inferRho body
+                        binds <- checkPat pat match_ty
+                        (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
-                return $ CaseEok match' match_ty alts'
+                elabCase $ CaseEok match' match_ty alts'
 
 -- | Type check of Sigma
 inferSigma ::
@@ -200,8 +206,8 @@ checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
-                subst <- concat <$> zipWithM checkPat pats pat_tys
-                body' <- local (modifyEnv $ extendList subst) $ checkSigma body res_ty
+                binds <- concat <$> zipWithM checkPat pats pat_tys
+                body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'
         env_tys <- getEnvTypes
