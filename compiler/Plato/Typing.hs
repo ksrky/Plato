@@ -100,7 +100,7 @@ typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
 typing decs = catchErrors $ do
         (decs, env) <- runReaderT (typingDecls decs) =<< initTypContext
         ctx <- getContext =<< ask
-        setContext (setTypEnv (getTypEnv env) ctx) =<< ask
+        setContext ((setTypEnv (getTypEnv env) . setConEnv (getConEnv env)) ctx) =<< ask
         return decs
 
 typingExpr :: PlatoMonad m => LExpr 'Untyped -> m (LExpr 'Typed)

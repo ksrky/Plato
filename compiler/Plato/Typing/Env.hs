@@ -81,6 +81,8 @@ initConEnv = M.empty
 class HasConEnv a where
         getConEnv :: a -> ConEnv
         modifyConEnv :: (ConEnv -> ConEnv) -> a -> a
+        setConEnv :: ConEnv -> a -> a
+        setConEnv = modifyConEnv . const
 
 instance HasConEnv ConEnv where
         getConEnv = id

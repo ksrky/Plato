@@ -10,12 +10,12 @@ import Plato.PsToTyp.Scoping
 import Plato.Typing.Env
 
 data Context = Context
-        { ctx_uniq :: IORef Uniq
-        , ctx_fixityEnv :: FixityEnv
-        , ctx_scope :: Scope
-        , ctx_typEnv :: TypEnv
-        , ctx_conEnv :: ConEnv
-        , ctx_coreEnv :: CoreEnv
+        { ctx_uniq :: !(IORef Uniq)
+        , ctx_fixityEnv :: !FixityEnv
+        , ctx_scope :: !Scope
+        , ctx_typEnv :: !TypEnv
+        , ctx_conEnv :: !ConEnv
+        , ctx_coreEnv :: !CoreEnv
         }
 
 initContext :: IO Context

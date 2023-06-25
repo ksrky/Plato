@@ -47,7 +47,9 @@ elabExpr (T.CaseEok match _ alts) = do
 elabPat :: (HasCallStack, MonadIO m) => T.Pat -> m (C.Label, [Ident])
 elabPat (T.ConP con pats) = do
         let vars = [id | L _ (T.VarP id) <- pats]
-        unless (length pats == length vars) $ unreachable "allowed only variable patterns"
+        unless (length pats == length vars) $ do
+                liftIO $ errorM platoLog $ show pats
+                unreachable "allowed only variable patterns"
         return (nameIdent con, vars)
 elabPat _ = unreachable "allowed only constructor pattern"
 

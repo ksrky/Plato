@@ -135,21 +135,22 @@ elabClause (pats, exp) = do
         return (pats', exp')
 
 elabDecls ::
-        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
-        m [T.Decl 'T.Untyped]
-elabDecls [] = return []
+        WriterT [T.Decl 'T.Untyped] m e
+elabDecls [] = ask
 elabDecls (L _ (P.DataD id params constrs) : rest) = do
         paramNamesUnique params
         dataConUnique $ map fst constrs
         mapM_ (dataConType id) constrs
-        qnts <- mapM (\p -> do kv <- newKnVar; return (T.BoundTv p, kv)) params
+        qnts <- mapM (\p -> do kv <- lift newKnVar; return (T.BoundTv p, kv)) params
         constrs' <-
-                local (extendListScope $ id : params) $
-                        mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
-        rest' <- local (extendListScope (id : map fst constrs)) $ elabDecls rest
+                lift $
+                        local (extendListScope $ id : params) $
+                                mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
         sig <- newKnVar
-        return $ T.SpecDecl (T.TypSpec id sig) : T.DefnDecl (T.DatDefn id qnts constrs') : rest'
+        tell [T.SpecDecl (T.TypSpec id sig), T.DefnDecl (T.DatDefn id qnts constrs')]
+        local (extendListScope (id : map fst constrs)) $ elabDecls rest
 elabDecls fundecs = do
         -- Note: Nicifier ordered from data decls to local decls
         env <- extendScopeFromSeq fundecs
@@ -159,13 +160,16 @@ elabDecls fundecs = do
                 let fundecs'' =
                         map (T.SpecDecl . uncurry T.ValSpec) spcs
                                 ++ map (T.DefnDecl . uncurry T.FunDefn) bnds
-                return fundecs''
+                tell fundecs''
+                ask
 
 elabTopDecls ::
-        (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
-        m [T.Decl 'T.Untyped]
-elabTopDecls tdecs = Data.List.sort <$> elabDecls tdecs
+        m ([T.Decl 'T.Untyped], e)
+elabTopDecls tdecs = do
+        (env, decs) <- runWriterT (elabDecls tdecs)
+        return (Data.List.sort decs, env)
 
 -----------------------------------------------------------
 -- psToTyp
@@ -181,16 +185,11 @@ instance HasScope Context where
         modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
-psToTyp tdecs = do
+psToTyp tdecs = catchErrors $ do
         uref <- getUniq =<< ask
         ctx <- getContext =<< ask
-        (decs, sc) <-
-                catchErrors $
-                        (`runReaderT` Context uref (getScope ctx)) $ do
-                                decs <- elabTopDecls tdecs
-                                env <- extendScopeFromSeq tdecs
-                                return (decs, ctx_scope env)
-        setContext (setScope sc ctx) =<< ask
+        (decs, env) <- runReaderT (elabTopDecls tdecs) (Context uref (getScope ctx))
+        setContext (setScope (ctx_scope env) ctx) =<< ask
         return decs
 
 psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)

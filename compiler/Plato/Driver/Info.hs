@@ -10,4 +10,4 @@ class HasInfo a where
         setInfo :: MonadIO m => FilePath -> [FilePath] -> Maybe FilePath -> a -> m ()
 
 platoExt :: String
-platoExt = ".plt"
+platoExt = ".pla"
