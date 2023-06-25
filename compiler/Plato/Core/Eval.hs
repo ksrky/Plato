@@ -55,12 +55,12 @@ eval :: forall e m. (MonadReader e m, Env e, MonadThrow m, MonadIO m) => Clos Te
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
-eval (Q ps bind body, sc) = return (VQ ps ((body, bind), sc))
-eval (Lam (x, _) t, sc) = return (VLam (x, (t, sc)))
+eval (Q ps bind body, sc) = return (VQ ps ((bind, body), sc))
+eval (Lam (x, _) t, sc) = return $ VLam (x, (t, sc)) (t, sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
         evalApp :: Clos Term -> Val -> m Val
-        evalApp u (VLam bind) = eval =<< subst bind u
+        evalApp u (VLam (x, _) t) = eval =<< subst (x, t) u
         evalApp u (Ne t) = return (Ne (t :.. u))
         evalApp _ _ = throwError "function expected"
 eval (Pair t u, sc) = return $ VPair ((t, u), sc)

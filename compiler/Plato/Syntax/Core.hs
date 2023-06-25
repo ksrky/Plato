@@ -54,16 +54,16 @@ instance Pretty Entry where
         pretty (Decl x ty) = hsep [pretty x, colon, pretty ty]
         pretty (Defn x t) = hsep [pretty x, equals, pretty t]
 
-instance Pretty a => Pretty (Bind a) where
-        pretty (id, ty) = hsep [pretty id, colon, pretty ty]
+prettyBind :: Pretty a => Bind a -> Doc ann
+prettyBind (id, ty) = hsep [pretty id, colon, pretty ty]
 
 instance Pretty Term where
         pretty (Var x) = pretty x
         pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), "in", pretty t]
         pretty Type = "Type"
-        pretty (Q Pi bind ty) = hsep [parens (pretty bind), "->", pretty ty]
-        pretty (Q Sigma bind ty) = hsep [parens (pretty bind), "*", pretty ty]
-        pretty (Lam bind t) = hsep ["\\", pretty bind, dot, pretty t]
+        pretty (Q Pi bind ty) = hsep [parens (prettyBind bind), "->", pretty ty]
+        pretty (Q Sigma bind ty) = hsep [parens (prettyBind bind), "*", pretty ty]
+        pretty (Lam bind t) = hsep ["\\", prettyBind bind, dot, pretty t]
         pretty (App t u) = ppr TopPrec t <+> ppr AppPrec u
         pretty (Pair t u) = parens (pretty t <> comma <+> pretty u)
         pretty (Split t (x, (y, u))) =

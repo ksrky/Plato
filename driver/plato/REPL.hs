@@ -18,4 +18,4 @@ repl files session = do
                 case minp of
                         Nothing -> return ()
                         Just "" -> return ()
-                        Just inp -> lift $ interpret (T.pack inp)
+                        Just inp -> lift $ interpretExpr (T.pack inp)

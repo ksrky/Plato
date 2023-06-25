@@ -51,3 +51,7 @@ instance HasTypEnv Context where
 instance HasConEnv Context where
         getConEnv = ctx_conEnv
         modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
+
+instance HasCoreEnv Context where
+        getCoreEnv = ctx_coreEnv
+        modifyCoreEnv f ctx = ctx{ctx_coreEnv = f (ctx_coreEnv ctx)}

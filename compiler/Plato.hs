@@ -1,7 +1,8 @@
 module Plato (
         runPlato,
         compileToCore,
-        module Plato.Driver.Monad, 
+        interpretExpr,
+        module Plato.Driver.Monad,
 ) where
 
 import Control.Monad.IO.Class
@@ -9,7 +10,8 @@ import Data.Text qualified as T
 import Prettyprinter
 import Prettyprinter.Render.Text
 
-import Plato.Driver.Monad 
+import Plato.Driver.Monad
+import Plato.Interpret
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
@@ -37,4 +39,4 @@ interpretExpr inp = do
         typsyn <- psToTypExpr pssyn'
         typsyn' <- typingExpr typsyn
         coresyn <- typToCoreExpr typsyn'
-        undefined
+        evalCore coresyn

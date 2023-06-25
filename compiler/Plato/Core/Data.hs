@@ -2,6 +2,8 @@ module Plato.Core.Data where
 
 import Control.Monad.IO.Class
 import GHC.IORef
+import Prettyprinter
+
 import Plato.Common.Ident
 import Plato.Syntax.Core
 
@@ -41,43 +43,16 @@ newtype Boxed = Boxed (Clos Term) deriving (Eq, Show)
 data Val
         = Ne Ne
         | VType
-        | VQ PiSigma (Clos (Bind Type)) (Clos Type)
+        | VQ PiSigma (Clos (Bind Type, Type))
         | VLift (Clos Type)
-        | VLam (Bind (Clos Term))
-        | VPair (Clos Term) (Clos Term)
+        | VLam (Bind (Clos Type)) (Clos Term)
+        | VPair (Clos (Term, Term))
         | VEnum [Label]
         | VLabel Label
         | VBox Boxed
         | VRec (Clos Type)
         | VFold (Clos Term)
         deriving (Eq, Show)
-
-instance Pretty (Clos t) where
-        pretty (t, _) = pretty t
-
-instance Pretty Boxed where
-        pretty (Boxed t) = brackets $ pretty t
-
-instance Pretty Val where
-        pretty (Ne ne) = pretty ne
-        pretty VType = "*"
-        pretty (VQ Pi bind ty) = hsep [parens (pretty bind), "->", pretty ty]
-        pretty (VQ Sigma bind ty) = hsep [parens (pretty bind), "*", pretty ty]
-        pretty (VLam bind t) = hsep ["\\", pretty bind, dot, pretty t]
-        pretty (VPair t u) = parens (pretty t <> comma <+> pretty u)
-        pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
-        pretty (VLabel lab) = "`" <> pretty lab
-        pretty (VBox box) = pretty box
-        pretty (VRec ty) = "Rec" <+> pretty ty
-        pretty (VFold t) = "fold" <+> pretty t
-
-instance Pretty Ne where
-        pretty (NVar i) = pretty i
-        pretty (ne :.. t) = hsep [pretty ne, ":..", pretty t]
-        pretty (NSplit ne (x, y, t)) = "<not yet>" 
-        pretty (NCase ne lts) = "<not yet>"
-        pretty (NForce ne) = "<not yet>"
-        pretty (NUnfold ne bind) = "<not yet>"
 
 -- | Neutral terms.
 data Ne
@@ -100,3 +75,28 @@ data PrtInfo = PrtInfo
         { name :: Ident
         , expand :: Bool
         }
+
+instance Pretty Boxed where
+        pretty (Boxed (t, _)) = brackets $ pretty t
+
+instance Pretty Val where
+        pretty (Ne ne) = pretty ne
+        pretty VType = "*"
+        pretty (VQ Pi ((bind, ty), _)) = hsep [parens (pretty bind), "->", pretty ty]
+        pretty (VQ Sigma ((bind, ty), _)) = hsep [parens (pretty bind), "*", pretty ty]
+        pretty (VLift (ty, _)) = "^" <> pretty ty
+        pretty (VLam (bind, _) (t, _)) = hsep ["\\", pretty bind, dot, pretty t]
+        pretty (VPair ((t, u), _)) = parens (pretty t <> comma <+> pretty u)
+        pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
+        pretty (VLabel lab) = "`" <> pretty lab
+        pretty (VBox box) = pretty box
+        pretty (VRec (ty, _)) = "Rec" <+> pretty ty
+        pretty (VFold (t, _)) = "fold" <+> pretty t
+
+instance Pretty Ne where
+        pretty (NVar i) = pretty i
+        pretty (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
+        pretty (NSplit ne (x, (y, t))) = "<not yet>"
+        pretty (NCase ne lts) = "<not yet>"
+        pretty (NForce ne) = "<not yet>"
+        pretty (NUnfold ne bind) = "<not yet>"
