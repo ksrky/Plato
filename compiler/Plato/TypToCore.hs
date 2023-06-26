@@ -90,7 +90,7 @@ elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
         return [C.Decl id ty']
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
         liftIO $ debugM platoLog $ "elaborate DatDefnDecl: " ++ show id
-        (:) <$> (C.Defn id <$> dataDefn) <*> mapM constrDefn constrs
+        (:) <$> (C.Defn id <$> dataDefn) <*> ((++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs)
     where
         labDefns :: m (Ident, C.Type) = do
                 idL <- freshIdent $ genName "l"
@@ -102,6 +102,8 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
         dataDefn :: m C.Term = do
                 idL <- fst <$> labDefns
                 C.Q C.Sigma <$> labDefns <*> (C.Case (C.Var idL) <$> caseAlts)
+        constrDecl :: (Ident, T.LType) -> m C.Entry
+        constrDecl (con, ty) = C.Decl con <$> elabType (unLoc ty)
         constrDefn :: (Ident, T.LType) -> m C.Entry
         constrDefn (con, ty) = do
                 let walk :: [Ident] -> T.Type -> m C.Term

@@ -77,14 +77,14 @@ instance Pretty Term where
                         ]
         pretty (Enum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
         pretty (Label lab) = "`" <> pretty lab
-        pretty (Case t alts) =
+        pretty (Case t lts) =
                 hsep
                         [ "case"
                         , ppr TopPrec t
                         , braces $
                                 concatWith
                                         (surround (semi <> space))
-                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) alts)
+                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts)
                         ]
         pretty (Lift t) = "^" <> pretty t
         pretty (Box t) = brackets $ pretty t

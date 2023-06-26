@@ -96,7 +96,15 @@ instance Pretty Val where
 instance Pretty Ne where
         pretty (NVar i) = pretty i
         pretty (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
-        pretty (NSplit ne (x, (y, t))) = "<not yet>"
-        pretty (NCase ne lts) = "<not yet>"
-        pretty (NForce ne) = "<not yet>"
-        pretty (NUnfold ne bind) = "<not yet>"
+        pretty (NSplit ne (x, (y, (t, _)))) = hsep ["split", pretty ne, "with", braces (hsep [pretty x, comma, pretty y]), "->", pretty t]
+        pretty (NCase ne (lts, _)) =
+                hsep
+                        [ "case"
+                        , pretty ne
+                        , braces $
+                                concatWith
+                                        (surround (semi <> space))
+                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts)
+                        ]
+        pretty (NForce ne) = "!" <> pretty ne
+        pretty (NUnfold ne (x, (t, _))) = hsep ["unfold", pretty ne, "as", pretty x, "->", pretty t]
