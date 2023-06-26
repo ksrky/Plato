@@ -27,6 +27,11 @@ instance HasCoreEnv CoreEnv where
         getCoreEnv = id
         modifyCoreEnv = id
 
+enterCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Prog -> m Scope
+enterCore prog = do
+        CoreEnv env sc <- asks getCoreEnv
+        runReaderT (evalProg (prog, sc)) env
+
 runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Term -> m ()
 runCore t = do
         CoreEnv env sc <- asks getCoreEnv

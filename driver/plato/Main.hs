@@ -14,6 +14,7 @@ processCommands (REPL files opts) = do
         session <- initSession
         setInfo "interactive" (libraryPaths opts) (logPath opts) session
         processOptions opts session
+        setFlag FEvalCore session
         repl files session
 processCommands (Run src opts) = do
         session <- initSession

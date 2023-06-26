@@ -31,6 +31,7 @@ compileToCore src = do
         whenFlagOn FDumpTyped $ liftIO $ putDoc $ pretty typsyn'
         coresyn <- typToCore typsyn'
         whenFlagOn FDumpCore $ liftIO $ putDoc $ pretty coresyn
+        whenFlagOn FEvalCore $ addCoreEnv coresyn
 
 interpretExpr :: PlatoMonad m => T.Text -> m ()
 interpretExpr inp = do
