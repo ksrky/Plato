@@ -17,7 +17,6 @@ import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Utils
 
--- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
@@ -46,7 +45,7 @@ dataConsof ty = do
             getTycon (ArrT _ res) = getTycon (unLoc res)
             getTycon (AppT fun _) = getTycon (unLoc fun)
             getTycon (ConT tc) = tc
-            getTycon _ = unreachable $ "Not a variant type "
+            getTycon _ = unreachable  "Not a variant type"
         lookupIdent (getTycon ty) =<< asks getConEnv
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
@@ -102,8 +101,6 @@ matchVar (var, _) rest clauses = do
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
-
--- [(pats, subst exp var varp) | (L _ (VarP varp) : pats, exp) <- clauses]
 
 matchCon ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>

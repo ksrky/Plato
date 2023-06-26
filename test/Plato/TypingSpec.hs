@@ -4,6 +4,7 @@
 module Plato.TypingSpec where
 
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Data.IORef
 import Data.Text qualified as T
 import Prettyprinter
@@ -84,7 +85,7 @@ test_decls inp = do
         uref <- initUniq
         let ctx = Context uref initScope initTypEnv initConEnv
         decs <- runReaderT (parseDecls inp) ctx
-        decs' <- runReaderT (elabDecls decs) ctx
+        decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
         void $ runReaderT (typingDecls decs') ctx
 
 test_file :: FilePath -> IO ()

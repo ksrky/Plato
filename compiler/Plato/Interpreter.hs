@@ -1,4 +1,4 @@
-module Plato.Interpret where
+module Plato.Interpreter where
 
 import Control.Monad.Reader
 
