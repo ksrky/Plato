@@ -12,6 +12,7 @@ main = processCommands =<< runWithCommand
 processCommands :: Command -> IO ()
 processCommands (REPL files opts) = do
         session <- initSession
+        setInfo "interactive" (libraryPaths opts) (logPath opts) session
         processOptions opts session
         repl files session
 processCommands (Run src opts) = do

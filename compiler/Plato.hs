@@ -11,7 +11,7 @@ import Prettyprinter
 import Prettyprinter.Render.Text
 
 import Plato.Driver.Monad
-import Plato.Interpret
+import Plato.Interpreter
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp

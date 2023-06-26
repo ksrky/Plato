@@ -2,9 +2,10 @@
 
 module Plato.Core.Eval where
 
-import Control.Monad.Reader
-
 import Control.Exception.Safe
+import Control.Monad.Reader
+import Prettyprinter
+
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Core.Data
@@ -14,7 +15,7 @@ import Plato.Syntax.Core
 getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Index
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
-        Nothing -> throwError ""
+        Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
 lookupIndex :: (MonadReader env m, Env env, MonadIO m) => Index -> m EnvEntry
 lookupIndex i = getE i =<< ask
