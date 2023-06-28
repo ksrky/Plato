@@ -162,12 +162,20 @@ tcRho (L sp exp) exp_ty = do
                 return $ LetEok bnds' spcs body'
         tcRho' (CaseE match alts) exp_ty = do
                 (match', match_ty) <- inferRho match
+                exp_ty' <- zapToMonoType exp_ty
                 alts' <- forM alts $ \(pat, body) -> do
                         binds <- checkPat pat match_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
-                        coer <- instSigma body_ty exp_ty
+                        coer <- instSigma body_ty exp_ty'
                         return (pat, (coer .>) <$> body')
                 elabCase $ CaseEok match' match_ty alts'
+
+zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
+zapToMonoType (Check ty) = return $ Check ty
+zapToMonoType (Infer ref) = do
+        ty <- newTyVar
+        writeMIORef ref ty
+        return $ Check ty
 
 -- | Type check of Sigma
 inferSigma ::
