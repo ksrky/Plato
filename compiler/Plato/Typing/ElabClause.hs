@@ -8,14 +8,17 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Utils
+import System.Log.Logger
 
 elabClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
@@ -45,7 +48,7 @@ dataConsof ty = do
             getTycon (ArrT _ res) = getTycon (unLoc res)
             getTycon (AppT fun _) = getTycon (unLoc fun)
             getTycon (ConT tc) = tc
-            getTycon _ = unreachable  "Not a variant type"
+            getTycon _ = unreachable "Not a variant type"
         lookupIdent (getTycon ty) =<< asks getConEnv
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
@@ -94,6 +97,7 @@ matchVar ::
         [Clause 'Typed] ->
         m (LExpr 'Typed)
 matchVar (var, _) rest clauses = do
+        when (length clauses > 1) $ liftIO $ warningM platoLog "Pattern matching is redundant."
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
                 (L _ (VarP varp) : pats, exp) ->
@@ -119,6 +123,9 @@ matchClause ::
         [(Ident, Type)] ->
         [Clause 'Typed] ->
         m (LPat, LExpr 'Typed)
+matchClause (con, _) _ [] =
+        throwError $
+                hsep ["Pattern matching is non-exhaustive. Required", squotes $ pretty con]
 matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)

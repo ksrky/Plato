@@ -160,14 +160,14 @@ tcRho (L sp exp) exp_ty = do
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
                 return $ LetEok bnds' spcs body'
-        tcRho' (CaseE match alts) exp_ty = do
-                (match', match_ty) <- inferRho match
+        tcRho' (CaseE mat alts) exp_ty = do
+                (mat', mat_ty) <- inferRho mat
                 alts' <- forM alts $ \(pat, body) -> do
-                        binds <- checkPat pat match_ty
+                        binds <- checkPat pat mat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty
                         return (pat, (coer .>) <$> body')
-                elabCase $ CaseEok match' match_ty alts'
+                elabCase $ CaseEok mat' mat_ty alts'
 
 -- | Type check of Sigma
 inferSigma ::
