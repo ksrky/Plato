@@ -54,34 +54,48 @@ instance Show a => Show (Expected a) where
         show Infer{} = "{tyref}"
         show (Check ty) = show ty
 
+checkPats ::
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        [LPat] ->
+        [Rho] ->
+        m ([LPat], [(Ident, Sigma)])
+checkPats pats pat_tys = do
+        (pats', binds) <- unzip <$> zipWithM checkPat pats pat_tys
+        return (pats', concat binds)
+
 -- | Type checking of patterns
 checkPat ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
         Rho ->
-        m [(Ident, Sigma)]
+        m (LPat, [(Ident, Sigma)])
 checkPat pat ty = tcPat pat (Check ty)
 
 tcPat ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LPat ->
         Expected Sigma ->
-        m [(Ident, Sigma)]
-tcPat (L _ WildP) _ = return []
-tcPat (L _ (VarP var)) (Infer ref) = do
+        m (LPat, [(Ident, Sigma)])
+tcPat pat@(L _ WildP) _ = return (pat, [])
+tcPat pat@(L sp (VarP var)) (Infer ref) = do
         var_ty <- newTyVar
         writeMIORef ref var_ty
-        return [(var, var_ty)]
-tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
+        return (L sp (AnnP pat var_ty), [(var, var_ty)])
+tcPat pat@(L sp (VarP var)) (Check exp_ty) =
+        return (L sp (AnnP pat exp_ty), [(var, exp_ty)])
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        binds <- concat <$> zipWithM checkPat pats arg_tys
+        (pats', binds) <- checkPats pats arg_tys
         res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
         _ <- apInstSigma sp instPatSigma res_ty' exp_ty
-        return binds
+        return (L sp (AnnP (L sp (ConP con pats')) res_ty'), binds)
+tcPat (L sp (AnnP pat pat_ty)) exp_ty = do
+        (pat', binds) <- checkPat pat pat_ty
+        _ <- apInstSigma sp instPatSigma pat_ty exp_ty
+        return (L sp (AnnP pat' pat_ty), binds)
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -164,10 +178,10 @@ tcRho (L sp exp) exp_ty = do
                 (mat', mat_ty) <- inferRho mat
                 exp_ty' <- zapToMonoType exp_ty
                 alts' <- forM alts $ \(pat, body) -> do
-                        binds <- checkPat pat mat_ty
+                        (pat', binds) <- checkPat pat mat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty'
-                        return (pat, (coer .>) <$> body')
+                        return (pat', (coer .>) <$> body')
                 elabCase $ CaseEok mat' mat_ty alts'
 
 zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
@@ -214,7 +228,7 @@ checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
-                binds <- concat <$> zipWithM checkPat pats pat_tys
+                (_, binds) <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'

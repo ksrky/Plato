@@ -4,6 +4,7 @@ import Prettyprinter
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Syntax.Typing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
@@ -14,6 +15,7 @@ data Pat
         = ConP Ident [LPat]
         | VarP Ident
         | WildP
+        | AnnP LPat Type
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -23,6 +25,7 @@ instance Pretty Pat where
         pretty (ConP con pats) = hsep (pretty con : map prAtomPat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
+        pretty (AnnP pat ann) = hsep [pretty pat, colon, pretty ann]
 
 prAtomPat :: LPat -> Doc ann
 prAtomPat pat@(L _ (ConP con pats))
