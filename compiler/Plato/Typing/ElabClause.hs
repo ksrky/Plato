@@ -52,11 +52,11 @@ dataConsof ty = do
         lookupIdent (getTycon ty) =<< asks getConEnv
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
-subst exp replace id2 = subst' <$> exp
+subst exp replace id = subst' <$> exp
     where
         subst' :: Expr 'Typed -> Expr 'Typed
         subst' (VarE var)
-                | var == id2 = replace
+                | var == id = replace
                 | otherwise = VarE var
         subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
         subst' (AbsEok var ty body) = AbsEok var ty (subst' body)

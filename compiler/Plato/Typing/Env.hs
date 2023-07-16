@@ -10,6 +10,7 @@ module Plato.Typing.Env (
         ConEnv,
         initConEnv,
         HasConEnv (..),
+        splitConstrTy,
         extendConEnv,
 ) where
 
@@ -21,7 +22,6 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Typing.Utils
 
 data Bind
         = ValBind Type
@@ -87,6 +87,13 @@ class HasConEnv a where
 instance HasConEnv ConEnv where
         getConEnv = id
         modifyConEnv = id
+
+splitConstrTy :: Rho -> ([Sigma], Tau)
+splitConstrTy = go []
+    where
+        go :: [Sigma] -> Rho -> ([Sigma], Tau)
+        go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
+        go acc tau = (reverse acc, tau)
 
 extendConEnv :: HasConEnv env => Ident -> [(Ident, LType)] -> env -> env
 extendConEnv id constrs =

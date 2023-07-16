@@ -13,18 +13,21 @@ module Plato.Typing.Utils (
         newMetaKv,
         readMetaKv,
         writeMetaKv,
-        splitConstrTy,
+        getConstrs,
 ) where
 
+import Control.Exception.Safe
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.Reader (MonadReader (ask))
+import Control.Monad.Reader (MonadReader (ask), asks)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
+import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Typing.Env
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
@@ -75,9 +78,12 @@ readMetaKv (MetaKv _ ref) = readMIORef ref
 writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
 
-splitConstrTy :: Rho -> ([Sigma], Tau)
-splitConstrTy = go []
-    where
-        go :: [Sigma] -> Rho -> ([Sigma], Tau)
-        go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
-        go acc tau = (reverse acc, tau)
+getConstrs :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m Constrs
+getConstrs ty = do
+        let getTycon :: Type -> Ident
+            getTycon (AllT _ ty) = getTycon (unLoc ty)
+            getTycon (ArrT _ res) = getTycon (unLoc res)
+            getTycon (AppT fun _) = getTycon (unLoc fun)
+            getTycon (ConT tc) = tc
+            getTycon _ = unreachable "Not a variant type"
+        lookupIdent (getTycon ty) =<< asks getConEnv
