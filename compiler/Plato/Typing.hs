@@ -45,7 +45,7 @@ typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         tell [DefnDecl (DatDefnok id kn params constrs)]
         local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
-                local (extendConEnv id constrs) $
+                local (extendConEnv id (map fst params) constrs) $
                         typingDecls' decs
 typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
         kn <- zonk =<< find id =<< asks getTypEnv

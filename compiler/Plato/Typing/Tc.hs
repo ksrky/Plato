@@ -154,7 +154,7 @@ tcRho (L sp exp) exp_ty = do
                 liftIO $ debugM platoLog $ "tcRho': " ++ show fun' ++ " : " ++ show fun_ty
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
                 coercion <- apInstSigma sp instSigma res_ty' exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
@@ -174,15 +174,15 @@ tcRho (L sp exp) exp_ty = do
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
                 return $ LetEok bnds' spcs body'
-        tcRho' (CaseE mat alts) exp_ty = do
-                (mat', mat_ty) <- inferRho mat
+        tcRho' (CaseE test alts) exp_ty = do
+                (test', pat_ty) <- inferRho test
                 exp_ty' <- zapToMonoType exp_ty
                 alts' <- forM alts $ \(pat, body) -> do
-                        (pat', binds) <- checkPat pat mat_ty
+                        (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma body_ty exp_ty'
                         return (pat', (coer .>) <$> body')
-                elabCase $ CaseEok mat' mat_ty alts'
+                elabCase $ CaseEok test' pat_ty alts'
 
 zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty

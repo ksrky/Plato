@@ -9,6 +9,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Prettyprinter
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
@@ -17,8 +18,8 @@ import Plato.Common.Uniq
 import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.Env
+import Plato.Typing.Tc.Subst qualified as Subst
 import Plato.Typing.Utils
-import System.Log.Logger
 
 elabClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
@@ -41,15 +42,15 @@ elabCase (CaseEok exp ty alts) = do
         return $ AppE (AbsEok var ty <$> altsexp) exp
 elabCase _ = unreachable "Expected case expression"
 
-dataConsof :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m Constrs
-dataConsof ty = do
-        let getTycon :: Type -> Ident
-            getTycon (AllT _ ty) = getTycon (unLoc ty)
-            getTycon (ArrT _ res) = getTycon (unLoc res)
-            getTycon (AppT fun _) = getTycon (unLoc fun)
-            getTycon (ConT tc) = tc
-            getTycon _ = unreachable "Not a variant type"
-        lookupIdent (getTycon ty) =<< asks getConEnv
+dataConsof :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m) => Type -> m Constrs
+dataConsof = getTycon []
+    where
+        getTycon :: [Type] -> Type -> m Constrs
+        getTycon acc (AppT fun arg) = getTycon (unLoc arg : acc) (unLoc fun)
+        getTycon acc (ConT tc) = do
+                (params, constrs) <- lookupIdent tc =<< asks getConEnv
+                return (map (\(con, ty) -> (con, Subst.subst params (reverse acc) <$> ty)) constrs)
+        getTycon _ _ = unreachable "Not a variant type"
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
 subst exp replace id = subst' <$> exp
@@ -71,10 +72,12 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
+isVar (L _ AnnP{} : _, _) = False
 isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
+isVarorSameCon con1 (L _ (AnnP (L _ (ConP con2 _)) _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
@@ -103,6 +106,7 @@ matchVar (var, _) rest clauses = do
                 (L _ (VarP varp) : pats, exp) ->
                         (pats, subst exp (VarE var) varp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
+                (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
 
@@ -131,6 +135,8 @@ matchClause (con, arg_tys) vars clauses = do
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)
             vars' = zip params arg_tys ++ vars
         clauses' <- forM clauses $ \case
+                (L _ (AnnP (L _ (ConP _ ps)) _) : ps', e) -> return (ps ++ ps', e)
+                (L _ AnnP{} : _, _) -> unreachable ""
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
