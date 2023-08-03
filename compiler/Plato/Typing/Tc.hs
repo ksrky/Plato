@@ -77,12 +77,12 @@ tcPat ::
         Expected Sigma ->
         m (LPat, [(Ident, Sigma)])
 tcPat pat@(L _ WildP) _ = return (pat, [])
-tcPat pat@(L sp (VarP var)) (Infer ref) = do
+tcPat pat@(L _ (VarP var)) (Infer ref) = do
         var_ty <- newTyVar
         writeMIORef ref var_ty
-        return (L sp (AnnP pat var_ty), [(var, var_ty)])
-tcPat pat@(L sp (VarP var)) (Check exp_ty) =
-        return (L sp (AnnP pat exp_ty), [(var, exp_ty)])
+        return (pat, [(var, var_ty)])
+tcPat pat@(L _ (VarP var)) (Check exp_ty) =
+        return (pat, [(var, exp_ty)])
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         unless (length pats == length arg_tys) $ do
@@ -91,11 +91,7 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         (pats', binds) <- checkPats pats arg_tys
         res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
         _ <- apInstSigma sp instPatSigma res_ty' exp_ty
-        return (L sp (AnnP (L sp (ConP con pats')) res_ty'), binds)
-tcPat (L sp (AnnP pat pat_ty)) exp_ty = do
-        (pat', binds) <- checkPat pat pat_ty
-        _ <- apInstSigma sp instPatSigma pat_ty exp_ty
-        return (L sp (AnnP pat' pat_ty), binds)
+        return (L sp (ConP con pats'), binds)
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>

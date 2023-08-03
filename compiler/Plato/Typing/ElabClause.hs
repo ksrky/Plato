@@ -72,12 +72,10 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
-isVar (L _ AnnP{} : _, _) = False
 isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
-isVarorSameCon con1 (L _ (AnnP (L _ (ConP con2 _)) _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
@@ -106,7 +104,6 @@ matchVar (var, _) rest clauses = do
                 (L _ (VarP varp) : pats, exp) ->
                         (pats, subst exp (VarE var) varp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
-                (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
 
@@ -135,8 +132,6 @@ matchClause (con, arg_tys) vars clauses = do
         let pat = noLoc $ ConP con (map (noLoc . VarP) params)
             vars' = zip params arg_tys ++ vars
         clauses' <- forM clauses $ \case
-                (L _ (AnnP (L _ (ConP _ ps)) _) : ps', e) -> return (ps ++ ps', e)
-                (L _ AnnP{} : _, _) -> unreachable ""
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
