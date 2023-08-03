@@ -14,14 +14,12 @@ import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
-import Prettyprinter
-import System.Log.Logger
+import Prettyprinter 
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Uniq
-import Plato.Driver.Logger
+import Plato.Common.Uniq 
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env
@@ -137,7 +135,6 @@ tcRho ::
         Expected Rho ->
         m (LExpr 'Typed)
 tcRho (L sp exp) exp_ty = do
-        liftIO $ debugM platoLog $ "tcRho: " ++ show exp ++ " : " ++ show exp_ty
         L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
@@ -147,7 +144,6 @@ tcRho (L sp exp) exp_ty = do
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                liftIO $ debugM platoLog $ "tcRho': " ++ show fun' ++ " : " ++ show fun_ty
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
                 res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
@@ -210,7 +206,6 @@ checkSigma exp sigma = do
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
-                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
                 throwError "Type not polymorphic enough"
         return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
 
@@ -232,7 +227,6 @@ checkClauses clauses sigma_ty = do
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
-                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
                 throwError "Type not polymorphic enough"
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
 

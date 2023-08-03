@@ -9,13 +9,11 @@ module Plato.Typing (
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import Data.IORef
-import System.Log.Logger
+import Data.IORef 
 
 import Control.Monad.Writer
 import Plato.Common.Error
-import Plato.Common.Uniq
-import Plato.Driver.Logger
+import Plato.Common.Uniq 
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -57,7 +55,6 @@ typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         tell [SpecDecl (ValSpec id ty)]
         local (modifyTypEnv $ extend id ty) $ typingDecls' decs
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
-        liftIO $ debugM platoLog $ "Start type checking of function '" ++ show id ++ "'"
         sigma <- zonk =<< find id =<< asks getTypEnv
         exp <- checkClauses clauses sigma
         tell [DefnDecl (FunDefnok id exp)]

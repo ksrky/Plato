@@ -43,7 +43,6 @@ unifyVar :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m (
 unifyVar tv1 ty2@(MetaT tv2) = do
         mb_ty1 <- readMetaTv tv1
         mb_ty2 <- readMetaTv tv2
-        liftIO $ debugM rootLoggerName $ "UnifyVar: " ++ show mb_ty1 ++ ", " ++ show mb_ty2
         case (mb_ty1, mb_ty2) of
                 (Just ty1, _) -> unify ty1 ty2
                 (Nothing, Just ty2) -> unify (MetaT tv1) ty2

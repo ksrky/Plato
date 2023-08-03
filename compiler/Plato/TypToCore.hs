@@ -81,15 +81,12 @@ elabFunDecls fbnds fspcs = do
 
 elabDecl :: forall ctx m. (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show kn
         kn' <- elabKind kn
         return [C.Decl id kn']
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Decl id ty']
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
-        liftIO $ debugM platoLog $ "elaborate DatDefnDecl: " ++ show id
         (:) <$> (C.Defn id <$> dataDefn) <*> ((++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs)
     where
         labDefns :: m (Ident, C.Type) = do
@@ -118,11 +115,9 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Defn id ty']
 elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show exp
         exp' <- elabExpr $ unLoc exp
         return [C.Defn id exp']
 
