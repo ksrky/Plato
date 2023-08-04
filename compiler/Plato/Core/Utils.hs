@@ -47,17 +47,17 @@ mkSplits ::
         forall ctx m.
         (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
         Term ->
-        [Ident] ->
+        [(Ident, Type)] ->
         Term ->
         m Term
 mkSplits t vars body = loop t (reverse vars)
     where
-        loop :: Term -> [Ident] -> m Term
+        loop :: Term -> [(Ident, Type)] -> m Term
         loop _ [] = return body
-        loop t [x] = return $ Let [Defn x t] body
-        loop t (x : [y]) = return $ Split t (x, (y, body))
-        loop t (x : xs) = do
-                idYZ <- freshIdent $ genName "yz"
+        loop t [(x, ty)] = return $ Let [Decl x ty, Defn x t] body
+        loop t ((x, _) : [(y, _)]) = return $ Split t (x, (y, body))
+        loop t ((x, _) : xs) = do
+                idYZ <- freshIdent $ genName "ys"
                 u <- loop (Var idYZ) xs
                 return $ Split t (x, (idYZ, u))
 

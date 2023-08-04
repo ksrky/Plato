@@ -36,7 +36,7 @@ instance HasLoc Ident where
         getLoc = spanIdent
 
 instance Pretty Ident where
-        pretty id = pretty (nameIdent id)
+        pretty id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
 
 ident :: Located Name -> Uniq -> Ident
 ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}

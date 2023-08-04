@@ -38,7 +38,7 @@ data Term
         | Lam (Bind Type) Term
         | App Term Term
         | Pair Term Term
-        | Split Term (Bind (Bind Term))
+        | Split Term (Ident, (Ident, Term))
         | Enum [Label]
         | Label Label
         | Case Term [(Label, Term)]

@@ -14,12 +14,12 @@ import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
-import Prettyprinter 
+import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Uniq 
+import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env
@@ -90,6 +90,7 @@ tcPat (L sp (ConP con pats)) exp_ty = do
         res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
         _ <- apInstSigma sp instPatSigma res_ty' exp_ty
         return (L sp (ConP con pats'), binds)
+tcPat (L _ TagP{}) _ = unreachable "received TagP"
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>

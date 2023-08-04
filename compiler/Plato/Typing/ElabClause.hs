@@ -72,6 +72,7 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
+isVar (L _ TagP{} : _, _) = unreachable "received TagP"
 isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
@@ -104,6 +105,7 @@ matchVar (var, _) rest clauses = do
                 (L _ (VarP varp) : pats, exp) ->
                         (pats, subst exp (VarE var) varp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
+                (L _ TagP{} : _, _) -> unreachable "TagP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
 
@@ -129,7 +131,7 @@ matchClause (con, _) _ [] =
                 hsep ["Pattern matching is non-exhaustive. Required", squotes $ pretty con]
 matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
-        let pat = noLoc $ ConP con (map (noLoc . VarP) params)
+        let pat = noLoc $ TagP con (zip params arg_tys)
             vars' = zip params arg_tys ++ vars
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
@@ -141,6 +143,7 @@ matchClause (con, arg_tys) vars clauses = do
                 (L _ WildP : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
                         return (vps ++ ps', e)
+                (L _ TagP{} : _, _) -> unreachable "received TagP"
                 ([], _) -> unreachable "empty patterns"
         (pat,) <$> match vars' clauses'
 

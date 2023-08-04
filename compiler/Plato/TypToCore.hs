@@ -36,24 +36,24 @@ elabExpr (T.LetEok fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> el
 elabExpr (T.CaseEok match _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
-        alts <- forM alts $ \(pat, exp) -> do
-                (con, vars) <- elabPat (unLoc pat)
+        alts' <- forM alts $ \(pat, exp) -> do
+                (con, args) <- elabPat (unLoc pat)
                 t <- mkUnfold $ C.Var idY
-                (con,) <$> (mkSplits t vars =<< elabExpr (unLoc exp))
+                (con,) <$> (mkSplits t args =<< elabExpr (unLoc exp))
         C.Split
                 <$> elabExpr (unLoc match)
-                <*> pure (idX, (idY, C.Case (C.Var idX) alts))
+                <*> pure (idX, (idY, C.Case (C.Var idX) alts'))
 
-elabPat :: (HasCallStack, MonadIO m) => T.Pat -> m (C.Label, [Ident])
-elabPat (T.ConP con pats) = do
-        let vars = [id | L _ (T.VarP id) <- pats]
-        unless (length pats == length vars) $ do
-                liftIO $ errorM platoLog $ show pats
-                unreachable "allowed only variable patterns"
-        return (nameIdent con, vars)
-elabPat _ = unreachable "allowed only constructor pattern"
+elabPat ::
+        (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) =>
+        T.Pat ->
+        m (C.Label, [(Ident, C.Type)])
+elabPat (T.TagP con args) = do
+        args' <- mapM (\(arg, ty) -> (arg,) <$> elabType ty) args
+        return (nameIdent con, args')
+elabPat _ = unreachable "allowed only tagged constructor pattern"
 
-elabType :: (HasCallStack, MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Type -> m C.Type
+elabType :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Type -> m C.Type
 elabType (T.VarT tv) = return $ C.Var (T.unTyVar tv)
 elabType (T.ConT tc) = return $ C.Var tc
 elabType (T.ArrT arg res) = join $ mkArr <$> elabType (unLoc arg) <*> elabType (unLoc res)
