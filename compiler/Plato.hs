@@ -10,6 +10,7 @@ import Data.Text qualified as T
 import Prettyprinter
 import Prettyprinter.Render.Text
 
+import Plato.Common.Error
 import Plato.Driver.Monad
 import Plato.Interpreter
 import Plato.Nicifier
@@ -34,7 +35,7 @@ compileToCore src = do
         whenFlagOn FEvalCore $ addCoreEnv coresyn
 
 interpretExpr :: PlatoMonad m => T.Text -> m ()
-interpretExpr inp = do
+interpretExpr inp = catchErrors $ do
         pssyn <- parseExpr inp
         pssyn' <- nicifyExpr pssyn
         typsyn <- psToTypExpr pssyn'

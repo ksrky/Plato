@@ -34,6 +34,7 @@ library
       Plato.Common.Utils
       Plato.Core.Data
       Plato.Core.Eval
+      Plato.Core.Pretty
       Plato.Core.Scope
       Plato.Core.Utils
       Plato.Driver.Context

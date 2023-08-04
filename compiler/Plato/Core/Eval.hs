@@ -52,6 +52,11 @@ subst (x, (t, sc)) u = do
         defn' i u
         return (t, s')
 
+unfold :: (MonadReader e m, Env e, MonadThrow m, MonadIO m) => Bind (Clos Term) -> Val -> m Val
+unfold b (VFold c) = eval =<< subst b c
+unfold b (Ne n) = return (Ne (NUnfold n b))
+unfold _ _ = throwError "Fold expected"
+
 eval :: forall e m. (MonadReader e m, Env e, MonadThrow m, MonadIO m) => Clos Term -> m Val
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
@@ -95,11 +100,6 @@ eval (Force t, s) = force =<< eval (t, s)
 eval (Rec t, s) = return (VRec (t, s))
 eval (Fold t, s) = return (VFold (t, s))
 eval (Unfold (x, t) u, sc) = unfold (x, (u, sc)) =<< eval (t, sc)
-    where
-        unfold :: Bind (Clos Term) -> Val -> m Val
-        unfold b (VFold c) = eval =<< subst b c
-        unfold b (Ne n) = return (Ne (NUnfold n b))
-        unfold _ _ = throwError "Fold expected"
 
 evalProg :: (MonadReader e m, Env e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
 evalProg ([], sc) = return sc

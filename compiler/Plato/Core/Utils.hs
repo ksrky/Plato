@@ -50,7 +50,7 @@ mkSplits ::
         [(Ident, Type)] ->
         Term ->
         m Term
-mkSplits t vars body = loop t (reverse vars)
+mkSplits t vars body = loop t vars
     where
         loop :: Term -> [(Ident, Type)] -> m Term
         loop _ [] = return body

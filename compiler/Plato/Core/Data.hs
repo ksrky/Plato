@@ -82,10 +82,10 @@ instance Pretty Boxed where
 instance Pretty Val where
         pretty (Ne ne) = pretty ne
         pretty VType = "*"
-        pretty (VQ Pi ((bind, ty), _)) = hsep [parens (pretty bind), "->", pretty ty]
-        pretty (VQ Sigma ((bind, ty), _)) = hsep [parens (pretty bind), "*", pretty ty]
+        pretty (VQ Pi ((bind, ty), _)) = hsep [parens (prettyBind bind), "->", pretty ty]
+        pretty (VQ Sigma ((bind, ty), _)) = hsep [parens (prettyBind bind), "*", pretty ty]
         pretty (VLift (ty, _)) = "^" <> pretty ty
-        pretty (VLam (bind, _) (t, _)) = hsep ["\\", pretty bind, dot, pretty t]
+        pretty (VLam (id, _) (t, _)) = hsep ["\\", prettyId id, dot, pretty t]
         pretty (VPair ((t, u), _)) = parens (pretty t <> comma <+> pretty u)
         pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
         pretty (VLabel lab) = "`" <> pretty lab
@@ -96,7 +96,7 @@ instance Pretty Val where
 instance Pretty Ne where
         pretty (NVar i) = pretty i
         pretty (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
-        pretty (NSplit ne (x, (y, (t, _)))) = hsep ["split", pretty ne, "with", braces (hsep [pretty x, comma, pretty y]), "->", pretty t]
+        pretty (NSplit ne (x, (y, (t, _)))) = hsep ["split", pretty ne, "with", braces (hsep [prettyId x, comma, prettyId y]), "->", pretty t]
         pretty (NCase ne (lts, _)) =
                 hsep
                         [ "case"
@@ -107,4 +107,4 @@ instance Pretty Ne where
                                         (map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts)
                         ]
         pretty (NForce ne) = "!" <> pretty ne
-        pretty (NUnfold ne (x, (t, _))) = hsep ["unfold", pretty ne, "as", pretty x, "->", pretty t]
+        pretty (NUnfold ne (x, (t, _))) = hsep ["unfold", pretty ne, "as", prettyId x, "->", pretty t]

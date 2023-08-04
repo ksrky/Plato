@@ -9,11 +9,11 @@ module Plato.Typing (
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import Data.IORef 
+import Data.IORef
 
 import Control.Monad.Writer
 import Plato.Common.Error
-import Plato.Common.Uniq 
+import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
 import Plato.Typing.Env

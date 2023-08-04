@@ -51,15 +51,21 @@ data Term
         deriving (Show, Eq)
 
 instance Pretty Entry where
-        pretty (Decl x ty) = hsep [pretty x, colon, pretty ty]
-        pretty (Defn x t) = hsep [pretty x, equals, pretty t]
+        pretty (Decl x ty) = hsep [prettyId x, colon, pretty ty]
+        pretty (Defn x t) = hsep [prettyId x, equals, pretty t]
 
 prettyBind :: Pretty a => Bind a -> Doc ann
-prettyBind (id, ty) = hsep [pretty id, colon, pretty ty]
+prettyBind (id, ty) = hsep [prettyId id, colon, pretty ty]
 
 instance Pretty Term where
-        pretty (Var x) = pretty x
-        pretty (Let prog t) = hsep ["let", braces $ hsep (map pretty prog), "in", pretty t]
+        pretty (Var x) = prettyId x
+        pretty (Let prog t) =
+                hsep
+                        [ "let"
+                        , braces $ concatWith (surround (semi <> space)) (map pretty prog)
+                        , "in"
+                        , pretty t
+                        ]
         pretty Type = "Type"
         pretty (Q Pi bind ty) = hsep [parens (prettyBind bind), "->", pretty ty]
         pretty (Q Sigma bind ty) = hsep [parens (prettyBind bind), "*", pretty ty]
@@ -71,7 +77,7 @@ instance Pretty Term where
                         [ "split"
                         , ppr TopPrec t
                         , "with"
-                        , parens (pretty x <> comma <+> pretty y)
+                        , parens (prettyId x <> comma <+> prettyId y)
                         , "->"
                         , pretty u
                         ]
