@@ -26,6 +26,24 @@ spec = do
                         test_decls "id : {a} a -> a; id = \\x -> x" `shouldReturn` ()
                 it "function clause" $ do
                         test_decls "id : {a} a -> a; id x = x" `shouldReturn` ()
+        {-
+        describe "elaboration of pattern matching" $ do
+                it "1 constructor-pattern" $ do
+                        test_clauses "not : Bool -> Bool; not True = False; not False = True"
+                                `shouldReturn` [ "not : Bool -> Bool"
+                                               , "not = \\$:Bool. case $ of {True -> False; False -> True}"
+                                               ]
+                it "1 constructor-pattern and 1 variable-pattern" $ do
+                        test_clauses "(+) : Nat -> Nat -> Nat; Zero + n = n; Succ m + n = Succ (m + n)"
+                                `shouldReturn` [ "+ : Nat -> Nat -> Nat"
+                                               , "\\$:Nat. \\$:Nat. case $ of {Zero -> $; Succ $ -> Succ (+ $ $)}"
+                                               ]
+                it "2 constructor-patterns" $ do
+                        test_clauses "(<) : Nat -> Nat -> Bool; Succ m < Succ n = m < n; Zero < Succ _ = True; _ < Zero = False"
+                                `shouldReturn` [ "< : Nat -> Nat -> Nat"
+                                               , "< = \\$:Nat. \\$:Nat. case $ of {Zero -> case $ of {Zero -> False; Succ $ -> True}; Succ $ -> case $ of {Zero -> False; Succ $ -> < $ $}}"
+                                               ]
+        -}
         describe "Type checking of a file" $ do
                 it "test01.plt" $ do
                         test_file "test01.plt" `shouldReturn` ()
@@ -87,6 +105,15 @@ test_decls inp = do
         decs <- runReaderT (parseDecls inp) ctx
         decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
         void $ runReaderT (typingDecls decs') ctx
+
+test_clauses :: T.Text -> IO [String]
+test_clauses inp = do
+        uref <- initUniq
+        let ctx = Context uref initScope initTypEnv initConEnv
+        decs <- runReaderT (parseDecls inp) ctx
+        decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
+        (decs'', _) <- runReaderT (typingDecls decs') ctx
+        return $ map (show . pretty) decs''
 
 test_file :: FilePath -> IO ()
 test_file fn =
