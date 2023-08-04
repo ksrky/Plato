@@ -36,8 +36,12 @@ instance Zonking (Expr 'Typed) where
         zonk (CaseEok match ann alts) = do
                 match' <- zonk match
                 ann' <- zonk ann
-                alts' <- mapM (\(pats, exp) -> (pats,) <$> zonk exp) alts
+                alts' <- mapM (\(pats, exp) -> (,) <$> mapM zonk pats <*> zonk exp) alts
                 return $ CaseEok match' ann' alts'
+
+instance Zonking Pat where
+        zonk (TagP con args) = TagP con <$> mapM (\(arg, ty) -> (arg,) <$> zonk ty) args
+        zonk pat = return pat
 
 instance Zonking Type where
         zonk (VarT tv) = return (VarT tv)
