@@ -3,6 +3,7 @@ module Plato.Interpreter where
 import Control.Monad.Reader
 
 import Plato.Common.Error
+import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Interpreter.Core
 import Plato.Syntax.Core
@@ -17,4 +18,5 @@ addCoreEnv prog = do
 evalCore :: PlatoMonad m => Term -> m ()
 evalCore t = catchErrors $ do
         ctx <- getContext =<< ask
-        runReaderT (runCore t) (getCoreEnv ctx)
+        uref <- getUniq =<< ask
+        runReaderT (runCore uref t) (getCoreEnv ctx)

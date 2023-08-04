@@ -19,7 +19,8 @@ instance Print Ident where
         evalPrint = return . prettyId
 
 instance Print Val where
-        evalPrint a = evalPrint =<< quote [] a
+        -- original impl uses 'quote', but need to expand inside fold for the final result
+        evalPrint a = evalPrint =<< nf [] a
 
 instance Print (Clos Term) where
         evalPrint a = evalPrint =<< quote [] a
@@ -36,7 +37,7 @@ prettyTerm c (Let prog t) =
         contextParens c 0 $
                 hsep
                         [ "let"
-                        , braces $ map pretty prog `sepBy` semi
+                        , braces $ map prettyEntry prog `sepBy` semi
                         , "in"
                         , prettyTerm 0 t
                         ]
@@ -75,9 +76,9 @@ prettyTerm _ (Case t lts) =
                         [ "case"
                         , prettyTerm 0 t
                         , "of"
-                        , map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts `sepBy` semi
+                        , braces $ map (\(l, t) -> hsep [pretty l, "->", prettyTerm 0 t]) lts `sepBy` semi
                         ]
-prettyTerm c (Lift t) = contextParens c 1 $ "^" <> pretty t
+prettyTerm c (Lift t) = contextParens c 1 $ "^" <> prettyTerm 2 t
 prettyTerm _ (Box t) = brackets $ prettyTerm 0 t
 prettyTerm c (Force t) = contextParens c 1 $ "!" <> prettyTerm 2 t
 prettyTerm c (Rec t) = contextParens c 1 $ "Rec" <+> prettyTerm 2 t
@@ -94,4 +95,4 @@ binding c (id, ty)
 
 prettyEntry :: Entry -> Doc ann
 prettyEntry (Decl x ty) = hang 2 $ hsep [prettyId x, colon, prettyTerm 0 ty]
-prettyEntry (Defn x t) = hang 2 $ hsep [prettyId x, equals, pretty t]
+prettyEntry (Defn x t) = hang 2 $ hsep [prettyId x, equals, prettyTerm 0 t]

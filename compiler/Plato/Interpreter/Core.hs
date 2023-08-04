@@ -1,4 +1,5 @@
 module Plato.Interpreter.Core (
+        CoreEnv (..),
         initCoreEnv,
         HasCoreEnv (..),
         enterCore,
@@ -53,9 +54,8 @@ instance Env Context where
         setE i v (Context env _) = setE i v env
         prtE i (Context env _) = prtE i env
 
-runCore :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Term -> m ()
-runCore t = do
+runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => IORef Uniq -> Term -> m ()
+runCore uref t = do
         CoreEnv env sc <- asks getCoreEnv
-        uref <- getUniq =<< ask
         doc <- runReaderT (evalPrint =<< eval (t, sc)) (Context env uref)
         liftIO $ putDoc $ doc <> line
