@@ -65,3 +65,8 @@ mkUnfold :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Term -> m Term
 mkUnfold t = do
         idX <- freshIdent $ genName "x"
         return $ Unfold (idX, t) (Var idX)
+
+decls :: Prog -> [Ident]
+decls [] = []
+decls (Decl x _ : p) = x : decls p
+decls (Defn _ _ : p) = decls p

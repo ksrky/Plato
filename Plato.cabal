@@ -30,10 +30,12 @@ library
       Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Name
+      Plato.Common.Pretty
       Plato.Common.Uniq
       Plato.Common.Utils
       Plato.Core.Data
       Plato.Core.Eval
+      Plato.Core.Normalise
       Plato.Core.Pretty
       Plato.Core.Scope
       Plato.Core.Utils

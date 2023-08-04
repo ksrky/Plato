@@ -8,10 +8,10 @@ import Plato.Common.Ident
 import Plato.Syntax.Core
 
 class Env e where
-        emptyE :: MonadIO m => m e
         extendE :: MonadIO m => PrtInfo -> e -> m Index
         getE :: MonadIO m => Index -> e -> m EnvEntry
         setE :: MonadIO m => Index -> EnvEntry -> e -> m ()
+        prtE :: MonadIO m => Index -> e -> m PrtInfo
 
 set :: [a] -> Int -> a -> [a]
 set [] _ _ = error "list is empty"
@@ -19,7 +19,6 @@ set (_ : as) 0 b = b : as
 set (a : as) i b = a : set as (i - 1) b
 
 instance Env (IORef EnvEntries) where
-        emptyE = liftIO $ newIORef []
         extendE fi ref = do
                 env <- liftIO $ readIORef ref
                 let i = length env
@@ -31,6 +30,9 @@ instance Env (IORef EnvEntries) where
         setE i v ref = do
                 env <- liftIO $ readIORef ref
                 liftIO $ writeIORef ref (set env i (v, snd (env !! i)))
+        prtE i ref = do
+                env <- liftIO $ readIORef ref
+                return $ snd $ env !! i
 
 type Index = Int
 
@@ -45,7 +47,7 @@ data Val
         | VType
         | VQ PiSigma (Clos (Bind Type, Type))
         | VLift (Clos Type)
-        | VLam (Bind (Clos Type)) (Clos Term)
+        | VLam (Clos (Bind Type, Term))
         | VPair (Clos (Term, Term))
         | VEnum [Label]
         | VLabel Label
@@ -85,7 +87,7 @@ instance Pretty Val where
         pretty (VQ Pi ((bind, ty), _)) = hsep [parens (prettyBind bind), "->", pretty ty]
         pretty (VQ Sigma ((bind, ty), _)) = hsep [parens (prettyBind bind), "*", pretty ty]
         pretty (VLift (ty, _)) = "^" <> pretty ty
-        pretty (VLam (id, _) (t, _)) = hsep ["\\", prettyId id, dot, pretty t]
+        pretty (VLam (((id, _), t), _)) = hsep ["\\", prettyId id, dot, pretty t]
         pretty (VPair ((t, u), _)) = parens (pretty t <> comma <+> pretty u)
         pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
         pretty (VLabel lab) = "`" <> pretty lab

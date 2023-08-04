@@ -97,7 +97,7 @@ instance Pretty Term where
         pretty (Force t) = "!" <> pretty t
         pretty (Rec t) = "Rec" <+> pretty t
         pretty (Fold t) = "fold" <+> pretty t
-        pretty (Unfold (x, t) u) = hsep ["unfold", ppr TopPrec t, "as", pretty x, "->", pretty u]
+        pretty (Unfold (x, t) u) = hsep ["unfold", ppr TopPrec t, "as", prettyId x, "->", pretty u]
 
 data Prec = TopPrec | AppPrec | AtomPrec deriving (Enum)
 

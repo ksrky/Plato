@@ -62,11 +62,11 @@ eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
 eval (Q ps bind body, sc) = return (VQ ps ((bind, body), sc))
-eval (Lam (x, _) t, sc) = return $ VLam (x, (t, sc)) (t, sc)
+eval (Lam (x, ty) t, sc) = return $ VLam (((x, ty), t), sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
         evalApp :: Clos Term -> Val -> m Val
-        evalApp u (VLam (x, _) t) = eval =<< subst (x, t) u
+        evalApp u (VLam (((x, _), t), sc)) = eval =<< subst (x, (t, sc)) u
         evalApp u (Ne t) = return (Ne (t :.. u))
         evalApp _ _ = throwError "function expected"
 eval (Pair t u, sc) = return $ VPair ((t, u), sc)
