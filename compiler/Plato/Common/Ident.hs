@@ -37,7 +37,7 @@ instance HasLoc Ident where
         getLoc = spanIdent
 
 instance Pretty Ident where
-        pretty id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
+        pretty id = pretty (nameIdent id)
 
 prettyId :: Ident -> Doc ann
 prettyId id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
