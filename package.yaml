@@ -1,5 +1,5 @@
 name: Plato
-version: 0.1.0.0
+version: 1.0.0
 github: "ksrky/Plato"
 license: BSD3
 author: "ksrk"
@@ -12,11 +12,6 @@ extra-source-files:
   - README.md
   - ChangeLog.md
 
-build-tools:
-  - alex
-  - happy
-  - hspec-discover:hspec-discover
-
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -28,23 +23,17 @@ description: Please see the README on GitHub at <https://github.com/ksrky/Plato#
 
 dependencies:
   - base >= 4.7 && < 5
-  - aeson
   - array
   - bytestring
   - containers
   - directory
   - filepath
-  - haskeline
   - hslogger
-  - hspec
   - mtl
-  - optparse-applicative
   - prettyprinter
   - safe-exceptions
-  - template-haskell
   - transformers
   - text
-  - vector
 
 ghc-options:
   - -Wall
@@ -74,6 +63,10 @@ executables:
       - -with-rtsopts=-N
     dependencies:
       - Plato
+      - aeson
+      - haskeline
+      - optparse-applicative
+      - template-haskell
 
 tests:
   Plato-test:
@@ -85,4 +78,7 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - Plato
+      - hspec
       - hspec-discover
+    build-tools:
+      - hspec-discover:hspec-discover

@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Plato
-version:        0.1.0.0
+version:        1.0.0
 description:    Please see the README on GitHub at <https://github.com/ksrky/Plato#readme>
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
@@ -100,30 +100,19 @@ library
       OverloadedStrings
       ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
-  build-tools:
-      alex
-    , happy
-  build-tool-depends:
-      hspec-discover:hspec-discover
   build-depends:
-      aeson
-    , array
+      array
     , base >=4.7 && <5
     , bytestring
     , containers
     , directory
     , filepath
-    , haskeline
     , hslogger
-    , hspec
     , mtl
-    , optparse-applicative
     , prettyprinter
     , safe-exceptions
-    , template-haskell
     , text
     , transformers
-    , vector
   default-language: GHC2021
 
 executable plato
@@ -140,11 +129,6 @@ executable plato
       OverloadedStrings
       ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
-  build-tools:
-      alex
-    , happy
-  build-tool-depends:
-      hspec-discover:hspec-discover
   build-depends:
       Plato
     , aeson
@@ -156,7 +140,6 @@ executable plato
     , filepath
     , haskeline
     , hslogger
-    , hspec
     , mtl
     , optparse-applicative
     , prettyprinter
@@ -164,7 +147,6 @@ executable plato
     , template-haskell
     , text
     , transformers
-    , vector
   default-language: GHC2021
 
 test-suite Plato-test
@@ -184,30 +166,22 @@ test-suite Plato-test
       OverloadedStrings
       ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing -threaded -rtsopts -with-rtsopts=-N
-  build-tools:
-      alex
-    , happy
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
       Plato
-    , aeson
     , array
     , base >=4.7 && <5
     , bytestring
     , containers
     , directory
     , filepath
-    , haskeline
     , hslogger
     , hspec
     , hspec-discover
     , mtl
-    , optparse-applicative
     , prettyprinter
     , safe-exceptions
-    , template-haskell
     , text
     , transformers
-    , vector
   default-language: GHC2021
