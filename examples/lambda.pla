@@ -49,15 +49,13 @@ termSubstTop s t = termShift (Z - S Z) (termSubst (termShift (S Z) s) Z t)
 
 eval : Term -> Val
 eval (TApp t1 t2) =
-    let v1 : Val
-        v1 = eval t1
+    let v1 : Val = eval t1
      in case v1 of
-        VAbs t11 -> termSubstTop t2 t11
+        VAbs t11 -> eval (termSubstTop t2 t11)
         _ -> v1
 eval TZero = VZero
-eval TSucc t1 =
-    let v1 : Val
-        v1 = eval t1
+eval (TSucc t1) =
+    let v1 : Val = eval t1
      in VSucc v1
 eval _ = VNil
         
