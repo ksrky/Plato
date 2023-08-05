@@ -91,8 +91,8 @@ spec = do
                                                , "succ : ChurchNum -> ChurchNum"
                                                , "two : ChurchNum"
                                                , "runNum where {(ChurchNum xs) -> xs}"
-                                               , "zero where {-> ChurchNum (\\s. \\z. z)}"
-                                               , "succ where {n -> ChurchNum (\\s. \\z. s (runNum n s z))}"
+                                               , "zero where {-> ChurchNum (\\ s . \\ z . z)}"
+                                               , "succ where {n -> ChurchNum (\\s . \\z . s (runNum n s z))}"
                                                , "two where {-> succ (succ zero)}"
                                                ]
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (typToCore, typToCoreExpr) where
+module Plato.TypToCore (elabDecl, typToCore, typToCoreExpr) where
 
 import Control.Monad.Reader
 import Data.Foldable
