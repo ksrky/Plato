@@ -19,7 +19,7 @@ import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
-import Plato.Typing.Env 
+import Plato.Typing.Env
 
 elabExpr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
@@ -38,11 +38,11 @@ elabExpr (T.CaseEok match _ alts) = do
         idY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do
                 (con, args) <- elabPat (unLoc pat)
-                t <- mkUnfold $ C.Var idY 
-                (con,) <$> (mkSplits t args =<< elabExpr (unLoc exp))
+                t <- mkUnfold $ C.Var idY
+                (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr (unLoc exp)))
         C.Split
                 <$> elabExpr (unLoc match)
-                <*> pure (idX, (idY, C.Case (C.Var idX) alts'))
+                <*> pure (idX, (idY, C.Force $ C.Case (C.Var idX) alts'))
 
 elabPat ::
         (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) =>
