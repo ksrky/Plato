@@ -2,9 +2,9 @@ module Plato.Core.Data where
 
 import Control.Monad.IO.Class
 import GHC.IORef
-import Prettyprinter
 
 import Plato.Common.Ident
+import Plato.Common.Pretty
 import Plato.Syntax.Core
 
 class Env e where
@@ -81,32 +81,56 @@ data PrtInfo = PrtInfo
 instance Pretty Boxed where
         pretty (Boxed (t, _)) = brackets $ pretty t
 
+instance PrettyWithContext a => PrettyWithContext (Clos a) where
+        pretty' c (t, _) = pretty' c t
+
 instance Pretty Val where
-        pretty (Ne ne) = pretty ne
-        pretty VType = "*"
-        pretty (VQ Pi ((bind, ty), _)) = hsep [parens (prettyBind bind), "->", pretty ty]
-        pretty (VQ Sigma ((bind, ty), _)) = hsep [parens (prettyBind bind), "*", pretty ty]
-        pretty (VLift (ty, _)) = "^" <> pretty ty
-        pretty (VLam (((id, _), t), _)) = hsep ["\\", prettyId id, dot, pretty t]
-        pretty (VPair ((t, u), _)) = parens (pretty t <> comma <+> pretty u)
-        pretty (VEnum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
-        pretty (VLabel lab) = "`" <> pretty lab
-        pretty (VBox box) = pretty box
-        pretty (VRec (ty, _)) = "Rec" <+> pretty ty
-        pretty (VFold (t, _)) = "fold" <+> pretty t
+        pretty = pretty' 0
+
+instance PrettyWithContext Val where
+        pretty' c (Ne ne) = pretty' c ne
+        pretty' _ VType = "Type"
+        pretty' c (VQ Pi ((bind, ty), _)) =
+                contextParens c 0 $ hsep [prettyBind 1 bind, "->", pretty' 0 ty]
+        pretty' c (VQ Sigma ((bind, ty), _)) =
+                contextParens c 0 $ hsep [prettyBind 1 bind, "*", pretty' 0 ty]
+        pretty' c (VLam (((x, ty), t), _)) =
+                contextParens c 0 $ hsep ["\\", prettyId x, colon, pretty' 1 ty, dot, pretty' 0 t]
+        pretty' _ (VPair ((t, u), _)) = parens $ map (pretty' 0) [t, u] `sepBy` comma
+        pretty' _ (VEnum labs) = braces $ map pretty labs `sepBy` comma
+        pretty' _ (VLabel lab) = "`" <> pretty lab
+        pretty' c (VLift t) = contextParens c 1 $ "^" <> pretty' 2 t
+        pretty' _ (VBox t) = brackets $ pretty t
+        pretty' c (VRec (ty, _)) = contextParens c 1 $ "Rec" <+> pretty' 2 ty
+        pretty' c (VFold (t, _)) = contextParens c 1 $ "fold" <+> pretty' 2 t
 
 instance Pretty Ne where
-        pretty (NVar i) = pretty i
-        pretty (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
-        pretty (NSplit ne (x, (y, (t, _)))) = hsep ["split", pretty ne, "with", braces (hsep [prettyId x, comma, prettyId y]), "->", pretty t]
-        pretty (NCase ne (lts, _)) =
-                hsep
-                        [ "case"
-                        , pretty ne
-                        , braces $
-                                concatWith
-                                        (surround (semi <> space))
-                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts)
-                        ]
-        pretty (NForce ne) = "!" <> pretty ne
-        pretty (NUnfold ne (x, (t, _))) = hsep ["unfold", pretty ne, "as", prettyId x, "->", pretty t]
+        pretty = pretty' 0
+
+instance PrettyWithContext Ne where
+        pretty' _ (NVar i) = pretty i
+        pretty' _ (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
+        pretty' c (NSplit ne (x, (y, (t, _)))) =
+                contextParens c 0 $
+                        hang 2 $
+                                hsep
+                                        [ "split"
+                                        , pretty' 0 ne
+                                        , "with"
+                                        , parens $ [prettyId x, prettyId y] `sepBy` comma
+                                        , "->"
+                                        , pretty' 0 t
+                                        ]
+        pretty' _ (NCase ne (lts, _)) =
+                hang 1 $
+                        hsep
+                                [ "case"
+                                , pretty' 0 ne
+                                , "of"
+                                , braces $ map (\(l, t) -> hsep [pretty l, "->", pretty' 0 t]) lts `sepBy` semi
+                                ]
+        pretty' c (NForce ne) = contextParens c 1 $ "!" <> pretty' 2 ne
+        pretty' c (NUnfold ne (x, (t, _))) =
+                contextParens c 0 $
+                        hang 2 $
+                                hsep ["unfold", pretty' 0 t, "as", prettyId x, "->", pretty' 0 ne]

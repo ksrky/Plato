@@ -3,6 +3,7 @@ module Plato.Common.Pretty (
         sepBy,
         contextParens,
         prettyPrint,
+        PrettyWithContext (..),
 ) where
 
 import Prettyprinter
@@ -16,3 +17,6 @@ contextParens i j doc = if i > j then parens doc else doc
 
 prettyPrint :: Pretty a => a -> IO ()
 prettyPrint = putDoc . pretty
+
+class PrettyWithContext a where
+        pretty' :: Int -> a -> Doc ann

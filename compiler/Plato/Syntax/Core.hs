@@ -53,68 +53,61 @@ instance Pretty Entry where
         pretty (Decl x ty) = hsep [prettyId x, colon, pretty ty]
         pretty (Defn x t) = hsep [prettyId x, equals, pretty t]
 
-prettyBind :: Pretty a => Bind a -> Doc ann
-prettyBind (id, ty) = hsep [prettyId id, colon, pretty ty]
+prettyBind :: PrettyWithContext a => Int -> Bind a -> Doc ann
+prettyBind c (id, ty)
+        | nameIdent id == wcName = pretty' c ty
+        | otherwise = parens $ hsep [prettyId id, colon, pretty' 0 ty]
 
 instance Pretty Term where
-        pretty (Var x) = prettyId x
-        pretty (Let prog t) =
-                hsep
-                        [ "let"
-                        , braces $ concatWith (surround (semi <> space)) (map pretty prog)
-                        , "in"
-                        , pretty t
-                        ]
-        pretty Type = "Type"
-        pretty (Q Pi bind ty) = hsep [parens (prettyBind bind), "->", pretty ty]
-        pretty (Q Sigma bind ty) = hsep [parens (prettyBind bind), "*", pretty ty]
-        pretty (Lam bind t) = hsep ["\\", prettyBind bind, dot, pretty t]
-        pretty (App t u) = ppr TopPrec t <+> ppr AppPrec u
-        pretty (Pair t u) = parens (pretty t <> comma <+> pretty u)
-        pretty (Split t (x, (y, u))) =
-                hsep
-                        [ "split"
-                        , ppr TopPrec t
-                        , "with"
-                        , parens (prettyId x <> comma <+> prettyId y)
-                        , "->"
-                        , pretty u
-                        ]
-        pretty (Enum labs) = braces $ concatWith (surround (comma <> space)) (map pretty labs)
-        pretty (Label lab) = "`" <> pretty lab
-        pretty (Case t lts) =
-                hsep
-                        [ "case"
-                        , ppr TopPrec t
-                        , braces $
-                                concatWith
-                                        (surround (semi <> space))
-                                        (map (\(l, t) -> hsep [pretty l, "->", pretty t]) lts)
-                        ]
-        pretty (Lift t) = "^" <> pretty t
-        pretty (Box t) = brackets $ pretty t
-        pretty (Force t) = "!" <> pretty t
-        pretty (Rec t) = "Rec" <+> pretty t
-        pretty (Fold t) = "fold" <+> pretty t
-        pretty (Unfold (x, t) u) = hsep ["unfold", ppr TopPrec t, "as", prettyId x, "->", pretty u]
+        pretty = pretty' 0
 
-data Prec = TopPrec | AppPrec | AtomPrec deriving (Enum)
-
-precOf :: Type -> Prec
-precOf Var{} = AtomPrec
-precOf Type{} = AtomPrec
-precOf Enum{} = AtomPrec
-precOf Pair{} = AtomPrec
-precOf Label{} = AtomPrec
-precOf App{} = AppPrec
-precOf Lift{} = AppPrec
-precOf Box{} = AppPrec
-precOf Force{} = AppPrec
-precOf Rec{} = AppPrec
-precOf Fold{} = AppPrec
-precOf _ = TopPrec
-
-ppr :: Prec -> Term -> Doc ann
-ppr p t
-        | fromEnum p >= fromEnum (precOf t) = parens (pretty t)
-        | otherwise = pretty t
+instance PrettyWithContext Term where
+        pretty' _ (Var id) = prettyId id
+        pretty' c (Let prog t) =
+                contextParens c 0 $
+                        hsep
+                                [ "let"
+                                , braces $ map pretty prog `sepBy` semi
+                                , "in"
+                                , pretty' 0 t
+                                ]
+        pretty' _ Type = "Type"
+        pretty' c (Q Pi bind ty) =
+                contextParens c 0 $ hsep [prettyBind 1 bind, "->", pretty' 0 ty]
+        pretty' c (Q Sigma bind ty) =
+                contextParens c 0 $ hsep [prettyBind 1 bind, "*", pretty' 0 ty]
+        pretty' c (Lam (x, ty) t) =
+                contextParens c 0 $ hsep ["\\", prettyId x, colon, pretty' 1 ty, dot, pretty' 0 t]
+        pretty' c (App t1 t2) =
+                group $ hang 2 $ contextParens c 1 $ hsep [pretty' 1 t1, pretty' 2 t2]
+        pretty' _ (Pair t1 t2) = parens $ map (pretty' 0) [t1, t2] `sepBy` comma
+        pretty' c (Split t (x, (y, u))) =
+                contextParens c 0 $
+                        hang 2 $
+                                hsep
+                                        [ "split"
+                                        , pretty' 0 t
+                                        , "with"
+                                        , parens $ [prettyId x, prettyId y] `sepBy` comma
+                                        , "->"
+                                        , pretty' 0 u
+                                        ]
+        pretty' _ (Enum labs) = braces $ map pretty labs `sepBy` comma
+        pretty' _ (Label lab) = "`" <> pretty lab
+        pretty' _ (Case t lts) =
+                hang 1 $
+                        hsep
+                                [ "case"
+                                , pretty' 0 t
+                                , "of"
+                                , braces $ map (\(l, t) -> hsep [pretty l, "->", pretty' 0 t]) lts `sepBy` semi
+                                ]
+        pretty' c (Lift t) = contextParens c 1 $ "^" <> pretty' 2 t
+        pretty' _ (Box t) = brackets $ pretty' 0 t
+        pretty' c (Force t) = contextParens c 1 $ "!" <> pretty' 2 t
+        pretty' c (Rec t) = contextParens c 1 $ "Rec" <+> pretty' 2 t
+        pretty' c (Fold t) = contextParens c 1 $ "fold" <+> pretty' 2 t
+        pretty' c (Unfold (x, t) u) =
+                contextParens c 0 $
+                        hang 2 $
+                                hsep ["unfold", pretty' 0 t, "as", prettyId x, "->", pretty' 0 u]
