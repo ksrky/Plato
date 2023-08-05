@@ -11,6 +11,7 @@ language: GHC2021
 extra-source-files:
   - README.md
   - ChangeLog.md
+  - compiler/info.json
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -52,6 +53,9 @@ default-extensions:
 
 library:
   source-dirs: compiler
+  build-tools:
+    - alex
+    - happy
 
 executables:
   plato:

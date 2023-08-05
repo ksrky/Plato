@@ -18,6 +18,7 @@ build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+    compiler/info.json
 
 source-repository head
   type: git
@@ -100,6 +101,9 @@ library
       OverloadedStrings
       ImportQualifiedPost
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-name-shadowing
+  build-tools:
+      alex
+    , happy
   build-depends:
       array
     , base >=4.7 && <5
