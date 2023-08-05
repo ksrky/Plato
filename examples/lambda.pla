@@ -27,38 +27,37 @@ tmmap onvar c t =
 
 termShiftAbove : Nat -> Nat -> Term -> Term
 termShiftAbove d =
-        tmmap
-            ( \c i -> case i < c of
-                True -> TVar i
-                False -> TVar (i + d)
-            )
+    tmmap
+        ( \c i -> case i < c of
+            True -> TVar i
+            False -> TVar (i + d)
+        )
 
 termShift : Nat -> Term -> Term
 termShift d = termShiftAbove d Z
 
 termSubst : Term -> Nat -> Term -> Term
 termSubst t =
-        tmmap
-                ( \j x -> case x == j of
-                    True -> termShift j t
-                    False -> TVar x
-                )
+    tmmap
+        ( \j x -> case x == j of
+            True -> termShift j t
+            False -> TVar x
+        )
 
 termSubstTop : Term -> Term -> Term
 termSubstTop s t = termShift (Z - S Z) (termSubst (termShift (S Z) s) Z t)
 
 eval : Term -> Val
-eval t = case t of
-    TApp t1 t2 ->
-        let v1 : Val
-            v1 = eval t1
-         in case v1 of
-                VAbs t11 -> termSubstTop t2 t11
-                _ -> v1
-    TZero -> VZero
-    TSucc t1 ->
-        let v1 : Val
-            v1 = eval t1
-         in VSucc v1
-    _ -> VNil
+eval (TApp t1 t2) =
+    let v1 : Val
+        v1 = eval t1
+     in case v1 of
+        VAbs t11 -> termSubstTop t2 t11
+        _ -> v1
+eval TZero = VZero
+eval TSucc t1 =
+    let v1 : Val
+        v1 = eval t1
+     in VSucc v1
+eval _ = VNil
         
