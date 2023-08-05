@@ -50,8 +50,8 @@ null Nil = True
 null _ = False
 
 length : {a} List a -> Nat
-length Nil = Zero
-length (x :: xs) = Succ (length xs)
+length Nil = Z
+length (x :: xs) = S (length xs)
 
 map : {a b} (a -> b) -> List a -> List b
 map f Nil = Nil
