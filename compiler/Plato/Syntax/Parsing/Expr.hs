@@ -2,10 +2,9 @@
 
 module Plato.Syntax.Parsing.Expr where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import {-# SOURCE #-} Plato.Syntax.Parsing.Decl
 import Plato.Syntax.Parsing.Pat
 
@@ -46,21 +45,13 @@ instance Pretty Expr where
         pretty (InfixE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
         pretty (LamE vars body) = hsep [backslash <> hsep (map pretty vars), "->", pretty body]
         pretty (LetE decs body) =
-                hsep
-                        [ "let"
-                        , braces $ concatWith (surround $ semi <> space) (map pretty decs)
-                        , "in"
-                        , pretty body
-                        ]
+                hsep ["let", braces $ map pretty decs `sepBy` semi, "in", pretty body]
         pretty (CaseE match alts) =
                 hsep
                         [ "case"
                         , pretty match
                         , "of"
-                        , braces $
-                                concatWith
-                                        (surround $ semi <> space)
-                                        (map (\(pat, body) -> hsep [pretty pat, "->", pretty body]) alts)
+                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
         pretty (FactorE exp) = pretty exp
 

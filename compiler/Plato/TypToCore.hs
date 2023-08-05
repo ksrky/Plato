@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (typToCore, typToCoreExpr) where
+module Plato.TypToCore (elabDecl, typToCore, typToCoreExpr) where
 
 import Control.Monad.Reader
 import Data.Foldable
@@ -19,7 +19,7 @@ import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Typing qualified as T
-import Plato.Typing.Utils
+import Plato.Typing.Env
 
 elabExpr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
@@ -36,24 +36,24 @@ elabExpr (T.LetEok fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> el
 elabExpr (T.CaseEok match _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
-        alts <- forM alts $ \(pat, exp) -> do
-                (con, vars) <- elabPat (unLoc pat)
+        alts' <- forM alts $ \(pat, exp) -> do
+                (con, args) <- elabPat (unLoc pat)
                 t <- mkUnfold $ C.Var idY
-                (con,) <$> (mkSplits t vars =<< elabExpr (unLoc exp))
+                (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr (unLoc exp)))
         C.Split
                 <$> elabExpr (unLoc match)
-                <*> pure (idX, (idY, C.Case (C.Var idX) alts))
+                <*> pure (idX, (idY, C.Force $ C.Case (C.Var idX) alts'))
 
-elabPat :: (HasCallStack, MonadIO m) => T.Pat -> m (C.Label, [Ident])
-elabPat (T.ConP con pats) = do
-        let vars = [id | L _ (T.VarP id) <- pats]
-        unless (length pats == length vars) $ do
-                liftIO $ errorM platoLog $ show pats
-                unreachable "allowed only variable patterns"
-        return (nameIdent con, vars)
-elabPat _ = unreachable "allowed only constructor pattern"
+elabPat ::
+        (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) =>
+        T.Pat ->
+        m (C.Label, [(Ident, C.Type)])
+elabPat (T.TagP con args) = do
+        args' <- mapM (\(arg, ty) -> (arg,) <$> elabType ty) args
+        return (nameIdent con, args')
+elabPat _ = unreachable "allowed only tagged constructor pattern"
 
-elabType :: (HasCallStack, MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Type -> m C.Type
+elabType :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Type -> m C.Type
 elabType (T.VarT tv) = return $ C.Var (T.unTyVar tv)
 elabType (T.ConT tc) = return $ C.Var tc
 elabType (T.ArrT arg res) = join $ mkArr <$> elabType (unLoc arg) <*> elabType (unLoc res)
@@ -81,16 +81,13 @@ elabFunDecls fbnds fspcs = do
 
 elabDecl :: forall ctx m. (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show kn
         kn' <- elabKind kn
         return [C.Decl id kn']
 elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Decl id ty']
 elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
-        liftIO $ debugM platoLog $ "elaborate DatDefnDecl: " ++ show id
-        (:) <$> (C.Defn id <$> dataDefn) <*> mapM constrDefn constrs
+        (:) <$> (C.Defn id <$> dataDefn) <*> ((++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs)
     where
         labDefns :: m (Ident, C.Type) = do
                 idL <- freshIdent $ genName "l"
@@ -102,6 +99,8 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
         dataDefn :: m C.Term = do
                 idL <- fst <$> labDefns
                 C.Q C.Sigma <$> labDefns <*> (C.Case (C.Var idL) <$> caseAlts)
+        constrDecl :: (Ident, T.LType) -> m C.Entry
+        constrDecl (con, ty) = C.Decl con <$> elabType (unLoc ty)
         constrDefn :: (Ident, T.LType) -> m C.Entry
         constrDefn (con, ty) = do
                 let walk :: [Ident] -> T.Type -> m C.Term
@@ -116,11 +115,9 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show ty
         ty' <- elabType $ unLoc ty
         return [C.Defn id ty']
 elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
-        liftIO $ debugM platoLog $ "elaborate " ++ show id ++ ": " ++ show exp
         exp' <- elabExpr $ unLoc exp
         return [C.Defn id exp']
 

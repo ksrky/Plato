@@ -8,16 +8,19 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+import Prettyprinter
+import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.Env
+import Plato.Typing.Tc.Subst qualified as Subst
 import Plato.Typing.Utils
 
--- TODO: Each occurance of matching variables' Uniqs in abstractions are identical.
 elabClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
@@ -39,22 +42,22 @@ elabCase (CaseEok exp ty alts) = do
         return $ AppE (AbsEok var ty <$> altsexp) exp
 elabCase _ = unreachable "Expected case expression"
 
-dataConsof :: (MonadReader env m, HasConEnv env, MonadThrow m) => Type -> m Constrs
-dataConsof ty = do
-        let getTycon :: Type -> Ident
-            getTycon (AllT _ ty) = getTycon (unLoc ty)
-            getTycon (ArrT _ res) = getTycon (unLoc res)
-            getTycon (AppT fun _) = getTycon (unLoc fun)
-            getTycon (ConT tc) = tc
-            getTycon _ = unreachable $ "Not a variant type "
-        lookupIdent (getTycon ty) =<< asks getConEnv
+dataConsof :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m) => Type -> m Constrs
+dataConsof = getTycon []
+    where
+        getTycon :: [Type] -> Type -> m Constrs
+        getTycon acc (AppT fun arg) = getTycon (unLoc arg : acc) (unLoc fun)
+        getTycon acc (ConT tc) = do
+                (params, constrs) <- lookupIdent tc =<< asks getConEnv
+                return (map (\(con, ty) -> (con, Subst.subst params (reverse acc) <$> ty)) constrs)
+        getTycon _ _ = unreachable "Not a variant type"
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
-subst exp replace id2 = subst' <$> exp
+subst exp replace id = subst' <$> exp
     where
         subst' :: Expr 'Typed -> Expr 'Typed
         subst' (VarE var)
-                | var == id2 = replace
+                | var == id = replace
                 | otherwise = VarE var
         subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
         subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
@@ -69,6 +72,7 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
+isVar (L _ TagP{} : _, _) = unreachable "received TagP"
 isVar ([], _) = unreachable "ElabClause.isVar"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
@@ -95,15 +99,15 @@ matchVar ::
         [Clause 'Typed] ->
         m (LExpr 'Typed)
 matchVar (var, _) rest clauses = do
+        when (length clauses > 1) $ liftIO $ warningM platoLog "Pattern matching is redundant."
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
                 (L _ (VarP varp) : pats, exp) ->
                         (pats, subst exp (VarE var) varp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
+                (L _ TagP{} : _, _) -> unreachable "TagP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
-
--- [(pats, subst exp var varp) | (L _ (VarP varp) : pats, exp) <- clauses]
 
 matchCon ::
         (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
@@ -122,9 +126,12 @@ matchClause ::
         [(Ident, Type)] ->
         [Clause 'Typed] ->
         m (LPat, LExpr 'Typed)
+matchClause (con, _) _ [] =
+        throwError $
+                hsep ["Pattern matching is non-exhaustive. Required", squotes $ pretty con]
 matchClause (con, arg_tys) vars clauses = do
         params <- mapM (const newVarIdent) arg_tys
-        let pat = noLoc $ ConP con (map (noLoc . VarP) params)
+        let pat = noLoc $ TagP con (zip params arg_tys)
             vars' = zip params arg_tys ++ vars
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
@@ -136,6 +143,7 @@ matchClause (con, arg_tys) vars clauses = do
                 (L _ WildP : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
                         return (vps ++ ps', e)
+                (L _ TagP{} : _, _) -> unreachable "received TagP"
                 ([], _) -> unreachable "empty patterns"
         (pat,) <$> match vars' clauses'
 

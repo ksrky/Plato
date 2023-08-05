@@ -15,13 +15,11 @@ import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
 import Prettyprinter
-import System.Log.Logger
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
-import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.ElabClause
 import Plato.Typing.Env
@@ -54,34 +52,45 @@ instance Show a => Show (Expected a) where
         show Infer{} = "{tyref}"
         show (Check ty) = show ty
 
+checkPats ::
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        [LPat] ->
+        [Rho] ->
+        m ([LPat], [(Ident, Sigma)])
+checkPats pats pat_tys = do
+        (pats', binds) <- unzip <$> zipWithM checkPat pats pat_tys
+        return (pats', concat binds)
+
 -- | Type checking of patterns
 checkPat ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
         Rho ->
-        m [(Ident, Sigma)]
+        m (LPat, [(Ident, Sigma)])
 checkPat pat ty = tcPat pat (Check ty)
 
 tcPat ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LPat ->
         Expected Sigma ->
-        m [(Ident, Sigma)]
-tcPat (L _ WildP) _ = return []
-tcPat (L _ (VarP var)) (Infer ref) = do
+        m (LPat, [(Ident, Sigma)])
+tcPat pat@(L _ WildP) _ = return (pat, [])
+tcPat pat@(L _ (VarP var)) (Infer ref) = do
         var_ty <- newTyVar
         writeMIORef ref var_ty
-        return [(var, var_ty)]
-tcPat (L _ (VarP var)) (Check exp_ty) = return [(var, exp_ty)]
+        return (pat, [(var, var_ty)])
+tcPat pat@(L _ (VarP var)) (Check exp_ty) =
+        return (pat, [(var, exp_ty)])
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         unless (length pats == length arg_tys) $ do
                 throwLocErr sp $
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        binds <- concat <$> zipWithM checkPat pats arg_tys
+        (pats', binds) <- checkPats pats arg_tys
         res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
         _ <- apInstSigma sp instPatSigma res_ty' exp_ty
-        return binds
+        return (L sp (ConP con pats'), binds)
+tcPat (L _ TagP{}) _ = unreachable "received TagP"
 
 instPatSigma ::
         (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
@@ -127,7 +136,6 @@ tcRho ::
         Expected Rho ->
         m (LExpr 'Typed)
 tcRho (L sp exp) exp_ty = do
-        liftIO $ debugM platoLog $ "tcRho: " ++ show exp ++ " : " ++ show exp_ty
         L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
@@ -137,10 +145,9 @@ tcRho (L sp exp) exp_ty = do
                 return $ coercion .> VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                liftIO $ debugM platoLog $ "tcRho': " ++ show fun' ++ " : " ++ show fun_ty
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
                 coercion <- apInstSigma sp instSigma res_ty' exp_ty
                 return $ coercion .> AppE fun' arg'
         tcRho' (AbsE var body) (Check exp_ty) = do
@@ -160,14 +167,22 @@ tcRho (L sp exp) exp_ty = do
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
                 return $ LetEok bnds' spcs body'
-        tcRho' (CaseE match alts) exp_ty = do
-                (match', match_ty) <- inferRho match
+        tcRho' (CaseE test alts) exp_ty = do
+                (test', pat_ty) <- inferRho test
+                exp_ty' <- zapToMonoType exp_ty
                 alts' <- forM alts $ \(pat, body) -> do
-                        binds <- checkPat pat match_ty
+                        (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
-                        coer <- instSigma body_ty exp_ty
-                        return (pat, (coer .>) <$> body')
-                elabCase $ CaseEok match' match_ty alts'
+                        coer <- instSigma body_ty exp_ty'
+                        return (pat', (coer .>) <$> body')
+                elabCase $ CaseEok test' pat_ty alts'
+
+zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
+zapToMonoType (Check ty) = return $ Check ty
+zapToMonoType (Infer ref) = do
+        ty <- newTyVar
+        writeMIORef ref ty
+        return $ Check ty
 
 -- | Type check of Sigma
 inferSigma ::
@@ -192,7 +207,6 @@ checkSigma exp sigma = do
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
-                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
                 throwError "Type not polymorphic enough"
         return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
 
@@ -206,7 +220,7 @@ checkClauses clauses sigma_ty = do
         (coer, skol_tvs, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
-                binds <- concat <$> zipWithM checkPat pats pat_tys
+                (_, binds) <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
         exp <- elabClauses pat_tys clauses'
@@ -214,7 +228,6 @@ checkClauses clauses sigma_ty = do
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
-                liftIO $ debugM platoLog $ "esc_tvs: " ++ show esc_tvs ++ ", " ++ "skol_tvs: " ++ show skol_tvs
                 throwError "Type not polymorphic enough"
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
 

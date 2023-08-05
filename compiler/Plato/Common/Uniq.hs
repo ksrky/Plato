@@ -40,6 +40,10 @@ instance HasUniq (IORef Uniq) where
         getUniq = return
         setUniq uniq ref = liftIO $ writeIORef ref uniq
 
+instance HasUniq a => HasUniq (a, b) where
+        getUniq = getUniq . fst
+        setUniq uniq = setUniq uniq . fst
+
 uniqZero :: Uniq
 uniqZero = 0
 

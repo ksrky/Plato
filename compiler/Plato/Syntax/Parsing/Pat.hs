@@ -4,10 +4,9 @@ module Plato.Syntax.Parsing.Pat (
         prAtomPat,
 ) where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 
 ----------------------------------------------------------------
 -- Data and types

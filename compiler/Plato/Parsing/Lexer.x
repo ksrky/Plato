@@ -12,7 +12,6 @@ import Plato.Parsing.Layout
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
 
-import Plato.Common.Error
 import Plato.Common.Location
 }
 

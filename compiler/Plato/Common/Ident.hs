@@ -4,6 +4,7 @@ module Plato.Common.Ident (
         fromIdent,
         freshIdent,
         reassignUniq,
+        prettyId,
         IdentMap,
         lookupIdent,
 ) where
@@ -37,6 +38,9 @@ instance HasLoc Ident where
 
 instance Pretty Ident where
         pretty id = pretty (nameIdent id)
+
+prettyId :: Ident -> Doc ann
+prettyId id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
 
 ident :: Located Name -> Uniq -> Ident
 ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}

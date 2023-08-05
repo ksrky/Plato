@@ -9,23 +9,33 @@ Plato is a purely functional programming language based on higher-order polymorp
 - Statically typed
 - Haskell-like syntax
 - N-rank parametric polymorphism
-- Evaluating all terms at compile time
 - No literal or builtin constant
-- Using typed lambda calculus as a core language
+- Able to evaluate the core language
 
-## Getting the source
+## Installation
 
-**From GitHub**
+### Getting the source from GitHub
 
 ```command
 $ git clone https://github.com/ksrky/Plato.git
 ```
 
-## Building and Installing
+### Prerequisities
 
-**Using stack**
+```
+ghc >= 9.2.7
+stack >= 2.9.3
+```
+
+### Building and Installing
 
 ```command
 $ cd Plato
 $ stack install
+```
+
+If you can run the following command, Plato is successfully installed.
+```
+$ plato --version
+Plato version 1.0.0
 ```

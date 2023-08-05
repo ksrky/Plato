@@ -9,6 +9,9 @@ data Options = Options
         { libraryPaths :: [FilePath]
         , logPath :: !(Maybe FilePath)
         , isDebug :: !Bool
+        , printParsed :: !Bool
+        , printTyped :: !Bool
+        , printCore :: !Bool
         }
         deriving (Eq, Show)
 
@@ -48,8 +51,24 @@ pIsDebug =
                         <> help "Enable debug mode"
                 )
 
+pPrintParsed :: Parser Bool
+pPrintParsed = switch (long "print-parsed" <> help "Print parsed program")
+
+pPrintTyped :: Parser Bool
+pPrintTyped = switch (long "print-typed" <> help "Print typed program")
+
+pPrintCore :: Parser Bool
+pPrintCore = switch (long "print-core" <> help "Print core program")
+
 pOptions :: Parser Options
-pOptions = Options <$> pLibraryPaths <*> pLogPath <*> pIsDebug
+pOptions =
+        Options
+                <$> pLibraryPaths
+                <*> pLogPath
+                <*> pIsDebug
+                <*> pPrintParsed
+                <*> pPrintTyped
+                <*> pPrintCore
 
 pREPL :: Parser Command
 pREPL = REPL <$> many (argument str (metavar "FILES...")) <*> pOptions

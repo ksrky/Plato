@@ -1,9 +1,8 @@
 module Plato.Syntax.Parsing.Type (LType, Type (..)) where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 
 ----------------------------------------------------------------
 -- Data and type

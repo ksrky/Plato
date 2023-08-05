@@ -64,12 +64,7 @@ locatedErrorMessage sp msg =
 data LocatedError = forall ann. LocErr Span (Doc ann)
 
 instance Show LocatedError where
-        show (LocErr NoSpan doc) = "<no location info>: " ++ renderString (layoutPretty defaultLayoutOptions doc)
-        show (LocErr sp doc) =
-                renderString
-                        ( layoutPretty defaultLayoutOptions $
-                                hcat [pretty sp, colon, space, doc]
-                        )
+        show (LocErr sp msg) = locatedErrorMessage sp msg
 
 instance Exception LocatedError
 

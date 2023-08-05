@@ -22,3 +22,19 @@ lookupCon :: HasCallStack => Scope -> Ident -> Maybe (Clos Type)
 lookupCon (Scope s) x = do
         idCon <- lookup x s
         return $! fromJust $! snd idCon
+
+class Closure a where
+        getScope :: a -> Scope
+        putScope :: a -> Scope -> a
+
+instance Closure (Clos a) where
+        getScope (_, s) = s
+        putScope (a, _) s = (a, s)
+
+instance Closure a => Closure (Bind a) where
+        getScope (_, a) = getScope a
+        putScope (x, a) s = (x, putScope a s)
+
+instance Closure Boxed where
+        getScope (Boxed c) = getScope c
+        putScope (Boxed c) = Boxed . putScope c

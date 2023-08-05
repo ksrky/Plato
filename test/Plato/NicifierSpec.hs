@@ -12,8 +12,8 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
-import Plato.Nicifier.OpParser 
-import Plato.Parsing 
+import Plato.Nicifier.OpParser
+import Plato.Parsing
 import Plato.Syntax.Parsing
 
 spec :: Spec
@@ -27,6 +27,8 @@ spec = do
                         test "x ++ y ++ z" `shouldReturn` "(x ++ (y ++ z))"
                 it "x > y > z" $ do
                         test "x > y > z" `shouldThrow` anyException
+                it "f $ g x" $ do
+                        test "f $ g $ h x y" `shouldReturn` "(f $ (g $ h x y))"
         describe "File test" $ do
                 it "test05.plt" $ do
                         test_file "test05.plt"
@@ -71,11 +73,12 @@ fixityEnv =
                 , (varName "-", Fixity 6 Leftfix)
                 , (varName "++", Fixity 5 Rightfix)
                 , (varName ">", Fixity 4 Nonfix)
+                , (varName "$", Fixity 0 Rightfix)
                 ]
 
 test :: T.Text -> IO String
 test inp = do
-        exp <- runReaderT (parseExpr inp ) =<< initUniq
+        exp <- runReaderT (parseExpr inp) =<< initUniq
         exp' <- runReaderT (opParse exp) fixityEnv
         return $ show $ pretty exp'
 

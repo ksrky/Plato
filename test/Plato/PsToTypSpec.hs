@@ -7,6 +7,7 @@ module Plato.PsToTypSpec where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Data.IORef
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
@@ -19,8 +20,8 @@ import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Nicifier
-import Plato.Nicifier.OpParser 
-import Plato.Parsing 
+import Plato.Nicifier.OpParser
+import Plato.Parsing
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
 import Plato.Syntax.Typing hiding (Spec)
@@ -76,22 +77,22 @@ spec = do
         describe "Test psToTyp" $ do
                 it "test10.plt" $ do
                         test_file "test10.plt"
-                                `shouldReturn` [ "List : $48"
+                                `shouldReturn` [ "List : $46"
                                                , "data List (a:$45) where {Nil : List a; :: : a -> List a -> List a}"
-                                               , "reverse : {a:$46} List a -> List a"
-                                               , "reverse where {l -> let {rev = {a:$47} List a -> List a -> List a; rev where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
+                                               , "reverse : {a:$47} List a -> List a"
+                                               , "reverse where {l -> let {rev = {a:$48} List a -> List a -> List a; rev where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
                                                ]
                 it "test15.plt" $ do
                         test_file "test15.plt"
-                                `shouldReturn` [ "ChurchNum : $47"
+                                `shouldReturn` [ "ChurchNum : $46"
                                                , "data ChurchNum where {ChurchNum : ({a:$45} (a -> a) -> a -> a) -> ChurchNum}"
-                                               , "runNum : ChurchNum -> ({a:$46} (a -> a) -> a -> a)"
+                                               , "runNum : ChurchNum -> ({a:$47} (a -> a) -> a -> a)"
                                                , "zero : ChurchNum"
                                                , "succ : ChurchNum -> ChurchNum"
                                                , "two : ChurchNum"
                                                , "runNum where {(ChurchNum xs) -> xs}"
-                                               , "zero where {-> ChurchNum (\\s. \\z. z)}"
-                                               , "succ where {n -> ChurchNum (\\s. \\z. s (runNum n s z))}"
+                                               , "zero where {-> ChurchNum (\\ s . \\ z . z)}"
+                                               , "succ where {n -> ChurchNum (\\ s . \\ z . s (runNum n s z))}"
                                                , "two where {-> succ (succ zero)}"
                                                ]
 
@@ -120,7 +121,7 @@ instance HasScope Context where
 test_scexpr :: (MonadIO m, MonadThrow m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uniq <- initUniq
-        exp <- runReaderT (parseExpr inp  ) uniq
+        exp <- runReaderT (parseExpr inp) uniq
         exp' <- runReaderT (opParse exp) initFixityEnv
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
@@ -128,9 +129,9 @@ test_scexpr inp = do
 test_decls :: (MonadIO m, MonadThrow m) => T.Text -> m [Decl 'Untyped]
 test_decls inp = do
         uniq <- initUniq
-        decs <- runReaderT (parseDecls inp ) uniq
+        decs <- runReaderT (parseDecls inp) uniq
         sc <- defScope uniq
-        runReaderT (elabDecls decs) (Context uniq sc)
+        runReaderT (execWriterT $ elabDecls decs) (Context uniq sc)
 
 test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Program 'Untyped)
 test_scfile fn =

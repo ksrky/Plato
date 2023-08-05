@@ -7,11 +7,11 @@ module Plato (
 
 import Control.Monad.IO.Class
 import Data.Text qualified as T
-import Prettyprinter
-import Prettyprinter.Render.Text
 
+import Plato.Common.Error
+import Plato.Common.Pretty
 import Plato.Driver.Monad
-import Plato.Interpret
+import Plato.Interpreter
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
@@ -25,15 +25,16 @@ compileToCore :: PlatoMonad m => FilePath -> m ()
 compileToCore src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
-        whenFlagOn FDumpParsed $ liftIO $ putDoc $ pretty pssyn'
+        whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn'
         typsyn <- psToTyp pssyn'
         typsyn' <- typing typsyn
-        whenFlagOn FDumpTyped $ liftIO $ putDoc $ pretty typsyn'
+        whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
         coresyn <- typToCore typsyn'
-        whenFlagOn FDumpCore $ liftIO $ putDoc $ pretty coresyn
+        whenFlagOn FPrintCore $ liftIO $ prettyPrint coresyn
+        whenFlagOn FEvalCore $ addCoreEnv coresyn
 
 interpretExpr :: PlatoMonad m => T.Text -> m ()
-interpretExpr inp = do
+interpretExpr inp = catchErrors $ do
         pssyn <- parseExpr inp
         pssyn' <- nicifyExpr pssyn
         typsyn <- psToTypExpr pssyn'

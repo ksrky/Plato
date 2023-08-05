@@ -3,10 +3,9 @@
 
 module Plato.Syntax.Typing.Decl where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Utils
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
@@ -62,7 +61,7 @@ instance Pretty (Defn a) where
                 hsep
                         [ pretty id
                         , "where"
-                        , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
+                        , braces $ map prClause clauses `sepBy` semi
                         ]
         pretty (FunDefnok id exp) = hsep [pretty id, equals, pretty exp]
         pretty (TypDefn id ty) = hsep [pretty id, equals, pretty ty]
@@ -71,10 +70,7 @@ instance Pretty (Defn a) where
                         [ "data"
                         , hsep (pretty id : map (parens . prQuant) params)
                         , "where"
-                        , braces $
-                                concatWith
-                                        (surround (semi <> space))
-                                        (map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs)
+                        , braces $ map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs `sepBy` semi
                         ]
         pretty (DatDefnok id _ params constrs) = pretty (DatDefn id params constrs)
 

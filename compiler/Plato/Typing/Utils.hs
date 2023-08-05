@@ -13,7 +13,6 @@ module Plato.Typing.Utils (
         newMetaKv,
         readMetaKv,
         writeMetaKv,
-        splitConstrTy,
 ) where
 
 import Control.Monad.IO.Class (MonadIO (..))
@@ -21,7 +20,6 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Ident
-import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -74,10 +72,3 @@ readMetaKv (MetaKv _ ref) = readMIORef ref
 
 writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
-
-splitConstrTy :: Rho -> ([Sigma], Tau)
-splitConstrTy = go []
-    where
-        go :: [Sigma] -> Rho -> ([Sigma], Tau)
-        go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
-        go acc tau = (reverse acc, tau)

@@ -10,12 +10,10 @@ module Plato.Typing (
 import Control.Exception.Safe
 import Control.Monad.Reader
 import Data.IORef
-import System.Log.Logger
 
 import Control.Monad.Writer
 import Plato.Common.Error
 import Plato.Common.Uniq
-import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -45,7 +43,7 @@ typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         tell [DefnDecl (DatDefnok id kn params constrs)]
         local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
-                local (extendConEnv id constrs) $
+                local (extendConEnv id (map fst params) constrs) $
                         typingDecls' decs
 typingDecls' (DefnDecl (TypDefn id ty) : decs) = do
         kn <- zonk =<< find id =<< asks getTypEnv
@@ -57,7 +55,6 @@ typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         tell [SpecDecl (ValSpec id ty)]
         local (modifyTypEnv $ extend id ty) $ typingDecls' decs
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
-        liftIO $ debugM platoLog $ "Start type checking of function '" ++ show id ++ "'"
         sigma <- zonk =<< find id =<< asks getTypEnv
         exp <- checkClauses clauses sigma
         tell [DefnDecl (FunDefnok id exp)]

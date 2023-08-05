@@ -4,8 +4,8 @@ module Plato.Syntax.Typing.Kind (
 ) where
 
 import Data.IORef (IORef)
-import Prettyprinter
 
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 
 ----------------------------------------------------------------

@@ -2,9 +2,10 @@
 
 module Plato.Core.Eval where
 
-import Control.Monad.Reader
-
 import Control.Exception.Safe
+import Control.Monad.Reader
+import Prettyprinter
+
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Core.Data
@@ -14,7 +15,7 @@ import Plato.Syntax.Core
 getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Index
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
-        Nothing -> throwError ""
+        Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
 lookupIndex :: (MonadReader env m, Env env, MonadIO m) => Index -> m EnvEntry
 lookupIndex i = getE i =<< ask
@@ -51,16 +52,21 @@ subst (x, (t, sc)) u = do
         defn' i u
         return (t, s')
 
+unfold :: (MonadReader e m, Env e, MonadThrow m, MonadIO m) => Bind (Clos Term) -> Val -> m Val
+unfold b (VFold c) = eval =<< subst b c
+unfold b (Ne n) = return (Ne (NUnfold n b))
+unfold _ _ = throwError "Fold expected"
+
 eval :: forall e m. (MonadReader e m, Env e, MonadThrow m, MonadIO m) => Clos Term -> m Val
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
 eval (Q ps bind body, sc) = return (VQ ps ((bind, body), sc))
-eval (Lam (x, _) t, sc) = return $ VLam (x, (t, sc)) (t, sc)
+eval (Lam (x, ty) t, sc) = return $ VLam (((x, ty), t), sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
         evalApp :: Clos Term -> Val -> m Val
-        evalApp u (VLam (x, _) t) = eval =<< subst (x, t) u
+        evalApp u (VLam (((x, _), t), sc)) = eval =<< subst (x, (t, sc)) u
         evalApp u (Ne t) = return (Ne (t :.. u))
         evalApp _ _ = throwError "function expected"
 eval (Pair t u, sc) = return $ VPair ((t, u), sc)
@@ -94,11 +100,6 @@ eval (Force t, s) = force =<< eval (t, s)
 eval (Rec t, s) = return (VRec (t, s))
 eval (Fold t, s) = return (VFold (t, s))
 eval (Unfold (x, t) u, sc) = unfold (x, (u, sc)) =<< eval (t, sc)
-    where
-        unfold :: Bind (Clos Term) -> Val -> m Val
-        unfold b (VFold c) = eval =<< subst b c
-        unfold b (Ne n) = return (Ne (NUnfold n b))
-        unfold _ _ = throwError "Fold expected"
 
 evalProg :: (MonadReader e m, Env e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
 evalProg ([], sc) = return sc
