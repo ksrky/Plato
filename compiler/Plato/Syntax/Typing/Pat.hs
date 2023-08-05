@@ -1,9 +1,8 @@
 module Plato.Syntax.Typing.Pat (LPat, Pat (..), prAtomPat) where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Typing.Type
 
 ----------------------------------------------------------------

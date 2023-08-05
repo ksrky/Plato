@@ -4,10 +4,9 @@
 
 module Plato.Syntax.Parsing.Decl where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Parsing.Expr
 import Plato.Syntax.Parsing.Type
 
@@ -33,10 +32,7 @@ instance Pretty Decl where
                         [ "data"
                         , hsep (pretty con : map pretty args)
                         , "where"
-                        , braces $
-                                concatWith
-                                        (surround $ semi <> space)
-                                        (map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs)
+                        , braces $ map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
                         ]
         pretty (FunSpecD id ty) = hsep [pretty id, colon, pretty ty]
         pretty (FunBindD id clauses) =

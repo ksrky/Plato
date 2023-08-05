@@ -12,10 +12,10 @@ module Plato.Syntax.Typing.Type (
 ) where
 
 import Data.IORef (IORef)
-import Prettyprinter
 
 import Plato.Common.Ident as Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing.Kind
 

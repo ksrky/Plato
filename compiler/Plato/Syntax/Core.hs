@@ -1,9 +1,8 @@
 module Plato.Syntax.Core where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Name
+import Plato.Common.Pretty
 
 -- *  Abstract syntax
 

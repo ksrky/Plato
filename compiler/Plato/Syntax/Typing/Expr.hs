@@ -8,10 +8,9 @@ module Plato.Syntax.Typing.Expr (
         prClause,
 ) where
 
-import Prettyprinter
-
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base (TcFlag (..))
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
@@ -59,76 +58,42 @@ prBinds bnds =
                                 hsep
                                         [ pretty id
                                         , "where"
-                                        , braces $ concatWith (surround $ semi <> space) (map prClause clses)
+                                        , braces $ map prClause clses `sepBy` semi
                                         ]
                         )
                         bnds
                 )
 
 prBinds' :: [(Ident, LExpr 'Typed)] -> Doc ann
-prBinds' bnds =
-        concatWith
-                (surround $ semi <> space)
-                (map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) bnds)
+prBinds' bnds = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) bnds `sepBy` semi
 prSpecs :: [(Ident, LType)] -> Doc ann
-prSpecs spcs =
-        concatWith
-                (surround $ semi <> space)
-                (map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs)
+prSpecs spcs = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs `sepBy` semi
 
 instance Pretty (Expr a) where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
-        pretty (AbsE var body) =
-                hcat
-                        [ backslash
-                        , pretty var
-                        , dot <+> pretty body
-                        ]
+        pretty (AbsE var body) = hsep [backslash, pretty var, dot, pretty body]
         pretty (AbsEok var ann body) =
-                hcat
-                        [ backslash
-                        , pretty var
-                        , colon
-                        , pretty ann
-                        , dot <+> pretty body
-                        ]
+                hsep [backslash, pretty var, colon, pretty ann, dot, pretty body]
         pretty (TAppE fun tyargs) = hsep (prExpr1 fun : map pretty tyargs)
-        pretty (TAbsE qnts body) =
-                hcat [backslash, prQuants qnts, dot <+> pretty body]
+        pretty (TAbsE qnts body) = hsep [backslash, prQuants qnts, dot, pretty body]
         pretty (LetE bnds spcs body) =
-                hsep
-                        [ "let"
-                        , braces $ prSpecs spcs <> semi <+> prBinds bnds
-                        , "in"
-                        , pretty body
-                        ]
+                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds bnds, "in", pretty body]
         pretty (LetEok bnds spcs body) =
-                hsep
-                        [ "let"
-                        , braces $ prSpecs spcs <> semi <+> prBinds' bnds
-                        , " in"
-                        , pretty body
-                        ]
+                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds' bnds, "in", pretty body]
         pretty (CaseE match alts) =
                 hsep
                         [ "case"
                         , pretty match
                         , "of"
-                        , braces $
-                                concatWith
-                                        (surround $ semi <> space)
-                                        (map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts)
+                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
         pretty (CaseEok match _ alts) =
                 hsep
                         [ "case"
                         , prExpr1 (unLoc match)
                         , "of"
-                        , braces $
-                                concatWith
-                                        (surround $ semi <> space)
-                                        (map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts)
+                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
 
 prExpr2 :: Expr a -> Doc ann
