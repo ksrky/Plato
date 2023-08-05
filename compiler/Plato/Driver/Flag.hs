@@ -5,7 +5,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.IORef
 
-data Flag = FDebug | FDumpParsed | FDumpTyped | FDumpCore | FEvalCore
+data Flag = FDebug | FPrintParsed | FPrintTyped | FPrintCore | FEvalCore
         deriving (Eq, Show)
 
 class HasFlags a where

@@ -26,4 +26,7 @@ processCommands (Version version) = putStrLn $ "Plato version " ++ version
 processOptions :: Options -> Session -> IO ()
 processOptions opts session = do
         when (isDebug opts) $ setFlag FDebug session
+        when (printParsed opts) $ setFlag FPrintParsed session
+        when (printTyped opts) $ setFlag FPrintTyped session
+        when (printCore opts) $ setFlag FPrintCore session
         initLogger session
