@@ -18,19 +18,19 @@ data Val where
 tmmap : (Nat -> Nat -> Term) -> Nat -> Term -> Term
 tmmap onvar c t = 
     let walk : Nat -> Term -> Term
-        walk c (TVar i) = onvar c i
+        walk c (TVar x) = onvar c x
         walk c (TApp t1 t2) = TApp (walk c t1) (walk c t2)
         walk c (TAbs t1) = TAbs (walk (c + S Z) t1)
-        walk c TZero = TZero
+        walk _ TZero = TZero
         walk c (TSucc t1) = TSucc (walk c t1)
      in walk c t
 
 termShiftAbove : Nat -> Nat -> Term -> Term
 termShiftAbove d =
     tmmap
-        ( \c i -> case i < c of
-            True -> TVar i
-            False -> TVar (i + d)
+        ( \c x -> case x < c of
+            True -> TVar x
+            False -> TVar (x + d)
         )
 
 termShift : Nat -> Term -> Term
@@ -48,14 +48,12 @@ termSubstTop : Term -> Term -> Term
 termSubstTop s t = termShift (Z - S Z) (termSubst (termShift (S Z) s) Z t)
 
 eval : Term -> Val
-eval (TApp t1 t2) =
-    let v1 : Val = eval t1
-     in case v1 of
-        VAbs t11 -> eval (termSubstTop t2 t11)
-        _ -> v1
+eval (TAbs t1) = VAbs t1
+eval (TApp t1 t2) = case eval t1 of
+    VAbs t11 -> eval (termSubstTop t2 t11)
+    v1 -> v1
 eval TZero = VZero
 eval (TSucc t1) =
     let v1 : Val = eval t1
      in VSucc v1
 eval _ = VNil
-        
