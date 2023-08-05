@@ -1,4 +1,4 @@
-module REPL where
+module REPL (repl) where
 
 import Control.Exception.Safe
 import Control.Monad.Trans
@@ -11,11 +11,16 @@ repl :: [FilePath] -> Session -> IO ()
 repl files session = do
         unPlato (mapM_ compileToCore files) session
         unPlato (runInputT defaultSettings loop) session
-    where
-        loop :: (PlatoMonad m, MonadMask m) => InputT m ()
-        loop = do
-                minp <- getInputLine ">> "
-                case minp of
-                        Nothing -> return ()
-                        Just "" -> return ()
-                        Just inp -> lift (interpretExpr (T.pack inp)) >> loop
+
+loop :: (PlatoMonad m, MonadMask m) => InputT m ()
+loop = do
+        minp <- getInputLine ">> "
+        case minp of
+                Nothing -> return ()
+                Just "" -> loop
+                Just (':' : cmd) -> replCommand cmd
+                Just inp -> lift (interpretExpr (T.pack inp)) >> loop
+
+replCommand :: String -> (PlatoMonad m, MonadMask m) => InputT m ()
+replCommand "q" = return ()
+replCommand _ = loop
