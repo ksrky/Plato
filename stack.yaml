@@ -1,5 +1,5 @@
-resolver: lts-20.20
-compiler: ghc-9.2.7
+resolver: lts-20.26
+compiler: ghc-9.2.8
 
 packages:
   - .
