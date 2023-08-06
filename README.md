@@ -1,6 +1,7 @@
 # Plato
 
 [![Haskell CI](https://github.com/ksrky/Plato/actions/workflows/haskell.yml/badge.svg)](https://github.com/ksrky/Plato/actions/workflows/haskell.yml)
+[![Plato Github Pages](https://github.com/ksrky/Plato/actions/workflows/docs-gh-pages.yml/badge.svg)](https://github.com/ksrky/Plato/actions/workflows/docs-gh-pages.yml)
 
 Plato is a purely functional programming language based on higher-order polymorphic lambda calculus. Only an interpreter is currently implemented that evaluates expressions on the core language.
 
