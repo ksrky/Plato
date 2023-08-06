@@ -25,32 +25,32 @@ tmmap onvar c t =
         walk c (TSucc t1) = TSucc (walk c t1)
      in walk c t
 
-termShiftAbove : Nat -> Nat -> Term -> Term
-termShiftAbove d =
+shiftAbove : Nat -> Nat -> Term -> Term
+shiftAbove d =
     tmmap
         ( \c x -> case x < c of
             True -> TVar x
             False -> TVar (x + d)
         )
 
-termShift : Nat -> Term -> Term
-termShift d = termShiftAbove d Z
+shift : Nat -> Term -> Term
+shift d = shiftAbove d Z
 
-termSubst : Term -> Nat -> Term -> Term
-termSubst t =
+subst : Term -> Nat -> Term -> Term
+subst t =
     tmmap
         ( \j x -> case x == j of
-            True -> termShift j t
+            True -> shift j t
             False -> TVar x
         )
 
-termSubstTop : Term -> Term -> Term
-termSubstTop s t = termShift (Z - S Z) (termSubst (termShift (S Z) s) Z t)
+substTop : Term -> Term -> Term
+substTop s t = shift (Z - S Z) (subst (shift (S Z) s) Z t)
 
 eval : Term -> Val
 eval (TAbs t1) = VAbs t1
 eval (TApp t1 t2) = case eval t1 of
-    VAbs t11 -> eval (termSubstTop t2 t11)
+    VAbs t11 -> eval (substTop t2 t11)
     v1 -> v1
 eval TZero = VZero
 eval (TSucc t1) =
