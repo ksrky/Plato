@@ -1,0 +1,5 @@
+resolver: lts-21.6
+compiler: ghc-9.4.5
+
+packages:
+  - .

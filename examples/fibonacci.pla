@@ -1,6 +1,6 @@
 import Nat
 
 fib : Nat -> Nat
-fib Zero = Zero
-fib (Succ Zero) = Succ Zero
-fib (Succ (Succ n)) = fib n + fib (Succ n)
+fib Z = Z
+fib (S Z) = S Z
+fib (S (S n)) = fib n + fib (S n)

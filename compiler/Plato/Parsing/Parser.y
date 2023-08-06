@@ -107,20 +107,20 @@ topdecls    :: { LInstr }
 -- Declarations
 -----------------------------------------------------------
 decls       :: { [LTopDecl] }
-            : decl ';' decls                        { $1 : $3 }
-            | decl                                  { [$1] }
+            : decl ';' decls                        { $1 ++ $3 }
+            | decl                                  { $1 }
             | {- empty -}                           { [] }
 
-decl        :: { LTopDecl }
+decl        :: { [LTopDecl] }
             -- Data declaration
             : 'data' tycon tyvarseq datarhs
-                                                    { sL $1 $4 (DataD $2 $3 (unLoc $4)) }
+                                                    { [sL $1 $4 (DataD $2 $3 (unLoc $4))] }
             | 'data' tyvar tyconop tyvar datarhs
-                                                    { sL $1 $5 (DataD $3 [$2, $4] (unLoc $5)) }
+                                                    { [sL $1 $5 (DataD $3 [$2, $4] (unLoc $5))] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
-                                                    { sL $1 $6 (DataD $3 $5 (unLoc $6)) }
+                                                    { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
             | fundecl                               { $1 }
-            | fixdecl                               { $1 }
+            | fixdecl                               { [$1] }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -137,15 +137,21 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecl     :: { LDecl }
+fundecls    :: { [LDecl] }
+            : fundecl ';' fundecls                  { $1 ++ $3 }
+            | fundecl                               { $1 }
+            | {- empty -}                           { [] }
+
+fundecl     :: { [LDecl] }
             -- Function signature
-            : var ':' type                        	{ sL $1 $3 (FunSpecD $1 $3) }
-            | '(' varop ')' ':' type                { sL $1 $5 (FunSpecD $2 $5) }
+            : var ':' type                        	{ [sL $1 $3 (FunSpecD $1 $3)] }
+            | '(' varop ')' ':' type                { [sL $1 $5 (FunSpecD $2 $5)] }
             -- Function definition
-            | var patseq '=' expr               	{ sL $1 $4 (FunBindD $1 [($2, $4)]) }
-            | '(' varop ')' patseq '=' expr         { sL $1 $6 (FunBindD $2 [($4, $6)]) }
-            | lpat varop lpat '=' expr              { sL $1 $5 (FunBindD $2 [([$1, $3], $5)]) }
-            | fixdecl                               { $1 }
+            | var patseq '=' expr               	{ [sL $1 $4 (FunBindD $1 [($2, $4)])] }
+            | '(' varop ')' patseq '=' expr         { [sL $1 $6 (FunBindD $2 [($4, $6)])] }
+            | lpat varop lpat '=' expr              { [sL $1 $5 (FunBindD $2 [([$1, $3], $5)])] }
+            | var ':' type '=' expr                 { [sL $1 $3 (FunSpecD $1 $3), sL $4 $5 (FunBindD $1 [([], $5)])] }
+            | fixdecl                               { [$1] }
 
 -- | Fixity declaration
 fixdecl     :: { LDecl }
@@ -171,7 +177,7 @@ btype       :: { LType }
 
 atype       :: { LType }
             : '(' type ')'                          { L (combineSpans $1 $3) (FactorT $2) }
-            | tycon                                 { L (getLoc $1) (ConT $1) }  -- tmp: ? something wrong
+            | tycon                                 { L (getLoc $1) (ConT $1) }
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
 -----------------------------------------------------------
@@ -185,8 +191,8 @@ lexpr       :: { LExpr }
             -- | Lambda expression
             : '\\' patseq1 '->' expr                { sL $1 $4 (LamE $2 $4) }
             -- | Let expression
-            | 'let' '{' letdecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
-            | 'let' 'v{' letdecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
+            | 'let' '{' fundecls '}' 'in' expr      { sL $1 $6 (LetE $3 $6) }
+            | 'let' 'v{' fundecls close 'in' expr   { sL $1 $6 (LetE $3 $6) }
             -- | Case expression
             | 'case' expr 'of' '{' alts '}'         { sL $1 $6 (CaseE $2 $5) }
             | 'case' expr 'of' 'v{' alts close      { sL $1 $6 (CaseE $2 $5) }
@@ -202,12 +208,6 @@ aexpr       :: { LExpr }
             | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
-
--- | Let declaration
-letdecls    :: { [LDecl] }
-            : fundecl ';' letdecls                  { $1 : $3 }
-            | fundecl                               { [$1] }
-            | {- empty -}                           { [] }
 
 -- | Alternatives
 alts        :: { [(LPat, LExpr)] }

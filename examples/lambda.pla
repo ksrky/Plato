@@ -1,0 +1,59 @@
+import Bool
+import Nat
+
+data Term where
+    TVar : Nat -> Term
+    TAbs : Term -> Term
+    TApp : Term -> Term -> Term
+    TZero : Term
+    TSucc : Term -> Term
+
+data Val where
+    VNil : Val
+    VVar : Nat -> Val
+    VAbs : Term -> Val
+    VZero : Val
+    VSucc : Val -> Val
+
+tmmap : (Nat -> Nat -> Term) -> Nat -> Term -> Term
+tmmap onvar c t = 
+    let walk : Nat -> Term -> Term
+        walk c (TVar x) = onvar c x
+        walk c (TApp t1 t2) = TApp (walk c t1) (walk c t2)
+        walk c (TAbs t1) = TAbs (walk (c + S Z) t1)
+        walk _ TZero = TZero
+        walk c (TSucc t1) = TSucc (walk c t1)
+     in walk c t
+
+shiftAbove : Nat -> Nat -> Term -> Term
+shiftAbove d =
+    tmmap
+        ( \c x -> case x < c of
+            True -> TVar x
+            False -> TVar (x + d)
+        )
+
+shift : Nat -> Term -> Term
+shift d = shiftAbove d Z
+
+subst : Term -> Nat -> Term -> Term
+subst t =
+    tmmap
+        ( \j x -> case x == j of
+            True -> shift j t
+            False -> TVar x
+        )
+
+substTop : Term -> Term -> Term
+substTop s t = shift (Z - S Z) (subst (shift (S Z) s) Z t)
+
+eval : Term -> Val
+eval (TAbs t1) = VAbs t1
+eval (TApp t1 t2) = case eval t1 of
+    VAbs t11 -> eval (substTop t2 t11)
+    v1 -> v1
+eval TZero = VZero
+eval (TSucc t1) =
+    let v1 : Val = eval t1
+     in VSucc v1
+eval _ = VNil

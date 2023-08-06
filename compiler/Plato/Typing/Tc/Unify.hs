@@ -14,6 +14,7 @@ import Data.Set qualified as S
 
 import Plato.Common.Location
 import Plato.Common.Uniq
+import Plato.Driver.Logger
 import Plato.Syntax.Typing
 import Plato.Typing.Error
 import Plato.Typing.Tc.Utils
@@ -22,7 +23,7 @@ import System.Log.Logger
 
 unify :: (MonadReader ctx m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = do
-        liftIO $ errorM rootLoggerName $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
+        liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
         throw UnificationError
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
@@ -36,7 +37,7 @@ unify (MetaT tv1) (MetaT tv2) | tv1 == tv2 = return ()
 unify (MetaT tv) ty = unifyVar tv ty
 unify ty (MetaT tv) = unifyVar tv ty
 unify ty1 ty2 = do
-        liftIO $ errorM rootLoggerName $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
+        liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
         throw UnificationError
 
 unifyVar :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
@@ -55,7 +56,7 @@ occursCheck :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> 
 occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
         when (tv1 `S.member` tvs2) $ do
-                liftIO $ errorM rootLoggerName $ "Unification: " ++ show tv1 ++ ", " ++ show ty2
+                liftIO $ errorM platoLog $ "Occurs check fail: " ++ show tv1 ++ ", " ++ show ty2
                 throw InfiniteTypeError
 
 badType :: Tau -> Bool

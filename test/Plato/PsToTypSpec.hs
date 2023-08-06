@@ -65,8 +65,8 @@ spec = do
                                         )
                                     )
         describe "Scope checking of a file" $ do
-                it "test04.plt" $ do
-                        test_scfile "test04.plt"
+                it "test04.pla" $ do
+                        test_scfile "test04.pla"
                                 >>= ( `shouldSatisfy`
                                         ( \case
                                                 [_, DefnDecl (FunDefn _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])] ->
@@ -75,15 +75,15 @@ spec = do
                                         )
                                     )
         describe "Test psToTyp" $ do
-                it "test10.plt" $ do
-                        test_file "test10.plt"
+                it "test10.pla" $ do
+                        test_file "test10.pla"
                                 `shouldReturn` [ "List : $46"
                                                , "data List (a:$45) where {Nil : List a; :: : a -> List a -> List a}"
                                                , "reverse : {a:$47} List a -> List a"
                                                , "reverse where {l -> let {rev = {a:$48} List a -> List a -> List a; rev where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
                                                ]
-                it "test15.plt" $ do
-                        test_file "test15.plt"
+                it "test15.pla" $ do
+                        test_file "test15.pla"
                                 `shouldReturn` [ "ChurchNum : $46"
                                                , "data ChurchNum where {ChurchNum : ({a:$45} (a -> a) -> a -> a) -> ChurchNum}"
                                                , "runNum : ChurchNum -> ({a:$47} (a -> a) -> a -> a)"

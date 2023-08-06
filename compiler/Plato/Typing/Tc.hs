@@ -173,7 +173,7 @@ tcRho (L sp exp) exp_ty = do
                 alts' <- forM alts $ \(pat, body) -> do
                         (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
-                        coer <- instSigma body_ty exp_ty'
+                        coer <- apInstSigma sp instSigma body_ty exp_ty'
                         return (pat', (coer .>) <$> body')
                 elabCase $ CaseEok test' pat_ty alts'
 

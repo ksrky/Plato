@@ -1,25 +1,25 @@
 import Bool
 
 data Nat where
-    Zero : Nat
-    Succ : Nat -> Nat
+    Z : Nat
+    S : Nat -> Nat
 
 infixl 6 +
 infixl 6 -
 infixl 7 *
 
 (+) : Nat -> Nat -> Nat
-Zero + n = n
-Succ m + n = Succ (m + n)
+Z + n = n
+S m + n = S (m + n)
 
 (-) : Nat -> Nat -> Nat
-Zero - n = Zero
-m - Zero = m
-Succ m - Succ n = m - n
+Z - n = Z
+m - Z = m
+S m - S n = m - n
 
 (*) : Nat -> Nat -> Nat
-Zero * n = Zero
-Succ m * n = n + m * n  
+Z * n = Z
+S m * n = n + m * n  
 
 infix 4 ==
 infix 4 <
@@ -28,25 +28,25 @@ infix 4 >
 infix 4 >=
 
 (==) : Nat -> Nat -> Bool
-Succ m == Succ n = m == n
-Succ _ == Zero = False
-Zero == Succ _ = False
-Zero == Zero = True
+S m == S n = m == n
+S _ == Z = False
+Z == S _ = False
+Z == Z = True
 
 (<) : Nat -> Nat -> Bool
-Succ m < Succ n = m < n
-Zero < Succ _ = True
-_ < Zero = False
+S m < S n = m < n
+Z < S _ = True
+_ < Z = False
 
 (<=) : Nat -> Nat -> Bool
-Succ m <= n = m < n
-Zero <= n = True
+S m <= n = m < n
+Z <= n = True
 
 (>) : Nat -> Nat -> Bool
-Succ m > Succ n =  m > n
-Succ _ > Zero = True
-Zero > n = False
+S m > S n =  m > n
+S _ > Z = True
+Z > n = False
 
 (>=) : Nat -> Nat -> Bool
-m >= (Succ n) = m > n
-m >= Zero = True
+m >= (S n) = m > n
+m >= Z = True
