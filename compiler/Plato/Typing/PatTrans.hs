@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Typing.ElabClause (transClauses, transCase) where
+module Plato.Typing.PatTrans (transClauses, transCase) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -71,7 +71,7 @@ isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
 isVar (L _ TagP{} : _, _) = unreachable "received TagP"
-isVar ([], _) = unreachable "ElabClause.isVar"
+isVar ([], _) = unreachable "empty pattern row"
 
 isVarorSameCon :: Ident -> Clause a -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
