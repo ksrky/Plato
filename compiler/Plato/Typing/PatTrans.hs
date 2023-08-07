@@ -84,8 +84,7 @@ match ::
         m (LExpr 'Typed)
 match [(var, ty)] [] = return $ noLoc (CaseEok (noLoc $ VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
-match [] [([], exp)] = return exp
-match [] (([], _) : _) = throwError "Pattern matching is redundant."
+match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
 match (vt : vts) clauses
         | all isVar clauses = matchVar vt vts clauses
