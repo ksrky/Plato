@@ -175,7 +175,7 @@ tcRho (L sp exp) exp_ty = do
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- apInstSigma sp instSigma body_ty exp_ty'
                         return (pat', (coer .>) <$> body')
-                elabCase $ CaseEok test' pat_ty alts'
+                transCase $ CaseEok test' pat_ty alts'
 
 zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty
@@ -223,7 +223,7 @@ checkClauses clauses sigma_ty = do
                 (_, binds) <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, body')
-        exp <- elabClauses pat_tys clauses'
+        exp <- transClauses pat_tys clauses'
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
