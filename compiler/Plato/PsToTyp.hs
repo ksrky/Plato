@@ -16,7 +16,6 @@ module Plato.PsToTyp (
 import Control.Exception.Safe
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Data.IORef (IORef)
 import Data.List qualified
 import GHC.Stack
 
@@ -174,26 +173,9 @@ elabTopDecls tdecs = do
 -----------------------------------------------------------
 -- psToTyp
 -----------------------------------------------------------
-data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
-
-instance HasUniq Context where
-        getUniq = return . ctx_uniq
-        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
-
-instance HasScope Context where
-        getScope (Context _ sc) = sc
-        modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
-psToTyp tdecs = catchErrors $ do
-        uref <- getUniq =<< ask
-        ctx <- getContext =<< ask
-        (decs, env) <- runReaderT (elabTopDecls tdecs) (Context uref (getScope ctx))
-        setContext (setScope (ctx_scope env) ctx) =<< ask
-        return decs
+psToTyp tdecs = catchErrors $ updateContext (elabTopDecls tdecs)
 
 psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = do
-        uref <- getUniq =<< ask
-        ctx <- getContext =<< ask
-        runReaderT (elabExpr `traverse` exp) (Context uref (getScope ctx))
+psToTypExpr exp = runReaderT (elabExpr `traverse` exp) =<< getContext =<< ask

@@ -5,6 +5,7 @@ module Plato.Driver.Monad (
         getContext,
         setContext,
         PlatoMonad (..),
+        updateContext,
         PlatoT,
         unPlato,
         Plato,
@@ -124,6 +125,13 @@ instance HasFlags Session where
 class (MonadReader Session m, MonadIO m, MonadCatch m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
+
+updateContext :: PlatoMonad m => ReaderT Context m (a, Context) -> m a
+updateContext m = do
+        ctx <- getContext =<< ask
+        (res, ctx') <- runReaderT m ctx
+        setContext ctx' =<< ask
+        return res
 
 type PlatoT m = ReaderT Session m
 
