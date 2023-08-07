@@ -21,16 +21,17 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import
 import Plato.Driver.Monad
+import Plato.Parsing.Error
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
 parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
-parseFile src = do
+parseFile src = catchPsErrors $ do
         inp <-
                 liftIO $
                         try (T.readFile src) >>= \case
-                                Left (_ :: SomeException) -> throwError $ viaShow src <> ": file does not exist."
+                                Left (_ :: SomeException) -> throwError $ pretty src <> ": file does not exist."
                                 Right inp -> return inp
         uref <- getUniq =<< ask
         (prog, _) <- liftIO $ parse src uref inp parser
@@ -68,8 +69,8 @@ processInstr (L _ (ImpDecl filename)) = do
 processInstr (L _ (EvalExpr exp)) = return $ Right exp
 processInstr (L _ TopDecls{}) = return $ Left []
 
-parseExpr :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m LExpr
-parseExpr = parsePartial exprParser
+parseExpr :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m LExpr
+parseExpr = catchPsErrors <$> parsePartial exprParser
 
-parseDecls :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m [LDecl]
-parseDecls = parsePartial declsParser
+parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LDecl]
+parseDecls = catchPsErrors <$> parsePartial declsParser
