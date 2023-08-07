@@ -21,10 +21,10 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
-import Plato.Typing.ElabClause
 import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Kc
+import Plato.Typing.PatTrans
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.SubsCheck

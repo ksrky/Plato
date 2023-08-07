@@ -51,7 +51,7 @@ elabExpr (P.LamE pats body) = do
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
-                v <- newVarIdent -- tmp: wild card pattern
+                v <- newVarIdent
                 return $ sL p e $ T.AbsE v $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE fdecs body) = do
@@ -107,7 +107,7 @@ elabType (P.InfixT left op right) = do
         return $ T.AppT (sL left' op $ T.AppT (L (getLoc op) (T.ConT op')) left') right'
 elabType P.FactorT{} = unreachable "fixity resolution failed"
 
-elabFunDecls :: -- tmp: type signature in let binding
+elabFunDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LDecl] ->
         m ([(Ident, [T.Clause 'T.Untyped])], [(Ident, T.LType)])
