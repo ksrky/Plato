@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Plato.Parsing (
         parseFile,
         parsePartial,
@@ -6,26 +8,32 @@ module Plato.Parsing (
         parseDecls,
 ) where
 
+import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Prettyprinter
 
 import {-# SOURCE #-} Plato (compileToCore)
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import
 import Plato.Driver.Monad
-import Plato.Parsing.Error
 import Plato.Parsing.Monad
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
 parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
-parseFile src = catchPsErrors $ do
-        inp <- liftIO $ T.readFile src
+parseFile src = do
+        inp <-
+                liftIO $
+                        try (T.readFile src) >>= \case
+                                Left (_ :: SomeException) -> throwError $ viaShow src <> ": file does not exist."
+                                Right inp -> return inp
         uref <- getUniq =<< ask
-        (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
+        (prog, _) <- liftIO $ parse src uref inp parser
         runReaderT (processInstrs prog) emptyImporting
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
