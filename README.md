@@ -51,7 +51,7 @@ $ plato --version
 Plato version 1.0.0
 ```
 
-## Examples
+## Getting started
 
 Since Plato does not have an entry point in a file, it is necessary to display outputs in combination with an interactive shell. For example, if you want to evaluate an expression using the functions declared in `A.pla` and `B.pla`, you can execute it as follows.
 
@@ -63,15 +63,16 @@ $ plato A.pla B.pla
 Let us run some files under [examples](examples) directory.
 
 ```
-$ cd path/to/Plato/examples
-$ plato fibonacci.pla quick_sort.pla --libs libraries/base
+$ cd path/to/Plato
+$ plato examples/fibonacci.pla --libs libraries/base
 >> fib (S (S (S Z)))
 (`S, fold (`S, fold (`Z, `unit)))
+>> :q
+$ plato examples/quick_sort.pla --libs libraries/base
 >> qsort (S (S Z) :: Z :: S Z :: S (S (S Z)) :: Nil)
 (`::, fold ((`Z, `unit), (`::, fold ((`S, fold (`Z, `unit)), (`::,
 fold ((`S, fold (`S, fold (`Z, `unit))), (`::, fold ((`S, fold (`S,
 fold (`S, fold (`Z, `unit)))), (`Nil, `unit)))))))))
->> :q
 ```
 
 `--libs` option specifies a directory of files that should be imported in advance.

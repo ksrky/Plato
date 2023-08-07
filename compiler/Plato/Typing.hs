@@ -9,7 +9,6 @@ module Plato.Typing (
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import Data.IORef
 
 import Control.Monad.Writer
 import Plato.Common.Error
@@ -63,42 +62,8 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
 -----------------------------------------------------------
 -- typing
 -----------------------------------------------------------
-data TypContext = TypContext
-        { ctx_typenv :: TypEnv
-        , ctx_conenv :: ConEnv
-        , ctx_uniq :: !(IORef Uniq)
-        }
-
-initTypContext :: PlatoMonad m => m TypContext
-initTypContext = do
-        uref <- getUniq =<< ask
-        typenv <- getTypEnv <$> (getContext =<< ask)
-        conenv <- getConEnv <$> (getContext =<< ask)
-        return
-                TypContext
-                        { ctx_typenv = typenv
-                        , ctx_conenv = conenv
-                        , ctx_uniq = uref
-                        }
-
-instance HasUniq TypContext where
-        getUniq = return . ctx_uniq
-        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
-
-instance HasTypEnv TypContext where
-        getTypEnv = getTypEnv . ctx_typenv
-        modifyTypEnv f ctx = ctx{ctx_typenv = f (ctx_typenv ctx)}
-
-instance HasConEnv TypContext where
-        getConEnv = ctx_conenv
-        modifyConEnv f ctx = ctx{ctx_conenv = f (ctx_conenv ctx)}
-
 typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
-typing decs = catchErrors $ do
-        (decs, env) <- runReaderT (typingDecls decs) =<< initTypContext
-        ctx <- getContext =<< ask
-        setContext ((setTypEnv (getTypEnv env) . setConEnv (getConEnv env)) ctx) =<< ask
-        return decs
+typing decs = catchErrors $ updateContext (typingDecls decs)
 
 typingExpr :: PlatoMonad m => LExpr 'Untyped -> m (LExpr 'Typed)
-typingExpr exp = fst <$> (runReaderT (inferType exp) =<< initTypContext)
+typingExpr exp = fst <$> (runReaderT (inferType exp) =<< getContext =<< ask)

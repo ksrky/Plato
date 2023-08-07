@@ -33,7 +33,7 @@ parseExp str =
                 Right json -> json
 
 infoPath :: String
-infoPath = "compiler/info.json"
+infoPath = "compiler/metainfo.json"
 
 loadJSONFile :: forall a. (FromJSON a, Lift a) => FilePath -> Q Exp
 loadJSONFile filename = do

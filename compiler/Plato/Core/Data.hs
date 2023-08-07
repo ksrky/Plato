@@ -36,7 +36,7 @@ instance Env (IORef EnvEntries) where
 
 type Index = Int
 
-newtype Scope = Scope [(Ident, (Index, Maybe (Clos Type)))] deriving (Eq, Show)
+newtype Scope = Scope (IdentMap (Index, Maybe (Clos Type))) deriving (Eq, Show)
 
 type Clos a = (a, Scope)
 

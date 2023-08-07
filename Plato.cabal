@@ -16,9 +16,7 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
-    README.md
-    ChangeLog.md
-    compiler/info.json
+    compiler/metainfo.json
 
 source-repository head
   type: git
@@ -77,12 +75,12 @@ library
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
       Plato.Typing
-      Plato.Typing.ElabClause
       Plato.Typing.Env
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
       Plato.Typing.Kc.Utils
+      Plato.Typing.PatTrans
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen

@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Plato.Parsing (
         parseFile,
         parsePartial,
@@ -6,12 +8,15 @@ module Plato.Parsing (
         parseDecls,
 ) where
 
+import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Prettyprinter
 
 import {-# SOURCE #-} Plato (compileToCore)
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Import
@@ -23,9 +28,13 @@ import Plato.Syntax.Parsing
 
 parseFile :: PlatoMonad m => FilePath -> m [LTopDecl]
 parseFile src = catchPsErrors $ do
-        inp <- liftIO $ T.readFile src
+        inp <-
+                liftIO $
+                        try (T.readFile src) >>= \case
+                                Left (_ :: SomeException) -> throwError $ pretty src <> ": file does not exist."
+                                Right inp -> return inp
         uref <- getUniq =<< ask
-        (prog, _) <- runReaderT (liftIO $ parse src uref inp parser) uref
+        (prog, _) <- liftIO $ parse src uref inp parser
         runReaderT (processInstrs prog) emptyImporting
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
@@ -60,8 +69,8 @@ processInstr (L _ (ImpDecl filename)) = do
 processInstr (L _ (EvalExpr exp)) = return $ Right exp
 processInstr (L _ TopDecls{}) = return $ Left []
 
-parseExpr :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m LExpr
-parseExpr = parsePartial exprParser
+parseExpr :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m LExpr
+parseExpr = catchPsErrors <$> parsePartial exprParser
 
-parseDecls :: (MonadReader env m, HasUniq env, MonadIO m) => T.Text -> m [LDecl]
-parseDecls = parsePartial declsParser
+parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LDecl]
+parseDecls = catchPsErrors <$> parsePartial declsParser

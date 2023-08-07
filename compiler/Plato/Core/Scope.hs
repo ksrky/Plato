@@ -1,5 +1,6 @@
 module Plato.Core.Scope where
 
+import Data.Map.Strict qualified as M
 import Data.Maybe
 import GHC.Stack
 
@@ -8,19 +9,19 @@ import Plato.Core.Data
 import Plato.Syntax.Core
 
 emptyScope :: Scope
-emptyScope = Scope []
+emptyScope = Scope M.empty
 
 extendScope :: Ident -> (Index, Maybe (Clos Type)) -> Scope -> Scope
-extendScope id (i, a) (Scope sc) = Scope $ (id, (i, a)) : sc
+extendScope id (i, a) (Scope sc) = Scope $ M.insert id (i, a) sc
 
 lookupScope :: Ident -> Scope -> Maybe Index
 lookupScope id (Scope sc) = do
-        idCon <- lookup id sc
+        idCon <- M.lookup id sc
         return $! fst idCon
 
 lookupCon :: HasCallStack => Scope -> Ident -> Maybe (Clos Type)
 lookupCon (Scope s) x = do
-        idCon <- lookup x s
+        idCon <- M.lookup x s
         return $! fromJust $! snd idCon
 
 class Closure a where

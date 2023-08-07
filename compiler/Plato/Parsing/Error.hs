@@ -10,12 +10,11 @@ import Plato.Common.Location
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
 
-catchPsErrors :: (MonadCatch m, MonadIO m, Monoid a) => m a -> m a
+catchPsErrors :: MonadCatch m => m a -> m a
 catchPsErrors =
         ( `catches`
-                [ Handler $ \e@LexError{} -> liftIO (print e) >> return mempty
-                , Handler $ \e@PsError{} -> liftIO (print e) >> return mempty
-                , defaultHandler
+                [ Handler $ \(LexError sp msg) -> throwLocErr sp (pretty msg)
+                , Handler $ \(PsError sp msg) -> throwLocErr sp (pretty msg)
                 ]
         )
 

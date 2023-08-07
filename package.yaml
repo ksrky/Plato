@@ -9,9 +9,7 @@ copyright: "2022 ksrk"
 language: GHC2021
 
 extra-source-files:
-  - README.md
-  - ChangeLog.md
-  - compiler/info.json
+  - compiler/metainfo.json
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package

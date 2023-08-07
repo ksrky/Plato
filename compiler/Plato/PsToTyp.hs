@@ -16,7 +16,6 @@ module Plato.PsToTyp (
 import Control.Exception.Safe
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Data.IORef (IORef)
 import Data.List qualified
 import GHC.Stack
 
@@ -52,7 +51,7 @@ elabExpr (P.LamE pats body) = do
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
             patlam e p = do
-                v <- newVarIdent -- tmp: wild card pattern
+                v <- newVarIdent
                 return $ sL p e $ T.AbsE v $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE fdecs body) = do
@@ -108,7 +107,7 @@ elabType (P.InfixT left op right) = do
         return $ T.AppT (sL left' op $ T.AppT (L (getLoc op) (T.ConT op')) left') right'
 elabType P.FactorT{} = unreachable "fixity resolution failed"
 
-elabFunDecls :: -- tmp: type signature in let binding
+elabFunDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LDecl] ->
         m ([(Ident, [T.Clause 'T.Untyped])], [(Ident, T.LType)])
@@ -174,26 +173,9 @@ elabTopDecls tdecs = do
 -----------------------------------------------------------
 -- psToTyp
 -----------------------------------------------------------
-data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
-
-instance HasUniq Context where
-        getUniq = return . ctx_uniq
-        setUniq uniq ctx = setUniq uniq (ctx_uniq ctx)
-
-instance HasScope Context where
-        getScope (Context _ sc) = sc
-        modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Program 'T.Untyped)
-psToTyp tdecs = catchErrors $ do
-        uref <- getUniq =<< ask
-        ctx <- getContext =<< ask
-        (decs, env) <- runReaderT (elabTopDecls tdecs) (Context uref (getScope ctx))
-        setContext (setScope (ctx_scope env) ctx) =<< ask
-        return decs
+psToTyp tdecs = catchErrors $ updateContext (elabTopDecls tdecs)
 
 psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = do
-        uref <- getUniq =<< ask
-        ctx <- getContext =<< ask
-        runReaderT (elabExpr `traverse` exp) (Context uref (getScope ctx))
+psToTypExpr exp = runReaderT (elabExpr `traverse` exp) =<< getContext =<< ask
