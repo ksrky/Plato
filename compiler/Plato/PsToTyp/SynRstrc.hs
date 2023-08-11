@@ -62,7 +62,7 @@ dataConType id (con, ty) = loop1 ty
         loop1 ty = loop2 ty
         loop2 :: MonadThrow m => LType -> m ()
         loop2 (L _ (AppT ty1 _)) = loop2 ty1
-        loop2 (L _ (InfixT _ op _))
+        loop2 (L _ (BinT _ op _))
                 | nameIdent id == nameIdent op = return ()
         loop2 (L _ (ConT id2)) | nameIdent id == nameIdent id2 = return ()
         loop2 (L sp ty) = do
