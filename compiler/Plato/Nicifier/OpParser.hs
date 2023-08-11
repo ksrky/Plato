@@ -40,7 +40,7 @@ class Linearize a where
         linearize :: MonadThrow m => Located a -> ReaderT FixityEnv m [Tok a]
 
 instance Linearize Expr where
-        linearize (L _ (InfixE lhs op rhs)) = do
+        linearize (L _ (BinE lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -51,7 +51,7 @@ instance Linearize Expr where
                 return [TTerm exp']
 
 instance Linearize Pat where
-        linearize (L _ (InfixP lhs op rhs)) = do
+        linearize (L _ (BinP lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -62,7 +62,7 @@ instance Linearize Pat where
                 return [TTerm pat']
 
 instance Linearize Type where
-        linearize (L _ (InfixT lhs op rhs)) = do
+        linearize (L _ (BinT lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -85,9 +85,9 @@ instance OpParser LExpr where
                 L sp <$> case exp of
                         VarE{} -> return exp
                         AppE fun arg -> AppE <$> opParse fun <*> opParse arg
-                        InfixE{} -> do
+                        BinE{} -> do
                                 toks <- linearize (L sp exp)
-                                unLoc <$> parse InfixE toks
+                                unLoc <$> parse BinE toks
                         LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
                                 (decs', body') <- opParse (decs, body)
@@ -109,9 +109,9 @@ instance OpParser LPat where
                                 return $ ConP con pats'
                         VarP{} -> return pat
                         WildP -> return WildP
-                        InfixP{} -> do
+                        BinP{} -> do
                                 toks <- linearize (L sp pat)
-                                unLoc <$> parse InfixP toks
+                                unLoc <$> parse BinP toks
                         FactorP p -> unLoc <$> opParse p
 
 instance OpParser LType where
@@ -122,9 +122,9 @@ instance OpParser LType where
                         ArrT arg res -> ArrT <$> opParse arg <*> opParse res
                         AllT tvs body -> AllT tvs <$> opParse body
                         AppT fun arg -> AppT <$> opParse fun <*> opParse arg
-                        InfixT{} -> do
+                        BinT{} -> do
                                 toks <- linearize (L sp ty)
-                                unLoc <$> parse InfixT toks
+                                unLoc <$> parse BinT toks
                         FactorT ty -> unLoc <$> opParse ty
 
 instance OpParser [LDecl] where

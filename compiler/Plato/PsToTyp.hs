@@ -38,7 +38,7 @@ elabExpr ::
         m (T.Expr 'T.Untyped)
 elabExpr (P.VarE id) = T.VarE <$> scoping id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
-elabExpr (P.InfixE left op right) = do
+elabExpr (P.BinE left op right) = do
         left' <- elabExpr `traverse` left
         op' <- scoping op
         right' <- elabExpr `traverse` right
@@ -78,7 +78,7 @@ elabPat (P.ConP con pats) = do
         return $ T.ConP con' pats'
 elabPat (P.VarP var) = return $ T.VarP var
 elabPat P.WildP = return T.WildP
-elabPat (P.InfixP left op right) = do
+elabPat (P.BinP left op right) = do
         left' <- elabPat `traverse` left
         op' <- scoping op
         right' <- elabPat `traverse` right
@@ -100,7 +100,7 @@ elabType (P.AllT vars body) = do
         body' <- local (extendListScope vars) $ elabType `traverse` body
         return $ T.AllT qnts body'
 elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
-elabType (P.InfixT left op right) = do
+elabType (P.BinT left op right) = do
         left' <- elabType `traverse` left
         op' <- scoping op
         right' <- elabType `traverse` right

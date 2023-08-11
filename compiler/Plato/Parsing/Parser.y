@@ -168,7 +168,7 @@ type        :: { LType }
             | ctype                                 { $1 }
 
 ctype       :: { LType }
-            : btype tyconop ctype                   { sL $1 $3 (InfixT $1 $2 $3) }
+            : btype tyconop ctype                   { sL $1 $3 (BinT $1 $2 $3) }
             | btype                                 { $1 }
 
 btype       :: { LType }
@@ -184,7 +184,7 @@ atype       :: { LType }
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr op expr                         { sL $1 $3 (InfixE $1 $2 $3) }
+            : lexpr op expr                         { sL $1 $3 (BinE $1 $2 $3) }
             | lexpr                                 { $1 }
 
 lexpr       :: { LExpr }
@@ -236,7 +236,7 @@ clause      :: { Clause }
 -- Patterns
 -----------------------------------------------------------
 pat         :: { LPat }
-            : lpat conop pat                        { sL $1 $3 (InfixP $1 $2 $3) } 
+            : lpat conop pat                        { sL $1 $3 (BinP $1 $2 $3) } 
             | lpat                                  { $1 }
 
 lpat        :: { LPat }
