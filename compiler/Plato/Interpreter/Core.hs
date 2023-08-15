@@ -14,10 +14,10 @@ import Prettyprinter
 import Prettyprinter.Render.Text
 
 import Plato.Common.Uniq
-import Plato.Core.Data
+import Plato.Core.Closure
+import Plato.Core.Env
 import Plato.Core.Eval
 import Plato.Core.Pretty
-import Plato.Core.Scope
 import Plato.Syntax.Core
 
 data CoreEnv = CoreEnv (IORef EnvEntries) Scope

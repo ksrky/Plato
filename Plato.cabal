@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -32,11 +32,12 @@ library
       Plato.Common.Pretty
       Plato.Common.Uniq
       Plato.Common.Utils
+      Plato.Core.Closure
       Plato.Core.Data
+      Plato.Core.Env
       Plato.Core.Eval
       Plato.Core.Normalise
       Plato.Core.Pretty
-      Plato.Core.Scope
       Plato.Core.Utils
       Plato.Driver.Context
       Plato.Driver.Flag

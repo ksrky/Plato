@@ -1,4 +1,4 @@
-module Plato.Core.Scope where
+module Plato.Core.Closure where
 
 import Data.Map.Strict qualified as M
 import Data.Maybe

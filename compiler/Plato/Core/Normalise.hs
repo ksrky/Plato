@@ -4,16 +4,17 @@
 
 module Plato.Core.Normalise where
 
+import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
-import Control.Exception.Safe
 import Plato.Common.Ident
 import Plato.Common.Uniq
+import Plato.Core.Closure
 import Plato.Core.Data
+import Plato.Core.Env
 import Plato.Core.Eval
-import Plato.Core.Scope
 import Plato.Core.Utils
 import Plato.Syntax.Core
 
@@ -35,18 +36,13 @@ instance Nf Index Term where
                 (PrtInfo x shouldExpand) <- prtE i =<< ask
                 lookupIndex i >>= \case
                         (Index _) -> return (Var x)
-                        (Closure t) ->
-                                if shouldExpand
-                                        then do
-                                                t' <- nf' b xs t
-                                                return
-                                                        ( Let
-                                                                [Defn x t']
-                                                                (Var x)
-                                                        )
-                                        else -- we should also declare x, but we don't know its type!
-                                        -- the let cannot be expanded if inside a box!
-                                                return (Var x)
+                        (Closure t)
+                                | shouldExpand -> do
+                                        t' <- nf' b xs t
+                                        return (Let [Defn x t'] (Var x))
+                                | otherwise -> -- we should also declare x, but we don't know its type!
+                                -- the let cannot be expanded if inside a box!
+                                        return (Var x)
 
 qq :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
 qq xs (Var x, s) = quote xs =<< getIndex x s
@@ -130,14 +126,9 @@ instance Nf Ne Term where
                 return (Split t' xyu')
         nf' b xs (NCase t (lus, s)) = do
                 t' <- nf xs t
-                lus' <-
-                        mapM
-                                ( \(l, u) ->
-                                        do
-                                                u' <- nf' b xs (u, s)
-                                                return (l, u')
-                                )
-                                lus
+                lus' <- forM lus $ \(l, u) -> do
+                        u' <- nf' b xs (u, s)
+                        return (l, u')
                 return (Case t' lus')
         nf' _ xs (NForce t) = Force <$> nf xs t
         nf' b xs (NUnfold t xu) = do
