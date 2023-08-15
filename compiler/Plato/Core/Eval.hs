@@ -13,7 +13,7 @@ import Plato.Core.Data
 import Plato.Core.Env
 import Plato.Syntax.Core
 
-getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Index
+getIndex :: (MonadReader env m, MonadThrow m) => Ident -> CoreScope -> m Index
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError $ hsep ["Not in scope", pretty id]
@@ -31,15 +31,15 @@ decl ::
         (MonadReader e m, Env e, MonadIO m) =>
         Ident ->
         PrtInfo ->
-        Scope ->
+        CoreScope ->
         Maybe (Clos Type) ->
-        m (Index, Scope)
+        m (Index, CoreScope)
 decl id fi sc a = do
-        i <- extendE fi =<< ask
+        i <- extE fi =<< ask
         return (i, extendScope id (i, a) sc)
 
-decl' :: (MonadReader e m, Env e, MonadIO m) => Ident -> Scope -> m (Index, Scope)
-decl' x s = decl x PrtInfo{name = x, expand = True} s Nothing
+decl' :: (MonadReader e m, Env e, MonadIO m) => Ident -> CoreScope -> m (Index, CoreScope)
+decl' x sc = decl x PrtInfo{name = x, expand = True} sc Nothing
 
 defn :: (MonadReader e m, Env e, MonadIO m) => Index -> EnvEntry -> m ()
 defn i ei = setE i ei =<< ask
@@ -102,7 +102,7 @@ eval (Rec t, s) = return (VRec (t, s))
 eval (Fold t, s) = return (VFold (t, s))
 eval (Unfold (x, t) u, sc) = unfold (x, (u, sc)) =<< eval (t, sc)
 
-evalProg :: (MonadReader e m, Env e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
+evalProg :: (MonadReader e m, Env e, MonadIO m, MonadThrow m) => Clos Prog -> m CoreScope
 evalProg ([], sc) = return sc
 evalProg ((Decl id _) : tel, sc) = do
         (_, sc') <- decl id (PrtInfo id False) sc Nothing

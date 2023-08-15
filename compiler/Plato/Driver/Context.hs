@@ -16,6 +16,7 @@ data Context = Context
         , ctx_typEnv :: !TypEnv
         , ctx_conEnv :: !ConEnv
         , ctx_coreEnv :: !CoreEnv
+        , ctx_coreScope :: !CoreScope
         }
 
 initContext :: IO Context

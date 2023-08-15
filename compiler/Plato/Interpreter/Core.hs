@@ -20,12 +20,18 @@ import Plato.Core.Eval
 import Plato.Core.Pretty
 import Plato.Syntax.Core
 
-data CoreEnv = CoreEnv (IORef EnvEntries) Scope
+data CoreEnv = CoreEnv (IORef EnvEntries) CoreScope
 
 initCoreEnv :: IO CoreEnv
 initCoreEnv = do
         envref <- newIORef []
         return $ CoreEnv envref emptyScope
+
+instance Env CoreEnv where
+        extE fi (CoreEnv env _) = extE fi env
+        getE i (CoreEnv env _) = getE i env
+        setE i v (CoreEnv env _) = setE i v env
+        prtE i (CoreEnv env _) = prtE i env
 
 class HasCoreEnv e where
         getCoreEnv :: e -> CoreEnv
@@ -37,7 +43,7 @@ instance HasCoreEnv CoreEnv where
         getCoreEnv = id
         modifyCoreEnv = id
 
-enterCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Prog -> m Scope
+enterCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Prog -> m CoreScope
 enterCore prog = do
         CoreEnv env sc <- asks getCoreEnv
         runReaderT (evalProg (prog, sc)) env
@@ -49,13 +55,12 @@ instance HasUniq Context where
         setUniq uniq (Context _ uref) = setUniq uniq uref
 
 instance Env Context where
-        extendE fi (Context env _) = extendE fi env
+        extE fi (Context env _) = extE fi env
         getE i (Context env _) = getE i env
         setE i v (Context env _) = setE i v env
         prtE i (Context env _) = prtE i env
 
-runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => IORef Uniq -> Term -> m ()
-runCore uref t = do
-        CoreEnv env sc <- asks getCoreEnv
-        doc <- runReaderT (evalPrint =<< eval (t, sc)) (Context env uref)
+runCore :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => CoreScope -> Term -> m ()
+runCore sc t = do
+        doc <- evalPrint =<< eval (t, sc)
         liftIO $ putDoc $ doc <> line
