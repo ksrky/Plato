@@ -5,6 +5,7 @@ import GHC.IORef
 
 import Plato.Common.Ident
 import Plato.Common.Pretty
+import Plato.Core.Scope
 import Plato.Syntax.Core
 
 class Env e where
@@ -34,13 +35,11 @@ instance Env (IORef EnvEntries) where
                 env <- liftIO $ readIORef ref
                 return $ snd $ env !! i
 
-type Index = Int
-
-newtype Scope = Scope (IdentMap (Index, Maybe (Clos Type))) deriving (Eq, Show)
-
-type Clos a = (a, Scope)
-
 newtype Boxed = Boxed (Clos Term) deriving (Eq, Show)
+
+instance Closure Boxed where
+        getScope (Boxed c) = getScope c
+        putScope (Boxed c) = Boxed . putScope c
 
 data Val
         = Ne Ne
@@ -80,9 +79,6 @@ data PrtInfo = PrtInfo
 
 instance Pretty Boxed where
         pretty (Boxed (t, _)) = brackets $ pretty t
-
-instance PrettyWithContext a => PrettyWithContext (Clos a) where
-        pretty' c (t, _) = pretty' c t
 
 instance Pretty Val where
         pretty = pretty' 0

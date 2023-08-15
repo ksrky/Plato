@@ -66,4 +66,6 @@ typing :: PlatoMonad m => Program 'Untyped -> m (Program 'Typed)
 typing decs = catchErrors $ updateContext (typingDecls decs)
 
 typingExpr :: PlatoMonad m => LExpr 'Untyped -> m (LExpr 'Typed)
-typingExpr exp = fst <$> (runReaderT (inferType exp) =<< getContext =<< ask)
+typingExpr exp = do
+        (exp', _) <- runReaderT (inferType exp) =<< getContext =<< ask
+        return exp'

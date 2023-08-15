@@ -15,14 +15,14 @@ instance Exception InfiniteTypeError
 
 instErrHandler :: MonadCatch m => Span -> Type -> Type -> [Handler m a]
 instErrHandler sp ty_exp ty_sup =
-        [ Handler $ \(UnificationError{}) ->
+        [ Handler $ \UnificationError ->
                 throwLocErr sp $
                         vsep
                                 [ "Infered type doesn't match expected type from the signature."
                                 , "Expected type:" <+> pretty ty_sup
                                 , " Infered type:" <+> pretty ty_exp
                                 ]
-        , Handler $ \(InfiniteTypeError{}) ->
+        , Handler $ \InfiniteTypeError ->
                 throwLocErr sp $
                         hsep
                                 [ "Infinite type:"

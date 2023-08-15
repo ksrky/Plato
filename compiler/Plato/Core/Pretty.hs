@@ -9,6 +9,7 @@ import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Core.Data
 import Plato.Core.Normalise
+import Plato.Core.Scope
 import Plato.Syntax.Core
 
 class Print a where
