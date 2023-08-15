@@ -1,6 +1,7 @@
 import Bool
 import Nat
 import Maybe
+import Pair
 
 infixr 5 ::
 infixr 5 ++
@@ -10,7 +11,7 @@ data List a where
     (::) : a -> List a -> List a
 
 (++) : {a} List a -> List a -> List a
-(++) Nil m = m
+Nil ++ m = m
 (x :: xs) ++ m = x :: (xs ++ m)
 
 head : {a} List a -> Maybe a
@@ -26,22 +27,20 @@ tail : {a} List a -> List a
 tail Nil = Nil
 tail (_ :: tl) = tl
 
+cons : {a} a -> List a -> List a
+cons x xs = x :: xs
+
+uncons : {a} List a -> Maybe (a :,: List a)
+uncons Nil = Nothing
+uncons (x :: xs) = Just (x :,: xs)
+
 {-
 init : {a} List a -> List a
 init Nil = Nil
-init (x :: xs) =
-    let init' : {a} a -> List a -> List a -- error : Scoped type variables
-        init' y Nil = Nil
-        init' y (z :: zs) -> y :: init' z zs
-     in init' x xs
-
--- Alternative
-init : {a} List a -> List a
-init Nil = Nil
-init {a} (x :: xs) ->
+init {a} (x :: xs) =
     let init' : a -> List a -> List a -- error : Scoped type variables
         init' y Nil = Nil
-        init' y (z :: zs) -> y :: init' z zs
+        init' y (z :: zs) = y :: init' z zs
      in init' x xs
 -}
 
@@ -54,7 +53,7 @@ length Nil = Z
 length (x :: xs) = S (length xs)
 
 map : {a b} (a -> b) -> List a -> List b
-map f Nil = Nil
+map _ Nil = Nil
 map f (x :: xs) = f x :: map f xs
 
 reverse : {a} List a -> List a
@@ -66,9 +65,26 @@ reverse l =
      in rev l Nil
 
 filter : {a} (a -> Bool) -> List a -> List a
-filter f Nil = Nil
+filter _ Nil = Nil
 filter f (x :: xs) = ifThenElse (f x) (x :: filter f xs) (filter f xs)
 
+foldl : {a b} (b -> a -> b) -> b -> List a -> b
+foldl _ v Nil = v
+foldl f v (x :: xs) = foldl f (f v x) xs
+
 foldr : {a b} (a -> b -> b) -> b -> List a -> b
-foldr k z Nil = z
-foldr k z (y :: ys) = k y (foldr k z ys)
+foldr _ v Nil = v
+foldr f v (x :: xs) = f x (foldr f v xs)
+
+zip : {a b} List a -> List b -> List (a :,: b)
+zip Nil _ = Nil
+zip _ Nil = Nil
+zip (x :: xs) (y :: ys) = (x :,: y) :: zip xs ys
+
+zipWith : {a b c} (a -> b -> c) -> List a -> List b -> List c
+zipWith _ Nil _ = Nil
+zipWith _ _ Nil = Nil
+zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
+
+unzip : {a b} List (a :,: b) -> List a :,: List b
+unzip = foldr (\(x :,: y) (xs :,: ys) -> x :: xs :,: y :: ys) (Nil :,: Nil)

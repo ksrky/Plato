@@ -72,7 +72,7 @@ instance Ord MetaTv where
 ----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty (nameIdent id) <> pretty (stamp id)
+        pretty (SkolemTv id) = pretty id
 
 instance Pretty MetaTv where
         pretty (MetaTv u _) = "$" <> pretty u

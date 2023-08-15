@@ -33,8 +33,8 @@ instance Zonking (Expr 'Typed) where
                 spcs' <- mapM (\(id, ty) -> (id,) <$> zonk ty) spcs
                 body' <- zonk body
                 return $ LetEok bnds' spcs' body'
-        zonk (CaseEok match ann alts) = do
-                match' <- zonk match
+        zonk (CaseEok test ann alts) = do
+                match' <- zonk test
                 ann' <- zonk ann
                 alts' <- mapM (\(pats, exp) -> (,) <$> mapM zonk pats <*> zonk exp) alts
                 return $ CaseEok match' ann' alts'

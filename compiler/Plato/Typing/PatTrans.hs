@@ -18,6 +18,7 @@ import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Tc.Subst qualified as Subst
 import Plato.Typing.Utils
+import Plato.Typing.Zonking
 
 transClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
@@ -40,8 +41,8 @@ transCase (CaseEok exp ty alts) = do
         return $ AppE (AbsEok var ty <$> altsexp) exp
 transCase _ = unreachable "Expected type-checked case expression"
 
-constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m) => Type -> m Constrs
-constructors = getCon []
+constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
+constructors ty = getCon [] =<< zonk ty
     where
         getCon :: [Type] -> Type -> m Constrs
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
