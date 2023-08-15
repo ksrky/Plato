@@ -1,5 +1,4 @@
-module Plato.Core.Data where
- 
+module Plato.Core.Result where
 
 import Plato.Common.Ident
 import Plato.Common.Pretty
@@ -35,16 +34,6 @@ data Ne
         | NForce Ne
         | NUnfold Ne (Bind (Clos Term))
         deriving (Eq, Show)
-
-data EnvEntry
-        = Index Index
-        | Closure (Clos Term)
-        deriving (Show)
-
-data PrtInfo = PrtInfo
-        { name :: Ident
-        , expand :: Bool
-        }
 
 instance Pretty Boxed where
         pretty (Boxed (t, _)) = brackets $ pretty t

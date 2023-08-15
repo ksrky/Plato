@@ -3,8 +3,19 @@ module Plato.Core.Env where
 import Control.Monad.IO.Class
 import Data.IORef
 
+import Plato.Common.Ident
 import Plato.Core.Closure
-import Plato.Core.Data
+import Plato.Syntax.Core
+
+data EnvEntry
+        = Index Index
+        | Closure (Clos Term)
+        deriving (Show)
+
+data PrtInfo = PrtInfo
+        { name :: Ident
+        , expand :: Bool
+        }
 
 type EnvEntries = [(EnvEntry, PrtInfo)]
 

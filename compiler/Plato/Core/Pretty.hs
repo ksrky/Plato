@@ -8,9 +8,9 @@ import Plato.Common.Ident
 import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Core.Closure
-import Plato.Core.Data
 import Plato.Core.Env
 import Plato.Core.Normalise
+import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Print a where

@@ -60,7 +60,8 @@ instance Env Context where
         setE i v (Context env _) = setE i v env
         prtE i (Context env _) = prtE i env
 
-runCore :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => CoreScope -> Term -> m ()
-runCore sc t = do
-        doc <- evalPrint =<< eval (t, sc)
+runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => IORef Uniq -> Term -> m ()
+runCore uref t = do
+        CoreEnv env sc <- asks getCoreEnv
+        doc <- runReaderT (evalPrint =<< eval (t, sc)) (Context env uref)
         liftIO $ putDoc $ doc <> line

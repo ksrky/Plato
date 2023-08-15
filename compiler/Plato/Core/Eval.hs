@@ -9,8 +9,8 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Core.Closure
-import Plato.Core.Data
 import Plato.Core.Env
+import Plato.Core.Result
 import Plato.Syntax.Core
 
 getIndex :: (MonadReader env m, MonadThrow m) => Ident -> CoreScope -> m Index

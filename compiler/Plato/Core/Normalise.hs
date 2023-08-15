@@ -12,9 +12,9 @@ import Control.Monad.Reader.Class
 import Plato.Common.Ident
 import Plato.Common.Uniq
 import Plato.Core.Closure
-import Plato.Core.Data
 import Plato.Core.Env
 import Plato.Core.Eval
+import Plato.Core.Result
 import Plato.Core.Utils
 import Plato.Syntax.Core
 
