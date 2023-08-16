@@ -33,6 +33,7 @@ dependencies:
   - safe-exceptions
   - transformers
   - text
+  - vector
 
 ghc-options:
   - -Wall

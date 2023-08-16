@@ -116,6 +116,7 @@ library
     , safe-exceptions
     , text
     , transformers
+    , vector
   default-language: GHC2021
 
 executable plato
@@ -150,6 +151,7 @@ executable plato
     , template-haskell
     , text
     , transformers
+    , vector
   default-language: GHC2021
 
 test-suite Plato-test
@@ -187,4 +189,5 @@ test-suite Plato-test
     , safe-exceptions
     , text
     , transformers
+    , vector
   default-language: GHC2021

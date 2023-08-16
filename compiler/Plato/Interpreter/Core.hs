@@ -24,7 +24,7 @@ data CoreEnv = CoreEnv (IORef EnvEntries) CoreScope
 
 initCoreEnv :: IO CoreEnv
 initCoreEnv = do
-        envref <- newIORef []
+        envref <- newIORef mempty
         return $ CoreEnv envref emptyScope
 
 instance Env CoreEnv where
