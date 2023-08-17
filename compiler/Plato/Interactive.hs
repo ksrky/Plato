@@ -1,4 +1,4 @@
-module Plato.Interpreter where
+module Plato.Interactive where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
@@ -13,15 +13,7 @@ import Plato.Core.Eval
 import Plato.Core.Pretty
 import Plato.Driver.Context
 import Plato.Driver.Monad
-import Plato.Interpreter.Core
 import Plato.Syntax.Core
-
-addCoreEnv :: PlatoMonad m => Prog -> m ()
-addCoreEnv prog = do
-        ctx <- getContext =<< ask
-        sc <- runReaderT (enterCore prog) (getCoreEnv ctx)
-        let CoreEnv env _ = getCoreEnv ctx
-        setContext (setCoreEnv (CoreEnv env sc) ctx) =<< ask
 
 appendProg :: PlatoMonad m => Prog -> m ()
 appendProg prog = do

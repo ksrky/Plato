@@ -4,7 +4,6 @@ import Control.Monad.IO.Class
 import Data.IORef
 
 import Plato.Common.Uniq
-import Plato.Interpreter.Core
 import Plato.Nicifier.OpParser
 import Plato.PsToTyp.Scoping
 import Plato.Syntax.Core
@@ -16,14 +15,12 @@ data Context = Context
         , ctx_scope :: !Scope
         , ctx_typEnv :: !TypEnv
         , ctx_conEnv :: !ConEnv
-        , ctx_coreEnv :: !CoreEnv
         , ctx_coreProg :: !Prog
         }
 
 initContext :: IO Context
 initContext = do
         uref <- initUniq
-        coreenv <- initCoreEnv
         return $
                 Context
                         { ctx_uniq = uref
@@ -31,7 +28,6 @@ initContext = do
                         , ctx_scope = mempty
                         , ctx_typEnv = mempty
                         , ctx_conEnv = mempty
-                        , ctx_coreEnv = coreenv
                         , ctx_coreProg = mempty
                         }
 
@@ -54,7 +50,3 @@ instance HasTypEnv Context where
 instance HasConEnv Context where
         getConEnv = ctx_conEnv
         modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
-
-instance HasCoreEnv Context where
-        getCoreEnv = ctx_coreEnv
-        modifyCoreEnv f ctx = ctx{ctx_coreEnv = f (ctx_coreEnv ctx)}

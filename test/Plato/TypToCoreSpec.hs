@@ -12,7 +12,6 @@ import Test.Hspec
 
 import Plato.Common.Uniq
 import Plato.Driver.Monad
-import Plato.Interpreter.Core
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp qualified as T
@@ -96,7 +95,6 @@ data Context = Context
         , ctx_scope :: Scope
         , ctx_typEnv :: TypEnv
         , ctx_conEnv :: ConEnv
-        , ctx_coreEnv :: CoreEnv
         }
 
 instance HasUniq Context where
@@ -115,14 +113,10 @@ instance HasConEnv Context where
         getConEnv = ctx_conEnv
         modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
 
-instance HasCoreEnv Context where
-        getCoreEnv = ctx_coreEnv
-        modifyCoreEnv f ctx = ctx{ctx_coreEnv = f (ctx_coreEnv ctx)}
-
 test_decls :: T.Text -> IO [String]
 test_decls inp = do
         uref <- initUniq
-        ctx <- Context uref initScope initTypEnv initConEnv <$> initCoreEnv
+        let ctx = Context uref initScope initTypEnv initConEnv
         decs <- runReaderT (parseDecls inp) ctx
         decs' <- runReaderT (execWriterT $ T.elabDecls decs) ctx
         (decs'', ctx') <- runReaderT (typingDecls decs') ctx
