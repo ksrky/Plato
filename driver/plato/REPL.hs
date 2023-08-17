@@ -6,21 +6,24 @@ import Data.Text qualified as T
 import System.Console.Haskeline
 
 import Plato
+import Plato.Interpreter
 
 repl :: [FilePath] -> Session -> IO ()
-repl files session = do
-        unPlato (mapM_ compileToCore files) session
-        unPlato (runInputT defaultSettings loop) session
+repl files session =  
+        unPlato (do
+                _ <- mapM_ compileToCore files
+                runInteractive (runInputT defaultSettings loop)
+                ) session 
 
-loop :: (PlatoMonad m, MonadMask m) => InputT m ()
+loop :: (PlatoMonad m, MonadMask m) => InputT (Interactive m) ()
 loop = do
         minp <- getInputLine ">> "
         case minp of
                 Nothing -> return ()
                 Just "" -> loop
                 Just (':' : cmd) -> replCommand cmd
-                Just inp -> lift (interpretExpr (T.pack inp)) >> loop
+                Just inp -> lift (evaluateCore (T.pack inp)) >> loop
 
-replCommand :: String -> (PlatoMonad m, MonadMask m) => InputT m ()
+replCommand :: String -> (PlatoMonad m, MonadMask m) => InputT (Interactive m) ()
 replCommand "q" = return ()
 replCommand _ = loop

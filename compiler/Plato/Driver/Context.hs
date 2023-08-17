@@ -7,6 +7,7 @@ import Plato.Common.Uniq
 import Plato.Interpreter.Core
 import Plato.Nicifier.OpParser
 import Plato.PsToTyp.Scoping
+import Plato.Syntax.Core
 import Plato.Typing.Env
 
 data Context = Context
@@ -16,6 +17,7 @@ data Context = Context
         , ctx_typEnv :: !TypEnv
         , ctx_conEnv :: !ConEnv
         , ctx_coreEnv :: !CoreEnv
+        , ctx_coreProg :: !Prog
         }
 
 initContext :: IO Context
@@ -25,11 +27,12 @@ initContext = do
         return $
                 Context
                         { ctx_uniq = uref
-                        , ctx_fixityEnv = initFixityEnv
-                        , ctx_scope = initScope
-                        , ctx_typEnv = initTypEnv
-                        , ctx_conEnv = initConEnv
+                        , ctx_fixityEnv = mempty
+                        , ctx_scope = mempty
+                        , ctx_typEnv = mempty
+                        , ctx_conEnv = mempty
                         , ctx_coreEnv = coreenv
+                        , ctx_coreProg = mempty
                         }
 
 instance HasUniq Context where

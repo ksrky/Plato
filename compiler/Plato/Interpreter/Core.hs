@@ -3,21 +3,17 @@ module Plato.Interpreter.Core (
         initCoreEnv,
         HasCoreEnv (..),
         enterCore,
-        runCore,
 ) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.IORef
-import Prettyprinter
-import Prettyprinter.Render.Text
 
 import Plato.Common.Uniq
 import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Eval
-import Plato.Core.Pretty
 import Plato.Syntax.Core
 
 data CoreEnv = CoreEnv (IORef EnvEntries) CoreScope
@@ -59,9 +55,3 @@ instance Env Context where
         getE i (Context env _) = getE i env
         setE i v (Context env _) = setE i v env
         prtE i (Context env _) = prtE i env
-
-runCore :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => IORef Uniq -> Term -> m ()
-runCore uref t = do
-        CoreEnv env sc <- asks getCoreEnv
-        doc <- runReaderT (evalPrint =<< eval (t, sc)) (Context env uref)
-        liftIO $ putDoc $ doc <> line

@@ -1,11 +1,13 @@
 module Plato (
         runPlato,
         compileToCore,
-        interpretExpr,
+        evaluateCore,
         module Plato.Driver.Monad,
 ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Trans
 import Data.Text qualified as T
 
 import Plato.Common.Error
@@ -15,13 +17,14 @@ import Plato.Interpreter
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
+import Plato.Syntax.Core
 import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> Session -> IO ()
-runPlato = unPlato . compileToCore
+runPlato filepath = void . unPlato (compileToCore filepath)
 
-compileToCore :: PlatoMonad m => FilePath -> m ()
+compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
@@ -31,13 +34,17 @@ compileToCore src = do
         whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
         coresyn <- typToCore typsyn'
         whenFlagOn FPrintCore $ liftIO $ prettyPrint coresyn
-        whenFlagOn FEvalCore $ addCoreEnv coresyn
+        whenFlagOn FEvalCore $ appendProg coresyn
+        return coresyn
 
-interpretExpr :: PlatoMonad m => T.Text -> m ()
-interpretExpr inp = catchErrors $ do
-        pssyn <- parseExpr inp
-        pssyn' <- nicifyExpr pssyn
-        typsyn <- psToTypExpr pssyn'
-        typsyn' <- typingExpr typsyn
-        coresyn <- typToCoreExpr typsyn'
-        evalCore coresyn
+evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
+evaluateCore inp =
+        lift
+                ( do
+                        pssyn <- parseExpr inp
+                        pssyn' <- nicifyExpr pssyn
+                        typsyn <- psToTypExpr pssyn'
+                        typsyn' <- typingExpr typsyn
+                        typToCoreExpr typsyn'
+                )
+                >>= (catchErrors . evalCore)
