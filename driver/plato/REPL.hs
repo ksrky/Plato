@@ -6,7 +6,6 @@ import Data.Text qualified as T
 import System.Console.Haskeline
 
 import Plato
-import Plato.Interactive
 
 repl :: [FilePath] -> Session -> IO ()
 repl files session =  

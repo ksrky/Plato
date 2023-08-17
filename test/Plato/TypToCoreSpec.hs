@@ -131,7 +131,7 @@ test_file fn =
                         pssyn' <- nicify pssyn
                         typsyn <- T.psToTyp pssyn'
                         typsyn' <- typing typsyn
-                        coresyn <- C.typToCore typsyn'
-                        return $ map (show . pretty) coresyn
+                        corsyn <- C.typToCore typsyn'
+                        return $ map (show . pretty) corsyn
                 )
                 =<< initSession

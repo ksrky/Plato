@@ -10,34 +10,34 @@ import Plato.Syntax.Core
 
 type Index = Int
 
-newtype CoreScope = CoreScope (IdentMap (Index, Maybe (Clos Type))) deriving (Eq, Show)
+newtype Scope = Scope (IdentMap (Index, Maybe (Clos Type))) deriving (Eq, Show)
 
-type Clos a = (a, CoreScope)
+type Clos a = (a, Scope)
 
 instance PrettyWithContext a => PrettyWithContext (Clos a) where
         pretty' c (t, _) = pretty' c t
 
-emptyScope :: CoreScope
-emptyScope = CoreScope M.empty
+emptyScope :: Scope
+emptyScope = Scope M.empty
 
-extendScope :: Ident -> (Index, Maybe (Clos Type)) -> CoreScope -> CoreScope
-extendScope id (i, a) (CoreScope sc) = CoreScope $ M.insert id (i, a) sc
+extendScope :: Ident -> (Index, Maybe (Clos Type)) -> Scope -> Scope
+extendScope id (i, a) (Scope sc) = Scope $ M.insert id (i, a) sc
 
-lookupScope :: Ident -> CoreScope -> Maybe Index
-lookupScope id (CoreScope sc) = do
+lookupScope :: Ident -> Scope -> Maybe Index
+lookupScope id (Scope sc) = do
         idCon <- M.lookup id sc
         return $! fst idCon
 
-lookupCon :: HasCallStack => CoreScope -> Ident -> Maybe (Clos Type)
-lookupCon (CoreScope s) x = do
+lookupCon :: HasCallStack => Scope -> Ident -> Maybe (Clos Type)
+lookupCon (Scope s) x = do
         idCon <- M.lookup x s
         return $! fromJust $! snd idCon
 
 class Closure a where
-        getScope :: a -> CoreScope
-        putScope :: a -> CoreScope -> a
+        getScope :: a -> Scope
+        putScope :: a -> Scope -> a
 
-instance Closure CoreScope where
+instance Closure Scope where
         getScope = id
         putScope _ sc = sc
 

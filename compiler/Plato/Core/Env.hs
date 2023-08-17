@@ -20,13 +20,13 @@ data PrtInfo = PrtInfo
 
 type EnvEntries = V.Vector (EnvEntry, PrtInfo)
 
-class Env e where
+class CoreEnv e where
         extE :: MonadIO m => PrtInfo -> e -> m Index
         getE :: MonadIO m => Index -> e -> m EnvEntry
         setE :: MonadIO m => Index -> EnvEntry -> e -> m ()
         prtE :: MonadIO m => Index -> e -> m PrtInfo
 
-instance Env (IORef EnvEntries) where
+instance CoreEnv (IORef EnvEntries) where
         extE fi ref = do
                 env <- liftIO $ readIORef ref
                 let i = length env

@@ -1,4 +1,11 @@
-module Plato.Interactive where
+module Plato.Driver.Interactive (
+        appendProg,
+        Interactive,
+        getEnvEntries,
+        getCoreScope,
+        runInteractive,
+        evalCore,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
@@ -22,7 +29,7 @@ appendProg prog = do
 
 data InteractEnv = InteractEnv
         { int_envent :: IORef EnvEntries
-        , int_scope :: CoreScope
+        , int_scope :: Scope
         , int_uniq :: IORef Uniq
         }
 
@@ -31,14 +38,14 @@ type Interactive m = ReaderT InteractEnv m
 getEnvEntries :: MonadIO m => Interactive m (IORef EnvEntries)
 getEnvEntries = asks int_envent
 
-getCoreScope :: Monad m => Interactive m CoreScope
+getCoreScope :: Monad m => Interactive m Scope
 getCoreScope = asks int_scope
 
 instance HasUniq InteractEnv where
-        getUniq (InteractEnv _ _ uref) = return uref
-        setUniq uniq (InteractEnv _ _ uref) = setUniq uniq uref
+        getUniq = return . int_uniq
+        setUniq uniq = setUniq uniq . int_uniq
 
-instance Env InteractEnv where
+instance CoreEnv InteractEnv where
         extE fi = extE fi . int_envent
         getE i = getE i . int_envent
         setE i e = setE i e . int_envent

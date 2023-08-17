@@ -3,6 +3,7 @@ module Plato (
         compileToCore,
         evaluateCore,
         module Plato.Driver.Monad,
+        module Plato.Driver.Interactive,
 ) where
 
 import Control.Monad
@@ -13,7 +14,7 @@ import Data.Text qualified as T
 import Plato.Common.Error
 import Plato.Common.Pretty
 import Plato.Driver.Monad
-import Plato.Interactive
+import Plato.Driver.Interactive
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
@@ -32,10 +33,10 @@ compileToCore src = do
         typsyn <- psToTyp pssyn'
         typsyn' <- typing typsyn
         whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
-        coresyn <- typToCore typsyn'
-        whenFlagOn FPrintCore $ liftIO $ prettyPrint coresyn
-        whenFlagOn FEvalCore $ appendProg coresyn
-        return coresyn
+        corsyn <- typToCore typsyn'
+        whenFlagOn FPrintCore $ liftIO $ prettyPrint corsyn
+        whenFlagOn FEvalCore $ appendProg corsyn
+        return corsyn
 
 evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
 evaluateCore inp =
