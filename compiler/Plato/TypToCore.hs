@@ -14,7 +14,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
-import Plato.Core.Utils
+import Plato.Syntax.Core.Helper
 import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C

@@ -38,7 +38,6 @@ library
       Plato.Core.Normalise
       Plato.Core.Pretty
       Plato.Core.Result
-      Plato.Core.Utils
       Plato.Driver.Context
       Plato.Driver.Flag
       Plato.Driver.Import
@@ -62,6 +61,7 @@ library
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
       Plato.Syntax.Core
+      Plato.Syntax.Core.Helper
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -88,7 +88,7 @@ library
       Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
-      Plato.Typing.Utils
+      Plato.Syntax.Typing.Helper
       Plato.Typing.Zonking
       Plato.TypToCore
   other-modules:

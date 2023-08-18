@@ -1,7 +1,8 @@
-module Plato.Core.Utils where
+module Plato.Syntax.Core.Helper where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+
 import Plato.Common.Ident
 import Plato.Common.Name
 import Plato.Common.Uniq

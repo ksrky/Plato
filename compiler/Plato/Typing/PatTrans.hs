@@ -15,9 +15,9 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Tc.Subst qualified as Subst
-import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 transClauses ::

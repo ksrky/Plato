@@ -16,9 +16,9 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Logger
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Error
 import Plato.Typing.Tc.Utils
-import Plato.Typing.Utils
 import System.Log.Logger
 
 unify :: (MonadReader ctx m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()

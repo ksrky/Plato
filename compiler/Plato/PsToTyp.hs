@@ -29,7 +29,7 @@ import Plato.PsToTyp.SynRstrc
 import Plato.PsToTyp.Utils
 import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
-import Plato.Typing.Utils
+import Plato.Syntax.Typing.Helper
 
 elabExpr ::
         forall e m.

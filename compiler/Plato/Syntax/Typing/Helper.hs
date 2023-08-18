@@ -1,19 +1,4 @@
-module Plato.Syntax.Typing.Helper (
-        newMIORef,
-        readMIORef,
-        writeMIORef,
-        newUniq,
-        newVarIdent,
-        newTyVar,
-        newSkolemTyVar,
-        newMetaTv,
-        readMetaTv,
-        writeMetaTv,
-        newKnVar,
-        newMetaKv,
-        readMetaKv,
-        writeMetaKv,
-) where
+module Plato.Syntax.Typing.Helper where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader (ask))

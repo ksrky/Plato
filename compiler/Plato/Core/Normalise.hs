@@ -15,8 +15,8 @@ import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Eval
 import Plato.Core.Result
-import Plato.Core.Utils
 import Plato.Syntax.Core
+import Plato.Syntax.Core.Helper
 
 type Vars = [Ident]
 

@@ -21,6 +21,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Kc
@@ -30,7 +31,6 @@ import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.SubsCheck
 import Plato.Typing.Tc.Unify
 import Plato.Typing.Tc.Utils
-import Plato.Typing.Utils
 import Plato.Typing.Zonking
 
 checkType ::
