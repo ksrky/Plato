@@ -71,6 +71,7 @@ library
       Plato.Syntax.Typing.Base
       Plato.Syntax.Typing.Decl
       Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Helper
       Plato.Syntax.Typing.Kind
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
@@ -88,7 +89,6 @@ library
       Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
       Plato.Typing.Tc.Utils
-      Plato.Syntax.Typing.Helper
       Plato.Typing.Zonking
       Plato.TypToCore
   other-modules:

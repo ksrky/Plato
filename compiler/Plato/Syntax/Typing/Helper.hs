@@ -8,6 +8,7 @@ import Plato.Common.Ident
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Common.Location
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
@@ -57,3 +58,10 @@ readMetaKv (MetaKv _ ref) = readMIORef ref
 
 writeMetaKv :: MonadIO m => MetaKv -> Kind -> m ()
 writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
+
+splitConstrTy :: Rho -> ([Sigma], Tau)
+splitConstrTy = go []
+    where
+        go :: [Sigma] -> Rho -> ([Sigma], Tau)
+        go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
+        go acc tau = (reverse acc, tau)

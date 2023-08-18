@@ -14,12 +14,12 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
-import Plato.Syntax.Core.Helper
 import Plato.Driver.Logger
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
+import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
-import Plato.Typing.Env
+import Plato.Syntax.Typing.Helper
 
 elabExpr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
