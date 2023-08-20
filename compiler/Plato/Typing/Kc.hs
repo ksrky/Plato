@@ -1,18 +1,15 @@
 module Plato.Typing.Kc (
         checkKindStar,
-        inferDataKind,
         inferKind,
         checkKind,
 ) where
 
 import Control.Exception.Safe
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import GHC.Stack
 
 import Plato.Common.Error
-import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -20,23 +17,6 @@ import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Kc.Unify
 import Plato.Typing.Zonking
-
--- asks . (Env.find @Kind) >=> zonk
-
-inferDataKind ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
-        [Ident] ->
-        [(Ident, LType)] ->
-        m [(Ident, Type)]
-inferDataKind params constrs = do
-        bnds <- forM params $ \x -> do
-                kv <- newKnVar
-                return (x, kv)
-        local (modifyTypEnv $ extendList bnds) $ forM_ constrs $ \(_, body) -> checkKindStar body
-        bnds' <- mapM (\(x, kn) -> (x,) <$> zonk kn) bnds
-        let qnts = map (\(id, kn) -> (BoundTv id, kn)) bnds'
-            constrs'' = map (\(con, body) -> (con, AllT qnts body)) constrs
-        return constrs''
 
 checkKindStar ::
         (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) => LType -> m ()

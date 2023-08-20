@@ -1,4 +1,8 @@
-module Plato.Typing.Tc.SubsCheck where
+module Plato.Typing.Tc.SubsCheck (
+        subsCheck,
+        subsCheckRho,
+        subsCheckFun,
+) where
 
 import Control.Exception.Safe (MonadThrow)
 import Control.Monad (unless)

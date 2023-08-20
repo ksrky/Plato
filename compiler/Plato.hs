@@ -13,8 +13,8 @@ import Data.Text qualified as T
 
 import Plato.Common.Error
 import Plato.Common.Pretty
-import Plato.Driver.Monad
 import Plato.Driver.Interactive
+import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
@@ -26,7 +26,7 @@ runPlato :: FilePath -> Session -> IO ()
 runPlato filepath = void . unPlato (compileToCore filepath)
 
 compileToCore :: PlatoMonad m => FilePath -> m Prog
-compileToCore src = do
+compileToCore src = catchErrors $ do
         pssyn <- parseFile src
         pssyn' <- nicify pssyn
         whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn'

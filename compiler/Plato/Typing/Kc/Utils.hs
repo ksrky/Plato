@@ -7,9 +7,7 @@ import Plato.Syntax.Typing
 import Plato.Typing.Zonking
 
 getMetaKvs :: MonadIO m => Kind -> m (S.Set MetaKv)
-getMetaKvs kn = do
-        kn' <- zonk kn
-        return (metaKvs kn')
+getMetaKvs kn = metaKvs <$> zonk kn
 
 metaKvs :: Kind -> S.Set MetaKv
 metaKvs StarK = S.empty

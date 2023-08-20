@@ -4,13 +4,6 @@ import Plato.Common.Ident
 import Plato.Common.Name
 import Plato.Common.Pretty
 
--- *  Abstract syntax
-
-data Phrase
-        = Prog Prog
-        | Term Term
-        deriving (Show, Eq)
-
 type Label = Name
 
 data Entry

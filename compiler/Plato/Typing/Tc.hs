@@ -8,7 +8,7 @@ module Plato.Typing.Tc (
 ) where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
-import Control.Monad (forM, unless, zipWithM)
+import Control.Monad (forM, unless, zipWithM, (<=<))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
@@ -38,13 +38,13 @@ checkType ::
         LExpr 'Untyped ->
         Type ->
         m (LExpr 'Typed)
-checkType = checkSigma
+checkType = (zonk <=<) . checkSigma
 
 inferType ::
         (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Type)
-inferType = inferSigma
+inferType = zonk <=< inferSigma
 
 data Expected a = Infer (IORef a) | Check a
 

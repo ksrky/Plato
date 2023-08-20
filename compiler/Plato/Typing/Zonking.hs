@@ -17,6 +17,9 @@ class Zonking a where
 instance Zonking a => Zonking (Located a) where
         zonk = traverse zonk
 
+instance (Zonking a, Zonking b) => Zonking (a, b) where
+        zonk (a, b) = (,) <$> zonk a <*> zonk b
+
 instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
@@ -43,6 +46,9 @@ instance Zonking Pat where
         zonk (TagP con args) = TagP con <$> mapM (\(arg, ty) -> (arg,) <$> zonk ty) args
         zonk pat = return pat
 
+instance Zonking TyVar where
+        zonk = return
+
 instance Zonking Type where
         zonk (VarT tv) = return (VarT tv)
         zonk (ConT tc) = return (ConT tc)
@@ -58,9 +64,6 @@ instance Zonking Type where
                                 ty' <- zonk ty
                                 writeMetaTv tv ty'
                                 return ty'
-
-instance Zonking Quant where
-        zonk (tv, kn) = (tv,) <$> zonk kn
 
 instance Zonking Kind where
         zonk StarK = return StarK

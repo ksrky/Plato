@@ -1,4 +1,9 @@
-module Plato.Typing.Error where
+module Plato.Typing.Error (
+        UnificationError (..),
+        InfiniteTypeError (..),
+        instErrHandler,
+        unifunErrHandler,
+) where
 
 import Control.Exception.Safe
 import Prettyprinter

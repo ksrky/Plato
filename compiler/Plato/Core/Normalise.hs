@@ -88,7 +88,7 @@ qq _ (t, _) = return t -- Type, Enum, Label
 
 instance (Closure a, Nf a b) => Nf (Ident, a) (Ident, b) where
         nf' b xs (x, t) = do
-                x' <- freshIdent (nameIdent x)
+                x' <- reassignUniq x
                 (_, s') <- decl x (PrtInfo x' True) (getScope t) Nothing
                 t' <- nf' b (x' : xs) (putScope t s')
                 return (x', t')

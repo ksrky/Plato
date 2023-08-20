@@ -25,8 +25,8 @@ typingDecls ::
         [Decl 'Untyped] ->
         m ([Decl 'Typed], e)
 typingDecls decs = do
-        (env, decs) <- runWriterT $ typingDecls' decs
-        (,env) <$> mapM zonk decs
+        (env, decs') <- runWriterT $ typingDecls' decs
+        (,env) <$> mapM zonk decs'
 
 typingDecls' ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
@@ -37,8 +37,8 @@ typingDecls' (SpecDecl (TypSpec id kn) : decs) = do
         tell [SpecDecl (TypSpec id kn)]
         local (modifyTypEnv $ extend id kn) $ typingDecls' decs
 typingDecls' (DefnDecl (DatDefn id params constrs) : decs) = do
-        let extendEnv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
-        local (modifyTypEnv extendEnv) $ mapM_ (checkKindStar . snd) constrs
+        let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
+        local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         tell [DefnDecl (DatDefnok id kn params constrs)]
         local (modifyTypEnv $ extendList $ map (\(con, ty) -> (con, AllT params ty)) constrs) $
