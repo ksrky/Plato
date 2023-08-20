@@ -19,11 +19,11 @@ import Plato.Typing.Kc.Unify
 import Plato.Typing.Zonking
 
 checkKindStar ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) => LType -> m ()
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) => LType -> m ()
 checkKindStar ty = checkKind ty StarK
 
 inferKind ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
         LType ->
         m (LType, Kind)
 inferKind ty = do
@@ -34,7 +34,7 @@ inferKind ty = do
         return (ty', res_kn)
 
 checkKind ::
-        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (HasCallStack, MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
         LType ->
         Kind ->
         m ()

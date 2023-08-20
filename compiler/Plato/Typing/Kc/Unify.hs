@@ -47,7 +47,7 @@ unify sp = unify'
                 kvs2 <- getMetaKvs kn2
                 when (kv1 `S.member` kvs2) $ throwLocErr sp $ hsep ["Infinite kind:", squotes $ pretty kn2]
 
-unifyFun :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Span -> Kind -> m (Kind, Kind)
+unifyFun :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Span -> Kind -> m (Kind, Kind)
 unifyFun _ (ArrK kn1 kn2) = return (kn1, kn2)
 unifyFun sp kn = do
         arg_kn <- newKnVar

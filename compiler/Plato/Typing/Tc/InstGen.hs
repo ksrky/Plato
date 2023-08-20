@@ -20,7 +20,7 @@ import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 -- | Instantiation
-instantiate :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Sigma -> m (Coercion, Rho)
+instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
 instantiate (AllT tvs tau) = do
         tys <- mapM (const newTyVar) tvs
         return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
@@ -28,7 +28,7 @@ instantiate ty = return (Id, ty)
 
 -- | Skolemisation
 skolemise ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
+        (MonadReader e m, HasUniq e, MonadIO m) =>
         Sigma ->
         m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
@@ -43,7 +43,7 @@ skolemise ty = return (Id, [], ty)
 
 -- | Generalization
 generalize ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) =>
         Rho ->
         m ([Quant], Sigma)
 generalize ty = do
@@ -53,7 +53,7 @@ generalize ty = do
         quantify (S.toList all_tvs) ty
 
 quantify ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
+        (MonadReader e m, HasUniq e, MonadIO m) =>
         [MetaTv] ->
         Rho ->
         m ([Quant], Sigma)

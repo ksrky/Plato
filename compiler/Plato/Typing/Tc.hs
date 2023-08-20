@@ -34,14 +34,14 @@ import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 checkType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Type ->
         m (LExpr 'Typed)
 checkType = (zonk <=<) . checkSigma
 
 inferType ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Type)
 inferType = zonk <=< inferSigma
@@ -70,7 +70,7 @@ checkPat ::
 checkPat pat ty = tcPat pat (Check ty)
 
 tcPat ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
         Expected Sigma ->
         m (LPat, [(Ident, Sigma)])
@@ -93,7 +93,7 @@ tcPat (L sp (ConP con pats)) exp_ty = do
 tcPat (L _ TagP{}) _ = unreachable "received TagP"
 
 instPatSigma ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
         Expected Sigma ->
         m Coercion
@@ -101,7 +101,7 @@ instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return Id
 instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
 
 instDataCon ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
@@ -111,7 +111,7 @@ instDataCon con = do
 
 -- | Type checking of Rho
 checkRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Rho ->
         m (LExpr 'Typed)
@@ -120,7 +120,7 @@ checkRho exp ty = do
         zonk `traverse` exp'
 
 inferRho ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Rho)
 inferRho exp = do
@@ -130,8 +130,8 @@ inferRho exp = do
         (exp'',) <$> readMIORef ref
 
 tcRho ::
-        forall ctx m.
-        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        forall e m.
+        (HasCallStack, MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Expected Rho ->
         m (LExpr 'Typed)
@@ -176,7 +176,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         return (pat', (coer .>) <$> body')
                 transCase $ CaseEok test' pat_ty alts'
 
-zapToMonoType :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Expected Rho -> m (Expected Rho)
+zapToMonoType :: (MonadReader e m, HasUniq e, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty
 zapToMonoType (Infer ref) = do
         ty <- newTyVar
@@ -185,7 +185,7 @@ zapToMonoType (Infer ref) = do
 
 -- | Type check of Sigma
 inferSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Sigma)
 inferSigma exp = do
@@ -195,7 +195,7 @@ inferSigma exp = do
         return ((genTrans tvs .>) <$> exp'', sigma)
 
 checkSigma ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Sigma ->
         m (LExpr 'Typed)
@@ -211,7 +211,7 @@ checkSigma exp sigma = do
 
 -- | Check clauses
 checkClauses ::
-        (MonadReader ctx m, HasTypEnv ctx, HasConEnv ctx, HasUniq ctx, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [Clause 'Untyped] ->
         Sigma ->
         m (LExpr 'Typed)
@@ -231,7 +231,7 @@ checkClauses clauses sigma_ty = do
         return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
 
 -- | Instantiation of Sigma
-instSigma :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
+instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
 instSigma sigma (Check rho) = subsCheckRho sigma rho
 instSigma sigma (Infer r) = do
         (coercion, rho) <- instantiate sigma

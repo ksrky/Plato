@@ -18,7 +18,7 @@ mkLam :: [Bind Type] -> Term -> Term
 mkLam [] t = t
 mkLam ((x, ty) : rest) t = Lam (x, ty) (mkLam rest t)
 
-mkArr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Type -> Type -> m Type
+mkArr :: (MonadReader e m, HasUniq e, MonadIO m) => Type -> Type -> m Type
 mkArr arg res = do
         idWC <- freshIdent wcName
         return $ Q Pi (idWC, arg) res
@@ -37,7 +37,7 @@ mkProduct [] = unit
 mkProduct [t] = t
 mkProduct ts = foldr1 Pair ts
 
-mkTTuple :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [Type] -> m Type
+mkTTuple :: (MonadReader e m, HasUniq e, MonadIO m) => [Type] -> m Type
 mkTTuple [] = return tUnit
 mkTTuple [ty] = return ty
 mkTTuple (ty : tys) = do
@@ -45,8 +45,8 @@ mkTTuple (ty : tys) = do
         Q Sigma (idWC, ty) <$> mkTTuple tys
 
 mkSplits ::
-        forall ctx m.
-        (MonadReader ctx m, HasUniq ctx, MonadIO m) =>
+        forall e m.
+        (MonadReader e m, HasUniq e, MonadIO m) =>
         Term ->
         [(Ident, Type)] ->
         Term ->
@@ -62,7 +62,7 @@ mkSplits t vars body = loop t vars
                 u <- loop (Var idYZ) xs
                 return $ Split t (x, (idYZ, u))
 
-mkUnfold :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Term -> m Term
+mkUnfold :: (MonadReader e m, HasUniq e, MonadIO m) => Term -> m Term
 mkUnfold t = do
         idX <- freshIdent $ genName "x"
         return $ Unfold (idX, t) (Var idX)

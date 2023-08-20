@@ -21,7 +21,7 @@ import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
 
-elabExpr :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Expr 'T.Typed -> m C.Term
+elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
 elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
 elabExpr (T.AbsEok id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
@@ -64,7 +64,7 @@ elabType ty@T.MetaT{} = do
         liftIO $ emergencyM platoLog $ "elaborate MetaT: " ++ show ty
         unreachable "Plato.TypToCore received MetaT"
 
-elabKind :: (HasCallStack, MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Kind -> m C.Type
+elabKind :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Kind -> m C.Type
 elabKind T.StarK = return C.Type
 elabKind (T.ArrK arg res) = do
         idWC <- freshIdent wcName
@@ -73,13 +73,13 @@ elabKind kn@T.MetaK{} = do
         liftIO $ emergencyM platoLog $ "Zonking may " ++ show kn
         unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
+elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
 elabFunDecls fbnds fspcs = do
         fspcs' <- mapM (\(id, ty) -> C.Decl id <$> elabType (unLoc ty)) fspcs
         fbnds' <- mapM (\(id, exp) -> C.Defn id <$> elabExpr (unLoc exp)) fbnds
         return $ fspcs' ++ fbnds'
 
-elabDecl :: forall ctx m. (MonadReader ctx m, HasUniq ctx, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
+elabDecl :: forall e m. (MonadReader e m, HasUniq e, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
         kn' <- elabKind kn
         return [C.Decl id kn']

@@ -21,7 +21,7 @@ import Plato.Typing.Error
 import Plato.Typing.Tc.Utils
 import System.Log.Logger
 
-unify :: (MonadReader ctx m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
+unify :: (MonadReader e m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = do
         liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
         throw UnificationError
@@ -40,7 +40,7 @@ unify ty1 ty2 = do
         liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
         throw UnificationError
 
-unifyVar :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
+unifyVar :: (MonadReader e m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 unifyVar tv1 ty2@(MetaT tv2) = do
         mb_ty1 <- readMetaTv tv1
         mb_ty2 <- readMetaTv tv2
@@ -52,7 +52,7 @@ unifyVar tv1 ty2 = do
         occursCheck tv1 ty2
         writeMetaTv tv1 ty2
 
-occursCheck :: (MonadReader ctx m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
+occursCheck :: (MonadReader e m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
         when (tv1 `S.member` tvs2) $ do
@@ -63,7 +63,7 @@ badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True
 badType _ = False
 
-unifyFun :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Rho -> m (Sigma, Rho)
+unifyFun :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Rho -> m (Sigma, Rho)
 unifyFun (ArrT arg res) = return (unLoc arg, unLoc res)
 unifyFun tau = do
         arg_ty <- newTyVar
@@ -71,7 +71,7 @@ unifyFun tau = do
         unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
         return (arg_ty, res_ty)
 
-unifyFuns :: (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) => Int -> Rho -> m ([Sigma], Rho)
+unifyFuns :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Int -> Rho -> m ([Sigma], Rho)
 unifyFuns 0 rho = return ([], rho)
 unifyFuns n (ArrT arg res) = do
         (args, res') <- unifyFuns (n - 1) (unLoc res)

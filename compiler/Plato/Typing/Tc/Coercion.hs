@@ -39,7 +39,7 @@ prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coercion = coercion
 prpolyTrans sks1 coercion = Coer $ \e -> TAbsE sks1 (coercion .> TAppE e (map (VarT . fst) sks1))
 
-prfunTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
+prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coercion = return coercion
 prfunTrans sks _ Id = return $ Coer $ \e -> TAbsE sks (TAppE e (map (VarT . fst) sks))
 prfunTrans sks arg_ty coercion = do
@@ -55,7 +55,7 @@ deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 <.> coer2
 deepskolTrans skol_tvs coer1 coer2 = coer1 <.> Coer (TAbsE skol_tvs) <.> coer2
 
-funTrans :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
+funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- newVarIdent

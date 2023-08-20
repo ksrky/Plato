@@ -21,23 +21,23 @@ writeMIORef :: MonadIO m => IORef a -> a -> m ()
 writeMIORef = (liftIO .) . writeIORef
 
 -- | Creating and rewriting Uniq
-newUniq :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Uniq
+newUniq :: (MonadReader e m, HasUniq e, MonadIO m) => m Uniq
 newUniq = pickUniq =<< ask
 
 -- | Variable generation
-newVarIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Ident
+newVarIdent :: (MonadReader e m, HasUniq e, MonadIO m) => m Ident
 newVarIdent = freshIdent $ genName "$"
 
 -- | Type variable generation
-newTyVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Type
+newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type
 newTyVar = MetaT <$> newMetaTv
 
-newSkolemTyVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => TyVar -> m TyVar
+newSkolemTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => TyVar -> m TyVar
 newSkolemTyVar tv = do
         u <- newUniq
         return $ SkolemTv (unTyVar tv){stamp = u}
 
-newMetaTv :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m MetaTv
+newMetaTv :: (MonadReader e m, HasUniq e, MonadIO m) => m MetaTv
 newMetaTv = MetaTv <$> newUniq <*> newMIORef Nothing
 
 readMetaTv :: MonadIO m => MetaTv -> m (Maybe Type)
@@ -47,10 +47,10 @@ writeMetaTv :: MonadIO m => MetaTv -> Type -> m ()
 writeMetaTv (MetaTv _ ref) ty = writeMIORef ref (Just ty)
 
 -- | Kind variable generation
-newKnVar :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m Kind
+newKnVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Kind
 newKnVar = MetaK <$> newMetaKv
 
-newMetaKv :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => m MetaKv
+newMetaKv :: (MonadReader e m, HasUniq e, MonadIO m) => m MetaKv
 newMetaKv = MetaKv <$> newUniq <*> newMIORef Nothing
 
 readMetaKv :: MonadIO m => MetaKv -> m (Maybe Kind)

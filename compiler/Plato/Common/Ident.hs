@@ -48,12 +48,12 @@ ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
 fromIdent :: Ident -> Located Name
 fromIdent id = L (getLoc id) (nameIdent id)
 
-freshIdent :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Name -> m Ident
+freshIdent :: (MonadReader e m, HasUniq e, MonadIO m) => Name -> m Ident
 freshIdent name = do
         uniq <- pickUniq =<< ask
         return Ident{nameIdent = name, spanIdent = NoSpan, stamp = uniq}
 
-reassignUniq :: (MonadReader ctx m, HasUniq ctx, MonadIO m) => Ident -> m Ident
+reassignUniq :: (MonadReader e m, HasUniq e, MonadIO m) => Ident -> m Ident
 reassignUniq id = do
         uniq <- pickUniq =<< ask
         return id{stamp = uniq}

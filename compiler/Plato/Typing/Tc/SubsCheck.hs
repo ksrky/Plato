@@ -22,7 +22,7 @@ import Plato.Typing.Tc.Utils
 
 -- | Subsumption checking.  Coersing sigma1 to sigma2.
 subsCheck ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
         Sigma ->
         m Coercion
@@ -38,7 +38,7 @@ subsCheck sigma1 sigma2 = do
 
 -- | Subsumption checking. Coersing sigma to rho.
 subsCheckRho ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
         Rho ->
         m Coercion
@@ -61,7 +61,7 @@ subsCheckRho tau1 tau2 = do
         return Id
 
 subsCheckFun ::
-        (MonadReader ctx m, HasUniq ctx, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
         Rho ->
         Sigma ->
