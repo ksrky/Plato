@@ -14,6 +14,8 @@ module Plato.PsToTyp (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.List qualified
@@ -142,13 +144,12 @@ elabDecls (L _ (P.DataD id params constrs) : rest) = do
         paramNamesUnique params
         dataConUnique $ map fst constrs
         mapM_ (dataConType id) constrs
-        qnts <- mapM (\p -> do kv <- lift newKnVar; return (T.BoundTv p, kv)) params
+        qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
         constrs' <-
-                lift $
-                        local (extendListScope $ id : params) $
-                                mapM (\(con, ty) -> (con,) <$> (elabType `traverse` ty)) constrs
-        sig <- newKnVar
-        tell [T.SpecDecl (T.TypSpec id sig), T.DefnDecl (T.DatDefn id qnts constrs')]
+                local (extendListScope $ id : params) $
+                        mapM (\(con, ty) -> (con,) <$> elabType `traverse` ty) constrs
+        kv <- newKnVar
+        tell [T.SpecDecl (T.TypSpec id kv), T.DefnDecl (T.DatDefn id qnts constrs')]
         local (extendListScope (id : map fst constrs)) $ elabDecls rest
 elabDecls fundecs = do
         -- Note: Nicifier ordered from data decls to local decls

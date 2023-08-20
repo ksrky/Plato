@@ -8,6 +8,7 @@ module Plato.Driver.Interactive (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.IORef
 import Prettyprinter

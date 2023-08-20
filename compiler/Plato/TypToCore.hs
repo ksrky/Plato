@@ -4,6 +4,8 @@
 
 module Plato.TypToCore (elabDecl, typToCore, typToCoreExpr) where
 
+import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Foldable
 import GHC.Stack

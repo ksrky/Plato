@@ -22,6 +22,8 @@ type LExpr a = Located (Expr a)
 
 type Clause a = ([LPat], LExpr a)
 
+type Alt a = (LPat, LExpr a)
+
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr a -> LExpr a -> Expr a
@@ -31,8 +33,8 @@ data Expr (a :: TcFlag) where
         TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
         LetE :: [(Ident, [Clause 'Untyped])] -> [(Ident, LType)] -> LExpr 'Untyped -> Expr 'Untyped
         LetEok :: [(Ident, LExpr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
-        CaseE :: LExpr 'Untyped -> [(LPat, LExpr 'Untyped)] -> Expr 'Untyped
-        CaseEok :: LExpr 'Typed -> Type -> [(LPat, LExpr 'Typed)] -> Expr 'Typed
+        CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
+        CaseEok :: LExpr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
 
 ----------------------------------------------------------------
 -- Basic instances

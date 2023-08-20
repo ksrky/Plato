@@ -6,7 +6,7 @@ module Plato.Typing.Kc.Unify (
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader
+import Control.Monad.Reader.Class
 import Data.Set qualified as S
 import Prettyprinter
 

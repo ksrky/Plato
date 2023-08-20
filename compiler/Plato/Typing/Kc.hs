@@ -6,7 +6,7 @@ module Plato.Typing.Kc (
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
-import Control.Monad.Reader
+import Control.Monad.Reader.Class
 import GHC.Stack
 
 import Plato.Common.Error

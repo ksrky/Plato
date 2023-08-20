@@ -13,7 +13,7 @@ module Plato.Syntax.Typing.Type (
 
 import Data.IORef (IORef)
 
-import Plato.Common.Ident as Ident
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Common.Uniq

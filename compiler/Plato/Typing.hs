@@ -8,9 +8,10 @@ module Plato.Typing (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad.IO.Class
 import Control.Monad.Reader
-
 import Control.Monad.Writer
+
 import Plato.Common.Error
 import Plato.Common.Uniq
 import Plato.Driver.Monad

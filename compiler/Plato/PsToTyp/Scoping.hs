@@ -7,7 +7,7 @@ module Plato.PsToTyp.Scoping (
 ) where
 
 import Control.Exception.Safe
-import Control.Monad.Reader
+import Control.Monad.Reader.Class
 import Data.Map.Strict qualified as M
 import Prettyprinter
 

@@ -8,7 +8,7 @@ module Plato (
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans
+import Control.Monad.Trans.Class
 import Data.Text qualified as T
 
 import Plato.Common.Error
