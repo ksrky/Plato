@@ -2,9 +2,9 @@ import Bool
 import Nat
 
 iseven : Nat -> Bool
-iseven Zero = True
+iseven Z = True
 iseven (S n) = isodd n
 
 isodd : Nat -> Bool
-isodd Zero = False
+isodd Z = False
 isodd (S n) = iseven n

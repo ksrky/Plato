@@ -1,3 +1,4 @@
+import Base
 import Bool
 import Nat
 import Maybe
@@ -28,7 +29,7 @@ tail Nil = Nil
 tail (_ :: tl) = tl
 
 cons : {a} a -> List a -> List a
-cons x xs = x :: xs
+cons = (::)
 
 uncons : {a} List a -> Maybe (a :,: List a)
 uncons Nil = Nothing
@@ -59,9 +60,8 @@ map f (x :: xs) = f x :: map f xs
 reverse : {a} List a -> List a
 reverse l =
     let rev : {a} List a -> List a -> List a
-        rev l' a = case l' of
-            Nil -> a
-            x :: xs -> rev xs (x :: a)
+        rev Nil a = a
+        rev (x :: xs) a = rev xs (x :: a)
      in rev l Nil
 
 filter : {a} (a -> Bool) -> List a -> List a
@@ -88,3 +88,29 @@ zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
 unzip : {a b} List (a :,: b) -> List a :,: List b
 unzip = foldr (\(x :,: y) (xs :,: ys) -> x :: xs :,: y :: ys) (Nil :,: Nil)
+
+elemBy : {a} (a -> a -> Bool) -> a -> List a -> Bool
+elemBy _ _ Nil = False
+elemBy eq y (x :: xs) = eq x y || elemBy eq y xs
+
+{-
+nubBy : {a} (a -> a -> Bool) -> List a -> List a
+nubBy eq Nil = Nil
+nubBy eq (x :: xs) = x :: nubBy eq (filter (\y -> not (eq x y)) xs)
+nubBy {a} eq l =
+    let nubBy' : List a -> List a -> List a
+        nubBy' Nil _ = Nil
+        nubBy' (y :: ys) xs = case elemBy eq y xs of
+            True -> nubBy' ys xs
+            False -> y :: nubBy' ys (y :: xs)
+    in nubBy' l Nil
+
+unionBy : {a} (a -> a -> Bool) -> List a -> List a -> List a
+unionBy eq xs ys = xs ++ foldl (flip (deleteBy eq)) (nubBy eq ys) xs
+-}
+
+deleteBy : {a} (a -> a -> Bool) -> a -> List a -> List a
+deleteBy _ _ Nil = Nil
+deleteBy eq x (y :: ys) = case eq x y of
+    True -> ys
+    False -> y :: deleteBy eq x ys
