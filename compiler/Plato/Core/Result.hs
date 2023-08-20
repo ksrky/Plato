@@ -35,6 +35,8 @@ data Ne
         | NUnfold Ne (Bind (Clos Term))
         deriving (Eq, Show)
 
+infix 5 :..
+
 instance Pretty Boxed where
         pretty (Boxed (t, _)) = brackets $ pretty t
 

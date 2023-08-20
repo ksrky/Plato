@@ -34,6 +34,7 @@ library
       Plato.Common.Utils
       Plato.Core.Closure
       Plato.Core.Env
+      Plato.Core.Equal
       Plato.Core.Eval
       Plato.Core.Normalise
       Plato.Core.Pretty

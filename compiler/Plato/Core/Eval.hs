@@ -47,6 +47,17 @@ defn i ei = setE i ei =<< ask
 defn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m ()
 defn' i = defn i . Closure
 
+letn :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> EnvEntry -> m a -> m a
+letn i ei p = do
+        eo <- lookupIndex i
+        defn i ei
+        a <- p
+        defn i eo
+        return a
+
+letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m a -> m a
+letn' i = letn i . Closure
+
 subst :: (MonadReader e m, CoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
 subst (x, (t, sc)) u = do
         (i, s') <- decl' x sc
