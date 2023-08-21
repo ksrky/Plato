@@ -72,10 +72,10 @@ dataConType id (con, ty) = loop1 ty
 {- | RULE 5: Bundling function clauses \\
 Checking number of arguments
 -}
-bundleClauses :: MonadThrow m => [LDecl] -> m [LDecl]
+bundleClauses :: MonadThrow m => [LLocDecl] -> m [LLocDecl]
 bundleClauses = classify . partition
 
-classify :: MonadThrow m => [[LDecl]] -> m [LDecl]
+classify :: MonadThrow m => [[LLocDecl]] -> m [LLocDecl]
 classify [] = return []
 classify ([] : rest) = classify rest
 classify (fspcs@(L _ FunSpecD{} : _) : rest) = (fspcs ++) <$> classify rest
@@ -91,9 +91,8 @@ classify (fbnds@(L sp (FunBindD id [(pats, _)]) : _) : rest) = do
         (L spn (FunBindD id clses) :) <$> classify rest
 classify ((L _ FunBindD{} : _) : _) = unreachable "malformed clauses"
 classify ((L _ FixityD{} : _) : _) = unreachable "deleted by Nicifier"
-classify ((L _ DataD{} : _) : _) = unreachable "Data declaration allowed only top-level"
 
-partition :: [LDecl] -> [[LDecl]]
+partition :: [LLocDecl] -> [[LLocDecl]]
 partition =
         Data.List.groupBy
                 ( curry $ \case

@@ -59,8 +59,7 @@ elabExpr (P.LamE pats body) = do
 elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
         local (const env) $ do
-                fdecs' <- bundleClauses fdecs
-                (bnds, spcs) <- elabFunDecls fdecs'
+                (bnds, spcs) <- elabFunDecls =<< bundleClauses fdecs
                 body' <- elabExpr `traverse` body
                 return $ T.LetE bnds spcs body'
 elabExpr (P.CaseE match alts) = do
@@ -111,7 +110,7 @@ elabType P.FactorT{} = unreachable "fixity resolution failed"
 
 elabFunDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
-        [P.LDecl] ->
+        [P.LLocDecl] ->
         m ([(Ident, [T.Clause 'T.Untyped])], [(Ident, T.LType)])
 elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
         L _ (P.FunSpecD id ty) -> do
@@ -122,7 +121,6 @@ elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
                 clses' <- mapM elabClause clses
                 tell ([(id', clses')], [])
         L _ P.FixityD{} -> unreachable "deleted by Nicifier"
-        L _ P.DataD{} -> unreachable "Data declaration allowed only top-level"
 
 elabClause ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
@@ -155,12 +153,10 @@ elabDecls fundecs = do
         -- Note: Nicifier ordered from data decls to local decls
         env <- extendScopeFromSeq fundecs
         local (const env) $ do
-                fundecs' <- bundleClauses fundecs
-                (bnds, spcs) <- elabFunDecls fundecs'
-                let fundecs'' =
+                (bnds, spcs) <- elabFunDecls =<< bundleClauses (map (P.unLocalD <$>) fundecs)
+                tell $
                         map (T.SpecDecl . uncurry T.ValSpec) spcs
                                 ++ map (T.DefnDecl . uncurry T.FunDefn) bnds
-                tell fundecs''
                 ask
 
 elabTopDecls ::

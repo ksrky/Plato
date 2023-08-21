@@ -5,13 +5,14 @@ module Plato.Syntax.Parsing.Expr where
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
-import {-# SOURCE #-} Plato.Syntax.Parsing.Decl
 import Plato.Syntax.Parsing.Pat
+import Plato.Syntax.Parsing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
 type LExpr = Located Expr
+type LLocDecl = Located LocDecl
 
 type Clause = ([LPat], LExpr)
 
@@ -20,9 +21,15 @@ data Expr
         | AppE LExpr LExpr
         | BinE LExpr Ident LExpr
         | LamE [LPat] LExpr
-        | LetE [LDecl] LExpr
+        | LetE [LLocDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
         | FactorE LExpr
+        deriving (Eq, Show)
+
+data LocDecl
+        = FunSpecD Ident LType
+        | FunBindD Ident [Clause]
+        | FixityD Ident Fixity
         deriving (Eq, Show)
 
 type FixPrec = Int
@@ -68,6 +75,16 @@ prExpr1 e = parens (pretty e)
 
 prClause :: Clause -> Doc ann
 prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
+
+instance Pretty LocDecl where
+        pretty (FunSpecD id ty) = hsep [pretty id, colon, pretty ty]
+        pretty (FunBindD id clauses) =
+                hsep
+                        [ pretty id
+                        , "where"
+                        , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
+                        ]
+        pretty (FixityD id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
 
 instance Pretty FixDir where
         pretty Leftfix = "infixl"

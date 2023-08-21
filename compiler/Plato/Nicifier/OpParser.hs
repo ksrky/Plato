@@ -127,23 +127,9 @@ instance OpParser LType where
                                 unLoc <$> parse BinT toks
                         FactorT ty -> unLoc <$> opParse ty
 
-instance OpParser [LDecl] where
-        opParse decs = local (\env -> foldr (uncurry M.insert) env fixmap) $ forM rest $ \case
-                L sp (DataD id params constrs) ->
-                        L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
-                L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
-                L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
-                dec -> return dec
-            where
-                (fixmap, rest) = execWriter $ forM decs $ \case
-                        L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
-                        d -> tell ([], [d])
-
-instance OpParser a => OpParser ([LDecl], a) where
+instance OpParser a => OpParser ([LLocDecl], a) where
         opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
                 rest' <- forM rest $ \case
-                        L sp (DataD id params constrs) ->
-                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
                         L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
                         L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
                         dec -> return dec
@@ -152,4 +138,19 @@ instance OpParser a => OpParser ([LDecl], a) where
             where
                 (fixmap, rest) = execWriter $ forM decs $ \case
                         L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
+                        d -> tell ([], [d])
+
+instance OpParser a => OpParser ([LTopDecl], a) where
+        opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
+                rest' <- forM rest $ \case
+                        L sp (DataD id params constrs) ->
+                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
+                        L sp (LocalD (FunSpecD id ty)) -> L sp . LocalD <$> (FunSpecD id <$> opParse ty)
+                        L sp (LocalD (FunBindD id clauses)) -> L sp . LocalD <$> (FunBindD id <$> mapM opParse clauses)
+                        dec -> return dec
+                t' <- opParse t
+                return (rest', t')
+            where
+                (fixmap, rest) = execWriter $ forM decs $ \case
+                        L _ (LocalD (FixityD id fix)) -> tell ([(nameIdent id, fix)], [])
                         d -> tell ([], [d])

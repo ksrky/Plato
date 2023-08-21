@@ -119,8 +119,8 @@ decl        :: { [LTopDecl] }
                                                     { [sL $1 $5 (DataD $3 [$2, $4] (unLoc $5))] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
                                                     { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
-            | fundecl                               { $1 }
-            | fixdecl                               { [$1] }
+            | fundecl                               { map (fmap LocalD) $1 }
+            | fixdecl                               { [fmap LocalD $1] }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -137,12 +137,12 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecls    :: { [LDecl] }
+fundecls    :: { [LLocDecl] }
             : fundecl ';' fundecls                  { $1 ++ $3 }
             | fundecl                               { $1 }
             | {- empty -}                           { [] }
 
-fundecl     :: { [LDecl] }
+fundecl     :: { [LLocDecl] }
             -- Function signature
             : var ':' type                        	{ [sL $1 $3 (FunSpecD $1 $3)] }
             | '(' varop ')' ':' type                { [sL $1 $5 (FunSpecD $2 $5)] }
@@ -154,7 +154,7 @@ fundecl     :: { [LDecl] }
             | fixdecl                               { [$1] }
 
 -- | Fixity declaration
-fixdecl     :: { LDecl }
+fixdecl     :: { LLocDecl }
             : 'infix' digit op                      { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Nonfix)) }
             | 'infixl' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Leftfix)) }
             | 'infixr' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Rightfix)) }

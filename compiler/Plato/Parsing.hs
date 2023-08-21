@@ -72,5 +72,5 @@ processInstr (L _ TopDecls{}) = return $ Left []
 parseExpr :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m LExpr
 parseExpr = catchPsErrors <$> parsePartial exprParser
 
-parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LDecl]
+parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LTopDecl]
 parseDecls = catchPsErrors <$> parsePartial declsParser

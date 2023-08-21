@@ -19,7 +19,7 @@ import Plato.Syntax.Parsing
 nicify :: PlatoMonad m => [LTopDecl] -> m [LTopDecl]
 nicify tdecs = catchErrors $ updateContext (nicifyDecls tdecs)
 
-nicifyDecls :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => [LDecl] -> m ([LDecl], e)
+nicifyDecls :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => [LTopDecl] -> m ([LTopDecl], e)
 nicifyDecls decs = do
         fixenv <- asks getFixityEnv
         (decs', fixenv') <- runReaderT (opParse (decs, fixenv)) fixenv
@@ -27,7 +27,7 @@ nicifyDecls decs = do
         env <- ask
         return (tds ++ lds, setFixityEnv fixenv' env)
 
-groupingDecl :: [LDecl] -> ([LDecl], [LDecl])
+groupingDecl :: [LTopDecl] -> ([LTopDecl], [LTopDecl])
 groupingDecl decs = execWriter $ forM decs $ \dec -> case dec of
         L _ DataD{} -> tell ([dec], [])
         _ -> tell ([], [dec])
