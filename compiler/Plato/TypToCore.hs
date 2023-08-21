@@ -44,7 +44,8 @@ elabExpr (T.CaseEok match _ alts) = do
                 (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr (unLoc exp)))
         C.Split
                 <$> elabExpr (unLoc match)
-                <*> pure (idX, (idY, C.Force $ C.Case (C.Var idX) alts'))
+                <*> pure (idX, idY)
+                <*> pure (C.Force $ C.Case (C.Var idX) alts')
 
 elabPat ::
         (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) =>

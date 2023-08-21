@@ -56,11 +56,11 @@ mkSplits t vars body = loop t vars
         loop :: Term -> [(Ident, Type)] -> m Term
         loop _ [] = return body
         loop t [(x, ty)] = return $ Let [Decl x ty, Defn x t] body
-        loop t ((x, _) : [(y, _)]) = return $ Split t (x, (y, body))
+        loop t ((x, _) : [(y, _)]) = return $ Split t (x, y) body
         loop t ((x, _) : xs) = do
                 idYZ <- freshIdent $ genName "ys"
                 u <- loop (Var idYZ) xs
-                return $ Split t (x, (idYZ, u))
+                return $ Split t (x, idYZ) u
 
 mkUnfold :: (MonadReader e m, HasUniq e, MonadIO m) => Term -> m Term
 mkUnfold t = do

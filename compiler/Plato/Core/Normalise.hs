@@ -72,10 +72,10 @@ qq xs (Pair t u, s) = do
         t' <- qq xs (t, s)
         u' <- qq xs (u, s)
         return (Pair t' u')
-qq xs (Split t (x, (y, u)), s) = do
+qq xs (Split t (x, y) u, s) = do
         t' <- qq xs (t, s)
-        xyu' <- quote xs (x, (y, (u, s)))
-        return (Split t' xyu')
+        (x', (y', u')) <- quote xs (x, (y, (u, s)))
+        return (Split t' (x', y') u')
 qq xs (Case t lts, s) = do
         t' <- qq xs (t, s)
         lts' <- forM lts $ \(l', t'') -> do
@@ -122,8 +122,8 @@ instance Nf Ne Term where
                 return (App t' u')
         nf' b xs (NSplit t xyu) = do
                 t' <- nf' b xs t
-                xyu' <- nf' b xs xyu
-                return (Split t' xyu')
+                (x', (y', u')) <- nf' b xs xyu
+                return (Split t' (x', y') u')
         nf' b xs (NCase t (lus, s)) = do
                 t' <- nf xs t
                 lus' <- forM lus $ \(l, u) -> do

@@ -30,7 +30,7 @@ data Term
         | Lam (Bind Type) Term
         | App Term Term
         | Pair Term Term
-        | Split Term (Ident, (Ident, Term))
+        | Split Term (Ident, Ident) Term
         | Enum [Label]
         | Label Label
         | Case Term [(Label, Term)]
@@ -39,7 +39,7 @@ data Term
         | Force Term
         | Rec Term
         | Fold Term
-        | Unfold (Bind Term) Term
+        | Unfold (Ident, Term) Term
         deriving (Show, Eq)
 
 instance Pretty Entry where
@@ -74,7 +74,7 @@ instance PrettyWithContext Term where
         pretty' c (App t1 t2) =
                 group $ hang 2 $ contextParens c 1 $ hsep [pretty' 1 t1, pretty' 2 t2]
         pretty' _ (Pair t1 t2) = parens $ map (pretty' 0) [t1, t2] `sepBy` comma
-        pretty' c (Split t (x, (y, u))) =
+        pretty' c (Split t (x, y) u) =
                 contextParens c 0 $
                         hang 2 $
                                 hsep

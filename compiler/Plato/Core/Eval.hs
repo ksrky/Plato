@@ -82,7 +82,7 @@ eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
         evalApp u (Ne t) = return (Ne (t :.. u))
         evalApp _ _ = throwError "function expected"
 eval (Pair t u, sc) = return $ VPair ((t, u), sc)
-eval (Split t (x, (y, u)), sc) = eval (t, sc) >>= evalSplit (x, (y, (u, sc)))
+eval (Split t (x, y) u, sc) = eval (t, sc) >>= evalSplit (x, (y, (u, sc)))
     where
         evalSplit :: Bind (Bind (Clos Term)) -> Val -> m Val
         evalSplit (x, (y, (t, sc))) (VPair ((l, r), sc')) = do
