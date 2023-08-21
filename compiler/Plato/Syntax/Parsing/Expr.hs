@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Plato.Syntax.Parsing.Expr where
 
 import Plato.Common.Ident

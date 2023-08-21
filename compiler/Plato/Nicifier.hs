@@ -1,7 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImpredicativeTypes #-}
-
 module Plato.Nicifier (nicify, nicifyExpr) where
 
 import Control.Exception.Safe

@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 module Plato.PsToTyp.Utils (
         HasDomain (..),
 ) where
