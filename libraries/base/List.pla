@@ -1,4 +1,4 @@
-import Base
+import Function
 import Bool
 import Nat
 import Maybe
