@@ -85,7 +85,7 @@ eqBox (App t u, s) (App t' u', s') = do
 eqBox (Pair t u, s) (Pair t' u', s') = do
         eqBox (t, s) (t', s')
         eqBox (u, s) (u', s')
-eqBox (Split t (x, (y, u)), s) (Split t' (x', (y', u')), s') = do
+eqBox (Split t (x, y) u, s) (Split t' (x', y') u', s') = do
         eqBox (t, s) (t', s')
         (x, (y, Boxed (u, s))) ~ (x', (y', Boxed (u', s')))
 eqBox (Case t bs, s) (Case t' bs', s') = do
