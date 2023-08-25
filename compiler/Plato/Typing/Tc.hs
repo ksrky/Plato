@@ -8,7 +8,7 @@ module Plato.Typing.Tc (
 ) where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
-import Control.Monad (forM, unless, zipWithM, (<=<))
+import Control.Monad (forM, unless, void, zipWithM, (<=<))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
@@ -79,8 +79,7 @@ tcPat pat@(L _ (VarP var)) (Infer ref) = do
         var_ty <- newTyVar
         writeMIORef ref var_ty
         return (pat, [(var, var_ty)])
-tcPat pat@(L _ (VarP var)) (Check exp_ty) =
-        return (pat, [(var, exp_ty)])
+tcPat pat@(L _ (VarP var)) (Check exp_ty) = return (pat, [(var, exp_ty)])
 tcPat (L sp (ConP con pats)) exp_ty = do
         (arg_tys, res_ty) <- instDataCon con
         unless (length pats == length arg_tys) $ do
@@ -88,8 +87,12 @@ tcPat (L sp (ConP con pats)) exp_ty = do
                         hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
         (pats', binds) <- checkPats pats arg_tys
         res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
-        _ <- apInstSigma sp instPatSigma res_ty' exp_ty
+        void $ apInstSigma sp instPatSigma res_ty' exp_ty
         return (L sp (ConP con pats'), binds)
+tcPat (L sp (AnnP pat ann_ty)) exp_ty = do
+        (pat', binds) <- checkPat pat ann_ty
+        void $ apInstSigma sp instPatSigma ann_ty exp_ty
+        return (pat', binds)
 tcPat (L _ TagP{}) _ = unreachable "received TagP"
 
 instPatSigma ::
@@ -97,7 +100,7 @@ instPatSigma ::
         Sigma ->
         Expected Sigma ->
         m Coercion
-instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return Id
+instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return CoerId
 instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
 
 instDataCon ::
@@ -141,20 +144,21 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' (VarE var) exp_ty = do
                 sigma <- zonk =<< find var =<< asks getTypEnv
                 coercion <- apInstSigma sp instSigma sigma exp_ty
-                return $ coercion .> VarE var
+                return $ coercion `ap` VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
                 res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
                 coercion <- apInstSigma sp instSigma res_ty' exp_ty
-                return $ coercion .> AppE fun' arg'
-        tcRho' (AbsE var body) (Check exp_ty) = do
+                return $ coercion `ap` AppE fun' arg'
+        tcRho' (AbsE var mbty body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
+                void $ maybe (return CoerId) (`subsCheck` var_ty) mbty
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
-        tcRho' (AbsE var body) (Infer ref) = do
-                var_ty <- newTyVar
+        tcRho' (AbsE var mbty body) (Infer ref) = do
+                var_ty <- maybe newTyVar return mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsEok var var_ty (unLoc body')
@@ -173,8 +177,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- apInstSigma sp instSigma body_ty exp_ty'
-                        return (pat', (coer .>) <$> body')
+                        return (pat', (coer `ap`) <$> body')
                 transCase $ CaseEok test' pat_ty alts'
+        tcRho' (AnnE exp ann_ty) exp_ty = do
+                exp' <- checkSigma exp ann_ty
+                coer <- apInstSigma sp instSigma ann_ty exp_ty
+                return $ coer `ap` unLoc exp'
 
 zapToMonoType :: (MonadReader e m, HasUniq e, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty
@@ -192,7 +200,7 @@ inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
         exp'' <- zonk `traverse` exp'
-        return ((genTrans tvs .>) <$> exp'', sigma)
+        return ((genTrans tvs `ap`) <$> exp'', sigma)
 
 checkSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
@@ -207,7 +215,7 @@ checkSigma exp sigma = do
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
                 throwError "Type not polymorphic enough"
-        return $ (\e -> coercion .> genTrans skol_tvs .> e) <$> exp'
+        return $ (\e -> coercion `ap` (genTrans skol_tvs `ap` e)) <$> exp'
 
 -- | Check clauses
 checkClauses ::
@@ -228,7 +236,7 @@ checkClauses clauses sigma_ty = do
         let bad_tvs = filter (`elem` esc_tvs) (map fst skol_tvs)
         unless (null bad_tvs) $ do
                 throwError "Type not polymorphic enough"
-        return $ (\e -> coer .> genTrans skol_tvs .> e) <$> exp
+        return $ (\e -> coer `ap` (genTrans skol_tvs `ap` e)) <$> exp
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion

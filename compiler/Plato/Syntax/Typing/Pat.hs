@@ -14,6 +14,7 @@ data Pat
         = ConP Ident [LPat]
         | VarP Ident
         | WildP
+        | AnnP LPat Type
         | TagP Ident [(Ident, Type)]
         deriving (Eq, Show)
 
@@ -24,6 +25,7 @@ instance Pretty Pat where
         pretty (ConP con pats) = hsep (pretty con : map prAtomPat pats)
         pretty (VarP var) = pretty var
         pretty WildP = "_"
+        pretty (AnnP pat ann_ty) = parens $ hsep [pretty pat, colon, pretty ann_ty]
         pretty (TagP con args) = hsep (map pretty (con : map fst args))
 
 prAtomPat :: LPat -> Doc ann

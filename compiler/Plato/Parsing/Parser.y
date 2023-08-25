@@ -176,7 +176,7 @@ btype       :: { LType }
             | atype                                 { $1 }
 
 atype       :: { LType }
-            : '(' type ')'                          { L (combineSpans $1 $3) (FactorT $2) }
+            : '(' type ')'                          { sL $1 $3 (FactorT $2) }
             | tycon                                 { L (getLoc $1) (ConT $1) }
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
@@ -204,8 +204,9 @@ fexpr       :: { LExpr }
             | aexpr                                 { $1 }
 
 aexpr       :: { LExpr }
-            : '(' op ')'                            { L (combineSpans $1 $3) (VarE $2) }
-            | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
+            : '(' op ')'                            { sL $1 $3 (VarE $2) }
+            | '(' expr ')'                          { sL $1 $3 (FactorE $2) }
+            | '(' expr ':' type ')'                 { sL $1 $5 (AnnE $2 $4) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 
@@ -248,7 +249,8 @@ apats       :: { [LPat] }
             | apat                                  { [$1] }
 
 apat        :: { LPat }
-            : '(' pat ')'                           { L (combineSpans $1 $3) (FactorP $2) }
+            : '(' pat ')'                           { sL $1 $3 (FactorP $2) }
+            | '(' pat ':' type ')'                  { sL $1 $5 (AnnP $2 $4) }
             | con                                   { L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }

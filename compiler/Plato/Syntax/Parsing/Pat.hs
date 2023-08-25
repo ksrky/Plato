@@ -7,6 +7,7 @@ module Plato.Syntax.Parsing.Pat (
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
+import Plato.Syntax.Parsing.Type
 
 ----------------------------------------------------------------
 -- Data and types
@@ -18,6 +19,7 @@ data Pat
         | VarP Ident
         | WildP
         | BinP LPat Ident LPat
+        | AnnP LPat LType
         | FactorP LPat
         deriving (Eq, Show)
 
@@ -29,6 +31,7 @@ instance Pretty Pat where
         pretty (VarP var) = pretty var
         pretty WildP = "_"
         pretty (BinP lhs op rhs) = hsep [prAtomPat lhs, pretty op, prAtomPat rhs]
+        pretty (AnnP pat ann_ty) = parens $ hsep [pretty pat, pretty ann_ty]
         pretty (FactorP pat) = parens $ pretty pat
 
 prAtomPat :: LPat -> Doc ann

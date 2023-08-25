@@ -27,7 +27,7 @@ type Alt a = (LPat, LExpr a)
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr a -> LExpr a -> Expr a
-        AbsE :: Ident -> LExpr 'Untyped -> Expr 'Untyped
+        AbsE :: Ident -> Maybe Type -> LExpr 'Untyped -> Expr 'Untyped
         AbsEok :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
@@ -35,6 +35,7 @@ data Expr (a :: TcFlag) where
         LetEok :: [(Ident, LExpr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
         CaseEok :: LExpr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
+        AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -74,9 +75,11 @@ prSpecs spcs = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs `se
 instance Pretty (Expr a) where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
-        pretty (AbsE var body) = hsep [backslash, pretty var, dot, pretty body]
-        pretty (AbsEok var ann body) =
-                hsep [backslash, pretty var, colon, pretty ann, dot, pretty body]
+        pretty (AbsE var Nothing body) = hsep [backslash, pretty var, dot, pretty body]
+        pretty (AbsE var (Just var_ty) body) =
+                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty (AbsEok var var_ty body) =
+                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
         pretty (TAppE fun tyargs) = hsep (prExpr1 fun : map pretty tyargs)
         pretty (TAbsE qnts body) = hsep [backslash, prQuants qnts, dot, pretty body]
         pretty (LetE bnds spcs body) =
@@ -97,6 +100,7 @@ instance Pretty (Expr a) where
                         , "of"
                         , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
+        pretty (AnnE exp ty) = hsep [pretty exp, colon, pretty ty]
 
 prExpr2 :: Expr a -> Doc ann
 prExpr2 e = walk e []

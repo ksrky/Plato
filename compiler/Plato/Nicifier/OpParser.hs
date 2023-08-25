@@ -95,6 +95,7 @@ instance OpParser LExpr where
                                 match' <- opParse match
                                 alts' <- mapM (\(p, e) -> (,) <$> opParse p <*> opParse e) alts
                                 return $ CaseE match' alts'
+                        AnnE exp ann_ty -> AnnE <$> opParse exp <*> opParse ann_ty
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where
@@ -111,6 +112,7 @@ instance OpParser LPat where
                         BinP{} -> do
                                 toks <- linearize (L sp pat)
                                 unLoc <$> parse BinP toks
+                        AnnP pat ann_ty -> AnnP <$> opParse pat <*> opParse ann_ty
                         FactorP p -> unLoc <$> opParse p
 
 instance OpParser LType where

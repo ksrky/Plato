@@ -49,10 +49,10 @@ elabExpr (P.LamE pats body) = do
         env <- extendScopeFromSeq pats
         body' <- local (const env) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
-            patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id e
+            patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
                 v <- newVarIdent
-                return $ sL p e $ T.AbsE v $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
+                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
@@ -68,9 +68,10 @@ elabExpr (P.CaseE match alts) = do
                 return (pat', body')
 
         return $ T.CaseE match' alts'
+elabExpr (P.AnnE exp ann_ty) = T.AnnE <$> elabExpr `traverse` exp <*> elabType (unLoc ann_ty)
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
-elabPat :: (MonadReader env m, HasScope env, MonadThrow m) => P.Pat -> m T.Pat
+elabPat :: (MonadReader e m, HasScope e, HasUniq e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
 elabPat (P.ConP con pats) = do
         con' <- scoping con
         pats' <- mapM (elabPat `traverse`) pats
@@ -82,6 +83,7 @@ elabPat (P.BinP left op right) = do
         op' <- scoping op
         right' <- elabPat `traverse` right
         return $ T.ConP op' [left', right']
+elabPat (P.AnnP pat ann_ty) = T.AnnP <$> elabPat `traverse` pat <*> elabType (unLoc ann_ty)
 elabPat P.FactorP{} = unreachable "fixity resolution failed"
 
 elabType ::

@@ -20,6 +20,7 @@ instance HasDomain Pat where
         getDomain (VarP id) = [id]
         getDomain WildP = []
         getDomain (BinP lhs _ rhs) = getDomain lhs ++ getDomain rhs
+        getDomain (AnnP pat _) = getDomain pat
         getDomain (FactorP pat) = getDomain pat
 
 instance HasDomain TopDecl where

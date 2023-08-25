@@ -45,11 +45,11 @@ subsCheckRho ::
 subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
-        return (coercion2 <.> coercion1)
+        return (coercion2 `compose` coercion1)
 subsCheckRho (AppT fun1 arg1) (AppT fun2 arg2) = do
         coer_fun <- subsCheckRho (unLoc fun1) (unLoc fun2)
         coer_arg <- subsCheck (unLoc arg1) (unLoc arg2)
-        return (coer_fun <.> coer_arg)
+        return (coer_fun `compose` coer_arg)
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
@@ -58,7 +58,7 @@ subsCheckRho (ArrT a1 r1) rho2 = do
         subsCheckFun (unLoc a1) (unLoc r1) a2 r2
 subsCheckRho tau1 tau2 = do
         unify tau1 tau2
-        return Id
+        return CoerId
 
 subsCheckFun ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>

@@ -21,6 +21,7 @@ data Expr
         | LamE [LPat] LExpr
         | LetE [LLocDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
+        | AnnE LExpr LType
         | FactorE LExpr
         deriving (Eq, Show)
 
@@ -48,7 +49,7 @@ instance Pretty Expr where
         pretty (VarE var) = pretty var
         pretty exp@AppE{} = prExpr2 exp
         pretty (BinE lhs op rhs) = parens $ pretty lhs <+> pretty op <+> pretty rhs
-        pretty (LamE vars body) = hsep [backslash <> hsep (map pretty vars), "->", pretty body]
+        pretty (LamE pats body) = hsep [backslash <> hsep (map pretty pats), "->", pretty body]
         pretty (LetE decs body) =
                 hsep ["let", braces $ map pretty decs `sepBy` semi, "in", pretty body]
         pretty (CaseE match alts) =
@@ -58,6 +59,7 @@ instance Pretty Expr where
                         , "of"
                         , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
+        pretty (AnnE exp ty) = parens $ hsep [pretty exp, colon, pretty ty]
         pretty (FactorE exp) = pretty exp
 
 prExpr2 :: Expr -> Doc ann

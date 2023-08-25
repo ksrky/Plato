@@ -24,7 +24,7 @@ instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, 
 instantiate (AllT tvs tau) = do
         tys <- mapM (const newTyVar) tvs
         return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
-instantiate ty = return (Id, ty)
+instantiate ty = return (CoerId, ty)
 
 -- | Skolemisation
 skolemise ::
@@ -39,7 +39,7 @@ skolemise (ArrT arg_ty res_ty) = do
         (coer, sks, res_ty') <- skolemise (unLoc res_ty)
         coer' <- prfunTrans sks (unLoc arg_ty) coer
         return (coer', sks, ArrT arg_ty (noLoc res_ty'))
-skolemise ty = return (Id, [], ty)
+skolemise ty = return (CoerId, [], ty)
 
 -- | Generalization
 generalize ::

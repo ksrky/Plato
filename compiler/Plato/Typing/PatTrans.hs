@@ -71,6 +71,7 @@ isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
+isVar (L _ AnnP{} : _, _) = False
 isVar (L _ TagP{} : _, _) = unreachable "received TagP"
 isVar ([], _) = unreachable "empty pattern row"
 
@@ -102,6 +103,7 @@ matchVar (var, _) rest clauses = do
                 (L _ WildP : pats, exp) -> (pats, exp)
                 (L _ (VarP vp) : pats, exp) -> (pats, subst exp (VarE var) vp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
+                (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 (L _ TagP{} : _, _) -> unreachable "TagP"
                 ([], _) -> unreachable "Number of variables and patterns are not same"
         match rest clauses'
@@ -144,6 +146,7 @@ matchClause (con, arg_tys) vts clauses = do
                 (L _ WildP : ps', e) -> do
                         vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
                         return (vps ++ ps', e)
+                (L _ AnnP{} : _, _) -> unreachable " received AnnP"
                 (L _ TagP{} : _, _) -> unreachable "received TagP"
                 ([], _) -> unreachable "empty patterns"
         let ats = zip args arg_tys
