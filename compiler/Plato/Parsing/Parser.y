@@ -101,7 +101,7 @@ impdecl     :: { LInstr }
 -- TopDecls
 -----------------------------------------------------------
 topdecls    :: { LInstr }
-            : decls                                 { L (concatSpans (map getLoc $1)) (TopDecls $1) }
+            : decls                                 { L (mconcat (map getLoc $1)) (TopDecls $1) }
 
 -----------------------------------------------------------
 -- Declarations

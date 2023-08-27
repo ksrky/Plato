@@ -44,7 +44,7 @@ deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
 
 instance HasLoc (Clause a) where
-        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
+        getLoc (pats, exp) = getLoc pats <> getLoc exp
 
 ----------------------------------------------------------------
 -- Pretty printing

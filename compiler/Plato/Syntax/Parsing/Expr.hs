@@ -40,7 +40,7 @@ data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 -- Basic instances
 ----------------------------------------------------------------
 instance HasLoc Clause where
-        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
+        getLoc (pats, exp) = getLoc pats <> getLoc exp
 
 ----------------------------------------------------------------
 -- Pretty printing

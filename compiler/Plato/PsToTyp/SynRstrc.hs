@@ -39,7 +39,7 @@ paramNamesUnique ids = do
         case dup of
                 [] -> return ()
                 (id1, id2) : _ ->
-                        throwLocErr (combineSpans (getLoc id1) (getLoc id2)) $
+                        throwLocErr (getLoc id1 <> getLoc id2) $
                                 hsep ["Conflicting definitions for", squotes $ pretty id2]
 
 paramPatsUnique :: MonadThrow m => [LPat] -> m ()
@@ -86,7 +86,7 @@ classify (fbnds@(L sp (FunBindD id [(pats, _)]) : _) : rest) = do
                                 return (psi, ei)
                         | L sp (FunBindD _ [(psi, ei)]) <- fbnds
                         ]
-        let spn = concatSpans $ sp : [spi | L spi FunBindD{} <- fbnds]
+        let spn = mconcat $ sp : [spi | L spi FunBindD{} <- fbnds]
         (L spn (FunBindD id clses) :) <$> classify rest
 classify ((L _ FunBindD{} : _) : _) = unreachable "malformed clauses"
 classify ((L _ FixityD{} : _) : _) = unreachable "deleted by Nicifier"
