@@ -47,6 +47,7 @@ instTrans tys = Fn (`TAppE` tys)
 
 prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coer = coer
+prpolyTrans _ Id = Id
 prpolyTrans sks1 coer = Fn $ \e -> TAbsE sks1 (unCoer coer $ TAppE e (map (VarT . fst) sks1))
 
 prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
