@@ -4,16 +4,17 @@ module Plato.Typing.Tc.SubsCheck (
         subsCheckFun,
 ) where
 
-import Control.Exception.Safe (MonadThrow, throw)
+import Control.Exception.Safe (MonadThrow)
 import Control.Monad (unless)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader)
 import Data.Set qualified as S
+import Prettyprinter
 
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
-import Plato.Typing.Error
 import Plato.Typing.Misc
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
@@ -33,7 +34,15 @@ subsCheck sigma1 sigma2 = do
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
         let bad_tvs = S.fromList (map fst skol_tvs) `S.intersection` esc_tvs
-        unless (null bad_tvs) $ throw SubsCheckFail
+        unless (null bad_tvs) $
+                throwError $
+                        hsep
+                                [ "Impredicative type:"
+                                , pretty sigma1
+                                , "cannot be instanciated with"
+                                , comma
+                                , pretty sigma2
+                                ]
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
 -- | Subsumption checking. Coersing sigma to rho.

@@ -2,7 +2,7 @@
 
 module Plato.Typing.Tc.Coercion (
         Coercion,
-        ap,
+        unCoer,
         genTrans,
         instTrans,
         prpolyTrans,
@@ -33,9 +33,9 @@ instance Semigroup Coercion where
 instance Monoid Coercion where
         mempty = Id
 
-ap :: Coercion -> Expr 'Typed -> Expr 'Typed
-Id `ap` e = e
-Fn f `ap` e = f e
+unCoer :: Coercion -> Expr 'Typed -> Expr 'Typed
+unCoer Id = id
+unCoer (Fn f) = f
 
 genTrans :: [Quant] -> Coercion
 genTrans [] = Id
@@ -47,14 +47,16 @@ instTrans tys = Fn (`TAppE` tys)
 
 prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coer = coer
-prpolyTrans sks1 coer = Fn $ \e -> TAbsE sks1 (coer `ap` TAppE e (map (VarT . fst) sks1))
+prpolyTrans sks1 coer = Fn $ \e -> TAbsE sks1 (unCoer coer $ TAppE e (map (VarT . fst) sks1))
 
 prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coer = return coer
 prfunTrans sks _ Id = return $ Fn $ \e -> TAbsE sks (TAppE e (map (VarT . fst) sks))
 prfunTrans sks arg_ty coer = do
         id <- newVarIdent
-        let coer' e = coer `ap` TAbsE sks (AppE (noLoc $ TAppE e (map (VarT . fst) sks)) (noLoc $ VarE id))
+        let coer' e =
+                unCoer coer $
+                        TAbsE sks (AppE (noLoc $ TAppE e (map (VarT . fst) sks)) (noLoc $ VarE id))
         return $ Fn $ AbsEok id arg_ty . coer'
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
@@ -65,4 +67,4 @@ funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coer
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- newVarIdent
-        return $ Fn $ \f -> AbsEok id a2 (co_res `ap` AppE (noLoc f) (noLoc $ co_arg `ap` VarE id))
+        return $ Fn $ \f -> AbsEok id a2 (unCoer co_res $ AppE (noLoc f) (noLoc $ unCoer co_arg $ VarE id))

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Zonking (Zonking (..)) where
 
@@ -52,16 +53,14 @@ instance Zonking Type where
         zonk (ConT tc) = return (ConT tc)
         zonk (ArrT arg res) = ArrT <$> zonk `traverse` arg <*> zonk `traverse` res
         zonk (AllT qnts ty) = AllT <$> zonk qnts <*> zonk `traverse` ty
-        zonk (AppT fun arg) = do
-                AppT <$> zonk `traverse` fun <*> zonk `traverse` arg
-        zonk (MetaT tv) = do
-                mb_ty <- readMetaTv tv
-                case mb_ty of
+        zonk (AppT fun arg) = AppT <$> zonk `traverse` fun <*> zonk `traverse` arg
+        zonk (MetaT tv) =
+                readMetaTv tv >>= \case
                         Nothing -> return (MetaT tv)
-                        Just ty -> do
-                                ty' <- zonk ty
-                                writeMetaTv tv ty'
-                                return ty'
+                        Just tau -> do
+                                tau' <- zonk tau
+                                writeMetaTv tv tau'
+                                return tau'
 
 instance Zonking Kind where
         zonk StarK = return StarK
@@ -69,9 +68,8 @@ instance Zonking Kind where
                 kn1' <- zonk kn1
                 kn2' <- zonk kn2
                 return (ArrK kn1' kn2')
-        zonk (MetaK kv) = do
-                mb_kn <- readMetaKv kv
-                case mb_kn of
+        zonk (MetaK kv) =
+                readMetaKv kv >>= \case
                         Nothing -> return (MetaK kv)
                         Just kn -> do
                                 kn' <- zonk kn

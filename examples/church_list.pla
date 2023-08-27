@@ -1,3 +1,4 @@
+import Function
 import List
 
 data ChurchList a where
@@ -7,7 +8,7 @@ runList : {a} ChurchList a -> ({r} (a -> r -> r) -> r -> r)
 runList (ChurchList xs) = xs
 
 fromList : {a} List a -> ChurchList a
-fromList xs = ChurchList (\k z -> foldr k z xs)
+fromList = ChurchList . foldr
 
 toList : {a} ChurchList a -> List a
 toList xs = runList xs (::) Nil

@@ -14,8 +14,8 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Misc
 import Plato.Typing.Tc.Coercion
+import Plato.Typing.Misc
 import Plato.Typing.Zonking
 
 -- | Instantiation
