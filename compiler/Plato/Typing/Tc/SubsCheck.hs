@@ -4,23 +4,25 @@ module Plato.Typing.Tc.SubsCheck (
         subsCheckFun,
 ) where
 
-import Control.Exception.Safe (MonadThrow)
+import Control.Exception.Safe (MonadThrow, throw)
 import Control.Monad (unless)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader)
 import Data.Set qualified as S
-import Prettyprinter
 
-import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Typing.Error
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.Unify
 import Plato.Typing.Tc.Utils
 
--- | Subsumption checking.  Coersing sigma1 to sigma2.
+{- | Subsumption checking.
+  Checks whether sigma1 is subsumption of (more polymorphic than) sigma2
+  and returns coercion of sigma1 to sigma2.
+-}
 subsCheck ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
@@ -31,9 +33,7 @@ subsCheck sigma1 sigma2 = do
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
         let bad_tvs = S.fromList (map fst skol_tvs) `S.intersection` esc_tvs
-        unless (null bad_tvs) $
-                throwError $
-                        hsep ["Subsumption check failed: ", pretty sigma1 <> comma, pretty sigma2]
+        unless (null bad_tvs) $ throw SubsCheckFail
         return $ deepskolTrans skol_tvs coercion1 coercion2
 
 -- | Subsumption checking. Coersing sigma to rho.
@@ -45,11 +45,11 @@ subsCheckRho ::
 subsCheckRho sigma1@AllT{} rho2 = do
         (coercion1, rho1) <- instantiate sigma1
         coercion2 <- subsCheckRho rho1 rho2
-        return (coercion2 `compose` coercion1)
+        return (coercion2 <> coercion1)
 subsCheckRho (AppT fun1 arg1) (AppT fun2 arg2) = do
         coer_fun <- subsCheckRho (unLoc fun1) (unLoc fun2)
         coer_arg <- subsCheck (unLoc arg1) (unLoc arg2)
-        return (coer_fun `compose` coer_arg)
+        return (coer_fun <> coer_arg)
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)
@@ -58,7 +58,7 @@ subsCheckRho (ArrT a1 r1) rho2 = do
         subsCheckFun (unLoc a1) (unLoc r1) a2 r2
 subsCheckRho tau1 tau2 = do
         unify tau1 tau2
-        return CoerId
+        return mempty
 
 subsCheckFun ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>

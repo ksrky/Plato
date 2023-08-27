@@ -100,7 +100,7 @@ instPatSigma ::
         Sigma ->
         Expected Sigma ->
         m Coercion
-instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return CoerId
+instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return mempty
 instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
 
 instDataCon ::
@@ -154,7 +154,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ coercion `ap` AppE fun' arg'
         tcRho' (AbsE var mbty body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
-                void $ maybe (return CoerId) (`subsCheck` var_ty) mbty
+                void $ maybe (return mempty) (`subsCheck` var_ty) mbty
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsEok var var_ty (unLoc body')
         tcRho' (AbsE var mbty body) (Infer ref) = do

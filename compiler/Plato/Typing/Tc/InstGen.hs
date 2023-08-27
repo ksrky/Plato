@@ -15,7 +15,6 @@ import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Tc.Coercion
-import Plato.Typing.Tc.Subst
 import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
@@ -23,8 +22,8 @@ import Plato.Typing.Zonking
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
 instantiate (AllT tvs tau) = do
         tys <- mapM (const newTyVar) tvs
-        return (instTrans tys, subst (map fst tvs) tys (unLoc tau))
-instantiate ty = return (CoerId, ty)
+        return (instTrans tys, substTvs (map fst tvs) tys (unLoc tau))
+instantiate ty = return (mempty, ty)
 
 -- | Skolemisation
 skolemise ::
@@ -33,13 +32,13 @@ skolemise ::
         m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
         sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) tvs
-        (coercion, sks2, ty') <- skolemise (subst (map fst tvs) (map (VarT . fst) sks1) (unLoc rho))
+        (coercion, sks2, ty') <- skolemise (substTvs (map fst tvs) (map (VarT . fst) sks1) (unLoc rho))
         return (prpolyTrans sks1 coercion, sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do
         (coer, sks, res_ty') <- skolemise (unLoc res_ty)
         coer' <- prfunTrans sks (unLoc arg_ty) coer
         return (coer', sks, ArrT arg_ty (noLoc res_ty'))
-skolemise ty = return (CoerId, [], ty)
+skolemise ty = return (mempty, [], ty)
 
 -- | Generalization
 generalize ::

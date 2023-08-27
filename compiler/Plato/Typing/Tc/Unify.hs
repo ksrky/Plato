@@ -1,6 +1,4 @@
 module Plato.Typing.Tc.Unify (
-        UnificationError (..),
-        InfiniteTypeError (..),
         unify,
         unifyFun,
         unifyFuns,
@@ -24,7 +22,7 @@ import System.Log.Logger
 unify :: (MonadReader e m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
 unify ty1 ty2 | badType ty1 || badType ty2 = do
         liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
-        throw UnificationError
+        throw UnificationFail
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
 unify (ArrT arg1 res1) (ArrT arg2 res2) = do
@@ -38,7 +36,7 @@ unify (MetaT tv) ty = unifyVar tv ty
 unify ty (MetaT tv) = unifyVar tv ty
 unify ty1 ty2 = do
         liftIO $ errorM platoLog $ "Unification: " ++ show ty1 ++ ", " ++ show ty2
-        throw UnificationError
+        throw UnificationFail
 
 unifyVar :: (MonadReader e m, MonadIO m, MonadThrow m) => MetaTv -> Tau -> m ()
 unifyVar tv1 ty2@(MetaT tv2) = do
@@ -57,7 +55,7 @@ occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
         when (tv1 `S.member` tvs2) $ do
                 liftIO $ errorM platoLog $ "Occurs check fail: " ++ show tv1 ++ ", " ++ show ty2
-                throw InfiniteTypeError
+                throw InfiniteType
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True
@@ -77,8 +75,8 @@ unifyFuns n (ArrT arg res) = do
         (args, res') <- unifyFuns (n - 1) (unLoc res)
         return (unLoc arg : args, res')
 unifyFuns n tau = do
-        arg <- newTyVar
-        res <- newTyVar
-        unify tau (ArrT (noLoc arg) (noLoc res))
-        (args, res') <- unifyFuns (n - 1) res
-        return (arg : args, res')
+        arg_ty <- newTyVar
+        res_ty <- newTyVar
+        unify tau (ArrT (noLoc arg_ty) (noLoc res_ty))
+        (args, res') <- unifyFuns (n - 1) res_ty
+        return (arg_ty : args, res')

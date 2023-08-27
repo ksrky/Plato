@@ -18,4 +18,12 @@ f : ({a} a -> T) -> T
 f _ = T
 
 ex3 : ({a} a -> T) -> T
-ex3 = id f
+ex3 = id f -- Rejected
+
+{- 
+   Error message:
+   Subsumption check failed:  $65, {a:*} a -> T
+ 
+   It is because type variable 'a' is Tau type, while type of f '({a} a -> T) -> T' is Rho type,
+   so they cannot be unified.
+-}

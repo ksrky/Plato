@@ -32,7 +32,7 @@ spec = do
                 it "lambda abstraction" $ do
                         test_scexpr "\\x -> x"
                                 >>= ( `shouldSatisfy`
-                                        (\case AbsE id1 (L _ (VarE id1')) -> check [(id1, id1')]; _ -> False)
+                                        (\case AbsE id1 Nothing (L _ (VarE id1')) -> check [(id1, id1')]; _ -> False)
                                     )
                 it "Unbound variable" $ do
                         test_scexpr "\\x -> y" `shouldThrow` anyException
@@ -50,7 +50,7 @@ spec = do
                         test_scexpr "\\(Con x) -> x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                AbsE id1 (L _ (CaseE (L _ (VarE id1')) [(L _ (ConP _ [L _ (VarP id2)]), L _ (VarE id2'))])) ->
+                                                AbsE id1 Nothing (L _ (CaseE (L _ (VarE id1')) [(L _ (ConP _ [L _ (VarP id2)]), L _ (VarE id2'))])) ->
                                                         check [(id1, id1'), (id2, id2')]
                                                 _ -> False
                                         )

@@ -17,7 +17,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Tc.Subst qualified as Subst
+import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 transClauses ::
@@ -48,7 +48,7 @@ constructors ty = getCon [] =<< zonk ty
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
         getCon acc (ConT tc) = do
                 (params, constrs) <- lookupIdent tc =<< asks getConEnv
-                return (map (\(con, ty) -> (con, Subst.subst params (reverse acc) <$> ty)) constrs)
+                return (map (\(con, ty) -> (con, substTvs params (reverse acc) <$> ty)) constrs)
         getCon _ _ = unreachable "Not a variant type"
 
 subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
