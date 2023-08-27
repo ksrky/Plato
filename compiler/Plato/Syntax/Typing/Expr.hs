@@ -50,65 +50,60 @@ instance HasLoc (Clause a) where
 -- Pretty printing
 ----------------------------------------------------------------
 prClause :: Clause a -> Doc ann
-prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
+prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 prBinds :: [(Ident, [Clause 'Untyped])] -> Doc ann
 prBinds bnds =
-        concatWith
-                (surround $ semi <> space)
-                ( map
-                        ( \(id, clses) ->
-                                hsep
-                                        [ pretty id
-                                        , "where"
-                                        , braces $ map prClause clses `sepBy` semi
-                                        ]
-                        )
-                        bnds
+        map
+                ( \(id, clses) ->
+                        hsep
+                                [ prettyId id
+                                , "where"
+                                , braces $ map prClause clses `sepBy` semi
+                                ]
                 )
+                bnds
+                `sepBy` semi
 
 prBinds' :: [(Ident, LExpr 'Typed)] -> Doc ann
-prBinds' bnds = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) bnds `sepBy` semi
+prBinds' bnds = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) bnds `sepBy` semi
+
 prSpecs :: [(Ident, LType)] -> Doc ann
-prSpecs spcs = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs `sepBy` semi
+prSpecs spcs = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) spcs `sepBy` semi
 
 instance Pretty (Expr a) where
-        pretty (VarE var) = pretty var
-        pretty exp@AppE{} = prExpr2 exp
-        pretty (AbsE var Nothing body) = hsep [backslash, pretty var, dot, pretty body]
-        pretty (AbsE var (Just var_ty) body) =
-                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty (AbsEok var var_ty body) =
-                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty (TAppE fun tyargs) = hsep (prExpr1 fun : map pretty tyargs)
-        pretty (TAbsE qnts body) = hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty (LetE bnds spcs body) =
-                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds bnds, "in", pretty body]
-        pretty (LetEok bnds spcs body) =
-                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds' bnds, "in", pretty body]
-        pretty (CaseE match alts) =
-                hsep
-                        [ "case"
-                        , pretty match
-                        , "of"
-                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
-                        ]
-        pretty (CaseEok match _ alts) =
-                hsep
-                        [ "case"
-                        , prExpr1 (unLoc match)
-                        , "of"
-                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
-                        ]
-        pretty (AnnE exp ty) = hsep [pretty exp, colon, pretty ty]
+        pretty = pretty' 0
 
-prExpr2 :: Expr a -> Doc ann
-prExpr2 e = walk e []
-    where
-        walk :: Expr a -> [Expr a] -> Doc ann
-        walk (AppE fun arg) acc = walk (unLoc fun) (unLoc arg : acc)
-        walk fun args = prExpr1 fun <+> hsep (map prExpr1 args)
-
-prExpr1 :: Expr a -> Doc ann
-prExpr1 e@VarE{} = pretty e
-prExpr1 e = parens (pretty e)
+instance PrettyWithContext (Expr a) where
+        pretty' _ (VarE var) = prettyId var
+        pretty' c (AppE fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' c (AbsE var Nothing body) = contextParens c 0 $ hsep [backslash, pretty var, dot, pretty body]
+        pretty' c (AbsE var (Just var_ty) body) =
+                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' c (AbsEok var var_ty body) =
+                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' c (TAppE fun []) = pretty' c fun
+        pretty' c (TAppE fun tyargs) = contextParens c 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
+        pretty' c (TAbsE [] body) = pretty' c body
+        pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
+        pretty' c (LetE bnds spcs body) =
+                contextParens c 0 $ hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds bnds, "in", pretty body]
+        pretty' c (LetEok bnds spcs body) =
+                contextParens c 0 $ hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds' bnds, "in", pretty body]
+        pretty' c (CaseE match alts) =
+                contextParens c 0 $
+                        hsep
+                                [ "case"
+                                , pretty match
+                                , "of"
+                                , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
+                                ]
+        pretty' c (CaseEok match _ alts) =
+                contextParens c 0 $
+                        hsep
+                                [ "case"
+                                , pretty match
+                                , "of"
+                                , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
+                                ]
+        pretty' c (AnnE exp ty) = contextParens c 0 $ hsep [pretty exp, colon, pretty ty]

@@ -35,13 +35,12 @@ instance Ord MetaKv where
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty MetaKv where
-        pretty (MetaKv u _) = "$" <> pretty u
+        pretty (MetaKv u _) = dollar <> pretty u
 
 instance Pretty Kind where
-        pretty StarK = "*"
-        pretty (ArrK kn1 kn2) = prettyKind1 kn1 <+> pretty kn2
-        pretty (MetaK kv) = pretty kv
+        pretty = pretty' 0
 
-prettyKind1 :: Kind -> Doc ann
-prettyKind1 StarK = pretty StarK
-prettyKind1 kn = parens (pretty kn)
+instance PrettyWithContext Kind where
+        pretty' _ StarK = asterisk
+        pretty' c (ArrK kn1 kn2) = contextParens c 0 $ hsep [pretty' 0 kn1, arrow, pretty' 1 kn2]
+        pretty' _ (MetaK kv) = pretty kv

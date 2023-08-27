@@ -71,36 +71,27 @@ instance Ord MetaTv where
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty TyVar where
-        pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty id
+        pretty (BoundTv id) = prettyId id
+        pretty (SkolemTv id) = prettyId id
 
 instance Pretty MetaTv where
-        pretty (MetaTv u _) = "$" <> pretty u
+        pretty (MetaTv u _) = dollar <> pretty u
 
 prQuant :: Quant -> Doc ann
-prQuant (tv, kn) = hcat [pretty tv, colon, pretty kn]
+prQuant (tv, kn) = hsep [pretty tv, colon, pretty kn]
 
 prQuants :: [Quant] -> Doc ann
-prQuants [(tv, kn)] = hcat [pretty tv, colon, pretty kn]
+prQuants [qnt] = prQuant qnt
 prQuants qnts = hsep $ map (parens . prQuant) qnts
 
 instance Pretty Type where
-        pretty (VarT var) = pretty var
-        pretty (ConT con) = pretty con
-        pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
-        pretty (AllT [] body) = pretty body
-        pretty (AllT qnts body) = hsep [braces (prQuants qnts), pretty body]
-        pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
-        pretty (MetaT tv) = pretty tv
+        pretty = pretty' 0
 
-data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
-
-precOf :: Type -> Prec
-precOf AllT{} = TopPrec
-precOf ArrT{} = ArrPrec
-precOf _ = AtomPrec
-
-prty :: Prec -> Type -> Doc ann
-prty p ty
-        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
-        | otherwise = pretty ty
+instance PrettyWithContext Type where
+        pretty' _ (VarT tv) = pretty tv
+        pretty' _ (ConT tc) = prettyId tc
+        pretty' c (ArrT arg res) = contextParens c 0 $ hsep [pretty' 1 arg, arrow, pretty res]
+        pretty' c (AllT [] body) = pretty' c body
+        pretty' c (AllT qnts body) = contextParens c 0 $ hsep [braces (prQuants qnts), pretty body]
+        pretty' c (AppT fun arg) = contextParens c 1 $ pretty' 1 fun <+> pretty' 2 arg
+        pretty' _ (MetaT tv) = pretty tv
