@@ -116,7 +116,7 @@ instance HasConEnv Context where
 test_decls :: T.Text -> IO [String]
 test_decls inp = do
         uref <- initUniq
-        let ctx = Context uref initScope initTypEnv initConEnv
+        let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
         decs' <- runReaderT (execWriterT $ T.elabDecls decs) ctx
         (decs'', ctx') <- runReaderT (typingDecls decs') ctx

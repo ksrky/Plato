@@ -2,7 +2,6 @@
 
 module Plato.Nicifier.OpParser (
         FixityEnv,
-        initFixityEnv,
         HasFixityEnv (..),
         opParse,
 ) where
@@ -21,9 +20,6 @@ import Plato.Nicifier.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 type FixityEnv = M.Map Name Fixity
-
-initFixityEnv :: FixityEnv
-initFixityEnv = M.empty
 
 class HasFixityEnv a where
         getFixityEnv :: a -> FixityEnv

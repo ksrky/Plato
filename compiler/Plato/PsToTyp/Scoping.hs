@@ -1,7 +1,6 @@
 module Plato.PsToTyp.Scoping (
         Scope,
         HasScope (..),
-        initScope,
         scoping,
         extendScopeFromSeq,
 ) where
@@ -33,9 +32,6 @@ instance HasScope Scope where
         getScope = id
         modifyScope = id
 
-initScope :: Scope
-initScope = M.empty
-
 scoping :: (MonadReader e m, HasScope e, MonadThrow m) => Ident -> m Ident
 scoping id = do
         sc <- asks getScope
@@ -43,5 +39,5 @@ scoping id = do
                 Just id' -> return id{stamp = stamp id'}
                 Nothing -> throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]
 
-extendScopeFromSeq :: (MonadReader env m, HasScope env, HasDomain a) => [a] -> m env
+extendScopeFromSeq :: (MonadReader e m, HasScope e, HasDomain a) => [a] -> m e
 extendScopeFromSeq seq = asks (extendListScope (getDomain seq))

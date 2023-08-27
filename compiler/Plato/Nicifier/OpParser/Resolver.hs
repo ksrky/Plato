@@ -1,4 +1,4 @@
-module Plato.Nicifier.OpParser.Resolver where
+module Plato.Nicifier.OpParser.Resolver (Tok (..), defaultFixity, parse) where
 
 import Control.Exception.Safe
 import Control.Monad

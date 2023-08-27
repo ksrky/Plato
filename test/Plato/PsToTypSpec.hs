@@ -122,7 +122,7 @@ test_scexpr :: (MonadIO m, MonadCatch m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uniq <- initUniq
         exp <- runReaderT (parseExpr inp) uniq
-        exp' <- runReaderT (opParse exp) initFixityEnv
+        exp' <- runReaderT (opParse exp) mempty
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
 

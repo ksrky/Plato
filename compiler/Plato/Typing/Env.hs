@@ -3,12 +3,10 @@
 module Plato.Typing.Env (
         Bind (..),
         TypEnv,
-        initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
         Constrs,
         ConEnv,
-        initConEnv,
         HasConEnv (..),
         extendConEnv,
 ) where
@@ -29,9 +27,6 @@ data Bind
         deriving (Eq, Show)
 
 type TypEnv = IdentMap Bind
-
-initTypEnv :: TypEnv
-initTypEnv = M.empty
 
 class HasTypEnv a where
         getTypEnv :: a -> TypEnv
@@ -75,8 +70,6 @@ type Constrs = [(Ident, [Type])]
 -- | Mapping a type constructor to data constructors
 type ConEnv = IdentMap ([TyVar], Constrs)
 
-initConEnv :: ConEnv
-initConEnv = M.empty
 
 class HasConEnv a where
         getConEnv :: a -> ConEnv
