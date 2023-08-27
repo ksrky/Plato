@@ -81,15 +81,13 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
-      Plato.Typing.Kc.Utils
+      Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
       Plato.Typing.Tc.SubsCheck
-      Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
-      Plato.Typing.Tc.Utils
       Plato.Typing.Zonking
       Plato.TypToCore
   other-modules:

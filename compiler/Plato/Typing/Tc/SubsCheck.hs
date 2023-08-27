@@ -14,10 +14,10 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Typing.Error
+import Plato.Typing.Misc
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.Unify
-import Plato.Typing.Tc.Utils
 
 {- | Subsumption checking.
   Checks whether sigma1 is subsumption of (more polymorphic than) sigma2

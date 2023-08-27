@@ -17,7 +17,7 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Tc.Utils
+import Plato.Typing.Misc
 import Plato.Typing.Zonking
 
 transClauses ::

@@ -15,7 +15,7 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
-import Plato.Typing.Kc.Utils
+import Plato.Typing.Misc
 
 unify :: (MonadThrow m, MonadIO m) => Span -> Kind -> Kind -> m ()
 unify sp = unify'

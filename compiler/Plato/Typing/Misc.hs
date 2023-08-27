@@ -1,10 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Typing.Tc.Utils (
+module Plato.Typing.Misc (
         getEnvTypes,
         getMetaTvs,
         getFreeTvs,
         substTvs,
+        getMetaKvs,
 ) where
 
 import Control.Monad.IO.Class
@@ -61,3 +62,11 @@ apply s (ArrT arg res) = ArrT (apply s <$> arg) (apply s <$> res)
 apply s (AllT tvs body) = AllT tvs $ apply (foldr (\(tv, _) -> M.delete tv) s tvs) <$> body
 apply s (AppT fun arg) = AppT (apply s <$> fun) (apply s <$> arg)
 apply _ ty@MetaT{} = ty
+
+getMetaKvs :: MonadIO m => Kind -> m (S.Set MetaKv)
+getMetaKvs kn = metaKvs <$> zonk kn
+
+metaKvs :: Kind -> S.Set MetaKv
+metaKvs StarK = S.empty
+metaKvs (ArrK kn1 kn2) = metaKvs kn1 `S.union` metaKvs kn2
+metaKvs (MetaK kv) = S.singleton kv

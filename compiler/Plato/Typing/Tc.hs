@@ -25,12 +25,12 @@ import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Kc
+import Plato.Typing.Misc
 import Plato.Typing.PatTrans
 import Plato.Typing.Tc.Coercion
 import Plato.Typing.Tc.InstGen
 import Plato.Typing.Tc.SubsCheck
 import Plato.Typing.Tc.Unify
-import Plato.Typing.Tc.Utils
 import Plato.Typing.Zonking
 
 checkType ::
