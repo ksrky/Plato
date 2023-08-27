@@ -1,8 +1,4 @@
-module Plato.Typing.Kc (
-        checkKindStar,
-        inferKind,
-        checkKind,
-) where
+module Plato.Typing.Kc (checkKindStar, inferKind, checkKind) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

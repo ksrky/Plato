@@ -1,11 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing (
-        typingDecls,
-        typing,
-        typingExpr,
-) where
+module Plato.Typing (typingDecls, typing, typingExpr) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

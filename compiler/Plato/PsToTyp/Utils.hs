@@ -1,6 +1,4 @@
-module Plato.PsToTyp.Utils (
-        HasDomain (..),
-) where
+module Plato.PsToTyp.Utils (HasDomain (..)) where
 
 import Plato.Common.Ident
 import Plato.Common.Location

@@ -1,13 +1,4 @@
-module Plato.Common.Ident (
-        Ident (..),
-        ident,
-        fromIdent,
-        freshIdent,
-        reassignUniq,
-        prettyId,
-        IdentMap,
-        lookupIdent,
-) where
+module Plato.Common.Ident where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

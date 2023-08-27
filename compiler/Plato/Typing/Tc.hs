@@ -1,11 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing.Tc (
-        checkType,
-        inferType,
-        checkClauses,
-) where
+module Plato.Typing.Tc (checkType, inferType, checkClauses) where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM, (<=<))

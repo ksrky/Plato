@@ -1,7 +1,4 @@
-module Plato.Typing.Kc.Unify (
-        unify,
-        unifyFun,
-) where
+module Plato.Typing.Kc.Unify (unify, unifyFun) where
 
 import Control.Exception.Safe
 import Control.Monad

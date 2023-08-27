@@ -1,9 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing.Zonking (
-        Zonking (..),
-) where
+module Plato.Typing.Zonking (Zonking (..)) where
 
 import Control.Monad.IO.Class
 

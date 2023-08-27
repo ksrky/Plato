@@ -1,10 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Nicifier.OpParser (
-        FixityEnv,
-        HasFixityEnv (..),
-        opParse,
-) where
+module Plato.Nicifier.OpParser (FixityEnv, HasFixityEnv (..), opParse) where
 
 import Control.Exception.Safe
 import Control.Monad
