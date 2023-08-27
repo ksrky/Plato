@@ -52,7 +52,7 @@ prpolyTrans sks1 coer = Fn $ \e -> TAbsE sks1 (unCoer coer $ TAppE e (map (VarT 
 
 prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coer = return coer
-prfunTrans sks _ Id = return $ Fn $ \e -> TAbsE sks (TAppE e (map (VarT . fst) sks))
+prfunTrans _ _ Id = return Id
 prfunTrans sks arg_ty coer = do
         id <- newVarIdent
         let coer' e =
