@@ -9,18 +9,10 @@ import Control.Exception.Safe (
         catches,
         throw,
  )
-import Control.Monad.IO.Class (MonadIO (..))
-import GHC.Stack (HasCallStack)
-import Prettyprinter (
-        Doc,
-        Pretty (pretty),
-        colon,
-        defaultLayoutOptions,
-        hcat,
-        layoutPretty,
-        space,
- )
-import Prettyprinter.Render.String (renderString)
+import Control.Monad.IO.Class
+import GHC.Stack
+import Prettyprinter
+import Prettyprinter.Render.String
 
 import Plato.Common.Location
 
@@ -48,7 +40,7 @@ continueError action =
         )
 
 unreachable :: HasCallStack => String -> a
-unreachable s = error $ "unreachable: " ++ s
+unreachable s = error $ "unreachable:\n" ++ s
 
 ----------------------------------------------------------------
 -- Error type
@@ -56,9 +48,9 @@ unreachable s = error $ "unreachable: " ++ s
 
 locatedErrorMessage :: Span -> Doc ann -> String
 locatedErrorMessage NoSpan msg =
-        "<no location info>: " ++ renderString (layoutPretty defaultLayoutOptions msg)
+        renderString (layoutPretty defaultLayoutOptions $ hcat ["<no location info>: error: ", line, indent 4 msg])
 locatedErrorMessage sp msg =
-        renderString (layoutPretty defaultLayoutOptions $ hcat [pretty sp, colon, space, msg])
+        renderString (layoutPretty defaultLayoutOptions $ hcat [pretty sp, ": error: ", line, indent 4 msg])
 
 -- | Error with location
 data LocatedError = forall ann. LocErr Span (Doc ann)

@@ -52,52 +52,62 @@ checkPats ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [LPat] ->
         [Rho] ->
-        m ([LPat], [(Ident, Sigma)])
+        m [(Ident, Sigma)]
 checkPats pats pat_tys = do
-        (pats', binds) <- unzip <$> zipWithM checkPat pats pat_tys
-        return (pats', concat binds)
+        binds <- zipWithM checkPat pats pat_tys
+        return $ concat binds
 
 -- | Type checking of patterns
 checkPat ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
         Rho ->
-        m (LPat, [(Ident, Sigma)])
+        m [(Ident, Sigma)]
 checkPat pat ty = tcPat pat (Check ty)
 
 tcPat ::
+        forall e m.
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
         Expected Sigma ->
-        m (LPat, [(Ident, Sigma)])
-tcPat pat@(L _ WildP) _ = return (pat, [])
-tcPat pat@(L _ (VarP var)) (Infer ref) = do
-        var_ty <- newTyVar
-        writeMIORef ref var_ty
-        return (pat, [(var, var_ty)])
-tcPat pat@(L _ (VarP var)) (Check exp_ty) = return (pat, [(var, exp_ty)])
-tcPat (L sp (ConP con pats)) exp_ty = do
-        (arg_tys, res_ty) <- instDataCon con
-        unless (length pats == length arg_tys) $ do
-                throwLocErr sp $
-                        hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
-        (pats', binds) <- checkPats pats arg_tys
-        res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
-        void $ apInstSigma sp instPatSigma res_ty' exp_ty
-        return (L sp (ConP con pats'), binds)
-tcPat (L sp (AnnP pat ann_ty)) exp_ty = do
-        (pat', binds) <- checkPat pat ann_ty
-        void $ apInstSigma sp instPatSigma ann_ty exp_ty
-        return (pat', binds)
-tcPat (L _ TagP{}) _ = unreachable "received TagP"
+        m [(Ident, Sigma)]
+tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
+    where
+        tcPat' :: Pat -> Expected Sigma -> m [(Ident, Sigma)]
+        tcPat' WildP _ = return []
+        tcPat' (VarP var) (Infer ref) = do
+                var_ty <- newTyVar
+                writeMIORef ref var_ty
+                return [(var, var_ty)]
+        tcPat' (VarP var) (Check exp_ty) = return [(var, exp_ty)]
+        tcPat' (ConP con pats) exp_ty = do
+                (arg_tys, res_ty) <- instDataCon con
+                unless (length pats == length arg_tys) $ do
+                        throwLocErr sp $
+                                hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+                binds <- checkPats pats arg_tys
+                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                instPatSigma_ res_ty' exp_ty
+                return binds
+        tcPat' (AnnP pat ann_ty) exp_ty = do
+                binds <- checkPat pat ann_ty
+                instPatSigma_ ann_ty exp_ty
+                return binds
+        tcPat' TagP{} _ = unreachable "received TagP"
+        instPatSigma_ :: Sigma -> Expected Rho -> m ()
+        instPatSigma_ sigma (Check rho) = catches (instPatSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
+        instPatSigma_ sigma (Infer ref) =
+                catches (instPatSigma sigma exp_ty)
+                        . tcErrorHandler sp sigma
+                        =<< readMIORef ref
 
 instPatSigma ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
         Expected Sigma ->
-        m Coercion
-instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty >> return mempty
-instPatSigma pat_ty (Check exp_ty) = subsCheck pat_ty exp_ty
+        m ()
+instPatSigma pat_ty (Infer ref) = void $ writeMIORef ref pat_ty
+instPatSigma pat_ty (Check exp_ty) = void $ subsCheck pat_ty exp_ty
 
 instDataCon ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
@@ -139,18 +149,18 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
                 sigma <- zonk =<< find var =<< asks getTypEnv
-                coer <- apInstSigma sp instSigma sigma exp_ty
+                coer <- instSigma_ sigma exp_ty
                 return $ unCoer coer $ VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
+                (arg_ty, res_ty) <- unifyFun_ fun_ty
                 arg' <- checkSigma arg arg_ty
                 res_ty' <- zonk res_ty -- Note: Argument type may apply to result type
-                coer <- apInstSigma sp instSigma res_ty' exp_ty
+                coer <- instSigma_ res_ty' exp_ty
                 return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var mbty body) (Check exp_ty) = do
-                (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
-                void $ maybe (return mempty) (`subsCheck` var_ty) mbty
+                (var_ty, body_ty) <- unifyFun_ exp_ty
+                void $ maybe (return mempty) (`instSigma_` Check var_ty) mbty
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
                 return $ AbsE' var var_ty (unLoc body')
         tcRho' (AbsE var mbty body) (Infer ref) = do
@@ -172,15 +182,23 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (test', pat_ty) <- inferRho test
                 exp_ty' <- zapToMonoType exp_ty
                 alts' <- forM alts $ \(pat, body) -> do
-                        (pat', binds) <- checkPat pat pat_ty
+                        binds <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
-                        coer <- apInstSigma sp instSigma body_ty exp_ty'
-                        return (pat', unCoer coer $ unLoc body')
+                        coer <- instSigma_ body_ty exp_ty'
+                        return (pat, unCoer coer $ unLoc body')
                 transCase $ CaseE' (unLoc test') pat_ty alts'
         tcRho' (AnnE exp ann_ty) exp_ty = do
                 exp' <- checkSigma exp ann_ty
-                coer <- apInstSigma sp instSigma ann_ty exp_ty
+                coer <- instSigma_ ann_ty exp_ty
                 return $ unCoer coer $ unLoc exp'
+        instSigma_ :: Sigma -> Expected Rho -> m Coercion
+        instSigma_ sigma (Check rho) = catches (instSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
+        instSigma_ sigma (Infer ref) =
+                catches (instSigma sigma exp_ty)
+                        . tcErrorHandler sp sigma
+                        =<< readMIORef ref
+        unifyFun_ :: Rho -> m (Sigma, Rho)
+        unifyFun_ rho = catches (unifyFun rho) (unifunErrorHandler sp rho)
 
 zapToMonoType :: (MonadReader e m, HasUniq e, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty
@@ -222,9 +240,12 @@ checkClauses ::
         m (Expr 'Typed)
 checkClauses clauses sigma_ty = do
         (coer, sk_qnts, rho_ty) <- skolemise sigma_ty
-        (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
+        (pat_tys, res_ty) <-
+                catches
+                        (unifyFuns (length (fst $ head clauses)) rho_ty)
+                        (unifunErrorHandler (getLoc clauses) rho_ty)
         clauses' <- forM clauses $ \(pats, body) -> do
-                (_, binds) <- checkPats pats pat_tys
+                binds <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
                 return (pats, unLoc body')
         exp <- transClauses pat_tys clauses'
@@ -237,32 +258,6 @@ checkClauses clauses sigma_ty = do
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
 instSigma sigma (Check rho) = subsCheckRho sigma rho
 instSigma sigma (Infer r) = do
-        (coercion, rho) <- instantiate sigma
+        (coer, rho) <- instantiate sigma
         writeMIORef r rho
-        return coercion
-
------------------------------------------------------------
--- Applying a function with catching errors
------------------------------------------------------------
-apInstSigma ::
-        (MonadIO m, MonadCatch m) =>
-        Span ->
-        (Type -> Expected Type -> m a) ->
-        Type ->
-        Expected Type ->
-        m a
-apInstSigma sp inst ty_exp expty@(Check ty_sup) = do
-        ty_exp' <- zonk ty_exp
-        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
-apInstSigma sp inst ty_exp expty@(Infer ref) = do
-        ty_exp' <- zonk ty_exp
-        ty_sup <- readMIORef ref
-        catches (inst ty_exp expty) (instErrHandler sp ty_exp' ty_sup)
-
-apUnifyFun ::
-        MonadCatch m =>
-        Span ->
-        (Rho -> m (a, Rho)) ->
-        Rho ->
-        m (a, Rho)
-apUnifyFun sp unifun rho = catches (unifun rho) (unifunErrHandler sp rho)
+        return coer

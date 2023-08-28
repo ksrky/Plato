@@ -14,8 +14,7 @@ import Plato.Typing.Env
 import Plato.Typing.Error
 import Plato.Typing.Kc.Unify
 
-checkKindStar ::
-        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) => LType -> m ()
+checkKindStar :: (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) => LType -> m ()
 checkKindStar ty = checkKind ty StarK
 
 inferKind ::

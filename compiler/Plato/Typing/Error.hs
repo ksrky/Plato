@@ -2,8 +2,8 @@ module Plato.Typing.Error (
         UnificationFail (..),
         OccursCheckFail (..),
         SubsCheckFail (..),
-        instErrHandler,
-        unifunErrHandler,
+        tcErrorHandler,
+        unifunErrorHandler,
         kcErrorHandler,
 ) where
 
@@ -22,14 +22,14 @@ instance Exception UnificationFail
 instance Exception OccursCheckFail
 instance Exception SubsCheckFail
 
-instErrHandler :: MonadCatch m => Span -> Type -> Type -> [Handler m a]
-instErrHandler sp ty_exp ty_sup =
+tcErrorHandler :: MonadCatch m => Span -> Type -> Type -> [Handler m a]
+tcErrorHandler sp ty_act ty_exp =
         [ Handler $ \UnificationFail ->
                 throwLocErr sp $
                         vsep
-                                [ "Infered type doesn't match expected type from the signature."
-                                , "Expected type:" <+> pretty ty_sup
-                                , " Infered type:" <+> pretty ty_exp
+                                [ "Couldn't match expected type with actual type."
+                                , "Expected type:" <+> pretty ty_exp
+                                , "  Actual type:" <+> pretty ty_act
                                 ]
         , Handler $ \OccursCheckFail ->
                 throwLocErr sp $
@@ -37,20 +37,20 @@ instErrHandler sp ty_exp ty_sup =
                                 [ "Infinite type:"
                                 , squotes $ pretty ty_exp
                                 , "~"
-                                , squotes $ pretty ty_sup
+                                , squotes $ pretty ty_act
                                 ]
         , Handler $ \SubsCheckFail ->
-                throwLocErr sp $ hsep ["Subsumption check failed: ", pretty ty_exp <> comma, pretty ty_sup]
+                throwLocErr sp $ hsep ["Subsumption check failed: ", pretty ty_exp <> comma, pretty ty_act]
         ]
 
-unifunErrHandler :: MonadCatch m => Span -> Rho -> [Handler m a]
-unifunErrHandler sp rho =
-        [ Handler $ \(UnificationFail{}) ->
+unifunErrorHandler :: MonadCatch m => Span -> Rho -> [Handler m a]
+unifunErrorHandler sp rho =
+        [ Handler $ \UnificationFail ->
                 throwLocErr sp $
                         vsep
                                 [ "Infered type doesn't match expected type from the signature."
                                 , "Expected type: " <+> pretty rho
-                                , "Infered function type"
+                                , "  Actual type: _ -> _"
                                 ]
         ]
 

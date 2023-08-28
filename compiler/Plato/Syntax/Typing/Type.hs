@@ -71,8 +71,8 @@ instance Ord MetaTv where
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty TyVar where
-        pretty (BoundTv id) = prettyId id
-        pretty (SkolemTv id) = prettyId id
+        pretty (BoundTv id) = pretty id
+        pretty (SkolemTv id) = pretty id
 
 instance Pretty MetaTv where
         pretty (MetaTv u _) = dollar <> pretty u
@@ -89,7 +89,7 @@ instance Pretty Type where
 
 instance PrettyWithContext Type where
         pretty' _ (VarT tv) = pretty tv
-        pretty' _ (ConT tc) = prettyId tc
+        pretty' _ (ConT tc) = pretty tc
         pretty' c (ArrT arg res) = contextParens c 0 $ hsep [pretty' 1 arg, arrow, pretty res]
         pretty' c (AllT [] body) = pretty' c body
         pretty' c (AllT qnts body) = contextParens c 0 $ hsep [braces (prQuants qnts), pretty body]

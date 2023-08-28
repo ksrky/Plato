@@ -33,9 +33,7 @@ newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type
 newTyVar = MetaT <$> newMetaTv
 
 newSkolemTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => TyVar -> m TyVar
-newSkolemTyVar tv = do
-        u <- newUniq
-        return $ SkolemTv (unTyVar tv){stamp = u}
+newSkolemTyVar tv = SkolemTv <$> reassignUniq (unTyVar tv)
 
 newMetaTv :: (MonadReader e m, HasUniq e, MonadIO m) => m MetaTv
 newMetaTv = MetaTv <$> newUniq <*> newMIORef Nothing

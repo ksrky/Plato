@@ -65,7 +65,7 @@ instance Pretty (Expr a) where
         pretty = pretty' 0
 
 instance PrettyWithContext (Expr a) where
-        pretty' _ (VarE var) = prettyId var
+        pretty' _ (VarE var) = pretty var
         pretty' c (AppE fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
         pretty' c (AppE' fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
         pretty' c (AbsE var Nothing body) = contextParens c 0 $ hsep [backslash, pretty var, dot, pretty body]
@@ -81,11 +81,11 @@ instance PrettyWithContext (Expr a) where
                 contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
             where
                 prdec ((id, ty), clses) =
-                        hsep [prettyId id, colon, pretty ty, "where", braces $ map prClause clses `sepBy` semi]
+                        hsep [pretty id, colon, pretty ty, "where", braces $ map prClause clses `sepBy` semi]
         pretty' c (LetE' decs body) =
                 contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
             where
-                prdec ((id, ty), exp) = hsep [prettyId id, colon, pretty ty, equals, pretty exp]
+                prdec ((id, ty), exp) = hsep [pretty id, colon, pretty ty, equals, pretty exp]
         pretty' c (CaseE match alts) =
                 contextParens c 0 $
                         hsep

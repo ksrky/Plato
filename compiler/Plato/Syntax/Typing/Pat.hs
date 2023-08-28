@@ -25,9 +25,9 @@ instance Pretty Pat where
         pretty = pretty' 0
 
 instance PrettyWithContext Pat where
-        pretty' _ (ConP con []) = prettyId con
-        pretty' c (ConP con pats) = contextParens c 0 $ hsep (prettyId con : map (pretty' 1) pats)
-        pretty' _ (VarP var) = prettyId var
+        pretty' _ (ConP con []) = pretty con
+        pretty' c (ConP con pats) = contextParens c 0 $ hsep (pretty con : map (pretty' 1) pats)
+        pretty' _ (VarP var) = pretty var
         pretty' _ WildP = wildcard
         pretty' _ (AnnP pat ann_ty) = parens $ hsep [pretty' 0 pat, colon, pretty' 0 ann_ty]
         pretty' _ (TagP con args) = hsep $ map pretty (con : map fst args)
