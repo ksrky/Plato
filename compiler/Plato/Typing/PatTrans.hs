@@ -28,17 +28,17 @@ transClauses ::
 transClauses tys clauses = do
         vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
         exp <- match vars clauses
-        return $ L (getLoc exp) $ foldr (uncurry AbsEok) (unLoc exp) vars
+        return $ L (getLoc exp) $ foldr (uncurry AbsE') (unLoc exp) vars
 
 transCase ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         Expr 'Typed ->
         m (Expr 'Typed)
-transCase (CaseEok exp ty alts) = do
+transCase (CaseE' exp ty alts) = do
         var <- newVarIdent
         let clauses :: [Clause 'Typed] = map (\(p, e) -> ([p], e)) alts
         altsexp <- match [(var, ty)] clauses
-        return $ AppE (AbsEok var ty <$> altsexp) exp
+        return $ AppE (AbsE' var ty <$> altsexp) exp
 transCase _ = unreachable "Expected type-checked case expression"
 
 constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
@@ -59,13 +59,13 @@ subst exp replace id = subst' <$> exp
                 | var == id = replace
                 | otherwise = VarE var
         subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
-        subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
+        subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
         subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetEok bnds sigs body) =
-                LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
-        subst' (CaseEok match ty alts) =
-                CaseEok (subst' <$> match) ty (map (\(id, exp) -> (id, subst' <$> exp)) alts)
+        subst' (LetE' bnds sigs body) =
+                LetE' (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
+        subst' (CaseE' match ty alts) =
+                CaseE' (subst' <$> match) ty (map (\(id, exp) -> (id, subst' <$> exp)) alts)
 
 isVar :: Clause a -> Bool
 isVar (L _ WildP{} : _, _) = True
@@ -84,7 +84,7 @@ match ::
         [(Ident, Type)] ->
         [Clause 'Typed] ->
         m (LExpr 'Typed)
-match [(var, ty)] [] = return $ noLoc (CaseEok (noLoc $ VarE var) ty [])
+match [(var, ty)] [] = return $ noLoc (CaseE' (noLoc $ VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
 match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
@@ -117,7 +117,7 @@ matchCon ::
 matchCon (var, ty) rest clauses = do
         constrs <- constructors ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ noLoc $ CaseEok (noLoc $ VarE var) ty alts
+        return $ noLoc $ CaseE' (noLoc $ VarE var) ty alts
 
 choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]

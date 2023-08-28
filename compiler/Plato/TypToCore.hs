@@ -26,7 +26,7 @@ import Plato.Syntax.Typing.Helper
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
 elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
-elabExpr (T.AbsEok id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
+elabExpr (T.AbsE' id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
 elabExpr (T.TAppE fun tyargs) = do
         t <- elabExpr fun
         tys <- mapM elabType tyargs
@@ -34,8 +34,8 @@ elabExpr (T.TAppE fun tyargs) = do
 elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) t qnts
-elabExpr (T.LetEok fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
-elabExpr (T.CaseEok match _ alts) = do
+elabExpr (T.LetE' fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
+elabExpr (T.CaseE' match _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do

@@ -25,21 +25,21 @@ instance Zonking a => Zonking [a] where
 instance Zonking (Expr 'Typed) where
         zonk (VarE id) = return (VarE id)
         zonk (AppE fun arg) = AppE <$> zonk fun <*> zonk arg
-        zonk (AbsEok var ty body) = AbsEok var <$> zonk ty <*> zonk body
+        zonk (AbsE' var ty body) = AbsE' var <$> zonk ty <*> zonk body
         zonk (TAppE exp tys) = TAppE <$> zonk exp <*> mapM zonk tys
         zonk (TAbsE qnts body) = do
                 qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonk kn) qnts
                 TAbsE qnts' <$> zonk body
-        zonk (LetEok bnds spcs body) = do
+        zonk (LetE' bnds spcs body) = do
                 bnds' <- mapM (\(id, exp) -> (id,) <$> zonk exp) bnds
                 spcs' <- mapM (\(id, ty) -> (id,) <$> zonk ty) spcs
                 body' <- zonk body
-                return $ LetEok bnds' spcs' body'
-        zonk (CaseEok test ann alts) = do
+                return $ LetE' bnds' spcs' body'
+        zonk (CaseE' test ann alts) = do
                 match' <- zonk test
                 ann' <- zonk ann
                 alts' <- mapM (\(pats, exp) -> (,) <$> mapM zonk pats <*> zonk exp) alts
-                return $ CaseEok match' ann' alts'
+                return $ CaseE' match' ann' alts'
 
 instance Zonking Pat where
         zonk (TagP con args) = TagP con <$> mapM (\(arg, ty) -> (arg,) <$> zonk ty) args

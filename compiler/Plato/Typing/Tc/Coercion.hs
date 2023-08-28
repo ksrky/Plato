@@ -58,7 +58,7 @@ prfunTrans sks arg_ty coer = do
         let coer' e =
                 unCoer coer $
                         TAbsE sks (AppE (noLoc $ TAppE e (map (VarT . fst) sks)) (noLoc $ VarE id))
-        return $ Fn $ AbsEok id arg_ty . coer'
+        return $ Fn $ AbsE' id arg_ty . coer'
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 <> coer2
@@ -68,4 +68,4 @@ funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coer
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- newVarIdent
-        return $ Fn $ \f -> AbsEok id a2 (unCoer co_res $ AppE (noLoc f) (noLoc $ unCoer co_arg $ VarE id))
+        return $ Fn $ \f -> AbsE' id a2 (unCoer co_res $ AppE (noLoc f) (noLoc $ unCoer co_arg $ VarE id))

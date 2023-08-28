@@ -152,12 +152,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
                 void $ maybe (return mempty) (`subsCheck` var_ty) mbty
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
-                return $ AbsEok var var_ty (unLoc body')
+                return $ AbsE' var var_ty (unLoc body')
         tcRho' (AbsE var mbty body) (Infer ref) = do
                 var_ty <- maybe newTyVar return mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsEok var var_ty (unLoc body')
+                return $ AbsE' var var_ty (unLoc body')
         tcRho' (LetE bnds spcs body) exp_ty = local (modifyTypEnv $ extendList spcs) $ do
                 bnds' <- forM bnds $ \(id, clauses) -> do
                         sigma <- zonk =<< find id =<< asks getTypEnv
@@ -165,7 +165,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         return (id, exp')
                 body' <- tcRho body exp_ty
                 mapM_ (\(_, ty) -> checkKindStar ty) spcs
-                return $ LetEok bnds' spcs body'
+                return $ LetE' bnds' spcs body'
         tcRho' (CaseE test alts) exp_ty = do
                 (test', pat_ty) <- inferRho test
                 exp_ty' <- zapToMonoType exp_ty
@@ -174,7 +174,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- apInstSigma sp instSigma body_ty exp_ty'
                         return (pat', unCoer coer <$> body')
-                transCase $ CaseEok test' pat_ty alts'
+                transCase $ CaseE' test' pat_ty alts'
         tcRho' (AnnE exp ann_ty) exp_ty = do
                 exp' <- checkSigma exp ann_ty
                 coer <- apInstSigma sp instSigma ann_ty exp_ty
