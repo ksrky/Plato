@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Plato.Syntax.Typing.Expr (
         LExpr,
@@ -20,21 +21,26 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 type LExpr a = Located (Expr a)
 
-type Clause a = ([LPat], LExpr a)
+type family Clause (a :: TcFlag)
+type instance Clause 'Untyped = ([LPat], LExpr 'Untyped)
+type instance Clause 'Typed = ([LPat], Expr 'Typed)
 
-type Alt a = (LPat, LExpr a)
+type family Alt (a :: TcFlag)
+type instance Alt 'Untyped = (LPat, LExpr 'Untyped)
+type instance Alt 'Typed = (LPat, Expr 'Typed)
 
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
-        AppE :: LExpr a -> LExpr a -> Expr a
+        AppE :: LExpr 'Untyped -> LExpr 'Untyped -> Expr 'Untyped
+        AppE' :: Expr 'Typed -> Expr 'Typed -> Expr 'Typed
         AbsE :: Ident -> Maybe Type -> LExpr 'Untyped -> Expr 'Untyped
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
         LetE :: [(Ident, [Clause 'Untyped])] -> [(Ident, LType)] -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: [(Ident, LExpr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
+        LetE' :: [(Ident, Expr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
-        CaseE' :: LExpr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
+        CaseE' :: Expr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
 
 ----------------------------------------------------------------
@@ -43,13 +49,16 @@ data Expr (a :: TcFlag) where
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
 
-instance HasLoc (Clause a) where
+instance HasLoc ([LPat], LExpr 'Untyped) where
         getLoc (pats, exp) = getLoc pats <> getLoc exp
+
+instance HasLoc (LPat, LExpr 'Untyped) where
+        getLoc (pat, exp) = getLoc pat <> getLoc exp
 
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-prClause :: Clause a -> Doc ann
+prClause :: Clause 'Untyped -> Doc ann
 prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 prBinds :: [(Ident, [Clause 'Untyped])] -> Doc ann
@@ -65,10 +74,10 @@ prBinds bnds =
                 bnds
                 `sepBy` semi
 
-prBinds' :: [(Ident, LExpr 'Typed)] -> Doc ann
+prBinds' :: Pretty a => [(Ident, a)] -> Doc ann
 prBinds' bnds = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) bnds `sepBy` semi
 
-prSpecs :: [(Ident, LType)] -> Doc ann
+prSpecs :: Pretty a => [(Ident, a)] -> Doc ann
 prSpecs spcs = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) spcs `sepBy` semi
 
 instance Pretty (Expr a) where
@@ -77,6 +86,7 @@ instance Pretty (Expr a) where
 instance PrettyWithContext (Expr a) where
         pretty' _ (VarE var) = prettyId var
         pretty' c (AppE fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' c (AppE' fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
         pretty' c (AbsE var Nothing body) = contextParens c 0 $ hsep [backslash, pretty var, dot, pretty body]
         pretty' c (AbsE var (Just var_ty) body) =
                 contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]

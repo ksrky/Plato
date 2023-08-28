@@ -24,7 +24,7 @@ instance Zonking a => Zonking [a] where
 
 instance Zonking (Expr 'Typed) where
         zonk (VarE id) = return (VarE id)
-        zonk (AppE fun arg) = AppE <$> zonk fun <*> zonk arg
+        zonk (AppE' fun arg) = AppE' <$> zonk fun <*> zonk arg
         zonk (AbsE' var ty body) = AbsE' var <$> zonk ty <*> zonk body
         zonk (TAppE exp tys) = TAppE <$> zonk exp <*> mapM zonk tys
         zonk (TAbsE qnts body) = do

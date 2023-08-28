@@ -25,7 +25,7 @@ import Plato.Syntax.Typing.Helper
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
-elabExpr (T.AppE fun arg) = C.App <$> elabExpr (unLoc fun) <*> elabExpr (unLoc arg)
+elabExpr (T.AppE' fun arg) = C.App <$> elabExpr fun <*> elabExpr arg
 elabExpr (T.AbsE' id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
 elabExpr (T.TAppE fun tyargs) = do
         t <- elabExpr fun
@@ -35,15 +35,15 @@ elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) t qnts
 elabExpr (T.LetE' fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
-elabExpr (T.CaseE' match _ alts) = do
+elabExpr (T.CaseE' test _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do
                 (con, args) <- elabPat (unLoc pat)
                 t <- mkUnfold $ C.Var idY
-                (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr (unLoc exp)))
+                (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr exp))
         C.Split
-                <$> elabExpr (unLoc match)
+                <$> elabExpr test
                 <*> pure (idX, idY)
                 <*> pure (C.Force $ C.Case (C.Var idX) alts')
 
@@ -76,10 +76,10 @@ elabKind kn@T.MetaK{} = do
         liftIO $ emergencyM platoLog $ "Zonking may " ++ show kn
         unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [(Ident, T.LExpr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
+elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [(Ident, T.Expr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
 elabFunDecls fbnds fspcs = do
         fspcs' <- mapM (\(id, ty) -> C.Decl id <$> elabType (unLoc ty)) fspcs
-        fbnds' <- mapM (\(id, exp) -> C.Defn id <$> elabExpr (unLoc exp)) fbnds
+        fbnds' <- mapM (\(id, exp) -> C.Defn id <$> elabExpr exp) fbnds
         return $ fspcs' ++ fbnds'
 
 elabDecl :: forall e m. (MonadReader e m, HasUniq e, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
@@ -121,7 +121,7 @@ elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
         ty' <- elabType $ unLoc ty
         return [C.Defn id ty']
 elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
-        exp' <- elabExpr $ unLoc exp
+        exp' <- elabExpr exp
         return [C.Defn id exp']
 
 typToCore :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]

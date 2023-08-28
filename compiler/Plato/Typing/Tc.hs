@@ -147,7 +147,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 arg' <- checkSigma arg arg_ty
                 res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
                 coer <- apInstSigma sp instSigma res_ty' exp_ty
-                return $ unCoer coer $ AppE fun' arg'
+                return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var mbty body) (Check exp_ty) = do
                 (var_ty, body_ty) <- apUnifyFun sp unifyFun exp_ty
                 void $ maybe (return mempty) (`subsCheck` var_ty) mbty
@@ -173,8 +173,8 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- apInstSigma sp instSigma body_ty exp_ty'
-                        return (pat', unCoer coer <$> body')
-                transCase $ CaseE' test' pat_ty alts'
+                        return (pat', unCoer coer $ unLoc body')
+                transCase $ CaseE' (unLoc test') pat_ty alts'
         tcRho' (AnnE exp ann_ty) exp_ty = do
                 exp' <- checkSigma exp ann_ty
                 coer <- apInstSigma sp instSigma ann_ty exp_ty
@@ -217,19 +217,19 @@ checkClauses ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [Clause 'Untyped] ->
         Sigma ->
-        m (LExpr 'Typed)
+        m (Expr 'Typed)
 checkClauses clauses sigma_ty = do
         (coer, sk_qnts, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <- apUnifyFun (getLoc clauses) (unifyFuns (length (fst $ head clauses))) rho_ty
         clauses' <- forM clauses $ \(pats, body) -> do
                 (_, binds) <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
-                return (pats, body')
+                return (pats, unLoc body')
         exp <- transClauses pat_tys clauses'
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst sk_qnts)
         unless (null bad_tvs) $ throwError "Type not polymorphic enough"
-        return $ unCoer (coer <> genTrans sk_qnts) <$> exp
+        return $ unCoer (coer <> genTrans sk_qnts) exp
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
