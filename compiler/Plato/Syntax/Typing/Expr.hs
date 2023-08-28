@@ -37,8 +37,8 @@ data Expr (a :: TcFlag) where
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
-        LetE :: [(Ident, [Clause 'Untyped])] -> [(Ident, LType)] -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: [(Ident, Expr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
+        LetE :: [((Ident, LType), [Clause 'Untyped])] -> LExpr 'Untyped -> Expr 'Untyped
+        LetE' :: [((Ident, Type), Expr 'Typed)] -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
@@ -61,25 +61,6 @@ instance HasLoc (LPat, LExpr 'Untyped) where
 prClause :: Clause 'Untyped -> Doc ann
 prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
-prBinds :: [(Ident, [Clause 'Untyped])] -> Doc ann
-prBinds bnds =
-        map
-                ( \(id, clses) ->
-                        hsep
-                                [ prettyId id
-                                , "where"
-                                , braces $ map prClause clses `sepBy` semi
-                                ]
-                )
-                bnds
-                `sepBy` semi
-
-prBinds' :: Pretty a => [(Ident, a)] -> Doc ann
-prBinds' bnds = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) bnds `sepBy` semi
-
-prSpecs :: Pretty a => [(Ident, a)] -> Doc ann
-prSpecs spcs = map (\(id, exp) -> hsep [prettyId id, equals, pretty exp]) spcs `sepBy` semi
-
 instance Pretty (Expr a) where
         pretty = pretty' 0
 
@@ -96,10 +77,15 @@ instance PrettyWithContext (Expr a) where
         pretty' c (TAppE fun tyargs) = contextParens c 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
         pretty' c (TAbsE [] body) = pretty' c body
         pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty' c (LetE bnds spcs body) =
-                contextParens c 0 $ hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds bnds, "in", pretty body]
-        pretty' c (LetE' bnds spcs body) =
-                contextParens c 0 $ hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds' bnds, "in", pretty body]
+        pretty' c (LetE decs body) =
+                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
+            where
+                prdec ((id, ty), clses) =
+                        hsep [prettyId id, colon, pretty ty, "where", braces $ map prClause clses `sepBy` semi]
+        pretty' c (LetE' decs body) =
+                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
+            where
+                prdec ((id, ty), exp) = hsep [prettyId id, colon, pretty ty, equals, pretty exp]
         pretty' c (CaseE match alts) =
                 contextParens c 0 $
                         hsep

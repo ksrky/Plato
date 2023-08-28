@@ -34,7 +34,7 @@ elabExpr (T.TAppE fun tyargs) = do
 elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) t qnts
-elabExpr (T.LetE' fbnds fspcs body) = C.Let <$> elabFunDecls fbnds fspcs <*> elabExpr (unLoc body)
+elabExpr (T.LetE' decs body) = C.Let <$> elabFunDecls decs <*> elabExpr (unLoc body)
 elabExpr (T.CaseE' test _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
@@ -76,11 +76,11 @@ elabKind kn@T.MetaK{} = do
         liftIO $ emergencyM platoLog $ "Zonking may " ++ show kn
         unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [(Ident, T.Expr 'T.Typed)] -> [(Ident, T.LType)] -> m C.Prog
-elabFunDecls fbnds fspcs = do
-        fspcs' <- mapM (\(id, ty) -> C.Decl id <$> elabType (unLoc ty)) fspcs
-        fbnds' <- mapM (\(id, exp) -> C.Defn id <$> elabExpr exp) fbnds
-        return $ fspcs' ++ fbnds'
+elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [((Ident, T.Type), T.Expr 'T.Typed)] -> m C.Prog
+elabFunDecls decs = do
+        decs' <- mapM (\((id, ty), _) -> C.Decl id <$> elabType ty) decs
+        defs <- mapM (\((id, _), exp) -> C.Defn id <$> elabExpr exp) decs
+        return $ decs' ++ defs
 
 elabDecl :: forall e m. (MonadReader e m, HasUniq e, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
 elabDecl (T.SpecDecl (T.TypSpec id kn)) = do

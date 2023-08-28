@@ -30,11 +30,10 @@ instance Zonking (Expr 'Typed) where
         zonk (TAbsE qnts body) = do
                 qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonk kn) qnts
                 TAbsE qnts' <$> zonk body
-        zonk (LetE' bnds spcs body) = do
-                bnds' <- mapM (\(id, exp) -> (id,) <$> zonk exp) bnds
-                spcs' <- mapM (\(id, ty) -> (id,) <$> zonk ty) spcs
+        zonk (LetE' decs body) = do
+                decs' <- mapM (\((id, ty), exp) -> (,) <$> ((id,) <$> zonk ty) <*> zonk exp) decs
                 body' <- zonk body
-                return $ LetE' bnds' spcs' body'
+                return $ LetE' decs' body'
         zonk (CaseE' test ann alts) = do
                 match' <- zonk test
                 ann' <- zonk ann

@@ -58,8 +58,9 @@ elabExpr (P.LetE fdecs body) = do
         env <- extendScopeFromSeq fdecs
         local (const env) $ do
                 (bnds, spcs) <- elabFunDecls =<< bundleClauses fdecs
+                let decs = [((id1, ty), clses) | (id1, ty) <- spcs, (id2, clses) <- bnds, id1 == id2]
                 body' <- elabExpr `traverse` body
-                return $ T.LetE bnds spcs body'
+                return $ T.LetE decs body'
 elabExpr (P.CaseE match alts) = do
         match' <- elabExpr `traverse` match
         alts' <- forM alts $ \(pat, body) -> do

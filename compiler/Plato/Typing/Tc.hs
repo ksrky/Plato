@@ -145,7 +145,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (fun', fun_ty) <- inferRho fun
                 (arg_ty, res_ty) <- apUnifyFun sp unifyFun fun_ty
                 arg' <- checkSigma arg arg_ty
-                res_ty' <- zonk res_ty -- Note: Argument type may apply to result type -- TODO
+                res_ty' <- zonk res_ty -- Note: Argument type may apply to result type
                 coer <- apInstSigma sp instSigma res_ty' exp_ty
                 return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var mbty body) (Check exp_ty) = do
@@ -158,14 +158,16 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsE' var var_ty (unLoc body')
-        tcRho' (LetE bnds spcs body) exp_ty = local (modifyTypEnv $ extendList spcs) $ do
-                bnds' <- forM bnds $ \(id, clauses) -> do
-                        sigma <- zonk =<< find id =<< asks getTypEnv
-                        exp' <- checkClauses clauses sigma
-                        return (id, exp')
-                body' <- tcRho body exp_ty
-                mapM_ (\(_, ty) -> checkKindStar ty) spcs
-                return $ LetE' bnds' spcs body'
+        tcRho' (LetE decs body) exp_ty = do
+                let (spcs, _) = unzip decs
+                local (modifyTypEnv $ extendList spcs) $ do
+                        decs' <- forM decs $ \((id, ty), clauses) -> do
+                                sigma <- zonk =<< find id =<< asks getTypEnv
+                                exp' <- checkClauses clauses sigma
+                                checkKindStar ty
+                                return ((id, unLoc ty), exp')
+                        body' <- tcRho body exp_ty
+                        return $ LetE' decs' body'
         tcRho' (CaseE test alts) exp_ty = do
                 (test', pat_ty) <- inferRho test
                 exp_ty' <- zapToMonoType exp_ty

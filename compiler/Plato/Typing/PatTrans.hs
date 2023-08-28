@@ -62,8 +62,8 @@ subst exp replace id = subst' exp
         subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
         subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetE' bnds sigs body) =
-                LetE' (map (\(id, exp) -> (id, subst' exp)) bnds) sigs (subst' <$> body)
+        subst' (LetE' decs body) =
+                LetE' (map (\(idty, exp) -> (idty, subst' exp)) decs) (subst' <$> body)
         subst' (CaseE' test ann_ty alts) =
                 CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
 

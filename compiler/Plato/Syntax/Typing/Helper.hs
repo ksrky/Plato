@@ -5,10 +5,10 @@ import Control.Monad.Reader (MonadReader (ask))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
-import Plato.Common.Location
 
 -- Creating, reading and writing IORef
 newMIORef :: MonadIO m => a -> m (IORef a)
@@ -26,7 +26,7 @@ newUniq = pickUniq =<< ask
 
 -- | Variable generation
 newVarIdent :: (MonadReader e m, HasUniq e, MonadIO m) => m Ident
-newVarIdent = freshIdent $ genName "$"
+newVarIdent = freshIdent dummyName
 
 -- | Type variable generation
 newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type

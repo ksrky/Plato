@@ -42,7 +42,7 @@ spec = do
                         test_scexpr "let {x : ty; x = exp} in x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                LetE [(id1', _)] [(id1, _)] (L _ (VarE id1'')) -> check [(id1, id1'), (id1, id1'')]
+                                                LetE [((id1, _), _)] (L _ (VarE id1')) -> check [(id1, id1')]
                                                 _ -> False
                                         )
                                     )
@@ -80,7 +80,7 @@ spec = do
                                 `shouldReturn` [ "List : $46"
                                                , "data List (a_2 : $45) where {Nil : List_1 a_2; :: : a_2 -> List_1 a_2 -> List_1 a_2}"
                                                , "reverse : {a_13 : $47} List_1 a_13 -> List_1 a_13"
-                                               , "reverse where {l_19 -> let {rev_20 = {a_21 : $48} List_1 a_21 -> List_1 a_21 -> List_1 a_21; rev_20 where {Nil_3 a_30 -> a_30; (::_6 x_33 xs_35) a_36 -> rev_20 xs_35 (::_6 x_33 a_36)}} in rev_20 l_19 Nil_3}"
+                                               , "reverse where {l_19 -> let {rev_20 : {a_21 : $48} List_1 a_21 -> List_1 a_21 -> List_1 a_21 where {Nil_3 a_30 -> a_30; (::_6 x_33 xs_35) a_36 -> rev_20 xs_35 (::_6 x_33 a_36)}} in rev_20 l_19 Nil_3}"
                                                ]
                 it "test15.pla" $ do
                         test_file "test15.pla"
