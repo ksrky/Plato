@@ -55,7 +55,7 @@ occursCheck tv1 ty2 = do
         tvs2 <- getMetaTvs ty2
         when (tv1 `S.member` tvs2) $ do
                 liftIO $ errorM platoLog $ "Occurs check fail: " ++ show tv1 ++ ", " ++ show ty2
-                throw InfiniteType
+                throw OccursCheckFail
 
 badType :: Tau -> Bool
 badType (VarT (BoundTv _)) = True

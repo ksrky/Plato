@@ -1,9 +1,10 @@
 module Plato.Typing.Error (
         UnificationFail (..),
-        InfiniteType (..),
+        OccursCheckFail (..),
         SubsCheckFail (..),
         instErrHandler,
         unifunErrHandler,
+        kcErrorHandler,
 ) where
 
 import Control.Exception.Safe
@@ -14,11 +15,11 @@ import Plato.Common.Location
 import Plato.Syntax.Typing
 
 data UnificationFail = UnificationFail deriving (Show)
-data InfiniteType = InfiniteType deriving (Show)
+data OccursCheckFail = OccursCheckFail deriving (Show)
 data SubsCheckFail = SubsCheckFail deriving (Show)
 
 instance Exception UnificationFail
-instance Exception InfiniteType
+instance Exception OccursCheckFail
 instance Exception SubsCheckFail
 
 instErrHandler :: MonadCatch m => Span -> Type -> Type -> [Handler m a]
@@ -30,7 +31,7 @@ instErrHandler sp ty_exp ty_sup =
                                 , "Expected type:" <+> pretty ty_sup
                                 , " Infered type:" <+> pretty ty_exp
                                 ]
-        , Handler $ \InfiniteType ->
+        , Handler $ \OccursCheckFail ->
                 throwLocErr sp $
                         hsep
                                 [ "Infinite type:"
@@ -50,5 +51,24 @@ unifunErrHandler sp rho =
                                 [ "Infered type doesn't match expected type from the signature."
                                 , "Expected type: " <+> pretty rho
                                 , "Infered function type"
+                                ]
+        ]
+
+kcErrorHandler :: MonadCatch m => Span -> Kind -> Kind -> [Handler m a]
+kcErrorHandler sp kn_exp kn_act =
+        [ Handler $ \UnificationFail ->
+                throwLocErr sp $
+                        vsep
+                                [ "Couldn't match expected kind with actual kind."
+                                , "Expected kind:" <+> pretty kn_exp
+                                , "  Actual kind:" <+> pretty kn_act
+                                ]
+        , Handler $ \OccursCheckFail ->
+                throwLocErr sp $
+                        hsep
+                                [ "Infinite kind:"
+                                , squotes $ pretty kn_exp
+                                , "~"
+                                , squotes $ pretty kn_act
                                 ]
         ]
