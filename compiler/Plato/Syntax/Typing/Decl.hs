@@ -20,7 +20,7 @@ type LDecl a = Located (Decl a)
 data Defn (a :: TcFlag) where
         -- ValDefn Ident LExpr |
         FunDefn :: Ident -> [Clause 'Untyped] -> Defn 'Untyped
-        FunDefnok :: Ident -> LExpr 'Typed -> Defn 'Typed
+        FunDefnok :: Ident -> Expr 'Typed -> Defn 'Typed
         TypDefn :: Ident -> LType -> Defn a
         DatDefn :: Ident -> [Quant] -> [(Ident, LType)] -> Defn 'Untyped
         DatDefnok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Defn 'Typed

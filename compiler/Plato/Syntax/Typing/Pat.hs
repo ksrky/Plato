@@ -1,4 +1,4 @@
-module Plato.Syntax.Typing.Pat (LPat, Pat (..), prAtomPat) where
+module Plato.Syntax.Typing.Pat (LPat, Pat (..)) where
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -14,6 +14,7 @@ data Pat
         = ConP Ident [LPat]
         | VarP Ident
         | WildP
+        | AnnP LPat Type
         | TagP Ident [(Ident, Type)]
         deriving (Eq, Show)
 
@@ -21,16 +22,12 @@ data Pat
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Pat where
-        pretty (ConP con pats) = hsep (pretty con : map prAtomPat pats)
-        pretty (VarP var) = pretty var
-        pretty WildP = "_"
-        pretty (TagP con args) = hsep (map pretty (con : map fst args))
+        pretty = pretty' 0
 
-prAtomPat :: LPat -> Doc ann
-prAtomPat pat@(L _ (ConP con pats))
-        | null pats = pretty con
-        | otherwise = parens $ pretty pat
-prAtomPat pat@(L _ (TagP con args))
-        | null args = pretty con
-        | otherwise = parens $ pretty pat
-prAtomPat pat = pretty pat
+instance PrettyWithContext Pat where
+        pretty' _ (ConP con []) = pretty con
+        pretty' c (ConP con pats) = contextParens c 0 $ hsep (pretty con : map (pretty' 1) pats)
+        pretty' _ (VarP var) = pretty var
+        pretty' _ WildP = wildcard
+        pretty' _ (AnnP pat ann_ty) = parens $ hsep [pretty' 0 pat, colon, pretty' 0 ann_ty]
+        pretty' _ (TagP con args) = hsep $ map pretty (con : map fst args)

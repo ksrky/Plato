@@ -3,14 +3,11 @@
 module Plato.Typing.Env (
         Bind (..),
         TypEnv,
-        initTypEnv,
         HasTypEnv (..),
         EnvManager (..),
         Constrs,
         ConEnv,
-        initConEnv,
         HasConEnv (..),
-        splitConstrTy,
         extendConEnv,
 ) where
 
@@ -22,6 +19,7 @@ import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 
 data Bind
         = ValBind Type
@@ -29,9 +27,6 @@ data Bind
         deriving (Eq, Show)
 
 type TypEnv = IdentMap Bind
-
-initTypEnv :: TypEnv
-initTypEnv = M.empty
 
 class HasTypEnv a where
         getTypEnv :: a -> TypEnv
@@ -75,8 +70,6 @@ type Constrs = [(Ident, [Type])]
 -- | Mapping a type constructor to data constructors
 type ConEnv = IdentMap ([TyVar], Constrs)
 
-initConEnv :: ConEnv
-initConEnv = M.empty
 
 class HasConEnv a where
         getConEnv :: a -> ConEnv
@@ -87,13 +80,6 @@ class HasConEnv a where
 instance HasConEnv ConEnv where
         getConEnv = id
         modifyConEnv = id
-
-splitConstrTy :: Rho -> ([Sigma], Tau)
-splitConstrTy = go []
-    where
-        go :: [Sigma] -> Rho -> ([Sigma], Tau)
-        go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
-        go acc tau = (reverse acc, tau)
 
 extendConEnv :: HasConEnv env => Ident -> [TyVar] -> [(Ident, LType)] -> env -> env
 extendConEnv id params constrs = modifyConEnv $ M.insert id (params, constrs')

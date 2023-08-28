@@ -1,8 +1,4 @@
-{-# LANGUAGE GADTs #-}
-
-module Plato.PsToTyp.Utils (
-        HasDomain (..),
-) where
+module Plato.PsToTyp.Utils (HasDomain (..)) where
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -14,15 +10,22 @@ class HasDomain a where
 instance HasDomain a => HasDomain [a] where
         getDomain = concatMap getDomain
 
-instance HasDomain LPat where
-        getDomain (L _ (ConP _ pats)) = getDomain pats
-        getDomain (L _ (VarP id)) = [id]
-        getDomain (L _ WildP) = []
-        getDomain (L _ (InfixP lhs _ rhs)) = getDomain lhs ++ getDomain rhs
-        getDomain (L _ (FactorP pat)) = getDomain pat
+instance HasDomain a => HasDomain (Located a) where
+        getDomain = getDomain . unLoc
 
-instance HasDomain LDecl where
-        getDomain (L _ (DataD id _ _)) = [id]
-        getDomain (L _ (FunSpecD id _)) = [id]
-        getDomain (L _ FunBindD{}) = []
-        getDomain (L _ FixityD{}) = []
+instance HasDomain Pat where
+        getDomain (ConP _ pats) = getDomain pats
+        getDomain (VarP id) = [id]
+        getDomain WildP = []
+        getDomain (BinP lhs _ rhs) = getDomain lhs ++ getDomain rhs
+        getDomain (AnnP pat _) = getDomain pat
+        getDomain (FactorP pat) = getDomain pat
+
+instance HasDomain TopDecl where
+        getDomain (DataD id _ _) = [id]
+        getDomain (LocalD ld) = getDomain ld
+
+instance HasDomain LocDecl where
+        getDomain (FunSpecD id _) = [id]
+        getDomain FunBindD{} = []
+        getDomain FixityD{} = []

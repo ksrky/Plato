@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.PsToTyp.SynRstrc (
@@ -40,7 +39,7 @@ paramNamesUnique ids = do
         case dup of
                 [] -> return ()
                 (id1, id2) : _ ->
-                        throwLocErr (combineSpans (getLoc id1) (getLoc id2)) $
+                        throwLocErr (getLoc id1 <> getLoc id2) $
                                 hsep ["Conflicting definitions for", squotes $ pretty id2]
 
 paramPatsUnique :: MonadThrow m => [LPat] -> m ()
@@ -62,7 +61,7 @@ dataConType id (con, ty) = loop1 ty
         loop1 ty = loop2 ty
         loop2 :: MonadThrow m => LType -> m ()
         loop2 (L _ (AppT ty1 _)) = loop2 ty1
-        loop2 (L _ (InfixT _ op _))
+        loop2 (L _ (BinT _ op _))
                 | nameIdent id == nameIdent op = return ()
         loop2 (L _ (ConT id2)) | nameIdent id == nameIdent id2 = return ()
         loop2 (L sp ty) = do
@@ -72,10 +71,10 @@ dataConType id (con, ty) = loop1 ty
 {- | RULE 5: Bundling function clauses \\
 Checking number of arguments
 -}
-bundleClauses :: MonadThrow m => [LDecl] -> m [LDecl]
+bundleClauses :: MonadThrow m => [LLocDecl] -> m [LLocDecl]
 bundleClauses = classify . partition
 
-classify :: MonadThrow m => [[LDecl]] -> m [LDecl]
+classify :: MonadThrow m => [[LLocDecl]] -> m [LLocDecl]
 classify [] = return []
 classify ([] : rest) = classify rest
 classify (fspcs@(L _ FunSpecD{} : _) : rest) = (fspcs ++) <$> classify rest
@@ -87,13 +86,12 @@ classify (fbnds@(L sp (FunBindD id [(pats, _)]) : _) : rest) = do
                                 return (psi, ei)
                         | L sp (FunBindD _ [(psi, ei)]) <- fbnds
                         ]
-        let spn = concatSpans $ sp : [spi | L spi FunBindD{} <- fbnds]
+        let spn = mconcat $ sp : [spi | L spi FunBindD{} <- fbnds]
         (L spn (FunBindD id clses) :) <$> classify rest
 classify ((L _ FunBindD{} : _) : _) = unreachable "malformed clauses"
 classify ((L _ FixityD{} : _) : _) = unreachable "deleted by Nicifier"
-classify ((L _ DataD{} : _) : _) = unreachable "Data declaration allowed only top-level"
 
-partition :: [LDecl] -> [[LDecl]]
+partition :: [LLocDecl] -> [[LLocDecl]]
 partition =
         Data.List.groupBy
                 ( curry $ \case

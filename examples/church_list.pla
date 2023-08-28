@@ -1,3 +1,4 @@
+import Function
 import List
 
 data ChurchList a where

@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
 name:           Plato
-version:        1.0.0
+version:        1.0.1
 description:    Please see the README on GitHub at <https://github.com/ksrky/Plato#readme>
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
@@ -32,20 +32,20 @@ library
       Plato.Common.Pretty
       Plato.Common.Uniq
       Plato.Common.Utils
-      Plato.Core.Data
+      Plato.Core.Closure
+      Plato.Core.Env
+      Plato.Core.Equal
       Plato.Core.Eval
       Plato.Core.Normalise
       Plato.Core.Pretty
-      Plato.Core.Scope
-      Plato.Core.Utils
+      Plato.Core.Result
       Plato.Driver.Context
       Plato.Driver.Flag
       Plato.Driver.Import
       Plato.Driver.Info
+      Plato.Driver.Interactive
       Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Interpreter
-      Plato.Interpreter.Core
       Plato.Nicifier
       Plato.Nicifier.OpParser
       Plato.Nicifier.OpParser.Resolver
@@ -62,6 +62,7 @@ library
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
       Plato.Syntax.Core
+      Plato.Syntax.Core.Helper
       Plato.Syntax.Parsing
       Plato.Syntax.Parsing.Decl
       Plato.Syntax.Parsing.Expr
@@ -71,6 +72,7 @@ library
       Plato.Syntax.Typing.Base
       Plato.Syntax.Typing.Decl
       Plato.Syntax.Typing.Expr
+      Plato.Syntax.Typing.Helper
       Plato.Syntax.Typing.Kind
       Plato.Syntax.Typing.Pat
       Plato.Syntax.Typing.Type
@@ -79,16 +81,13 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
-      Plato.Typing.Kc.Utils
+      Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
       Plato.Typing.Tc.SubsCheck
-      Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
-      Plato.Typing.Tc.Utils
-      Plato.Typing.Utils
       Plato.Typing.Zonking
       Plato.TypToCore
   other-modules:
@@ -115,6 +114,7 @@ library
     , safe-exceptions
     , text
     , transformers
+    , vector
   default-language: GHC2021
 
 executable plato
@@ -149,6 +149,7 @@ executable plato
     , template-haskell
     , text
     , transformers
+    , vector
   default-language: GHC2021
 
 test-suite Plato-test
@@ -186,4 +187,5 @@ test-suite Plato-test
     , safe-exceptions
     , text
     , transformers
+    , vector
   default-language: GHC2021

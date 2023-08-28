@@ -1,12 +1,6 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Nicifier.OpParser (
-        FixityEnv,
-        initFixityEnv,
-        HasFixityEnv (..),
-        opParse,
-) where
+module Plato.Nicifier.OpParser (FixityEnv, HasFixityEnv (..), opParse) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -23,9 +17,6 @@ import Plato.Syntax.Parsing
 
 type FixityEnv = M.Map Name Fixity
 
-initFixityEnv :: FixityEnv
-initFixityEnv = M.empty
-
 class HasFixityEnv a where
         getFixityEnv :: a -> FixityEnv
         modifyFixityEnv :: (FixityEnv -> FixityEnv) -> a -> a
@@ -40,7 +31,7 @@ class Linearize a where
         linearize :: MonadThrow m => Located a -> ReaderT FixityEnv m [Tok a]
 
 instance Linearize Expr where
-        linearize (L _ (InfixE lhs op rhs)) = do
+        linearize (L _ (BinE lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -51,7 +42,7 @@ instance Linearize Expr where
                 return [TTerm exp']
 
 instance Linearize Pat where
-        linearize (L _ (InfixP lhs op rhs)) = do
+        linearize (L _ (BinP lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -62,7 +53,7 @@ instance Linearize Pat where
                 return [TTerm pat']
 
 instance Linearize Type where
-        linearize (L _ (InfixT lhs op rhs)) = do
+        linearize (L _ (BinT lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
                 env <- ask
@@ -85,9 +76,9 @@ instance OpParser LExpr where
                 L sp <$> case exp of
                         VarE{} -> return exp
                         AppE fun arg -> AppE <$> opParse fun <*> opParse arg
-                        InfixE{} -> do
+                        BinE{} -> do
                                 toks <- linearize (L sp exp)
-                                unLoc <$> parse InfixE toks
+                                unLoc <$> parse BinE toks
                         LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
                                 (decs', body') <- opParse (decs, body)
@@ -96,6 +87,7 @@ instance OpParser LExpr where
                                 match' <- opParse match
                                 alts' <- mapM (\(p, e) -> (,) <$> opParse p <*> opParse e) alts
                                 return $ CaseE match' alts'
+                        AnnE exp ann_ty -> AnnE <$> opParse exp <*> opParse ann_ty
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where
@@ -109,9 +101,10 @@ instance OpParser LPat where
                                 return $ ConP con pats'
                         VarP{} -> return pat
                         WildP -> return WildP
-                        InfixP{} -> do
+                        BinP{} -> do
                                 toks <- linearize (L sp pat)
-                                unLoc <$> parse InfixP toks
+                                unLoc <$> parse BinP toks
+                        AnnP pat ann_ty -> AnnP <$> opParse pat <*> opParse ann_ty
                         FactorP p -> unLoc <$> opParse p
 
 instance OpParser LType where
@@ -122,28 +115,14 @@ instance OpParser LType where
                         ArrT arg res -> ArrT <$> opParse arg <*> opParse res
                         AllT tvs body -> AllT tvs <$> opParse body
                         AppT fun arg -> AppT <$> opParse fun <*> opParse arg
-                        InfixT{} -> do
+                        BinT{} -> do
                                 toks <- linearize (L sp ty)
-                                unLoc <$> parse InfixT toks
+                                unLoc <$> parse BinT toks
                         FactorT ty -> unLoc <$> opParse ty
 
-instance OpParser [LDecl] where
-        opParse decs = local (\env -> foldr (uncurry M.insert) env fixmap) $ forM rest $ \case
-                L sp (DataD id params constrs) ->
-                        L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
-                L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
-                L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
-                dec -> return dec
-            where
-                (fixmap, rest) = execWriter $ forM decs $ \case
-                        L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
-                        d -> tell ([], [d])
-
-instance OpParser a => OpParser ([LDecl], a) where
+instance OpParser a => OpParser ([LLocDecl], a) where
         opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
                 rest' <- forM rest $ \case
-                        L sp (DataD id params constrs) ->
-                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
                         L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
                         L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
                         dec -> return dec
@@ -152,4 +131,19 @@ instance OpParser a => OpParser ([LDecl], a) where
             where
                 (fixmap, rest) = execWriter $ forM decs $ \case
                         L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
+                        d -> tell ([], [d])
+
+instance OpParser a => OpParser ([LTopDecl], a) where
+        opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
+                rest' <- forM rest $ \case
+                        L sp (DataD id params constrs) ->
+                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
+                        L sp (LocalD (FunSpecD id ty)) -> L sp . LocalD <$> (FunSpecD id <$> opParse ty)
+                        L sp (LocalD (FunBindD id clauses)) -> L sp . LocalD <$> (FunBindD id <$> mapM opParse clauses)
+                        dec -> return dec
+                t' <- opParse t
+                return (rest', t')
+            where
+                (fixmap, rest) = execWriter $ forM decs $ \case
+                        L _ (LocalD (FixityD id fix)) -> tell ([(nameIdent id, fix)], [])
                         d -> tell ([], [d])

@@ -32,7 +32,7 @@ spec = do
                 it "lambda abstraction" $ do
                         test_scexpr "\\x -> x"
                                 >>= ( `shouldSatisfy`
-                                        (\case AbsE id1 (L _ (VarE id1')) -> check [(id1, id1')]; _ -> False)
+                                        (\case AbsE id1 Nothing (L _ (VarE id1')) -> check [(id1, id1')]; _ -> False)
                                     )
                 it "Unbound variable" $ do
                         test_scexpr "\\x -> y" `shouldThrow` anyException
@@ -42,7 +42,7 @@ spec = do
                         test_scexpr "let {x : ty; x = exp} in x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                LetE [(id1', _)] [(id1, _)] (L _ (VarE id1'')) -> check [(id1, id1'), (id1, id1'')]
+                                                LetE [((id1, _), _)] (L _ (VarE id1')) -> check [(id1, id1')]
                                                 _ -> False
                                         )
                                     )
@@ -50,7 +50,7 @@ spec = do
                         test_scexpr "\\(Con x) -> x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                AbsE id1 (L _ (CaseE (L _ (VarE id1')) [(L _ (ConP _ [L _ (VarP id2)]), L _ (VarE id2'))])) ->
+                                                AbsE id1 Nothing (L _ (CaseE (L _ (VarE id1')) [(L _ (ConP _ [L _ (VarP id2)]), L _ (VarE id2'))])) ->
                                                         check [(id1, id1'), (id2, id2')]
                                                 _ -> False
                                         )
@@ -78,15 +78,15 @@ spec = do
                 it "test10.pla" $ do
                         test_file "test10.pla"
                                 `shouldReturn` [ "List : $46"
-                                               , "data List (a:$45) where {Nil : List a; :: : a -> List a -> List a}"
-                                               , "reverse : {a:$47} List a -> List a"
-                                               , "reverse where {l -> let {rev = {a:$48} List a -> List a -> List a; rev where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
+                                               , "data List (a : $45) where {Nil : List a; :: : a -> List a -> List a}"
+                                               , "reverse : {a : $47} List a -> List a"
+                                               , "reverse where {l -> let {rev : {a : $48} List a -> List a -> List a where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
                                                ]
                 it "test15.pla" $ do
                         test_file "test15.pla"
                                 `shouldReturn` [ "ChurchNum : $46"
-                                               , "data ChurchNum where {ChurchNum : ({a:$45} (a -> a) -> a -> a) -> ChurchNum}"
-                                               , "runNum : ChurchNum -> ({a:$47} (a -> a) -> a -> a)"
+                                               , "data ChurchNum where {ChurchNum : ({a : $45} (a -> a) -> a -> a) -> ChurchNum}"
+                                               , "runNum : ChurchNum -> {a : $47} (a -> a) -> a -> a"
                                                , "zero : ChurchNum"
                                                , "succ : ChurchNum -> ChurchNum"
                                                , "two : ChurchNum"
@@ -122,7 +122,7 @@ test_scexpr :: (MonadIO m, MonadCatch m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uniq <- initUniq
         exp <- runReaderT (parseExpr inp) uniq
-        exp' <- runReaderT (opParse exp) initFixityEnv
+        exp' <- runReaderT (opParse exp) mempty
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
 

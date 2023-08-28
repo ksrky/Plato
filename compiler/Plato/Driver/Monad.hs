@@ -21,7 +21,7 @@ module Plato.Driver.Monad (
 ) where
 
 import Control.Exception.Safe
-import Control.Monad.RWS
+import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.IORef
 import Data.Maybe

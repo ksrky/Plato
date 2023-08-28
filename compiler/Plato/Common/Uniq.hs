@@ -1,10 +1,4 @@
-module Plato.Common.Uniq (
-        Uniq,
-        uniq2text,
-        HasUniq (..),
-        uniqZero,
-        initUniq,
-) where
+module Plato.Common.Uniq where
 
 import Control.Monad.IO.Class
 import Data.IORef

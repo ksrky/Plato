@@ -4,27 +4,28 @@
 
 module Plato.Core.Normalise where
 
+import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
-import Control.Exception.Safe
 import Plato.Common.Ident
 import Plato.Common.Uniq
-import Plato.Core.Data
+import Plato.Core.Closure
+import Plato.Core.Env
 import Plato.Core.Eval
-import Plato.Core.Scope
-import Plato.Core.Utils
+import Plato.Core.Result
 import Plato.Syntax.Core
+import Plato.Syntax.Core.Helper
 
 type Vars = [Ident]
 
 class Nf a b | a -> b where
-        nf :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        nf :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         nf = nf' True
-        quote :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        quote :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         quote = nf' False
-        nf' :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
+        nf' :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
 
 instance Nf (Clos Term) Term where
         nf' True xs t = nf' True xs =<< eval t
@@ -35,20 +36,15 @@ instance Nf Index Term where
                 (PrtInfo x shouldExpand) <- prtE i =<< ask
                 lookupIndex i >>= \case
                         (Index _) -> return (Var x)
-                        (Closure t) ->
-                                if shouldExpand
-                                        then do
-                                                t' <- nf' b xs t
-                                                return
-                                                        ( Let
-                                                                [Defn x t']
-                                                                (Var x)
-                                                        )
-                                        else -- we should also declare x, but we don't know its type!
-                                        -- the let cannot be expanded if inside a box!
-                                                return (Var x)
+                        (Closure t)
+                                | shouldExpand -> do
+                                        t' <- nf' b xs t
+                                        return (Let [Defn x t'] (Var x))
+                                | otherwise -> -- we should also declare x, but we don't know its type!
+                                -- the let cannot be expanded if inside a box!
+                                        return (Var x)
 
-qq :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
+qq :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
 qq xs (Var x, s) = quote xs =<< getIndex x s
 -- qq _  (Let _ _ _, _) = return (Label  "*quote-let-not-implemented*")
 qq xs (Let g t, s) = do
@@ -76,10 +72,10 @@ qq xs (Pair t u, s) = do
         t' <- qq xs (t, s)
         u' <- qq xs (u, s)
         return (Pair t' u')
-qq xs (Split t (x, (y, u)), s) = do
+qq xs (Split t (x, y) u, s) = do
         t' <- qq xs (t, s)
-        xyu' <- quote xs (x, (y, (u, s)))
-        return (Split t' xyu')
+        (x', (y', u')) <- quote xs (x, (y, (u, s)))
+        return (Split t' (x', y') u')
 qq xs (Case t lts, s) = do
         t' <- qq xs (t, s)
         lts' <- forM lts $ \(l', t'') -> do
@@ -92,7 +88,7 @@ qq _ (t, _) = return t -- Type, Enum, Label
 
 instance (Closure a, Nf a b) => Nf (Ident, a) (Ident, b) where
         nf' b xs (x, t) = do
-                x' <- freshIdent (nameIdent x)
+                x' <- reassignUniq x
                 (_, s') <- decl x (PrtInfo x' True) (getScope t) Nothing
                 t' <- nf' b (x' : xs) (putScope t s')
                 return (x', t')
@@ -126,18 +122,13 @@ instance Nf Ne Term where
                 return (App t' u')
         nf' b xs (NSplit t xyu) = do
                 t' <- nf' b xs t
-                xyu' <- nf' b xs xyu
-                return (Split t' xyu')
+                (x', (y', u')) <- nf' b xs xyu
+                return (Split t' (x', y') u')
         nf' b xs (NCase t (lus, s)) = do
                 t' <- nf xs t
-                lus' <-
-                        mapM
-                                ( \(l, u) ->
-                                        do
-                                                u' <- nf' b xs (u, s)
-                                                return (l, u')
-                                )
-                                lus
+                lus' <- forM lus $ \(l, u) -> do
+                        u' <- nf' b xs (u, s)
+                        return (l, u')
                 return (Case t' lus')
         nf' _ xs (NForce t) = Force <$> nf xs t
         nf' b xs (NUnfold t xu) = do

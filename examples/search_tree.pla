@@ -1,6 +1,6 @@
 -- https://softwarefoundations.cis.upenn.edu/vfa-current/SearchTree.html
 
-import Base
+import Function
 import Nat
 import Pair
 

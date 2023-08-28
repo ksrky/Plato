@@ -7,12 +7,14 @@ import Control.Monad.Reader.Class
 import Plato.Common.Ident
 import Plato.Common.Pretty
 import Plato.Common.Uniq
-import Plato.Core.Data
+import Plato.Core.Closure
+import Plato.Core.Env
 import Plato.Core.Normalise
+import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Print a where
-        evalPrint :: (MonadReader e m, Env e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
+        evalPrint :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
 
 instance Print Ident where
         evalPrint = return . prettyId

@@ -101,7 +101,7 @@ instance HasConEnv Context where
 test_decls :: T.Text -> IO ()
 test_decls inp = do
         uref <- initUniq
-        let ctx = Context uref initScope initTypEnv initConEnv
+        let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
         decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
         void $ runReaderT (typingDecls decs') ctx
@@ -109,7 +109,7 @@ test_decls inp = do
 test_clauses :: T.Text -> IO [String]
 test_clauses inp = do
         uref <- initUniq
-        let ctx = Context uref initScope initTypEnv initConEnv
+        let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
         decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
         (decs'', _) <- runReaderT (typingDecls decs') ctx

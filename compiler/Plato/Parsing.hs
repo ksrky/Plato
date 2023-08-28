@@ -41,7 +41,7 @@ processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
 processInstrs [] = return []
 processInstrs (L _ (ImpDecl filename) : rest) = do
         checkCyclicImport filename
-        unlessImported filename compileToCore
+        _ <- unlessImported filename compileToCore
         processInstrs rest
 processInstrs (L _ (TopDecls tdecs) : rest) = do
         tdecs' <- processInstrs rest
@@ -64,7 +64,7 @@ parseInstr inp = do
 processInstr :: PlatoMonad m => LInstr -> ReaderT Importing m (Either [LTopDecl] LExpr)
 processInstr (L _ (ImpDecl filename)) = do
         checkCyclicImport filename
-        unlessImported filename compileToCore
+        _ <- unlessImported filename compileToCore
         return $ Left []
 processInstr (L _ (EvalExpr exp)) = return $ Right exp
 processInstr (L _ TopDecls{}) = return $ Left []
@@ -72,5 +72,5 @@ processInstr (L _ TopDecls{}) = return $ Left []
 parseExpr :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m LExpr
 parseExpr = catchPsErrors <$> parsePartial exprParser
 
-parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LDecl]
+parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LTopDecl]
 parseDecls = catchPsErrors <$> parsePartial declsParser

@@ -12,6 +12,7 @@ data Loc
 
 instance Show Loc where
         show (Loc f l c) = show f ++ ":" ++ show l ++ ":" ++ show c
+
 instance Pretty Loc where
         pretty (Loc f l c) = hcat [pretty f, colon, pretty l, colon, pretty c]
 
@@ -31,17 +32,14 @@ instance Pretty Span where
         pretty (Span s (Loc _ l c)) = hcat [pretty s, "-", pretty l, colon, pretty c]
         pretty NoSpan = emptyDoc
 
--- | Combining spans
-combineSpans :: Span -> Span -> Span
-combineSpans (Span s1 e1) (Span s2 e2) = Span (s1 `min` s2) (e1 `max` e2)
-combineSpans (Span s1 e1) NoSpan = Span s1 e1
-combineSpans NoSpan (Span s2 e2) = Span s2 e2
-combineSpans NoSpan NoSpan = NoSpan
+instance Semigroup Span where
+        Span s1 e1 <> Span s2 e2 = Span (s1 `min` s2) (e1 `max` e2)
+        Span s1 e1 <> NoSpan = Span s1 e1
+        NoSpan <> (Span s2 e2) = Span s2 e2
+        NoSpan <> NoSpan = NoSpan
 
-concatSpans :: [Span] -> Span
-concatSpans [] = NoSpan
-concatSpans [sp] = sp
-concatSpans (sp : sps) = combineSpans sp (concatSpans sps)
+instance Monoid Span where
+        mempty = NoSpan
 
 data Located a = L {_span :: !Span, unLoc :: a}
         deriving (Eq, Ord, Functor, Foldable, Traversable)
@@ -62,10 +60,10 @@ instance HasLoc (Located a) where
         getLoc (L sp _) = sp
 
 instance HasLoc a => HasLoc [a] where
-        getLoc locs = concatSpans (map getLoc locs)
+        getLoc locs = mconcat (map getLoc locs)
 
 sL :: (HasLoc a, HasLoc b) => a -> b -> c -> Located c
-sL x y = L (combineSpans (getLoc x) (getLoc y))
+sL x y = L (getLoc x <> getLoc y)
 
 instance Pretty a => Pretty (Located a) where
         pretty (L _ x) = pretty x

@@ -101,7 +101,7 @@ impdecl     :: { LInstr }
 -- TopDecls
 -----------------------------------------------------------
 topdecls    :: { LInstr }
-            : decls                                 { L (concatSpans (map getLoc $1)) (TopDecls $1) }
+            : decls                                 { L (mconcat (map getLoc $1)) (TopDecls $1) }
 
 -----------------------------------------------------------
 -- Declarations
@@ -119,8 +119,8 @@ decl        :: { [LTopDecl] }
                                                     { [sL $1 $5 (DataD $3 [$2, $4] (unLoc $5))] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
                                                     { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
-            | fundecl                               { $1 }
-            | fixdecl                               { [$1] }
+            | fundecl                               { map (fmap LocalD) $1 }
+            | fixdecl                               { [fmap LocalD $1] }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -137,12 +137,12 @@ constr      :: { (Ident, LType) }
             | '(' conop ')' ':' type                { ($2, $5) }
 
 -- | Function/signature declaration
-fundecls    :: { [LDecl] }
+fundecls    :: { [LLocDecl] }
             : fundecl ';' fundecls                  { $1 ++ $3 }
             | fundecl                               { $1 }
             | {- empty -}                           { [] }
 
-fundecl     :: { [LDecl] }
+fundecl     :: { [LLocDecl] }
             -- Function signature
             : var ':' type                        	{ [sL $1 $3 (FunSpecD $1 $3)] }
             | '(' varop ')' ':' type                { [sL $1 $5 (FunSpecD $2 $5)] }
@@ -154,7 +154,7 @@ fundecl     :: { [LDecl] }
             | fixdecl                               { [$1] }
 
 -- | Fixity declaration
-fixdecl     :: { LDecl }
+fixdecl     :: { LLocDecl }
             : 'infix' digit op                      { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Nonfix)) }
             | 'infixl' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Leftfix)) }
             | 'infixr' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Rightfix)) }
@@ -168,7 +168,7 @@ type        :: { LType }
             | ctype                                 { $1 }
 
 ctype       :: { LType }
-            : btype tyconop ctype                   { sL $1 $3 (InfixT $1 $2 $3) }
+            : btype tyconop ctype                   { sL $1 $3 (BinT $1 $2 $3) }
             | btype                                 { $1 }
 
 btype       :: { LType }
@@ -176,7 +176,7 @@ btype       :: { LType }
             | atype                                 { $1 }
 
 atype       :: { LType }
-            : '(' type ')'                          { L (combineSpans $1 $3) (FactorT $2) }
+            : '(' type ')'                          { sL $1 $3 (FactorT $2) }
             | tycon                                 { L (getLoc $1) (ConT $1) }
             | tyvar                                 { L (getLoc $1) (VarT $1) }
 
@@ -184,7 +184,7 @@ atype       :: { LType }
 -- Expressions
 -----------------------------------------------------------
 expr        :: { LExpr }
-            : lexpr op expr                         { sL $1 $3 (InfixE $1 $2 $3) }
+            : lexpr op expr                         { sL $1 $3 (BinE $1 $2 $3) }
             | lexpr                                 { $1 }
 
 lexpr       :: { LExpr }
@@ -204,8 +204,9 @@ fexpr       :: { LExpr }
             | aexpr                                 { $1 }
 
 aexpr       :: { LExpr }
-            : '(' op ')'                            { L (combineSpans $1 $3) (VarE $2) }
-            | '(' expr ')'                          { L (combineSpans $1 $3) (FactorE $2) }
+            : '(' op ')'                            { sL $1 $3 (VarE $2) }
+            | '(' expr ')'                          { sL $1 $3 (FactorE $2) }
+            | '(' expr ':' type ')'                 { sL $1 $5 (AnnE $2 $4) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 
@@ -236,7 +237,7 @@ clause      :: { Clause }
 -- Patterns
 -----------------------------------------------------------
 pat         :: { LPat }
-            : lpat conop pat                        { sL $1 $3 (InfixP $1 $2 $3) } 
+            : lpat conop pat                        { sL $1 $3 (BinP $1 $2 $3) } 
             | lpat                                  { $1 }
 
 lpat        :: { LPat }
@@ -248,7 +249,8 @@ apats       :: { [LPat] }
             | apat                                  { [$1] }
 
 apat        :: { LPat }
-            : '(' pat ')'                           { L (combineSpans $1 $3) (FactorP $2) }
+            : '(' pat ')'                           { sL $1 $3 (FactorP $2) }
+            | '(' pat ':' type ')'                  { sL $1 $5 (AnnP $2 $4) }
             | con                                   { L (getLoc $1) (ConP $1 []) }
             | var                                   { L (getLoc $1) (VarP $1) }
             | '_'                                   { L (getLoc $1) WildP }

@@ -1,0 +1,29 @@
+-- Impredicative polymorphism will be rejected
+
+id : {a} a -> a
+id x = x
+
+ex1 : {a} a -> a
+ex1 = id id
+
+data A where
+    A : ({a} a -> a) -> A
+
+data T where T : T
+
+ex2 : A -> T
+ex2 (A f) = f T
+
+f : ({a} a -> T) -> T
+f _ = T
+
+ex3 : ({a} a -> T) -> T
+ex3 = id f -- Rejected
+
+{- 
+   Error message:
+   Subsumption check failed:  $65, {a:*} a -> T
+ 
+   It is because type variable 'a' is Tau type, while type of f '({a} a -> T) -> T' is Rho type,
+   so they cannot be unified.
+-}

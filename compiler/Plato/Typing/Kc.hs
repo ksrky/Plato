@@ -1,75 +1,49 @@
-module Plato.Typing.Kc (
-        checkKindStar,
-        inferDataKind,
-        inferKind,
-        checkKind,
-) where
+module Plato.Typing.Kc (checkKindStar, inferKind, checkKind) where
 
 import Control.Exception.Safe
-import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader
+import Control.Monad.Reader.Class
 import GHC.Stack
 
 import Plato.Common.Error
-import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
+import Plato.Typing.Error
 import Plato.Typing.Kc.Unify
-import Plato.Typing.Utils
-import Plato.Typing.Zonking
 
--- asks . (Env.find @Kind) >=> zonk
-
-inferDataKind ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
-        [Ident] ->
-        [(Ident, LType)] ->
-        m [(Ident, Type)]
-inferDataKind params constrs = do
-        bnds <- forM params $ \x -> do
-                kv <- newKnVar
-                return (x, kv)
-        local (modifyTypEnv $ extendList bnds) $ forM_ constrs $ \(_, body) -> checkKindStar body
-        bnds' <- mapM (\(x, kn) -> (x,) <$> zonk kn) bnds
-        let qnts = map (\(id, kn) -> (BoundTv id, kn)) bnds'
-            constrs'' = map (\(con, body) -> (con, AllT qnts body)) constrs
-        return constrs''
-
-checkKindStar ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) => LType -> m ()
+checkKindStar :: (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) => LType -> m ()
 checkKindStar ty = checkKind ty StarK
 
 inferKind ::
-        (MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         LType ->
         m (LType, Kind)
 inferKind ty = do
         exp_kn <- newKnVar
         checkKind ty exp_kn
-        ty' <- zonk `traverse` ty
-        res_kn <- zonk exp_kn
-        return (ty', res_kn)
+        return (ty, exp_kn)
 
 checkKind ::
-        (HasCallStack, MonadReader ctx m, HasTypEnv ctx, HasUniq ctx, MonadThrow m, MonadIO m) =>
+        forall e m.
+        (HasCallStack, MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         LType ->
         Kind ->
         m ()
 checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
-                kn <- zonk =<< find id =<< asks getTypEnv
-                unify sp kn exp_kn
+                kn <- find id =<< asks getTypEnv
+                unify_ kn exp_kn
         VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
         ConT tc -> do
-                kn <- zonk =<< find tc =<< asks getTypEnv
-                unify sp kn exp_kn
+                kn <- find tc =<< asks getTypEnv
+                unify_ kn exp_kn
         ArrT arg res -> do
                 checkKindStar arg
                 checkKindStar res
-                unify sp exp_kn StarK
+                unify_ exp_kn StarK
         AllT qnts body ->
                 local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
                         checkKind body exp_kn
@@ -78,3 +52,6 @@ checkKind (L sp ty) exp_kn = case ty of
                 checkKind fun (ArrK arg_kn exp_kn)
                 checkKind arg arg_kn
         MetaT{} -> unreachable "Plato.KindInfer.Typ.checkKind received MetaT"
+    where
+        unify_ :: Kind -> Kind -> m ()
+        unify_ kn1 kn2 = catches (unify kn1 kn2) (kcErrorHandler sp kn1 kn2)
