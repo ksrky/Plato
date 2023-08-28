@@ -26,12 +26,12 @@ spec = do
                 it "lambda abstraction" $ do
                         test_decls "id : {a} a -> a; id = \\x -> x"
                                 `shouldReturn` [ "id_0 : (a_1 : Type) -> a_1 -> a_1"
-                                               , "id_0 = \\ a_8 : Type . (\\ a_8 : Type . \\ x_5 : a_8 . x_5) a_8"
+                                               , "id_0 = \\ a_8 : Type . \\ x_5 : a_8 . x_5"
                                                ]
                 it "function clause" $ do
                         test_decls "id : {a} a -> a; id x = x"
                                 `shouldReturn` [ "id_0 : (a_1 : Type) -> a_1 -> a_1"
-                                               , "id_0 = \\ a_8 : Type . (\\ a_8 : Type . \\ $_9 : a_8 . $_9) a_8"
+                                               , "id_0 = \\ a_8 : Type . \\ $_9 : a_8 . $_9"
                                                ]
         describe "Core elaboration of a file" $ do
                 it "test01.pla" $ do
@@ -46,7 +46,7 @@ spec = do
                 it "test02.pla" $ do
                         test_file "test02.pla"
                                 `shouldReturn` [ "id_0 : (a_1 : Type) -> a_1 -> a_1"
-                                               , "id_0 = \\ a_8 : Type . (\\ a_8 : Type . \\ x_5 : a_8 . x_5) a_8"
+                                               , "id_0 = \\ a_8 : Type . \\ x_5 : a_8 . x_5"
                                                ]
                 it "test03.pla" $ do
                         test_file "test03.pla"
@@ -60,7 +60,7 @@ spec = do
                 it "test04.pla" $ do
                         test_file "test04.pla"
                                 `shouldReturn` [ "g_0 : (a_1 : Type) -> (b_2 : Type) -> (a_1 -> b_2) -> a_1 -> b_2"
-                                               , "g_0 = \\ a_14 : Type . \\ b_15 : Type . (\\ a_14 : Type . \\ b_15 : Type . \\ $_16 : (a_14 -> b_15) . \\ $_17 : a_14 . $_16 $_17) a_14 b_15"
+                                               , "g_0 = \\ a_14 : Type . \\ b_15 : Type . \\ $_16 : (a_14 -> b_15) . \\ $_17 : a_14 . $_16 $_17"
                                                ]
                 it "test05.pla" $ do
                         test_file "test05.pla"
@@ -76,7 +76,7 @@ spec = do
                 it "test06.pla" $ do
                         test_file "test06.pla"
                                 `shouldReturn` [ "f_0 : (a_1 : Type) -> a_1 -> a_1"
-                                               , "f_0 = \\ a_23 : Type . (\\ a_23 : Type . let {g_5 : (b_6 : Type) -> b_6 -> b_6; h_12 : (c_13 : Type) -> c_13 -> c_13; g_5 = \\ b_24 : Type . (\\ b_24 : Type . \\ x_10 : b_24 . x_10) b_24; h_12 = \\ c_25 : Type . (\\ c_25 : Type . \\ y_17 : c_25 . y_17) c_25} in g_5 a_23) a_23"
+                                               , "f_0 = \\ a_23 : Type . let {g_5 : (b_6 : Type) -> b_6 -> b_6; h_12 : (c_13 : Type) -> c_13 -> c_13; g_5 = \\ b_24 : Type . \\ x_10 : b_24 . x_10; h_12 = \\ c_25 : Type . \\ y_17 : c_25 . y_17} in g_5 a_23"
                                                ]
                 it "test07.pla" $ do
                         test_file "test07.pla"

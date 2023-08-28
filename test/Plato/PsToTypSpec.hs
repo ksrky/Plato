@@ -78,22 +78,22 @@ spec = do
                 it "test10.pla" $ do
                         test_file "test10.pla"
                                 `shouldReturn` [ "List : $46"
-                                               , "data List (a:$45) where {Nil : List a; :: : a -> List a -> List a}"
-                                               , "reverse : {a:$47} List a -> List a"
-                                               , "reverse where {l -> let {rev = {a:$48} List a -> List a -> List a; rev where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
+                                               , "data List (a_2 : $45) where {Nil : List_1 a_2; :: : a_2 -> List_1 a_2 -> List_1 a_2}"
+                                               , "reverse : {a_13 : $47} List_1 a_13 -> List_1 a_13"
+                                               , "reverse where {l_19 -> let {rev_20 = {a_21 : $48} List_1 a_21 -> List_1 a_21 -> List_1 a_21; rev_20 where {Nil_3 a_30 -> a_30; (::_6 x_33 xs_35) a_36 -> rev_20 xs_35 (::_6 x_33 a_36)}} in rev_20 l_19 Nil_3}"
                                                ]
                 it "test15.pla" $ do
                         test_file "test15.pla"
                                 `shouldReturn` [ "ChurchNum : $46"
-                                               , "data ChurchNum where {ChurchNum : ({a:$45} (a -> a) -> a -> a) -> ChurchNum}"
-                                               , "runNum : ChurchNum -> ({a:$47} (a -> a) -> a -> a)"
-                                               , "zero : ChurchNum"
-                                               , "succ : ChurchNum -> ChurchNum"
-                                               , "two : ChurchNum"
-                                               , "runNum where {(ChurchNum xs) -> xs}"
-                                               , "zero where {-> ChurchNum (\\ s . \\ z . z)}"
-                                               , "succ where {n -> ChurchNum (\\ s . \\ z . s (runNum n s z))}"
-                                               , "two where {-> succ (succ zero)}"
+                                               , "data ChurchNum where {ChurchNum : ({a_2 : $45} (a_2 -> a_2) -> a_2 -> a_2) -> ChurchNum_0}"
+                                               , "runNum : ChurchNum_0 -> {a_10 : $47} (a_10 -> a_10) -> a_10 -> a_10"
+                                               , "zero : ChurchNum_0"
+                                               , "succ : ChurchNum_0 -> ChurchNum_0"
+                                               , "two : ChurchNum_0"
+                                               , "runNum where {(ChurchNum_1 xs_17) -> xs_17}"
+                                               , "zero where {-> ChurchNum_1 (\\ s . \\ z . z_24)}"
+                                               , "succ where {n_30 -> ChurchNum_1 (\\ s . \\ z . s_32 (runNum_8 n_30 s_32 z_33))}"
+                                               , "two where {-> succ_26 (succ_26 zero_19)}"
                                                ]
 
 defScope :: MonadIO m => IORef Uniq -> m Scope
