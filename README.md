@@ -30,7 +30,7 @@ Source files are written in GHC2021, so at least ghc-9.2 is required.
 
 ### Building and Installing
 
-Currently, ghc-9.2.7, ghc-9.2.8 and ghc-9.4.5 are supported. Choose a specific ghc version, and use the corresponding stack.yaml to install.
+Currently, ghc-9.2.8 and ghc-9.4.5 are supported. Choose a specific ghc version, and use the corresponding stack.yaml to install.
 
 ```command
 $ cd Plato
