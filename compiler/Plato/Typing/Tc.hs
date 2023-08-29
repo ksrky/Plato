@@ -86,8 +86,8 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
                         throwLocErr sp $
                                 hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
                 binds <- checkPats pats arg_tys
-                res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
-                instPatSigma_ res_ty' exp_ty
+                -- res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
+                instPatSigma_ res_ty exp_ty
                 return binds
         tcPat' (AnnP pat ann_ty) exp_ty = do
                 binds <- checkPat pat ann_ty
@@ -114,7 +114,7 @@ instDataCon ::
         Ident ->
         m ([Sigma], Tau)
 instDataCon con = do
-        sigma <- zonk =<< find con =<< asks getTypEnv
+        sigma <- find con =<< asks getTypEnv
         (_, rho) <- instantiate sigma
         return $ splitConstrTy rho
 
@@ -124,9 +124,7 @@ checkRho ::
         LExpr 'Untyped ->
         Rho ->
         m (LExpr 'Typed)
-checkRho exp ty = do
-        exp' <- tcRho exp (Check ty)
-        zonk `traverse` exp'
+checkRho exp ty = tcRho exp (Check ty)
 
 inferRho ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
@@ -134,9 +132,7 @@ inferRho ::
         m (LExpr 'Typed, Rho)
 inferRho exp = do
         ref <- newMIORef (unreachable "inferRho: empty result")
-        exp' <- tcRho exp (Infer ref)
-        exp'' <- zonk `traverse` exp'
-        (exp'',) <$> readMIORef ref
+        (,) <$> tcRho exp (Infer ref) <*> readMIORef ref
 
 tcRho ::
         forall e m.
@@ -148,15 +144,15 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
-                sigma <- zonk =<< find var =<< asks getTypEnv
+                sigma <- find var =<< asks getTypEnv
                 coer <- instSigma_ sigma exp_ty
                 return $ unCoer coer $ VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
                 (arg_ty, res_ty) <- unifyFun_ fun_ty
                 arg' <- checkSigma arg arg_ty
-                res_ty' <- zonk res_ty -- Note: Argument type may apply to result type
-                coer <- instSigma_ res_ty' exp_ty
+                -- res_ty' <- zonk res_ty -- Note: Argument type may apply to result type
+                coer <- instSigma_ res_ty exp_ty
                 return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var mbty body) (Check exp_ty) = do
                 (var_ty, body_ty) <- unifyFun_ exp_ty
@@ -172,7 +168,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 let (spcs, _) = unzip decs
                 local (modifyTypEnv $ extendList spcs) $ do
                         decs' <- forM decs $ \((id, ty), clauses) -> do
-                                sigma <- zonk =<< find id =<< asks getTypEnv
+                                sigma <- find id =<< asks getTypEnv
                                 exp' <- checkClauses clauses sigma
                                 checkKindStar ty
                                 return ((id, unLoc ty), exp')
@@ -215,8 +211,7 @@ inferSigma ::
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (tvs, sigma) <- generalize rho
-        exp'' <- zonk `traverse` exp'
-        return (unCoer (genTrans tvs) <$> exp'', sigma)
+        return (unCoer (genTrans tvs) <$> exp', sigma)
 
 checkSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
