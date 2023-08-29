@@ -62,9 +62,9 @@ unifunErrorHandler sp rho =
                 rho' <- zonk rho
                 throwLocErr sp $
                         vsep
-                                [ "Infered type doesn't match expected type from the signature."
-                                , "Expected type: " <+> pretty rho'
-                                , "  Actual type: _ -> _"
+                                [ "Couldn't match expected type with actual type."
+                                , "Expected type: _ -> _"
+                                , "  Actual type:" <+> pretty rho'
                                 ]
         ]
 

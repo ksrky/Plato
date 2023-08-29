@@ -40,12 +40,13 @@ compileToCore src = catchErrors $ do
 
 evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
 evaluateCore inp =
-        lift
-                ( do
-                        pssyn <- parseExpr inp
-                        pssyn' <- nicifyExpr pssyn
-                        typsyn <- psToTypExpr pssyn'
-                        typsyn' <- typingExpr typsyn
-                        typToCoreExpr typsyn'
-                )
-                >>= (catchErrors . evalCore)
+        catchErrors $
+                lift
+                        ( do
+                                pssyn <- parseExpr inp
+                                pssyn' <- nicifyExpr pssyn
+                                typsyn <- psToTypExpr pssyn'
+                                typsyn' <- typingExpr typsyn
+                                typToCoreExpr typsyn'
+                        )
+                        >>= evalCore

@@ -4,6 +4,8 @@ import Control.Exception.Safe
 import Control.Monad.Trans.Class
 import Data.Text qualified as T
 import System.Console.Haskeline
+import System.IO
+import Control.Monad.IO.Class
 
 import Plato
 
@@ -19,7 +21,11 @@ loop = do
                 Nothing -> return ()
                 Just "" -> loop
                 Just (':' : cmd) -> replCommand cmd
-                Just inp -> lift (evaluateCore (T.pack inp)) >> loop
+                Just inp -> do
+                        lift $ evaluateCore (T.pack inp)
+                        liftIO $ hFlush stdout
+                        outputStrLn ""
+                        loop
 
 replCommand :: String -> (PlatoMonad m, MonadMask m) => InputT (Interactive m) ()
 replCommand "q" = return ()

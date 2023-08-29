@@ -4,9 +4,9 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import GHC.Stack
 import Prettyprinter
-import Prettyprinter.Render.String
 
 import Plato.Common.Location
+import Prettyprinter.Render.Text
 
 defaultHandler :: (MonadIO m, Monoid a) => Handler m a
 defaultHandler = Handler $ \(e :: SomeException) -> liftIO (print e) >> return mempty
@@ -14,52 +14,41 @@ defaultHandler = Handler $ \(e :: SomeException) -> liftIO (print e) >> return m
 catchErrors :: (MonadCatch m, MonadIO m, Monoid a) => m a -> m a
 catchErrors =
         ( `catches`
-                [ Handler $ \e@LocErr{} -> liftIO (print e) >> return mempty
-                , Handler $ \e@PlainErr{} -> liftIO (print e) >> return mempty
+                [ Handler $ \e@LocErr{} -> liftIO (printLocErr e) >> return mempty
+                , Handler $ \e@PlainErr{} -> liftIO (printPlainErr e) >> return mempty
                 , defaultHandler
-                ]
-        )
-
-continueError :: (MonadCatch m, MonadIO m) => m a -> m a -> m a
-continueError action =
-        ( `catches`
-                [ Handler $ \e@LocErr{} -> liftIO (print e) >> action
-                , Handler $ \e@PlainErr{} -> liftIO (print e) >> action
-                , Handler $ \(e :: SomeException) -> liftIO (print e) >> action
                 ]
         )
 
 unreachable :: HasCallStack => String -> a
 unreachable s = error $ "unreachable:\n" ++ s
 
-----------------------------------------------------------------
--- Error type
-----------------------------------------------------------------
-
-locatedErrorMessage :: Span -> Doc ann -> String
-locatedErrorMessage NoSpan msg =
-        renderString (layoutPretty defaultLayoutOptions $ hcat ["<no location info>: error: ", line, indent 4 msg])
-locatedErrorMessage sp msg =
-        renderString (layoutPretty defaultLayoutOptions $ hcat [pretty sp, ": error: ", line, indent 4 msg])
-
 -- | Error with location
 data LocatedError = forall ann. LocErr Span (Doc ann)
 
 instance Show LocatedError where
-        show (LocErr sp msg) = locatedErrorMessage sp msg
+        show _ = "Located error"
 
 instance Exception LocatedError
 
 throwLocErr :: MonadThrow m => Span -> Doc ann -> m a
 throwLocErr sp doc = throw $ LocErr sp doc
 
+printLocErr :: LocatedError -> IO ()
+printLocErr (LocErr sp msg) = putDoc $ case sp of
+        NoSpan -> hcat ["<no location info>: error: ", line, indent 4 msg]
+        _ -> hcat [pretty sp, ": error: ", line, indent 4 msg]
+
 -- | Error with no location
-newtype PlainError = PlainErr String
+data PlainError = forall ann. PlainErr (Doc ann)
 
 instance Show PlainError where
-        show (PlainErr msg) = msg
+        show _ = "Plain error"
 
 instance Exception PlainError
 
 throwError :: MonadThrow m => Doc ann -> m a
-throwError doc = throw $ PlainErr (renderString $ layoutPretty defaultLayoutOptions doc)
+throwError doc = throw $ PlainErr doc
+
+printPlainErr :: PlainError -> IO ()
+printPlainErr (PlainErr msg) = putDoc $ hcat ["error: ", line, indent 4 msg]
