@@ -44,7 +44,7 @@ getFreeTvs ty = do
 
 freeTvs :: HasCallStack => Type -> Reader (S.Set TyVar) (S.Set TyVar)
 freeTvs (VarT tv) = do
-        bounded <- asks (\bound -> tv `elem` bound) -- bounded TyVar must be BoundTv
+        bounded <- asks (tv `elem`) -- Note: if bounded, tv must be BoundTv
         if bounded then return S.empty else return $ S.singleton tv
 freeTvs ConT{} = return S.empty
 freeTvs (ArrT arg res) = S.union <$> freeTvs (unLoc arg) <*> freeTvs (unLoc res)

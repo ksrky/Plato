@@ -14,8 +14,8 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Tc.Coercion
 import Plato.Typing.Misc
+import Plato.Typing.Tc.Coercion
 import Plato.Typing.Zonking
 
 -- | Instantiation
@@ -31,7 +31,7 @@ skolemise ::
         Sigma ->
         m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
-        sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) tvs
+        sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTv tv) tvs
         (coercion, sks2, ty') <- skolemise (substTvs (map fst tvs) (map (VarT . fst) sks1) (unLoc rho))
         return (prpolyTrans sks1 coercion, sks1 ++ sks2, ty')
 skolemise (ArrT arg_ty res_ty) = do

@@ -41,7 +41,7 @@ unifyVar tv1 ty2 = do
                 (Just ty1, _) -> unify ty1 ty2
                 (Nothing, MetaT tv2) ->
                         readMetaTv tv2 >>= \case
-                                Just kn2 -> unify (MetaT tv1) kn2
+                                Just ty2 -> unify (MetaT tv1) ty2
                                 Nothing -> writeMetaTv tv1 ty2
                 (Nothing, _) -> do
                         occursCheck tv1 ty2

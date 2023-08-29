@@ -1,14 +1,6 @@
 module Plato.Common.Error where
 
-import Control.Exception.Safe (
-        Exception,
-        Handler (Handler),
-        MonadCatch,
-        MonadThrow,
-        SomeException,
-        catches,
-        throw,
- )
+import Control.Exception.Safe
 import Control.Monad.IO.Class
 import GHC.Stack
 import Prettyprinter
@@ -17,9 +9,7 @@ import Prettyprinter.Render.String
 import Plato.Common.Location
 
 defaultHandler :: (MonadIO m, Monoid a) => Handler m a
-defaultHandler = Handler $ \(e :: SomeException) -> do
-        liftIO (do putStrLn "Compiler bug:"; print e)
-        return mempty
+defaultHandler = Handler $ \(e :: SomeException) -> liftIO (print e) >> return mempty
 
 catchErrors :: (MonadCatch m, MonadIO m, Monoid a) => m a -> m a
 catchErrors =

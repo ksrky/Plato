@@ -95,11 +95,10 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
                 return binds
         tcPat' TagP{} _ = unreachable "received TagP"
         instPatSigma_ :: Sigma -> Expected Rho -> m ()
-        instPatSigma_ sigma (Check rho) = catches (instPatSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
+        instPatSigma_ sigma (Check rho) =
+                catches (instPatSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
         instPatSigma_ sigma (Infer ref) =
-                catches (instPatSigma sigma exp_ty)
-                        . tcErrorHandler sp sigma
-                        =<< readMIORef ref
+                catches (instPatSigma sigma exp_ty) . tcErrorHandler sp sigma =<< readMIORef ref
 
 instPatSigma ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
@@ -188,9 +187,13 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 coer <- instSigma_ ann_ty exp_ty
                 return $ unCoer coer $ unLoc exp'
         instSigma_ :: Sigma -> Expected Rho -> m Coercion
-        instSigma_ sigma (Check rho) = catches (instSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
+        instSigma_ sigma (Check rho) =
+                catches
+                        (instSigma sigma (Check rho))
+                        (tcErrorHandler sp sigma rho)
         instSigma_ sigma (Infer ref) =
-                catches (instSigma sigma exp_ty)
+                catches
+                        (instSigma sigma (Infer ref))
                         . tcErrorHandler sp sigma
                         =<< readMIORef ref
         unifyFun_ :: Rho -> m (Sigma, Rho)
@@ -224,7 +227,7 @@ checkSigma exp sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst skol_tvs)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
         return $ unCoer (coer <> genTrans skol_tvs) <$> exp'
 
 -- | Check clauses
@@ -246,7 +249,7 @@ checkClauses clauses sigma_ty = do
         exp <- transClauses pat_tys clauses'
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst sk_qnts)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
+        unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
         return $ unCoer (coer <> genTrans sk_qnts) exp
 
 -- | Instantiation of Sigma
