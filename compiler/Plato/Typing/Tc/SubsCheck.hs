@@ -29,12 +29,12 @@ subsCheck ::
         Sigma ->
         m Coercion
 subsCheck sigma1 sigma2 = do
-        (coercion1, skol_tvs, rho2) <- skolemise sigma2
+        (coercion1, fqnts, rho2) <- skolemise sigma2
         coercion2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
-        let bad_tvs = S.fromList (map fst skol_tvs) `S.intersection` esc_tvs
+        let bad_tvs = S.fromList (map fst fqnts) `S.intersection` esc_tvs
         unless (null bad_tvs) $ throw SubsCheckFail
-        return $ deepskolTrans skol_tvs coercion1 coercion2
+        return $ deepskolTrans fqnts coercion1 coercion2
 
 -- | Subsumption checking. Coersing sigma to rho.
 subsCheckRho ::

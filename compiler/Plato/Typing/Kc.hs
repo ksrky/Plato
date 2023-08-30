@@ -36,7 +36,7 @@ checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
                 kn <- find id =<< asks getTypEnv
                 unify_ kn exp_kn
-        VarT SkolemTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed SkolemTv"
+        VarT FreeTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed FreeTv"
         ConT tc -> do
                 kn <- find tc =<< asks getTypEnv
                 unify_ kn exp_kn

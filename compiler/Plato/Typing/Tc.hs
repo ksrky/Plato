@@ -222,13 +222,13 @@ checkSigma ::
         Sigma ->
         m (LExpr 'Typed)
 checkSigma exp sigma = do
-        (coer, skol_tvs, rho) <- skolemise sigma
+        (coer, fqnts, rho) <- skolemise sigma
         exp' <- checkRho exp rho
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
-        let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst skol_tvs)
+        let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst fqnts)
         unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
-        return $ unCoer (coer <> genTrans skol_tvs) <$> exp'
+        return $ unCoer (coer <> genTrans fqnts) <$> exp'
 
 -- | Check clauses
 checkClauses ::
@@ -237,7 +237,7 @@ checkClauses ::
         Sigma ->
         m (Expr 'Typed)
 checkClauses clauses sigma_ty = do
-        (coer, sk_qnts, rho_ty) <- skolemise sigma_ty
+        (coer, fqnts, rho_ty) <- skolemise sigma_ty
         (pat_tys, res_ty) <-
                 catches
                         (unifyFuns (length (fst $ head clauses)) rho_ty)
@@ -248,9 +248,9 @@ checkClauses clauses sigma_ty = do
                 return (pats, unLoc body')
         exp <- transClauses pat_tys clauses'
         esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
-        let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst sk_qnts)
+        let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst fqnts)
         unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
-        return $ unCoer (coer <> genTrans sk_qnts) exp
+        return $ unCoer (coer <> genTrans fqnts) exp
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion

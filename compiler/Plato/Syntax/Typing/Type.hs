@@ -41,7 +41,7 @@ type Tau = Type -- τ
 
 data TyVar
         = BoundTv {unTyVar :: Ident}
-        | SkolemTv {unTyVar :: Ident}
+        | FreeTv {unTyVar :: Ident}
         deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
@@ -51,11 +51,11 @@ data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
 ----------------------------------------------------------------
 instance Show TyVar where
         show (BoundTv id) = "(BoundTv " ++ show id ++ ")"
-        show (SkolemTv id) = "(SkolemTv " ++ show id ++ ")"
+        show (FreeTv id) = "(FreeTv " ++ show id ++ ")"
 
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
-        (SkolemTv id1) == (SkolemTv id2) = id1 == id2
+        (FreeTv id1) == (FreeTv id2) = id1 == id2
         _ == _ = False
 
 instance Eq MetaTv where
@@ -72,7 +72,7 @@ instance Ord MetaTv where
 ----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty id
+        pretty (FreeTv id) = pretty id
 
 instance Pretty MetaTv where
         pretty (MetaTv u _) = dollar <> pretty u

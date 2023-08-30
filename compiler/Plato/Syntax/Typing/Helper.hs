@@ -32,8 +32,8 @@ newVarIdent = freshIdent dummyName
 newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type
 newTyVar = MetaT <$> newMetaTv
 
-newSkolemTv :: (MonadReader e m, HasUniq e, MonadIO m) => TyVar -> m TyVar
-newSkolemTv tv = SkolemTv <$> reassignUniq (unTyVar tv)
+newFreeTv :: (MonadReader e m, HasUniq e, MonadIO m) => TyVar -> m TyVar
+newFreeTv tv = FreeTv <$> reassignUniq (unTyVar tv)
 
 newMetaTv :: (MonadReader e m, HasUniq e, MonadIO m) => m MetaTv
 newMetaTv = MetaTv <$> newUniq <*> newMIORef Nothing

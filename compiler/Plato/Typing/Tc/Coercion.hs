@@ -59,7 +59,7 @@ prfunTrans sks arg_ty coer = do
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 <> coer2
-deepskolTrans skol_tvs coer1 coer2 = coer1 <> Fn (TAbsE skol_tvs) <> coer2
+deepskolTrans fqnts coer1 coer2 = coer1 <> Fn (TAbsE fqnts) <> coer2
 
 funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id

@@ -50,7 +50,7 @@ tcErrorHandler sp ty_act ty_exp =
                 ty_exp' <- zonk ty_exp
                 throwLocErr sp $
                         vsep
-                                [ "Couldn't instantiate expected type with actual type. (Impredicative types)"
+                                [ "Couldn't instantiate actual type to expected type. (Impredicative types)"
                                 , "Expected type:" <+> pretty ty_exp'
                                 , "  Actual type:" <+> pretty ty_act'
                                 ]
