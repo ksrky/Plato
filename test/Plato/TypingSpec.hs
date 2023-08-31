@@ -45,35 +45,35 @@ spec = do
                                                ]
         -}
         describe "Type checking of a file" $ do
-                it "test01.pla" $ do
-                        test_file "test01.pla" `shouldReturn` ()
-                it "test02.pla" $ do
-                        test_file "test02.pla" `shouldReturn` ()
-                it "test03.pla" $ do
-                        test_file "test03.pla" `shouldReturn` ()
-                it "test04.pla" $ do
-                        test_file "test04.pla" `shouldReturn` ()
-                it "test05.pla" $ do
-                        test_file "test05.pla" `shouldReturn` ()
-                it "test06.pla" $ do
-                        test_file "test06.pla" `shouldReturn` ()
-                it "test07.pla" $ do
-                        test_file "test07.pla" `shouldReturn` ()
-                it "test08.pla" $ do
-                        test_file "test08.pla" `shouldReturn` ()
-                it "test09.pla" $ do
-                        test_file "test09.pla" `shouldReturn` ()
-                it "test10.pla" $ do
-                        test_file "test10.pla" `shouldReturn` ()
-                it "test15.pla" $ do
-                        test_file "test15.pla" `shouldReturn` ()
-                it "test16.pla" $ do
-                        test_file "test16.pla" `shouldReturn` ()
+                it "01.pla" $ do
+                        test_file "01.pla" `shouldReturn` ()
+                it "02.pla" $ do
+                        test_file "02.pla" `shouldReturn` ()
+                it "03.pla" $ do
+                        test_file "03.pla" `shouldReturn` ()
+                it "04.pla" $ do
+                        test_file "04.pla" `shouldReturn` ()
+                it "05.pla" $ do
+                        test_file "05.pla" `shouldReturn` ()
+                it "06.pla" $ do
+                        test_file "06.pla" `shouldReturn` ()
+                it "07.pla" $ do
+                        test_file "07.pla" `shouldReturn` ()
+                it "08.pla" $ do
+                        test_file "08.pla" `shouldReturn` ()
+                it "09.pla" $ do
+                        test_file "09.pla" `shouldReturn` ()
+                it "10.pla" $ do
+                        test_file "10.pla" `shouldReturn` ()
+                it "15.pla" $ do
+                        test_file "15.pla" `shouldReturn` ()
+                it "16.pla" $ do
+                        test_file "16.pla" `shouldReturn` ()
         describe "Uniq rewrited?" $ do
-                it "test01.pla" $ do
-                        test_uniq "test01.pla" >>= (`shouldSatisfy` isSorted)
-                it "test02.pla" $ do
-                        test_uniq "test02.pla" >>= (`shouldSatisfy` isSorted)
+                it "01.pla" $ do
+                        test_uniq "01.pla" >>= (`shouldSatisfy` isSorted)
+                it "02.pla" $ do
+                        test_uniq "02.pla" >>= (`shouldSatisfy` isSorted)
 
 data Context = Context
         { ctx_uniq :: IORef Uniq

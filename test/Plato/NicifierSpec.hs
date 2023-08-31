@@ -30,28 +30,28 @@ spec = do
                 it "f $ g x" $ do
                         test "f $ g $ h x y" `shouldReturn` "(f $ (g $ h x y))"
         describe "File test" $ do
-                it "test05.pla" $ do
-                        test_file "test05.pla"
+                it "05.pla" $ do
+                        test_file "05.pla"
                                 `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
                                                , "not : Bool -> Bool"
                                                , "not where {b -> case b of {True -> False; False -> True}}"
                                                ]
-                it "test07.pla" $ do
-                        test_file "test07.pla"
+                it "07.pla" $ do
+                        test_file "07.pla"
                                 `shouldReturn` [ "data Bool where {True : Bool; False : Bool}"
                                                , "not : Bool -> Bool"
                                                , "not where {True -> False}"
                                                , "not where {False -> True}"
                                                ]
-                it "test14.pla" $ do
-                        test_file "test14.pla"
+                it "14.pla" $ do
+                        test_file "14.pla"
                                 `shouldReturn` [ "data List a where {Nil : List a; :: : a -> List a -> List a}"
                                                , "data T where {T1 : T; T2 : T; T3 : T}"
                                                , "f : List T"
                                                , "f where {-> (T1 :: (T2 :: (T3 :: Nil)))}"
                                                ]
-                it "test16.pla" $ do
-                        test_file "test16.pla"
+                it "16.pla" $ do
+                        test_file "16.pla"
                                 `shouldReturn` [ "data :,: a b where {:,: : a -> b -> a :,: b}"
                                                , "fst : {a b} a :,: b -> a"
                                                , "fst where {(x :,: _) -> x}"
