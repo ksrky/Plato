@@ -166,11 +166,10 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' (LetE decs body) exp_ty = do
                 let (spcs, _) = unzip decs
                 local (modifyTypEnv $ extendList spcs) $ do
-                        decs' <- forM decs $ \((id, ty), clauses) -> do
-                                sigma <- find id =<< asks getTypEnv
-                                exp' <- checkClauses clauses sigma
-                                checkKindStar ty
-                                return ((id, unLoc ty), exp')
+                        decs' <- forM decs $ \((id, sigma), clauses) -> do
+                                checkKindStar sigma
+                                exp' <- checkClauses clauses (unLoc sigma)
+                                return ((id, unLoc sigma), exp')
                         body' <- tcRho body exp_ty
                         return $ LetE' decs' body'
         tcRho' (CaseE test alts) exp_ty = do

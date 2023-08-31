@@ -1,0 +1,14 @@
+id : {a} a -> a
+id x = x
+
+data T where T : T
+
+test : T
+test =
+    let
+        ex1 : {a} a -> a
+        ex1 x = id x
+
+        ex2 : T -> T
+        ex2 x = id x
+    in T
