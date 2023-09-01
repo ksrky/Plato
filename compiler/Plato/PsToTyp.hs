@@ -16,9 +16,11 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Data.List ((\\))
 import Data.List qualified
 import GHC.Stack
 
+import Data.Maybe (fromJust)
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -54,11 +56,15 @@ elabExpr (P.LamE pats body) = do
                 v <- newVarIdent
                 return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
-elabExpr (P.LetE fdecs body) = do
-        env <- extendScopeFromSeq fdecs
+elabExpr (P.LetE ldecs body) = do
+        ldecs' <- bundleClauses ldecs
+        env <- extendScopeFromSeq ldecs'
         local (const env) $ do
-                (bnds, spcs) <- elabFunDecls =<< bundleClauses fdecs
-                let decs = [((id1, ty), clses) | (id1, ty) <- spcs, (id2, clses) <- bnds, id1 == id2]
+                (bnds, spcs) <- elabLocDecls ldecs'
+                let decs = (`map` bnds) $ \(id, clses) ->
+                        let mbty = lookup id spcs
+                            ty = fromJust mbty -- tmp
+                         in ((id, ty), clses)
                 body' <- elabExpr `traverse` body
                 return $ T.LetE decs body'
 elabExpr (P.CaseE match alts) = do
@@ -109,19 +115,21 @@ elabType (P.BinT left op right) = do
         return $ T.AppT (sL left' op $ T.AppT (L (getLoc op) (T.ConT op')) left') right'
 elabType P.FactorT{} = unreachable "fixity resolution failed"
 
-elabFunDecls ::
+elabLocDecls ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
         [P.LLocDecl] ->
         m ([(Ident, [T.Clause 'T.Untyped])], [(Ident, T.LType)])
-elabFunDecls fdecs = execWriterT $ forM fdecs $ \case
-        L _ (P.FunSpecD id ty) -> do
-                ty' <- elabType `traverse` ty
-                tell ([], [(id, ty')])
-        L _ (P.FunBindD id clses) -> do
-                id' <- scoping id
-                clses' <- mapM elabClause clses
-                tell ([(id', clses')], [])
-        L _ P.FixityD{} -> unreachable "deleted by Nicifier"
+elabLocDecls fdecs = do
+        (bnds, spcs) <- execWriterT $ forM fdecs $ \case
+                L _ (P.FunSpecD id ty) -> do
+                        id' <- scoping id
+                        ty' <- elabType `traverse` ty
+                        tell ([], [(id', ty')])
+                L _ (P.FunBindD id clses) -> do
+                        clses' <- mapM elabClause clses
+                        tell ([(id, clses')], [])
+                L _ P.FixityD{} -> unreachable "deleted by Nicifier"
+        return (bnds, spcs)
 
 elabClause ::
         (MonadReader env m, HasUniq env, HasScope env, MonadIO m, MonadThrow m) =>
@@ -150,13 +158,15 @@ elabDecls (L _ (P.DataD id params constrs) : rest) = do
         kv <- newKnVar
         tell [T.SpecDecl (T.TypSpec id kv), T.DefnDecl (T.DatDefn id qnts constrs')]
         local (extendListScope (id : map fst constrs)) $ elabDecls rest
-elabDecls fundecs = do
+elabDecls ldecs = do
         -- Note: Nicifier ordered from data decls to local decls
-        env <- extendScopeFromSeq fundecs
+        ldecs' <- bundleClauses (map (P.unLocalD <$>) ldecs)
+        env <- extendScopeFromSeq ldecs
         local (const env) $ do
-                (bnds, spcs) <- elabFunDecls =<< bundleClauses (map (P.unLocalD <$>) fundecs)
+                (bnds, spcs) <- elabLocDecls ldecs'
+                spcs' <- mapM (\id -> (id,) . noLoc <$> newTyVar) (map fst bnds \\ map fst spcs)
                 tell $
-                        map (T.SpecDecl . uncurry T.ValSpec) spcs
+                        map (T.SpecDecl . uncurry T.ValSpec) (spcs ++ spcs')
                                 ++ map (T.DefnDecl . uncurry T.FunDefn) bnds
                 ask
 

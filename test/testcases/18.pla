@@ -4,8 +4,8 @@ id x = x
 choose : {a} a -> a -> a
 choose x _ = x
 
-ok : {a} (a -> a) -> a -> a
-ok = choose id
+ok1 : {a} (a -> a) -> a -> a
+ok1 = choose id
 
-no : ({a} a -> a) -> {a} a -> a
-no = choose id
+ok2 : ({a} a -> a) -> {a} a -> a
+ok2 = choose id

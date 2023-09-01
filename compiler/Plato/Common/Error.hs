@@ -21,7 +21,7 @@ catchErrors =
         )
 
 unreachable :: HasCallStack => String -> a
-unreachable s = error $ "unreachable:\n" ++ s
+unreachable s = error $ "unreachable:\n" ++ s ++ "\n"
 
 -- | Error with location
 data LocatedError = forall ann. LocErr Span (Doc ann)
@@ -36,8 +36,8 @@ throwLocErr sp doc = throw $ LocErr sp doc
 
 printLocErr :: LocatedError -> IO ()
 printLocErr (LocErr sp msg) = putDoc $ case sp of
-        NoSpan -> hcat ["<no location info>: error: ", line, indent 4 msg]
-        _ -> hcat [pretty sp, ": error: ", line, indent 4 msg]
+        NoSpan -> hcat ["<no location info>: error: ", line, indent 4 msg, line]
+        _ -> hcat [pretty sp, ": error: ", line, indent 4 msg, line]
 
 -- | Error with no location
 data PlainError = forall ann. PlainErr (Doc ann)
@@ -51,4 +51,4 @@ throwError :: MonadThrow m => Doc ann -> m a
 throwError doc = throw $ PlainErr doc
 
 printPlainErr :: PlainError -> IO ()
-printPlainErr (PlainErr msg) = putDoc $ hcat ["error: ", line, indent 4 msg]
+printPlainErr (PlainErr msg) = putDoc $ hcat ["error: ", line, indent 4 msg, line]

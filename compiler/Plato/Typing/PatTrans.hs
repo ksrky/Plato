@@ -86,7 +86,7 @@ match ::
         m (Expr 'Typed)
 match [(var, ty)] [] = return (CaseE' (VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
-match [] (([], exp) : _) = return $ exp
+match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
 match (vt : vts) clauses
         | all isVar clauses = matchVar vt vts clauses

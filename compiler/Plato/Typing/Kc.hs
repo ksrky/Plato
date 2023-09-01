@@ -51,7 +51,7 @@ checkKind (L sp ty) exp_kn = case ty of
                 arg_kn <- newKnVar
                 checkKind fun (ArrK arg_kn exp_kn)
                 checkKind arg arg_kn
-        MetaT{} -> unreachable "Plato.KindInfer.Typ.checkKind received MetaT"
+        MetaT{} -> return ()
     where
         unify_ :: Kind -> Kind -> m ()
         unify_ kn1 kn2 = catches (unify kn1 kn2) (kcErrorHandler sp kn1 kn2)

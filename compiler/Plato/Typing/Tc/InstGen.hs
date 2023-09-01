@@ -16,7 +16,6 @@ import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Misc
 import Plato.Typing.Tc.Coercion
-import Plato.Typing.Zonking
 
 -- | Instantiation
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
@@ -56,10 +55,9 @@ quantify ::
         [MetaTv] ->
         Rho ->
         m ([Quant], Sigma)
-quantify [] ty = return ([], ty)
-quantify tvs ty = do
+quantify [] rho = return ([], rho)
+quantify tvs rho = do
         new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
-        ty' <- zonk ty
         qnts <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
-        return (qnts, AllT qnts (noLoc ty'))
+        return (qnts, AllT qnts (noLoc rho))

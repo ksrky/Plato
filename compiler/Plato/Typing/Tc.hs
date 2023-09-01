@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing.Tc (checkType, inferType, checkClauses) where
+module Plato.Typing.Tc (checkType, inferType, checkDefn, inferDefn) where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM, (<=<))
@@ -168,7 +168,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 local (modifyTypEnv $ extendList spcs) $ do
                         decs' <- forM decs $ \((id, sigma), clauses) -> do
                                 checkKindStar sigma
-                                exp' <- checkClauses clauses (unLoc sigma)
+                                exp' <- checkDefn clauses (unLoc sigma)
                                 return ((id, unLoc sigma), exp')
                         body' <- tcRho body exp_ty
                         return $ LetE' decs' body'
@@ -205,15 +205,15 @@ zapToMonoType (Infer ref) = do
         writeMIORef ref ty
         return $ Check ty
 
--- | Type check of Sigma
+-- | Type checking of Sigma
 inferSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
-        (tvs, sigma) <- generalize rho
-        return (unCoer (genTrans tvs) <$> exp', sigma)
+        (qnts, sigma) <- generalize rho
+        return (unCoer (genTrans qnts) <$> exp', sigma)
 
 checkSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
@@ -229,27 +229,45 @@ checkSigma exp sigma = do
         unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
         return $ unCoer (coer <> genTrans fqnts) <$> exp'
 
--- | Check clauses
-checkClauses ::
+-- | Type checkinng of Clauses
+tcClauses ::
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        [Clause 'Untyped] ->
+        Rho ->
+        m (Expr 'Typed)
+tcClauses clauses rho = do
+        (pat_tys, res_ty) <-
+                catches
+                        (unifyFuns (length (fst $ head clauses)) rho)
+                        (unifunErrorHandler (getLoc clauses) rho)
+        clauses' <- forM clauses $ \(pats, body) -> do
+                binds <- checkPats pats pat_tys
+                body' <- local (modifyTypEnv $ extendList binds) $ checkRho body res_ty
+                return (pats, unLoc body')
+        transClauses pat_tys clauses'
+
+checkDefn ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [Clause 'Untyped] ->
         Sigma ->
         m (Expr 'Typed)
-checkClauses clauses sigma_ty = do
-        (coer, fqnts, rho_ty) <- skolemise sigma_ty
-        (pat_tys, res_ty) <-
-                catches
-                        (unifyFuns (length (fst $ head clauses)) rho_ty)
-                        (unifunErrorHandler (getLoc clauses) rho_ty)
-        clauses' <- forM clauses $ \(pats, body) -> do
-                binds <- checkPats pats pat_tys
-                body' <- local (modifyTypEnv $ extendList binds) $ checkSigma body res_ty
-                return (pats, unLoc body')
-        exp <- transClauses pat_tys clauses'
-        esc_tvs <- S.union <$> getFreeTvs sigma_ty <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
+checkDefn clauses sigma = do
+        (coer, fqnts, rho) <- skolemise sigma
+        exp <- tcClauses clauses rho
+        esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst fqnts)
         unless (null bad_tvs) $ unreachable "Type not polymorphic enough" -- tmp: when it fails?
         return $ unCoer (coer <> genTrans fqnts) exp
+
+inferDefn ::
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        [Clause 'Untyped] ->
+        m (Expr 'Typed, Sigma)
+inferDefn clauses = do
+        tv <- newTyVar
+        exp <- tcClauses clauses tv
+        (qnts, sigma) <- generalize tv
+        return (unCoer (genTrans qnts) exp, sigma)
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion

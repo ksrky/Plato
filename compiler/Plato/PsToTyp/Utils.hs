@@ -26,6 +26,6 @@ instance HasDomain TopDecl where
         getDomain (LocalD ld) = getDomain ld
 
 instance HasDomain LocDecl where
-        getDomain (FunSpecD id _) = [id]
-        getDomain FunBindD{} = []
+        getDomain FunSpecD{} = []
+        getDomain (FunBindD id _) = [id]
         getDomain FixityD{} = []

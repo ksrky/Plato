@@ -52,7 +52,7 @@ typingDecls' (SpecDecl (ValSpec id ty) : decs) = do
         local (modifyTypEnv $ extend id ty) $ typingDecls' decs
 typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         sigma <- zonk =<< find id =<< asks getTypEnv
-        exp <- checkClauses clauses sigma
+        exp <- checkDefn clauses sigma
         tell [DefnDecl (FunDefnok id exp)]
         typingDecls' decs
 
