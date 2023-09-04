@@ -1,5 +1,6 @@
 {
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Parsing.Parser (
     parser,
@@ -24,6 +25,7 @@ import Plato.Syntax.Parsing
 
 import Control.Monad.State (lift)
 import Control.Exception.Safe (MonadThrow)
+import qualified Data.List as List
 import qualified Data.Text as T
 import Prettyprinter
 }
@@ -388,4 +390,20 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
+
+bundleClauses :: MonadThrow m => [LLocDecl] -> m [LLocDecl]
+bundleClauses = classify . partition
+  where
+    classify :: MonadThrow m => [[LLocDecl]] -> m [LLocDecl]
+    classify [] = return []
+    classify (fbnds@(L sp (FunBindD id clses) : _) : rest) = do
+        let spn = mconcat $ [spi | L spi FunBindD{} <- fbnds]
+        (L spn (FunBindD id clses) :) <$> classify rest
+    classify (ldecs : rest) = (ldecs ++) <$> classify rest
+
+    partition :: [LLocDecl] -> [[LLocDecl]]
+    partition =
+        List.groupBy $ curry $ \case
+            (L _ (FunBindD id1 _), L _ (FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
+            _ -> False
 }

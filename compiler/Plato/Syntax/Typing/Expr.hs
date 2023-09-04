@@ -5,6 +5,7 @@
 module Plato.Syntax.Typing.Expr (
         LExpr,
         Clause,
+        Clauses,
         Expr (..),
         prClause,
 ) where
@@ -29,6 +30,9 @@ type family Alt (a :: TcFlag)
 type instance Alt 'Untyped = (LPat, LExpr 'Untyped)
 type instance Alt 'Typed = (LPat, Expr 'Typed)
 
+type Clauses (a :: TcFlag) = [Clause a]
+type Alts (a :: TcFlag) = [Alt a]
+
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr 'Untyped -> LExpr 'Untyped -> Expr 'Untyped
@@ -36,11 +40,11 @@ data Expr (a :: TcFlag) where
         AbsE :: Ident -> Maybe Type -> LExpr 'Untyped -> Expr 'Untyped
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
-        TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
-        LetE :: [((Ident, LType), [Clause 'Untyped])] -> LExpr 'Untyped -> Expr 'Untyped
+        TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
+        LetE :: [((Ident, LType), Clauses 'Untyped)] -> LExpr 'Untyped -> Expr 'Untyped
         LetE' :: [((Ident, Type), Expr 'Typed)] -> LExpr 'Typed -> Expr 'Typed
-        CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
-        CaseE' :: Expr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
+        CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
+        CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
 
 ----------------------------------------------------------------

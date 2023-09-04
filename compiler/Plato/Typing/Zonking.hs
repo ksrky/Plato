@@ -91,3 +91,6 @@ instance Zonking Spec where
 instance Zonking (Decl 'Typed) where
         zonk (DefnDecl def) = DefnDecl <$> zonk def
         zonk (SpecDecl spc) = SpecDecl <$> zonk spc
+
+instance Zonking (Bind 'Typed) where
+        zonk (Bind' (id, ty) exp) = Bind' <$> ((id,) <$> zonk ty) <*> zonk exp

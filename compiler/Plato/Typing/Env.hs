@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
-        Bind (..),
         TypEnv,
         HasTypEnv (..),
         EnvManager (..),
+        envTypes,
         Constrs,
         ConEnv,
         HasConEnv (..),
@@ -18,8 +18,9 @@ import Prettyprinter
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
+import Plato.Syntax.Typing.Kind
+import Plato.Syntax.Typing.Type
 
 data Bind
         = ValBind Type
@@ -62,6 +63,9 @@ instance EnvManager Kind where
                         TypBind kn -> return kn
                         _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
+envTypes :: TypEnv -> [Type]
+envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)
+
 -----------------------------------------------------------
 -- Constructor Env
 -----------------------------------------------------------
@@ -69,7 +73,6 @@ type Constrs = [(Ident, [Type])]
 
 -- | Mapping a type constructor to data constructors
 type ConEnv = IdentMap ([TyVar], Constrs)
-
 
 class HasConEnv a where
         getConEnv :: a -> ConEnv

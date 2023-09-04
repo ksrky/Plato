@@ -1,4 +1,7 @@
-module Plato.Typing.Kc (checkKindStar, inferKind, checkKind) where
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+
+module Plato.Typing.Kc (checkKindStar, inferKind, checkKind, kcTypDefns) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -55,3 +58,19 @@ checkKind (L sp ty) exp_kn = case ty of
     where
         unify_ :: Kind -> Kind -> m ()
         unify_ kn1 kn2 = catches (unify kn1 kn2) (kcErrorHandler sp kn1 kn2)
+
+kcTypDefn ::
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        TypDefn 'Untyped ->
+        m (TypDefn 'Typed)
+kcTypDefn (DatDefn' id params constrs) = do
+        let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
+        local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
+        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
+        return $ DatDefn'' (id, kn) params constrs
+
+kcTypDefns ::
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        [TypDefn 'Untyped] ->
+        m [TypDefn 'Typed]
+kcTypDefns = mapM kcTypDefn

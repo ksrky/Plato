@@ -25,6 +25,18 @@ data Defn (a :: TcFlag) where
         DatDefn :: Ident -> [Quant] -> [(Ident, LType)] -> Defn 'Untyped
         DatDefnok :: Ident -> Kind -> [Quant] -> [(Ident, LType)] -> Defn 'Typed
 
+data Bind (a :: TcFlag) where
+        Bind :: (Ident, Maybe LType) -> Clauses 'Untyped -> Bind 'Untyped
+        Bind' :: (Ident, Type) -> Expr 'Typed -> Bind 'Typed
+
+data TypDefn (a :: TcFlag) where
+        DatDefn' :: Ident -> Quants -> [(Ident, LType)] -> TypDefn 'Untyped
+        DatDefn'' :: (Ident, Kind) -> Quants -> [(Ident, LType)] -> TypDefn 'Typed
+
+data Defn' (a :: TcFlag)
+        = ValDefn' [Bind a]
+        | TypDefn' [TypDefn a]
+
 data Spec
         = ValSpec Ident LType
         | TypSpec Ident Kind

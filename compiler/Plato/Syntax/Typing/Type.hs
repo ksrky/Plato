@@ -1,6 +1,7 @@
 module Plato.Syntax.Typing.Type (
         LType,
         Quant,
+        Quants,
         Type (..),
         TyVar (..),
         MetaTv (..),
@@ -25,12 +26,13 @@ import Plato.Syntax.Typing.Kind
 type LType = Located Type
 
 type Quant = (TyVar, Kind)
+type Quants = [Quant]
 
 data Type
         = VarT TyVar
         | ConT Ident
         | ArrT LType LType
-        | AllT [Quant] (Located Rho)
+        | AllT Quants (Located Rho)
         | AppT LType LType
         | MetaT MetaTv
         deriving (Eq, Show)

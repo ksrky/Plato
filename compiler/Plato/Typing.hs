@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
-module Plato.Typing (typingDecls, typing, typingExpr) where
+module Plato.Typing (typingDecls, typingDefns, typing, typingExpr) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -55,6 +55,26 @@ typingDecls' (DefnDecl (FunDefn id clauses) : decs) = do
         exp <- checkDefn clauses sigma
         tell [DefnDecl (FunDefnok id exp)]
         typingDecls' decs
+
+typingDefns ::
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        [Defn' 'Untyped] ->
+        WriterT [Defn' 'Typed] m e
+typingDefns [] = undefined
+typingDefns (ValDefn' binds : rest) = do
+        binds' <- tcBinds binds
+        tell [ValDefn' binds']
+        let sig = map (\(Bind' idty _) -> idty) binds'
+        local (modifyTypEnv $ extendList sig) $ typingDefns rest
+typingDefns (TypDefn' tdefs : rest) = do
+        tdefs' <- kcTypDefns tdefs
+        tell [TypDefn' tdefs']
+        let datsig = map (\(DatDefn'' idkn _ _) -> idkn) tdefs'
+            ctors = concatMap (\(DatDefn'' _ _ ctors) -> ctors) tdefs'
+            extce env = foldr (\(DatDefn'' (id, _) qns ctors) -> extendConEnv id (map fst qns) ctors) env tdefs'
+        local (modifyTypEnv $ extendList datsig . extendList ctors) $
+                local (modifyConEnv extce) $
+                        typingDefns rest
 
 -----------------------------------------------------------
 -- typing
