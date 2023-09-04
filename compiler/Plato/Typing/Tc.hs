@@ -187,15 +187,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
                 return $ AbsE' var var_ty (unLoc body')
-        tcRho' (LetE decs body) exp_ty = do
-                let (spcs, _) = unzip decs
-                local (modifyTypEnv $ extendList spcs) $ do
-                        decs' <- forM decs $ \((id, sigma), clauses) -> do
-                                checkKindStar sigma
-                                exp' <- checkDefn clauses (unLoc sigma)
-                                return ((id, unLoc sigma), exp')
+        tcRho' (LetE bnds body) exp_ty = do
+                bnds' <- tcBinds bnds
+                let sigs = map (\(Bind' idty _) -> idty) bnds'
+                local (modifyTypEnv $ extendList sigs) $ do
                         body' <- tcRho body exp_ty
-                        return $ LetE' decs' body'
+                        return $ LetE' bnds' body'
         tcRho' (CaseE test alts) exp_ty = do
                 (test', pat_ty) <- inferRho test
                 exp_ty' <- zapToMonoType exp_ty

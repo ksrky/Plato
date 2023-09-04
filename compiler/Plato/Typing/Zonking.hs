@@ -30,10 +30,10 @@ instance Zonking (Expr 'Typed) where
         zonk (TAbsE qnts body) = do
                 qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonk kn) qnts
                 TAbsE qnts' <$> zonk body
-        zonk (LetE' decs body) = do
-                decs' <- mapM (\((id, ty), exp) -> (,) <$> ((id,) <$> zonk ty) <*> zonk exp) decs
+        zonk (LetE' bnds body) = do
+                bnds' <- zonk bnds
                 body' <- zonk body
-                return $ LetE' decs' body'
+                return $ LetE' bnds' body'
         zonk (CaseE' test ann alts) = do
                 match' <- zonk test
                 ann' <- zonk ann
@@ -75,22 +75,12 @@ instance Zonking Kind where
                                 writeMetaKv kv kn'
                                 return kn'
 
-instance Zonking (Defn 'Typed) where
-        zonk (FunDefnok id exp) = FunDefnok id <$> zonk exp
-        zonk (TypDefn id ty) = TypDefn id <$> zonk ty
-        zonk (DatDefnok id sig params constrs) =
-                DatDefnok id
-                        <$> zonk sig
-                        <*> mapM (\(p, kn) -> (p,) <$> zonk kn) params
-                        <*> mapM (\(con, ty) -> (con,) <$> zonk ty) constrs
-
-instance Zonking Spec where
-        zonk (ValSpec id ty) = ValSpec id <$> zonk ty
-        zonk (TypSpec id kn) = TypSpec id <$> zonk kn
-
-instance Zonking (Decl 'Typed) where
-        zonk (DefnDecl def) = DefnDecl <$> zonk def
-        zonk (SpecDecl spc) = SpecDecl <$> zonk spc
-
 instance Zonking (Bind 'Typed) where
         zonk (Bind' (id, ty) exp) = Bind' <$> ((id,) <$> zonk ty) <*> zonk exp
+
+instance Zonking (TypDefn 'Typed) where
+        zonk (DatDefn' (id, kn) params constrs) =
+                DatDefn'
+                        <$> ((id,) <$> zonk kn)
+                        <*> mapM (\(p, kn) -> (p,) <$> zonk kn) params
+                        <*> mapM (\(con, ty) -> (con,) <$> zonk ty) constrs

@@ -24,7 +24,7 @@ import Plato.Nicifier.OpParser
 import Plato.Parsing
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
-import Plato.Syntax.Typing hiding (Spec)
+import Plato.Syntax.Typing
 
 spec :: Spec
 spec = do
@@ -42,7 +42,7 @@ spec = do
                         test_scexpr "let {x : ty; x = exp} in x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                LetE [((id1, _), _)] (L _ (VarE id1')) -> check [(id1, id1')]
+                                                LetE [Bind (id1, _) _] (L _ (VarE id1')) -> check [(id1, id1')]
                                                 _ -> False
                                         )
                                     )
@@ -57,10 +57,10 @@ spec = do
                                     )
         describe "Scope checking of declarations" $ do
                 it "function clause" $ do
-                        test_decls "id : {a} a -> a; id x = x"
+                        test_defns "id : {a} a -> a; id x = x"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                [_, DefnDecl (FunDefn _ [([L _ (VarP x)], L _ (VarE x'))])] -> check [(x, x')]
+                                                [_, ValDefn [Bind _ [([L _ (VarP x)], L _ (VarE x'))]]] -> check [(x, x')]
                                                 _ -> False
                                         )
                                     )
@@ -69,7 +69,7 @@ spec = do
                         test_scfile "04.pla"
                                 >>= ( `shouldSatisfy`
                                         ( \case
-                                                [_, DefnDecl (FunDefn _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))])] ->
+                                                [_, ValDefn [Bind _ [([L _ (VarP f), L _ (VarP x)], L _ (AppE (L _ (VarE f')) (L _ (VarE x'))))]]] ->
                                                         check [(f, f'), (x, x')]
                                                 _ -> False
                                         )
@@ -126,14 +126,14 @@ test_scexpr inp = do
         sc <- defScope uniq
         runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
 
-test_decls :: (MonadIO m, MonadCatch m) => T.Text -> m [Decl 'Untyped]
-test_decls inp = do
+test_defns :: (MonadIO m, MonadCatch m) => T.Text -> m [Defn 'Untyped]
+test_defns inp = do
         uniq <- initUniq
         decs <- runReaderT (parseDecls inp) uniq
         sc <- defScope uniq
         runReaderT (execWriterT $ elabDecls decs) (Context uniq sc)
 
-test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Program 'Untyped)
+test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Prog 'Untyped)
 test_scfile fn =
         runReaderT
                 ( do

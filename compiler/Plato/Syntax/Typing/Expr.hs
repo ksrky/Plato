@@ -14,6 +14,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base (TcFlag (..))
+import {-# SOURCE #-} Plato.Syntax.Typing.Decl
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
 
@@ -41,8 +42,8 @@ data Expr (a :: TcFlag) where
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
-        LetE :: [((Ident, LType), Clauses 'Untyped)] -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: [((Ident, Type), Expr 'Typed)] -> LExpr 'Typed -> Expr 'Typed
+        LetE :: [Bind 'Untyped] -> LExpr 'Untyped -> Expr 'Untyped
+        LetE' :: [Bind 'Typed] -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
@@ -81,15 +82,10 @@ instance PrettyWithContext (Expr a) where
         pretty' c (TAppE fun tyargs) = contextParens c 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
         pretty' c (TAbsE [] body) = pretty' c body
         pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty' c (LetE decs body) =
-                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
-            where
-                prdec ((id, ty), clses) =
-                        hsep [pretty id, colon, pretty ty, "where", braces $ map prClause clses `sepBy` semi]
-        pretty' c (LetE' decs body) =
-                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
-            where
-                prdec ((id, ty), exp) = hsep [pretty id, colon, pretty ty, equals, pretty exp]
+        pretty' c (LetE bnds body) =
+                contextParens c 0 $ hsep ["let", braces $ map pretty bnds `sepBy` semi, "in", pretty body]
+        pretty' c (LetE' bnds body) =
+                contextParens c 0 $ hsep ["let", braces $ map pretty bnds `sepBy` semi, "in", pretty body]
         pretty' c (CaseE match alts) =
                 contextParens c 0 $
                         hsep

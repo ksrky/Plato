@@ -118,9 +118,9 @@ test_decls inp = do
         uref <- initUniq
         let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        decs' <- runReaderT (execWriterT $ T.elabDecls decs) ctx
-        (decs'', ctx') <- runReaderT (typingDecls decs') ctx
-        prog <- concat <$> runReaderT (mapM C.elabDecl decs'') ctx'
+        defs <- runReaderT (execWriterT $ T.elabDecls decs) ctx
+        (ctx', defs') <- runReaderT (runWriterT (typingDefns defs)) ctx
+        prog <- concat <$> runReaderT (mapM C.elabDefn defs') ctx'
         return $ map (show . pretty) prog
 
 test_file :: FilePath -> IO [String]

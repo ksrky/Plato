@@ -23,9 +23,9 @@ spec :: Spec
 spec = do
         describe "Type checking of declarations" $ do
                 it "lambda abstraction" $ do
-                        test_decls "id : {a} a -> a; id = \\x -> x" `shouldReturn` ()
+                        test_defns "id : {a} a -> a; id = \\x -> x" `shouldReturn` ()
                 it "function clause" $ do
-                        test_decls "id : {a} a -> a; id x = x" `shouldReturn` ()
+                        test_defns "id : {a} a -> a; id x = x" `shouldReturn` ()
         {-
         describe "elaboration of pattern matching" $ do
                 it "1 constructor-pattern" $ do
@@ -98,22 +98,22 @@ instance HasConEnv Context where
         getConEnv = ctx_conEnv
         modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
 
-test_decls :: T.Text -> IO ()
-test_decls inp = do
+test_defns :: T.Text -> IO ()
+test_defns inp = do
         uref <- initUniq
         let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
-        void $ runReaderT (typingDecls decs') ctx
+        defs <- runReaderT (execWriterT $ elabDecls decs) ctx
+        void $ runReaderT (runWriterT $ typingDefns defs) ctx
 
 test_clauses :: T.Text -> IO [String]
 test_clauses inp = do
         uref <- initUniq
         let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        decs' <- runReaderT (execWriterT $ elabDecls decs) ctx
-        (decs'', _) <- runReaderT (typingDecls decs') ctx
-        return $ map (show . pretty) decs''
+        defs <- runReaderT (execWriterT $ elabDecls decs) ctx
+        (_, defs') <- runReaderT (runWriterT $ typingDefns defs) ctx
+        return $ map (show . pretty) defs'
 
 test_file :: FilePath -> IO ()
 test_file fn =
