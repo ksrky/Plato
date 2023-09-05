@@ -109,20 +109,19 @@ topdecls    :: { LInstr }
 -- Declarations
 -----------------------------------------------------------
 decls       :: { [LTopDecl] }
-            : decl ';' decls                        { $1 ++ $3 }
-            | decl                                  { $1 }
+            : decl ';' decls                        { $1 : $3 }
+            | fundecls ';' decls                    { map (fmap LocalD) $1 ++ $3 }
+            | decl                                  { [$1] }
             | {- empty -}                           { [] }
 
-decl        :: { [LTopDecl] }
+decl        :: { LTopDecl }
             -- Data declaration
             : 'data' tycon tyvarseq datarhs
-                                                    { [sL $1 $4 (DataD $2 $3 (unLoc $4))] }
+                                                    { sL $1 $4 (DataD $2 $3 (unLoc $4)) }
             | 'data' tyvar tyconop tyvar datarhs
-                                                    { [sL $1 $5 (DataD $3 [$2, $4] (unLoc $5))] }
+                                                    { sL $1 $5 (DataD $3 [$2, $4] (unLoc $5)) }
             | 'data' '(' tyconop ')' tyvarseq datarhs
-                                                    { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
-            | fundecl                               { map (fmap LocalD) $1 }
-            | fixdecl                               { [fmap LocalD $1] }
+                                                    { sL $1 $6 (DataD $3 $5 (unLoc $6)) }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -140,7 +139,10 @@ constr      :: { (Ident, LType) }
 
 -- | Function/signature declaration
 fundecls    :: { [LLocDecl] }
-            : fundecl ';' fundecls                  { $1 ++ $3 }
+            : fundecls_                             {% bundleClauses $1 }
+
+fundecls_   :: { [LLocDecl] }
+            : fundecl ';' fundecls_                 { $1 ++ $3 }
             | fundecl                               { $1 }
             | {- empty -}                           { [] }
 
@@ -391,10 +393,10 @@ mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
 
-bundleClauses :: MonadThrow m => [LLocDecl] -> m [LLocDecl]
+bundleClauses :: MonadThrow m => [LLocDecl] -> ParserT m [LLocDecl]
 bundleClauses = classify . partition
   where
-    classify :: MonadThrow m => [[LLocDecl]] -> m [LLocDecl]
+    classify :: MonadThrow m => [[LLocDecl]] -> ParserT m [LLocDecl]
     classify [] = return []
     classify (fbnds@(L sp (FunBindD id clses) : _) : rest) = do
         let spn = mconcat $ [spi | L spi FunBindD{} <- fbnds]

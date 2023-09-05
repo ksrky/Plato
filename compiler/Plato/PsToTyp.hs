@@ -53,10 +53,10 @@ elabExpr (P.LamE pats body) = do
                 return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
-        ldecs' <- bundleClauses ldecs
-        env <- extendScopeFromSeq ldecs'
+        mapM_ (checkNumArgs . unLoc) ldecs
+        env <- extendScopeFromSeq ldecs
         local (const env) $ do
-                bnds <- elabLocDecls ldecs'
+                bnds <- elabLocDecls ldecs
                 body' <- elabExpr `traverse` body
                 return $ T.LetE bnds body'
 elabExpr (P.CaseE match alts) = do
@@ -153,7 +153,8 @@ elabDecls (L _ (P.DataD id params constrs) : rest) = do
         local (extendListScope (id : map fst constrs)) $ elabDecls rest
 elabDecls ldecs = do
         -- Note: Nicifier ordered from data decls to local decls
-        ldecs' <- bundleClauses (map (P.unLocalD <$>) ldecs)
+        let ldecs' = map (P.unLocalD <$>) ldecs
+        mapM_ (checkNumArgs . unLoc) ldecs'
         env <- extendScopeFromSeq ldecs
         local (const env) $ do
                 binds <- elabLocDecls ldecs'
