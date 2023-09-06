@@ -18,6 +18,13 @@ data TopDecl
         | LocalD {unLocalD :: LocDecl}
         deriving (Eq, Show)
 
+instance Ord TopDecl where
+        compare x y = compare (tag x) (tag y)
+            where
+                tag :: TopDecl -> Int
+                tag DataD{} = 0
+                tag LocalD{} = 1
+
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------

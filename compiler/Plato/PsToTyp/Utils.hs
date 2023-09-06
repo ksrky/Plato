@@ -13,6 +13,9 @@ instance HasDomain a => HasDomain [a] where
 instance HasDomain a => HasDomain (Located a) where
         getDomain = getDomain . unLoc
 
+instance HasDomain Ident where
+        getDomain id = [id]
+
 instance HasDomain Pat where
         getDomain (ConP _ pats) = getDomain pats
         getDomain (VarP id) = [id]
