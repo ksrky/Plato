@@ -67,10 +67,14 @@ kcTypDefn (DatDefn id params constrs) = do
         let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
+        kn' <- find id =<< asks getTypEnv
+        unify kn kn'
         return $ DatDefn' (id, kn) params constrs
 
 kcTypDefns ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         [TypDefn 'Untyped] ->
         m [TypDefn 'Typed]
-kcTypDefns = mapM kcTypDefn
+kcTypDefns tdefs = do
+        extenv <- extendList <$> mapM (\(DatDefn id _ _) -> (id,) <$> newKnVar) tdefs
+        local (modifyTypEnv extenv) $ mapM kcTypDefn tdefs

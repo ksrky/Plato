@@ -116,7 +116,7 @@ elabBinds bnds = do
 
 elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
 elabDefn (T.TypDefn tdefs) = do
-        decs <- forM tdefs $ \(T.DatDefn' (id, kn) _ _) -> C.Defn id <$> elabKind kn
+        decs <- forM tdefs $ \(T.DatDefn' (id, kn) _ _) -> C.Decl id <$> elabKind kn
         defs <- concat <$> mapM elabTypDefn tdefs
         return $ decs ++ defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds

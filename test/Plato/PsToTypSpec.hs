@@ -75,23 +75,18 @@ spec = do
         describe "Test psToTyp" $ do
                 it "10.pla" $ do
                         test_file "10.pla"
-                                `shouldReturn` [ "List : $46"
-                                               , "data List (a : $45) where {Nil : List a; :: : a -> List a -> List a}"
-                                               , "reverse : {a : $47} List a -> List a"
-                                               , "reverse where {l -> let {rev : {a : $48} List a -> List a -> List a where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
+                                `shouldReturn` [ "data List (a : $45) where {Nil : List a; :: : a -> List a -> List a}"
+                                               , "reverse : {a : $46} List a -> List a \
+                                                 \where {l -> let {rev : {a : $47} List a -> List a -> List a \
+                                                 \where {Nil a -> a; (:: x xs) a -> rev xs (:: x a)}} in rev l Nil}"
                                                ]
                 it "15.pla" $ do
                         test_file "15.pla"
-                                `shouldReturn` [ "ChurchNum : $46"
-                                               , "data ChurchNum where {ChurchNum : ({a : $45} (a -> a) -> a -> a) -> ChurchNum}"
-                                               , "runNum : ChurchNum -> {a : $47} (a -> a) -> a -> a"
-                                               , "zero : ChurchNum"
-                                               , "succ : ChurchNum -> ChurchNum"
-                                               , "two : ChurchNum"
-                                               , "runNum where {(ChurchNum xs) -> xs}"
-                                               , "zero where {-> ChurchNum (\\ s . \\ z . z)}"
-                                               , "succ where {n -> ChurchNum (\\ s . \\ z . s (runNum n s z))}"
-                                               , "two where {-> succ (succ zero)}"
+                                `shouldReturn` [ "data ChurchNum where {ChurchNum : ({a : $45} (a -> a) -> a -> a) -> ChurchNum}"
+                                               , "runNum : ChurchNum -> {a : $46} (a -> a) -> a -> a where {(ChurchNum xs) -> xs}; \
+                                                 \zero : ChurchNum where {-> ChurchNum (\\ s . \\ z . z)}; \
+                                                 \succ : ChurchNum -> ChurchNum where {n -> ChurchNum (\\ s . \\ z . s (runNum n s z))}; \
+                                                 \two : ChurchNum where {-> succ (succ zero)}"
                                                ]
 
 testScope :: MonadIO m => IORef Uniq -> m Scope

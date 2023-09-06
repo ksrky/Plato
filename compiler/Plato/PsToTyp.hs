@@ -55,7 +55,7 @@ elabExpr sc (P.LamE pats body) = do
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr sc (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
-        ldecs' <- bundleClauses ldecs
+        ldecs' <- assembleClauses ldecs
         let sc' = extendScope ldecs' sc
         bnds <- elabLocDecls sc' ldecs'
         body' <- elabExpr sc' `traverse` body
@@ -128,16 +128,16 @@ elabLocDecls sc ldecs = do
                 Just ty -> return (T.Bind (id, Just ty) clses)
                 _ -> return (T.Bind (id, Nothing) clses)
 
-bundleClauses :: MonadThrow m => [P.LLocDecl] -> m [P.LLocDecl]
-bundleClauses = classify . partition
+assembleClauses :: MonadThrow m => [P.LLocDecl] -> m [P.LLocDecl]
+assembleClauses = assemble . partition
     where
-        classify :: MonadThrow m => [[P.LLocDecl]] -> m [P.LLocDecl]
-        classify [] = return []
-        classify (fbnds@(L _ (P.FunBindD id clses) : _) : rest) = do
-                let spn = mconcat $ [spi | L spi P.FunBindD{} <- fbnds]
-                (L spn (P.FunBindD id clses) :) <$> classify rest
-        classify (ldecs : rest) = (ldecs ++) <$> classify rest
-
+        assemble :: MonadThrow m => [[P.LLocDecl]] -> m [P.LLocDecl]
+        assemble [] = return []
+        assemble (bnds@(L _ (P.FunBindD id _) : _) : rest) = do
+                let clses = [(psi, ei) | L _ (P.FunBindD _ [(psi, ei)]) <- bnds]
+                let spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
+                (L spn (P.FunBindD id clses) :) <$> assemble rest
+        assemble (ldecs : rest) = (ldecs ++) <$> assemble rest
         partition :: [P.LLocDecl] -> [[P.LLocDecl]]
         partition =
                 List.groupBy $ curry $ \case
@@ -178,7 +178,7 @@ elabTopDecls sc tdecs = do
         let (tdecs', ldecs) = groupDecl tdecs
         let sc' = extendScope tdecs' sc
         tdefs <- mapM (elabDecl sc') tdecs'
-        ldecs' <- bundleClauses ldecs
+        ldecs' <- assembleClauses ldecs
         let sc'' = extendScope ldecs' sc'
         mapM_ (checkNumArgs . unLoc) ldecs'
         binds <- elabLocDecls sc'' ldecs'

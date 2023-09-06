@@ -25,7 +25,7 @@ instance HasDomain Pat where
         getDomain (FactorP pat) = getDomain pat
 
 instance HasDomain TopDecl where
-        getDomain (DataD id _ _) = [id]
+        getDomain (DataD id _ ctors) = id : map fst ctors
         getDomain (LocalD ld) = getDomain ld
 
 instance HasDomain LocDecl where

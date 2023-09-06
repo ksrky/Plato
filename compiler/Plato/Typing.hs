@@ -34,7 +34,7 @@ typingDefns (TypDefn tdefs : rest) = do
         let datsig = map (\(DatDefn' idkn _ _) -> idkn) tdefs'
             ctors = concatMap (\(DatDefn' _ _ ctors) -> ctors) tdefs'
             extce env = foldr (\(DatDefn' (id, _) qns ctors) -> extendConEnv id (map fst qns) ctors) env tdefs'
-        local (modifyTypEnv $ extendList datsig . extendList ctors) $
+        local (modifyTypEnv $ extendList ctors . extendList datsig) $
                 local (modifyConEnv extce) $
                         typingDefns rest
 
