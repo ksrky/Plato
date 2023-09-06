@@ -27,7 +27,7 @@ unreachable s = error $ "unreachable:\n" ++ s ++ "\n"
 data LocatedError = forall ann. LocErr Span (Doc ann)
 
 instance Show LocatedError where
-        show _ = "Located error"
+        show (LocErr sp doc) = show sp ++ ":" ++ show doc
 
 instance Exception LocatedError
 
@@ -43,7 +43,7 @@ printLocErr (LocErr sp msg) = putDoc $ case sp of
 data PlainError = forall ann. PlainErr (Doc ann)
 
 instance Show PlainError where
-        show _ = "Plain error"
+        show (PlainErr doc) = show doc
 
 instance Exception PlainError
 

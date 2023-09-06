@@ -16,7 +16,9 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Data.List qualified as List
 import GHC.Stack
+import Plato.Common.Ident
 
 import Plato.Common.Error
 import Plato.Common.Location
@@ -111,8 +113,9 @@ elabLocDecls ::
         ScopeGraph ->
         [P.LLocDecl] ->
         m [T.Bind 'T.Untyped]
-elabLocDecls scg fdecs = do
-        (bnds, spcs) <- execWriterT $ forM fdecs $ \case
+elabLocDecls scg ldecs = do
+        ldecs' <- bundleClauses ldecs
+        (bnds, spcs) <- execWriterT $ forM ldecs' $ \case
                 L _ (P.FunSpecD id ty) -> do
                         id' <- scoping id scg
                         ty' <- elabType scg `traverse` ty
@@ -125,6 +128,21 @@ elabLocDecls scg fdecs = do
                 Just ty -> return (T.Bind (id, Just ty) clses)
                 _ -> return (T.Bind (id, Nothing) clses)
 
+bundleClauses :: MonadThrow m => [P.LLocDecl] -> m [P.LLocDecl]
+bundleClauses = classify . partition
+    where
+        classify :: MonadThrow m => [[P.LLocDecl]] -> m [P.LLocDecl]
+        classify [] = return []
+        classify (fbnds@(L _ (P.FunBindD id clses) : _) : rest) = do
+                let spn = mconcat $ [spi | L spi P.FunBindD{} <- fbnds]
+                (L spn (P.FunBindD id clses) :) <$> classify rest
+        classify (ldecs : rest) = (ldecs ++) <$> classify rest
+
+        partition :: [P.LLocDecl] -> [[P.LLocDecl]]
+        partition =
+                List.groupBy $ curry $ \case
+                        (L _ (P.FunBindD id1 _), L _ (P.FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
+                        _ -> False
 elabClause ::
         (MonadReader env m, HasUniq env, MonadIO m, MonadThrow m) =>
         ScopeGraph ->

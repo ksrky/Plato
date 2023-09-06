@@ -15,7 +15,7 @@ import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.PsToTyp.Scoping
+import Plato.PsToTyp.Graph
 import Plato.Typing
 import Plato.Typing.Env
 
@@ -86,10 +86,6 @@ instance HasUniq Context where
         getUniq = return . ctx_uniq
         setUniq uniq ref = setUniq uniq (ctx_uniq ref)
 
-instance HasScope Context where
-        getScope = ctx_scope
-        modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
-
 instance HasTypEnv Context where
         getTypEnv = ctx_typEnv
         modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
@@ -103,7 +99,8 @@ test_defns inp = do
         uref <- initUniq
         let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        defs <- runReaderT (execWriterT $ elabDecls decs) ctx
+        scg <- initScopeGraph
+        defs <- runReaderT (execWriterT $ mapM (elabDecl scg) decs) ctx
         void $ runReaderT (runWriterT $ typingDefns defs) ctx
 
 test_clauses :: T.Text -> IO [String]
@@ -111,7 +108,8 @@ test_clauses inp = do
         uref <- initUniq
         let ctx = Context uref mempty mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        defs <- runReaderT (execWriterT $ elabDecls decs) ctx
+        scg <- initScopeGraph
+        defs <- runReaderT (execWriterT $ mapM (elabDecl scg) decs) ctx
         (_, defs') <- runReaderT (runWriterT $ typingDefns defs) ctx
         return $ map (show . pretty) defs'
 

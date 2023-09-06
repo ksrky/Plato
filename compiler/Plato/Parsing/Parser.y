@@ -109,19 +109,19 @@ topdecls    :: { LInstr }
 -- Declarations
 -----------------------------------------------------------
 decls       :: { [LTopDecl] }
-            : decl ';' decls                        { $1 : $3 }
-            | fundecls ';' decls                    { map (fmap LocalD) $1 ++ $3 }
-            | decl                                  { [$1] }
+            : decl ';' decls                        { $1 ++ $3 }
+            | decl                                  { $1 }
             | {- empty -}                           { [] }
 
-decl        :: { LTopDecl }
+decl        :: { [LTopDecl] }
             -- Data declaration
             : 'data' tycon tyvarseq datarhs
-                                                    { sL $1 $4 (DataD $2 $3 (unLoc $4)) }
+                                                    { [sL $1 $4 (DataD $2 $3 (unLoc $4))] }
             | 'data' tyvar tyconop tyvar datarhs
-                                                    { sL $1 $5 (DataD $3 [$2, $4] (unLoc $5)) }
+                                                    { [sL $1 $5 (DataD $3 [$2, $4] (unLoc $5))] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
-                                                    { sL $1 $6 (DataD $3 $5 (unLoc $6)) }
+                                                    { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
+            | fundecl                               { map (fmap LocalD) $1 }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -139,10 +139,7 @@ constr      :: { (Ident, LType) }
 
 -- | Function/signature declaration
 fundecls    :: { [LLocDecl] }
-            : fundecls_                             {% bundleClauses $1 }
-
-fundecls_   :: { [LLocDecl] }
-            : fundecl ';' fundecls_                 { $1 ++ $3 }
+            : fundecl ';' fundecls                  { $1 ++ $3 }
             | fundecl                               { $1 }
             | {- empty -}                           { [] }
 
@@ -392,20 +389,4 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
-
-bundleClauses :: MonadThrow m => [LLocDecl] -> ParserT m [LLocDecl]
-bundleClauses = classify . partition
-  where
-    classify :: MonadThrow m => [[LLocDecl]] -> ParserT m [LLocDecl]
-    classify [] = return []
-    classify (fbnds@(L sp (FunBindD id clses) : _) : rest) = do
-        let spn = mconcat $ [spi | L spi FunBindD{} <- fbnds]
-        (L spn (FunBindD id clses) :) <$> classify rest
-    classify (ldecs : rest) = (ldecs ++) <$> classify rest
-
-    partition :: [LLocDecl] -> [[LLocDecl]]
-    partition =
-        List.groupBy $ curry $ \case
-            (L _ (FunBindD id1 _), L _ (FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
-            _ -> False
 }

@@ -9,7 +9,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.IORef
-import Data.Map.Strict qualified as M
 import Data.Text qualified as T
 import Prettyprinter
 import Test.Hspec
@@ -23,7 +22,7 @@ import Plato.Nicifier
 import Plato.Nicifier.OpParser
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.PsToTyp.Scoping
+import Plato.PsToTyp.Graph
 import Plato.Syntax.Typing
 
 spec :: Spec
@@ -96,42 +95,33 @@ spec = do
                                                , "two where {-> succ (succ zero)}"
                                                ]
 
-defScope :: MonadIO m => IORef Uniq -> m Scope
-defScope ref = do
+testScope :: MonadIO m => IORef Uniq -> m ScopeGraph
+testScope ref = do
+        scg <- initScopeGraph
         u1 <- pickUniq ref
         u2 <- pickUniq ref
         u3 <- pickUniq ref
-        return $
-                M.fromList
-                        [ (varName "exp", Ident{nameIdent = varName "exp", spanIdent = NoSpan, stamp = u1})
-                        , (conName "Con", Ident{nameIdent = conName "Con", spanIdent = NoSpan, stamp = u2})
-                        , (tyvarName "ty", Ident{nameIdent = tyvarName "ty", spanIdent = NoSpan, stamp = u3})
-                        ]
-
-data Context = Context {ctx_uniq :: IORef Uniq, ctx_scope :: Scope}
-
-instance HasUniq Context where
-        getUniq = return . ctx_uniq
-        setUniq uniq ref = setUniq uniq (ctx_uniq ref)
-
-instance HasScope Context where
-        getScope (Context _ sc) = sc
-        modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
+        let ids =
+                [ Ident{nameIdent = varName "exp", spanIdent = NoSpan, stamp = u1}
+                , Ident{nameIdent = conName "Con", spanIdent = NoSpan, stamp = u2}
+                , Ident{nameIdent = tyvarName "ty", spanIdent = NoSpan, stamp = u3}
+                ]
+        return $ extendScopes ids scg
 
 test_scexpr :: (MonadIO m, MonadCatch m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
-        uniq <- initUniq
-        exp <- runReaderT (parseExpr inp) uniq
+        uref <- initUniq
+        exp <- runReaderT (parseExpr inp) uref
         exp' <- runReaderT (opParse exp) mempty
-        sc <- defScope uniq
-        runReaderT (elabExpr (unLoc exp')) (Context uniq sc)
+        scg <- testScope uref
+        runReaderT (elabExpr scg (unLoc exp')) uref
 
 test_defns :: (MonadIO m, MonadCatch m) => T.Text -> m [Defn 'Untyped]
 test_defns inp = do
-        uniq <- initUniq
-        decs <- runReaderT (parseDecls inp) uniq
-        sc <- defScope uniq
-        runReaderT (execWriterT $ elabDecls decs) (Context uniq sc)
+        uref <- initUniq
+        decs <- runReaderT (parseDecls inp) uref
+        scg <- testScope uref
+        runReaderT (execWriterT $ mapM (elabDecl scg) decs) uref
 
 test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Prog 'Untyped)
 test_scfile fn =
