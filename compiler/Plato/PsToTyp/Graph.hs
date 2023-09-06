@@ -35,8 +35,13 @@ initScopeGraph = do
 newRoot :: Ident -> ScopeGraph -> ScopeGraph
 newRoot id env = env{roots = id : roots env}
 
-extendScopes :: HasDomain a => a -> ScopeGraph -> ScopeGraph
-extendScopes seq env = env{scopes = newScope (getDomain seq) : scopes env}
+extendScope :: HasDomain a => a -> ScopeGraph -> ScopeGraph
+extendScope seq env = case scopes env of
+        [] -> unreachable "stack is empty"
+        hd : tl -> env{scopes = mappend (newScope (getDomain seq)) hd : tl}
+
+pushNewScope :: HasDomain a => a -> ScopeGraph -> ScopeGraph
+pushNewScope seq env = env{scopes = newScope (getDomain seq) : scopes env}
 
 addEdge :: MonadIO m => Ident -> Ident -> ScopeGraph -> m ()
 addEdge u v env = do

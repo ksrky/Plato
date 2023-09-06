@@ -15,7 +15,6 @@ import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.PsToTyp.Graph
 import Plato.Typing
 import Plato.Typing.Env
 
@@ -77,7 +76,6 @@ spec = do
 
 data Context = Context
         { ctx_uniq :: IORef Uniq
-        , ctx_scope :: Scope
         , ctx_typEnv :: TypEnv
         , ctx_conEnv :: ConEnv
         }
@@ -97,19 +95,17 @@ instance HasConEnv Context where
 test_defns :: T.Text -> IO ()
 test_defns inp = do
         uref <- initUniq
-        let ctx = Context uref mempty mempty mempty
+        let ctx = Context uref mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        scg <- initScopeGraph
-        defs <- runReaderT (execWriterT $ mapM (elabDecl scg) decs) ctx
+        defs <- runReaderT (elabTopDecls mempty decs) ctx
         void $ runReaderT (runWriterT $ typingDefns defs) ctx
 
 test_clauses :: T.Text -> IO [String]
 test_clauses inp = do
         uref <- initUniq
-        let ctx = Context uref mempty mempty mempty
+        let ctx = Context uref mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        scg <- initScopeGraph
-        defs <- runReaderT (execWriterT $ mapM (elabDecl scg) decs) ctx
+        defs <- runReaderT (elabTopDecls mempty decs) ctx
         (_, defs') <- runReaderT (runWriterT $ typingDefns defs) ctx
         return $ map (show . pretty) defs'
 

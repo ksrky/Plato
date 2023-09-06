@@ -7,7 +7,6 @@ module Plato.PsToTypSpec where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Control.Monad.Writer
 import Data.IORef
 import Data.Text qualified as T
 import Prettyprinter
@@ -22,7 +21,7 @@ import Plato.Nicifier
 import Plato.Nicifier.OpParser
 import Plato.Parsing
 import Plato.PsToTyp
-import Plato.PsToTyp.Graph
+import Plato.PsToTyp.Scoping
 import Plato.Syntax.Typing
 
 spec :: Spec
@@ -95,9 +94,8 @@ spec = do
                                                , "two where {-> succ (succ zero)}"
                                                ]
 
-testScope :: MonadIO m => IORef Uniq -> m ScopeGraph
+testScope :: MonadIO m => IORef Uniq -> m Scope
 testScope ref = do
-        scg <- initScopeGraph
         u1 <- pickUniq ref
         u2 <- pickUniq ref
         u3 <- pickUniq ref
@@ -106,22 +104,22 @@ testScope ref = do
                 , Ident{nameIdent = conName "Con", spanIdent = NoSpan, stamp = u2}
                 , Ident{nameIdent = tyvarName "ty", spanIdent = NoSpan, stamp = u3}
                 ]
-        return $ extendScopes ids scg
+        return $ extendScope ids mempty
 
 test_scexpr :: (MonadIO m, MonadCatch m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
         uref <- initUniq
         exp <- runReaderT (parseExpr inp) uref
         exp' <- runReaderT (opParse exp) mempty
-        scg <- testScope uref
-        runReaderT (elabExpr scg (unLoc exp')) uref
+        sc <- testScope uref
+        runReaderT (elabExpr sc (unLoc exp')) uref
 
 test_defns :: (MonadIO m, MonadCatch m) => T.Text -> m [Defn 'Untyped]
 test_defns inp = do
         uref <- initUniq
         decs <- runReaderT (parseDecls inp) uref
-        scg <- testScope uref
-        runReaderT (execWriterT $ mapM (elabDecl scg) decs) uref
+        sc <- testScope uref
+        runReaderT (elabTopDecls sc decs) uref
 
 test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Prog 'Untyped)
 test_scfile fn =

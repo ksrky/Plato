@@ -15,7 +15,6 @@ import Plato.Driver.Monad
 import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp qualified as T
-import Plato.PsToTyp.Graph
 import Plato.TypToCore qualified as C
 import Plato.Typing
 import Plato.Typing.Env
@@ -92,7 +91,6 @@ spec = do
 
 data Context = Context
         { ctx_uniq :: IORef Uniq
-        , ctx_scope :: Scope
         , ctx_typEnv :: TypEnv
         , ctx_conEnv :: ConEnv
         }
@@ -112,10 +110,9 @@ instance HasConEnv Context where
 test_decls :: T.Text -> IO [String]
 test_decls inp = do
         uref <- initUniq
-        let ctx = Context uref mempty mempty mempty
+        let ctx = Context uref mempty mempty
         decs <- runReaderT (parseDecls inp) ctx
-        scg <- initScopeGraph
-        defs <- runReaderT (execWriterT $ mapM (T.elabDecl scg) decs) ctx
+        defs <- runReaderT (T.elabTopDecls mempty decs) ctx
         (ctx', defs') <- runReaderT (runWriterT (typingDefns defs)) ctx
         prog <- concat <$> runReaderT (mapM C.elabDefn defs') ctx'
         return $ map (show . pretty) prog
