@@ -4,7 +4,7 @@ import Control.Monad.IO.Class
 import Data.IORef
 
 import Plato.Common.Uniq
-import Plato.Nicifier.OpParser
+import Plato.Parsing.OpParser
 import Plato.Syntax.Core
 import Plato.Typing.Env
 

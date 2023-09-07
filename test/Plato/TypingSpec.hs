@@ -11,12 +11,11 @@ import Prettyprinter
 import Test.Hspec
 
 import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Monad
-import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
 import Plato.Typing
-import Plato.Typing.Env
 
 spec :: Spec
 spec = do
@@ -74,36 +73,16 @@ spec = do
                 it "02.pla" $ do
                         test_uniq "02.pla" >>= (`shouldSatisfy` isSorted)
 
-data Context = Context
-        { ctx_uniq :: IORef Uniq
-        , ctx_typEnv :: TypEnv
-        , ctx_conEnv :: ConEnv
-        }
-
-instance HasUniq Context where
-        getUniq = return . ctx_uniq
-        setUniq uniq ref = setUniq uniq (ctx_uniq ref)
-
-instance HasTypEnv Context where
-        getTypEnv = ctx_typEnv
-        modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
-
-instance HasConEnv Context where
-        getConEnv = ctx_conEnv
-        modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
-
 test_defns :: T.Text -> IO ()
 test_defns inp = do
-        uref <- initUniq
-        let ctx = Context uref mempty mempty
+        ctx <- initContext
         decs <- runReaderT (parseDecls inp) ctx
         defs <- runReaderT (elabTopDecls mempty decs) ctx
         void $ runReaderT (runWriterT $ typingDefns defs) ctx
 
 test_clauses :: T.Text -> IO [String]
 test_clauses inp = do
-        uref <- initUniq
-        let ctx = Context uref mempty mempty
+        ctx <- initContext
         decs <- runReaderT (parseDecls inp) ctx
         defs <- runReaderT (elabTopDecls mempty decs) ctx
         (_, defs') <- runReaderT (runWriterT $ typingDefns defs) ctx
@@ -114,8 +93,7 @@ test_file fn =
         runReaderT
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
-                        pssyn' <- nicify pssyn
-                        typsyn <- psToTyp pssyn'
+                        typsyn <- psToTyp pssyn
                         typsyn' <- typing typsyn
                         liftIO $ print $ map (show . pretty) typsyn'
                 )
@@ -127,14 +105,12 @@ test_uniq fn =
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
                         uniq1 <- liftIO . readIORef =<< getUniq =<< ask
-                        pssyn' <- nicify pssyn
+                        typsyn <- psToTyp pssyn
                         uniq2 <- liftIO . readIORef =<< getUniq =<< ask
-                        typsyn <- psToTyp pssyn'
-                        uniq3 <- liftIO . readIORef =<< getUniq =<< ask
                         _ <- typing typsyn
-                        uniq4 <- liftIO . readIORef =<< getUniq =<< ask
-                        liftIO $ print [uniq1, uniq2, uniq3, uniq4]
-                        return [uniq1, uniq2, uniq3, uniq4]
+                        uniq3 <- liftIO . readIORef =<< getUniq =<< ask
+                        liftIO $ print [uniq1, uniq2, uniq3]
+                        return [uniq1, uniq2, uniq3]
                 )
                 =<< initSession
 

@@ -46,15 +46,14 @@ library
       Plato.Driver.Interactive
       Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Nicifier
-      Plato.Nicifier.OpParser
-      Plato.Nicifier.OpParser.Resolver
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Error
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.OpParser
+      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp

@@ -10,10 +10,10 @@ import Test.Hspec
 
 import Plato.Common.Name
 import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Monad
-import Plato.Nicifier
-import Plato.Nicifier.OpParser
 import Plato.Parsing
+import Plato.Parsing.OpParser
 import Plato.Syntax.Parsing
 
 spec :: Spec
@@ -78,16 +78,14 @@ fixityEnv =
 
 test :: T.Text -> IO String
 test inp = do
-        exp <- runReaderT (parseExpr inp) =<< initUniq
-        exp' <- runReaderT (opParse exp) fixityEnv
-        return $ show $ pretty exp'
+        exp <- runReaderT (parseExpr inp) =<< initSession
+        return $ show $ pretty exp
 
 test_file :: String -> IO [String]
 test_file fn =
         runReaderT
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
-                        pssyn' <- nicify pssyn
-                        return $ map (show . pretty) pssyn'
+                        return $ map (show . pretty) pssyn
                 )
                 =<< initSession

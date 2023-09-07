@@ -11,8 +11,8 @@ import Prettyprinter
 import Test.Hspec
 
 import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Monad
-import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp qualified as T
 import Plato.TypToCore qualified as C
@@ -109,8 +109,7 @@ instance HasConEnv Context where
 
 test_decls :: T.Text -> IO [String]
 test_decls inp = do
-        uref <- initUniq
-        let ctx = Context uref mempty mempty
+        ctx <- initContext
         decs <- runReaderT (parseDecls inp) ctx
         defs <- runReaderT (T.elabTopDecls mempty decs) ctx
         (ctx', defs') <- runReaderT (runWriterT (typingDefns defs)) ctx
@@ -122,7 +121,6 @@ test_file fn =
         runReaderT
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
-                        pssyn' <- nicify pssyn
                         typsyn <- T.psToTyp pssyn'
                         typsyn' <- typing typsyn
                         corsyn <- C.typToCore typsyn'

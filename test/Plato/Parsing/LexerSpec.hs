@@ -4,7 +4,7 @@ import Control.Monad.Reader
 import Data.Text qualified as T
 import Test.Hspec
 
-import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Parsing
 import Plato.Parsing.Parser
 import Plato.Parsing.Token
@@ -25,4 +25,4 @@ semi :: Token
 semi = TokSymbol SymSemicolon
 
 parseTokens :: T.Text -> IO [Token]
-parseTokens inp = runReaderT (parsePartial tokenParser inp) =<< initUniq
+parseTokens inp = runReaderT (parsePartial tokenParser inp) =<< initContext

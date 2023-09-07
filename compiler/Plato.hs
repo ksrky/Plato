@@ -15,7 +15,6 @@ import Plato.Common.Error
 import Plato.Common.Pretty
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
-import Plato.Nicifier
 import Plato.Parsing
 import Plato.PsToTyp
 import Plato.Syntax.Core

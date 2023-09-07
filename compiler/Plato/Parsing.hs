@@ -22,7 +22,7 @@ import Plato.Driver.Import
 import Plato.Driver.Monad
 import Plato.Parsing.Error
 import Plato.Parsing.Monad
-import Plato.Nicifier.OpParser
+import Plato.Parsing.OpParser
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 

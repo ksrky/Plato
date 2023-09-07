@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Nicifier.OpParser (FixityEnv, HasFixityEnv (..), OpParser (..), opParseTop) where
+module Plato.Parsing.OpParser (FixityEnv, HasFixityEnv (..), OpParser (..), opParseTop) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -12,7 +12,7 @@ import Data.Maybe
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
-import Plato.Nicifier.OpParser.Resolver
+import Plato.Parsing.OpParser.Resolver
 import Plato.Syntax.Parsing
 
 type FixityEnv = M.Map Name Fixity

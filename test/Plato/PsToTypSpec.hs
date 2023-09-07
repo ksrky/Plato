@@ -16,9 +16,8 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Monad
-import Plato.Nicifier
-import Plato.Nicifier.OpParser
 import Plato.Parsing
 import Plato.PsToTyp
 import Plato.PsToTyp.Scoping
@@ -103,25 +102,24 @@ testScope ref = do
 
 test_scexpr :: (MonadIO m, MonadCatch m) => T.Text -> m (Expr 'Untyped)
 test_scexpr inp = do
-        uref <- initUniq
-        exp <- runReaderT (parseExpr inp) uref
+        ctx <- initContext
+        exp <- runReaderT (parseExpr inp) ctx
         exp' <- runReaderT (opParse exp) mempty
         sc <- testScope uref
-        runReaderT (elabExpr sc (unLoc exp')) uref
+        runReaderT (elabExpr sc (unLoc exp')) ctx
 
 test_defns :: (MonadIO m, MonadCatch m) => T.Text -> m [Defn 'Untyped]
 test_defns inp = do
-        uref <- initUniq
-        decs <- runReaderT (parseDecls inp) uref
+        ctx <- initContext
+        decs <- runReaderT (parseDecls inp) ctx
         sc <- testScope uref
-        runReaderT (elabTopDecls sc decs) uref
+        runReaderT (elabTopDecls sc decs) ctx
 
 test_scfile :: (MonadIO m, MonadCatch m) => String -> m (Prog 'Untyped)
 test_scfile fn =
         runReaderT
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
-                        pssyn' <- nicify pssyn
                         psToTyp pssyn'
                 )
                 =<< initSession
@@ -131,7 +129,6 @@ test_file fn =
         runReaderT
                 ( do
                         pssyn <- parseFile ("test/testcases/" ++ fn)
-                        pssyn' <- nicify pssyn
                         typsyn <- psToTyp pssyn'
                         return $ map (show . pretty) typsyn
                 )

@@ -5,7 +5,7 @@ import Data.Text qualified as T
 import Prettyprinter
 import Test.Hspec
 
-import Plato.Common.Uniq
+import Plato.Driver.Context
 import Plato.Driver.Monad
 import Plato.Parsing
 
@@ -66,7 +66,7 @@ spec = do
 
 test_expr :: T.Text -> IO String
 test_expr inp = do
-        exp <- runReaderT (parseExpr inp) =<< initUniq
+        exp <- runReaderT (parseExpr inp) =<< initContext
         return $ show (pretty exp)
 
 test_file :: FilePath -> IO [String]
