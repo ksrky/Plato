@@ -55,7 +55,7 @@ elabExpr (P.LamE pats body) = do
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
-        ldecs' <- assembleClauses ldecs
+        let ldecs' = assembleClauses ldecs
         local (extendScope ldecs') $ do
                 bnds <- elabLocDecls ldecs'
                 body' <- elabExpr `traverse` body
@@ -116,26 +116,26 @@ elabLocDecls ldecs = do
         (bnds, spcs) <- execWriterT $ forM ldecs $ \case
                 L _ (P.FunSpecD id ty) -> do
                         id' <- scoping id
-                        ty' <- elabType `traverse` ty
+                        ty' <- lift $ elabType `traverse` ty
                         tell ([], [(id', ty')])
                 L _ (P.FunBindD id clses) -> do
-                        clses' <- mapM elabClause clses
+                        clses' <- lift $ mapM elabClause clses
                         tell ([(id, clses')], [])
                 L _ P.FixityD{} -> unreachable "deleted by Nicifier"
         forM bnds $ \(id, clses) -> case lookup id spcs of
                 Just ty -> return (T.Bind (id, Just ty) clses)
                 _ -> return (T.Bind (id, Nothing) clses)
 
-assembleClauses :: MonadThrow m => [P.LLocDecl] -> m [P.LLocDecl]
+assembleClauses :: [P.LLocDecl] -> [P.LLocDecl]
 assembleClauses = assemble . partition
     where
-        assemble :: MonadThrow m => [[P.LLocDecl]] -> m [P.LLocDecl]
-        assemble [] = return []
+        assemble :: [[P.LLocDecl]] -> [P.LLocDecl]
+        assemble [] = []
         assemble (bnds@(L _ (P.FunBindD id _) : _) : rest) = do
                 let clses = [(psi, ei) | L _ (P.FunBindD _ [(psi, ei)]) <- bnds]
-                let spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
-                (L spn (P.FunBindD id clses) :) <$> assemble rest
-        assemble (ldecs : rest) = (ldecs ++) <$> assemble rest
+                    spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
+                 in L spn (P.FunBindD id clses) : assemble rest
+        assemble (ldecs : rest) = ldecs ++ assemble rest
         partition :: [P.LLocDecl] -> [[P.LLocDecl]]
         partition =
                 List.groupBy $ curry $ \case
@@ -174,7 +174,7 @@ elabTopDecls tdecs = do
         let (tdecs', ldecs) = groupDecl tdecs
         local (extendScope tdecs') $ do
                 tdefs <- mapM elabDecl tdecs'
-                ldecs' <- assembleClauses ldecs
+                let ldecs' = assembleClauses ldecs
                 local (extendScope ldecs') $ do
                         mapM_ (checkNumArgs . unLoc) ldecs'
                         binds <- elabLocDecls ldecs'
