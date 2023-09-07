@@ -9,10 +9,10 @@ module Plato (
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Control.Monad.Trans.Class
 import Data.Text qualified as T
 
 import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
@@ -30,6 +30,7 @@ compileToCore src = catchErrors $ do
         pssyn <- parseFile src
         whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn
         typsyn <- psToTyp pssyn
+        liftIO $ prettyPrint typsyn
         typsyn' <- typing typsyn
         whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
         corsyn <- typToCore typsyn'
@@ -38,16 +39,17 @@ compileToCore src = catchErrors $ do
         return corsyn
 
 evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
-evaluateCore inp = undefined
-
-{- catchErrors $
-        evalCore
-                =<< lift
-                        ( runReader $ do
-                                pssyn <- parseExpr inp
-                                typsyn <- PT.elabExpr `traverse` pssyn
-                                typsyn' <- typingExpr typsyn
-                                TC.elabExpr typsyn'
+evaluateCore inp =
+        catchErrors $
+                lift
+                        ( runReaderT
+                                ( do
+                                        pssyn <- parseExpr inp
+                                        typsyn <- PT.elabExpr `traverse` pssyn
+                                        typsyn' <- typingExpr typsyn
+                                        TC.elabExpr (unLoc typsyn')
+                                )
+                                =<< getContext
+                                =<< ask
                         )
-                =<< getContext
-                =<< ask -}
+                        >>= evalCore

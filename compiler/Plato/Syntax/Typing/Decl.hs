@@ -4,6 +4,7 @@
 module Plato.Syntax.Typing.Decl where
 
 import Plato.Common.Ident
+import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
@@ -36,12 +37,18 @@ deriving instance Show (TypDefn a)
 deriving instance Eq (Defn a)
 deriving instance Show (Defn a)
 
+instance HasLoc (Bind 'Untyped) where
+        getLoc (Bind (id, _) c) = getLoc id <> getLoc c
+
+instance HasLoc (TypDefn 'Untyped) where
+        getLoc (DatDefn id _ ctors) = getLoc id <> mconcat (map getLoc ctors)
+
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty (Defn a) where
-        pretty (ValDefn binds) = map pretty binds `sepBy` semi
-        pretty (TypDefn tdefs) = map pretty tdefs `sepBy` semi
+        pretty (ValDefn binds) = indent 2 $ vsep $ map pretty binds
+        pretty (TypDefn tdefs) = indent 2 $ vsep $ map pretty tdefs
 
 instance Pretty (Bind a) where
         pretty (Bind (id, Just ty) clauses) =

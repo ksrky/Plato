@@ -31,9 +31,8 @@ tcErrorHandler sp ty_act ty_exp =
                 ty_exp' <- zonk ty_exp
                 throwLocErr sp $
                         vsep
-                                [ "Couldn't match expected type with actual type."
-                                , "Expected type:" <+> pretty ty_exp'
-                                , "  Actual type:" <+> pretty ty_act'
+                                [ "Couldn't unify expected type:" <+> pretty ty_exp'
+                                , "            with actual type:" <+> pretty ty_act'
                                 ]
         , Handler $ \OccursCheckFail -> do
                 ty_act' <- zonk ty_act
@@ -62,9 +61,8 @@ unifunErrorHandler sp rho =
                 rho' <- zonk rho
                 throwLocErr sp $
                         vsep
-                                [ "Couldn't match expected type with actual type."
-                                , "Expected type: _ -> _"
-                                , "  Actual type:" <+> pretty rho'
+                                [ "Couldn't unify expected type: _ -> _"
+                                , "            with actual type:" <+> pretty rho'
                                 ]
         ]
 

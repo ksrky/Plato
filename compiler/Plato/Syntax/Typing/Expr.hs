@@ -54,12 +54,6 @@ data Expr (a :: TcFlag) where
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
 
-instance HasLoc ([LPat], LExpr 'Untyped) where
-        getLoc (pats, exp) = getLoc pats <> getLoc exp
-
-instance HasLoc (LPat, LExpr 'Untyped) where
-        getLoc (pat, exp) = getLoc pat <> getLoc exp
-
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------

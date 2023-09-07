@@ -37,12 +37,6 @@ data FixDir = Leftfix | Rightfix | Nonfix deriving (Eq, Show)
 data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 
 ----------------------------------------------------------------
--- Basic instances
-----------------------------------------------------------------
-instance HasLoc Clause where
-        getLoc (pats, exp) = getLoc pats <> getLoc exp
-
-----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Expr where

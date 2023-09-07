@@ -174,14 +174,17 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (fun', fun_ty) <- inferRho fun
                 (arg_ty, res_ty) <- unifyFun_ fun_ty
                 arg' <- checkSigma arg arg_ty
-                -- res_ty' <- zonk res_ty -- Note: Argument type may apply to result type
                 coer <- instSigma_ res_ty exp_ty
                 return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
-        tcRho' (AbsE var mbty body) (Check exp_ty) = do
-                (var_ty, body_ty) <- unifyFun_ exp_ty
-                void $ maybe (return mempty) (`instSigma_` Check var_ty) mbty
-                body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body body_ty)
-                return $ AbsE' var var_ty (unLoc body')
+        tcRho' (AbsE var Nothing body) (Check exp_ty) = do
+                (arg_ty, res_ty) <- unifyFun_ exp_ty
+                body' <- local (modifyTypEnv $ extend var arg_ty) (checkRho body res_ty)
+                return $ AbsE' var arg_ty (unLoc body')
+        tcRho' (AbsE var (Just var_ty) body) (Check exp_ty) = do
+                (arg_ty, res_ty) <- unifyFun_ exp_ty
+                coer <- instSigma_ arg_ty (Check var_ty)
+                body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body res_ty)
+                return $ AbsE' var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
         tcRho' (AbsE var mbty body) (Infer ref) = do
                 var_ty <- maybe newTyVar return mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)

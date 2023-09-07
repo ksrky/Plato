@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Linearize where
 
@@ -26,9 +27,9 @@ instance Linearize (Expr 'Untyped) where
         linearize (AppE fun arg) = AppE <$> linearize fun <*> linearize arg
         linearize (AbsE id mbty exp) = AbsE id mbty <$> linearize exp
         linearize (LetE binds exp) = do
-                binds' <- linBinds binds
+                bindss <- linBinds binds
                 exp' <- linearize exp
-                return $ LetE binds' exp'
+                return $ unLoc $ foldr (\b e -> sL b e $ LetE b e) exp' bindss
         linearize (CaseE exp alts) = do
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
@@ -48,28 +49,26 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty clses) = Bind idty <$> mapM (\(ps, e) -> (ps,) <$> linearize e) clses
 
-linBinds :: [Bind 'Untyped] -> Writer [Ident] [Bind 'Untyped]
+linBinds :: [Bind 'Untyped] -> Writer [Ident] [[Bind 'Untyped]]
 linBinds binds = do
         graph <- forM binds $ \bnd@(Bind (par, _) _) -> do
                 let (bnd', chs) = runWriter $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
         let sccs = stronglyConnComp graph
-        return $ flattenSCCs sccs
+        return $ map flattenSCC sccs
 
 instance Linearize (TypDefn 'Untyped) where
         linearize (DatDefn id qns ctors) = DatDefn id qns <$> mapM (\(id, ty) -> (id,) <$> linearize ty) ctors
 
-linDatDefns :: [TypDefn 'Untyped] -> Writer [Ident] [TypDefn 'Untyped]
+linDatDefns :: [TypDefn 'Untyped] -> Writer [Ident] [[TypDefn 'Untyped]]
 linDatDefns tdefs = do
         graph <- forM tdefs $ \tdef@(DatDefn id _ _) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
         let sccs = stronglyConnComp graph
-        return $ flattenSCCs sccs
-
-instance Linearize (Defn 'Untyped) where
-        linearize (ValDefn binds) = ValDefn <$> linBinds binds
-        linearize (TypDefn tdefs) = TypDefn <$> linDatDefns tdefs
+        return $ map flattenSCC sccs
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped
-linearizeTop defs = fst $ runWriter (linearize defs)
+linearizeTop = concatMap $ \case
+        ValDefn binds -> fst $ runWriter $ map ValDefn <$> linBinds binds
+        TypDefn tdefs -> fst $ runWriter $ map TypDefn <$> linDatDefns tdefs

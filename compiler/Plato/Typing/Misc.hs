@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 
 module Plato.Typing.Misc (
         getEnvTypes,
@@ -6,6 +7,7 @@ module Plato.Typing.Misc (
         getFreeTvs,
         substTvs,
         getMetaKvs,
+        substExpr,
 ) where
 
 import Control.Monad.IO.Class
@@ -14,6 +16,7 @@ import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import GHC.Stack
 
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Typing.Env
@@ -68,3 +71,19 @@ metaKvs :: Kind -> S.Set MetaKv
 metaKvs StarK = S.empty
 metaKvs (ArrK kn1 kn2) = metaKvs kn1 `S.union` metaKvs kn2
 metaKvs (MetaK kv) = S.singleton kv
+
+substExpr :: Ident -> Expr 'Typed -> Expr 'Typed -> Expr 'Typed
+substExpr id exp body = subst' body
+    where
+        subst' :: Expr 'Typed -> Expr 'Typed
+        subst' (VarE var)
+                | var == id = exp
+                | otherwise = VarE var
+        subst' (AppE' fun arg) = AppE' (subst' fun) (subst' arg)
+        subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
+        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
+        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
+        subst' (LetE' bnds body) =
+                LetE' (map (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
+        subst' (CaseE' test ann_ty alts) =
+                CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)

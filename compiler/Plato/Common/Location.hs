@@ -62,6 +62,9 @@ instance HasLoc (Located a) where
 instance HasLoc a => HasLoc [a] where
         getLoc locs = mconcat (map getLoc locs)
 
+instance (HasLoc a, HasLoc b) => HasLoc (a, b) where
+        getLoc (x, y) = getLoc x <> getLoc y
+
 sL :: (HasLoc a, HasLoc b) => a -> b -> c -> Located c
 sL x y = L (getLoc x <> getLoc y)
 
