@@ -18,9 +18,9 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.List qualified as List
 import GHC.Stack
-import Plato.Common.Ident
 
 import Plato.Common.Error
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Monad

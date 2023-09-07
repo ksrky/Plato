@@ -55,6 +55,7 @@ library
       Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
+      Plato.Plato
       Plato.PsToTyp
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc

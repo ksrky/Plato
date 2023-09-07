@@ -44,7 +44,8 @@ typingDefns (TypDefn tdefs : rest) = do
 typing :: PlatoMonad m => Prog 'Untyped -> m (Prog 'Typed)
 typing defs = catchErrors $ updateContext $ Tuple.swap <$> runWriterT (typingDefns defs)
 
-typingExpr :: PlatoMonad m => LExpr 'Untyped -> m (LExpr 'Typed)
-typingExpr exp = do
-        (exp', _) <- runReaderT (inferType exp) =<< getContext =<< ask
-        return exp'
+typingExpr ::
+        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        LExpr 'Untyped ->
+        m (LExpr 'Typed)
+typingExpr exp = fst <$> inferType exp
