@@ -42,7 +42,8 @@ evaluateCore inp =
         catchErrors $
                 lift
                         ( do
-                                pssyn <- parseExpr inp
+                                pssyn <- undefined --tmp
+                                --  parseExpr inp
                                 -- pssyn' <- nicifyExpr pssyn
                                 typsyn <- psToTypExpr pssyn
                                 typsyn' <- typingExpr typsyn

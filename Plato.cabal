@@ -57,7 +57,6 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
-      Plato.PsToTyp.Graph
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
@@ -81,6 +80,7 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
+      Plato.Typing.Linearize
       Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc
@@ -156,12 +156,6 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.NicifierSpec
-      Plato.Parsing.LexerSpec
-      Plato.Parsing.ParserSpec
-      Plato.PsToTypSpec
-      Plato.TypingSpec
-      Plato.TypToCoreSpec
       Paths_Plato
   hs-source-dirs:
       test

@@ -29,6 +29,7 @@ import Plato.PsToTyp.SynRstrc
 import Plato.Syntax.Parsing qualified as P
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
+import Plato.Typing.Linearize
 
 elabExpr ::
         forall e m.
@@ -182,7 +183,7 @@ elabTopDecls sc tdecs = do
         let sc'' = extendScope ldecs' sc'
         mapM_ (checkNumArgs . unLoc) ldecs'
         binds <- elabLocDecls sc'' ldecs'
-        return [T.TypDefn tdefs, T.ValDefn binds]
+        return $ linearizeTop [T.TypDefn tdefs, T.ValDefn binds]
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of

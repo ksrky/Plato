@@ -59,8 +59,8 @@ parsePartial parser inp = do
         (a, _) <- liftIO $ parseLine uref inp parser
         opParse a
 
-parseExpr :: PlatoMonad m => T.Text -> m LExpr
-parseExpr inp = catchPsErrors $ runReaderT (parsePartial exprParser inp) =<< getContext =<< ask
+parseExpr :: (MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadCatch m) => T.Text -> m LExpr
+parseExpr = catchPsErrors . parsePartial exprParser
 
-parseDecls :: PlatoMonad m => T.Text -> m [LTopDecl]
-parseDecls inp = catchPsErrors $ runReaderT (parsePartial declsParser inp) =<< getContext =<< ask
+parseDecls :: (MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadCatch m) => T.Text -> m [LTopDecl]
+parseDecls = catchPsErrors . parsePartial declsParser
