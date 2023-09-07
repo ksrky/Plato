@@ -27,7 +27,7 @@ data Val
 
 -- | Neutral terms.
 data Ne
-        = NVar Index
+        = NVar Ix
         | Ne :.. (Clos Term)
         | NSplit Ne (Bind (Bind (Clos Term)))
         | NCase Ne (Clos [(Label, Term)])

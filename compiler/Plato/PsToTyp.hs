@@ -33,96 +33,93 @@ import Plato.Typing.Linearize
 
 elabExpr ::
         forall e m.
-        (HasCallStack, MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Expr ->
         m (T.Expr 'T.Untyped)
-elabExpr sc (P.VarE id) = T.VarE <$> scoping id sc
-elabExpr sc (P.AppE fun arg) = T.AppE <$> elabExpr sc `traverse` fun <*> elabExpr sc `traverse` arg
-elabExpr sc (P.BinE left op right) = do
-        left' <- elabExpr sc `traverse` left
-        op' <- scoping op sc
-        right' <- elabExpr sc `traverse` right
+elabExpr (P.VarE id) = T.VarE <$> scoping id
+elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
+elabExpr (P.BinE left op right) = do
+        left' <- elabExpr `traverse` left
+        op' <- scoping op
+        right' <- elabExpr `traverse` right
         return $ T.AppE (sL left' op $ T.AppE (L (getLoc op) (T.VarE op')) left') right'
-elabExpr sc (P.LamE pats body) = do
+elabExpr (P.LamE pats body) = do
         paramPatsUnique pats
-        pats' <- mapM (elabPat sc `traverse`) pats
-        body' <- elabExpr (extendScope pats sc) `traverse` body
+        pats' <- mapM (elabPat `traverse`) pats
+        body' <- local (extendScope pats) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
                 v <- newVarIdent
                 return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
-elabExpr sc (P.LetE ldecs body) = do
+elabExpr (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
         ldecs' <- assembleClauses ldecs
-        let sc' = extendScope ldecs' sc
-        bnds <- elabLocDecls sc' ldecs'
-        body' <- elabExpr sc' `traverse` body
-        return $ T.LetE bnds body'
-elabExpr sc (P.CaseE match alts) = do
-        match' <- elabExpr sc `traverse` match
+        local (extendScope ldecs') $ do
+                bnds <- elabLocDecls ldecs'
+                body' <- elabExpr `traverse` body
+                return $ T.LetE bnds body'
+elabExpr (P.CaseE match alts) = do
+        match' <- elabExpr `traverse` match
         alts' <- forM alts $ \(pat, body) -> do
-                pat' <- elabPat sc `traverse` pat
-                body' <- elabExpr (extendScope pat sc) `traverse` body
+                pat' <- elabPat `traverse` pat
+                body' <- local (extendScope pat) $ elabExpr `traverse` body
                 return (pat', body')
 
         return $ T.CaseE match' alts'
-elabExpr sc (P.AnnE exp ann_ty) = T.AnnE <$> elabExpr sc `traverse` exp <*> elabType sc (unLoc ann_ty)
-elabExpr _ P.FactorE{} = unreachable "fixity resolution failed"
+elabExpr (P.AnnE exp ann_ty) = T.AnnE <$> elabExpr `traverse` exp <*> elabType (unLoc ann_ty)
+elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
-elabPat :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Scope -> P.Pat -> m T.Pat
-elabPat sc (P.ConP con pats) = do
-        con' <- scoping con sc
-        pats' <- mapM (elabPat sc `traverse`) pats
+elabPat :: (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
+elabPat (P.ConP con pats) = do
+        con' <- scoping con
+        pats' <- mapM (elabPat `traverse`) pats
         return $ T.ConP con' pats'
-elabPat _ (P.VarP var) = return $ T.VarP var
-elabPat _ P.WildP = return T.WildP
-elabPat sc (P.BinP left op right) = do
-        left' <- elabPat sc `traverse` left
-        op' <- scoping op sc
-        right' <- elabPat sc `traverse` right
+elabPat (P.VarP var) = return $ T.VarP var
+elabPat P.WildP = return T.WildP
+elabPat (P.BinP left op right) = do
+        left' <- elabPat `traverse` left
+        op' <- scoping op
+        right' <- elabPat `traverse` right
         return $ T.ConP op' [left', right']
-elabPat sc (P.AnnP pat ann_ty) = T.AnnP <$> elabPat sc `traverse` pat <*> elabType sc (unLoc ann_ty)
-elabPat _ P.FactorP{} = unreachable "fixity resolution failed"
+elabPat (P.AnnP pat ann_ty) = T.AnnP <$> elabPat `traverse` pat <*> elabType (unLoc ann_ty)
+elabPat P.FactorP{} = unreachable "fixity resolution failed"
 
 elabType ::
-        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Type ->
         m T.Type
-elabType sc (P.VarT var) = do
-        var' <- scoping var sc
+elabType (P.VarT var) = do
+        var' <- scoping var
         return $ T.VarT (T.BoundTv var')
-elabType sc (P.ConT con) = T.ConT <$> scoping con sc
-elabType sc (P.ArrT arg res) = T.ArrT <$> (elabType sc `traverse` arg) <*> (elabType sc `traverse` res)
-elabType sc (P.AllT vars body) = do
+elabType (P.ConT con) = T.ConT <$> scoping con
+elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
+elabType (P.AllT vars body) = do
         paramNamesUnique vars
         qnts <- mapM (\id -> do kv <- newKnVar; return (T.BoundTv id, kv)) vars
-        body' <- elabType (extendScope vars sc) `traverse` body
+        body' <- local (extendScope vars) $ elabType `traverse` body
         return $ T.AllT qnts body'
-elabType sc (P.AppT fun arg) = T.AppT <$> elabType sc `traverse` fun <*> elabType sc `traverse` arg
-elabType sc (P.BinT left op right) = do
-        left' <- elabType sc `traverse` left
-        op' <- scoping op sc
-        right' <- elabType sc `traverse` right
+elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `traverse` arg
+elabType (P.BinT left op right) = do
+        left' <- elabType `traverse` left
+        op' <- scoping op
+        right' <- elabType `traverse` right
         return $ T.AppT (sL left' op $ T.AppT (L (getLoc op) (T.ConT op')) left') right'
-elabType _ P.FactorT{} = unreachable "fixity resolution failed"
+elabType P.FactorT{} = unreachable "fixity resolution failed"
 
 elabLocDecls ::
-        (MonadReader env m, HasUniq env, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LLocDecl] ->
         m [T.Bind 'T.Untyped]
-elabLocDecls sc ldecs = do
+elabLocDecls ldecs = do
         (bnds, spcs) <- execWriterT $ forM ldecs $ \case
                 L _ (P.FunSpecD id ty) -> do
-                        id' <- scoping id sc
-                        ty' <- elabType sc `traverse` ty
+                        id' <- scoping id
+                        ty' <- elabType `traverse` ty
                         tell ([], [(id', ty')])
                 L _ (P.FunBindD id clses) -> do
-                        clses' <- mapM (elabClause sc) clses
+                        clses' <- mapM elabClause clses
                         tell ([(id, clses')], [])
                 L _ P.FixityD{} -> unreachable "deleted by Nicifier"
         forM bnds $ \(id, clses) -> case lookup id spcs of
@@ -145,45 +142,43 @@ assembleClauses = assemble . partition
                         (L _ (P.FunBindD id1 _), L _ (P.FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
                         _ -> False
 elabClause ::
-        (MonadReader env m, HasUniq env, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Clause ->
         m (T.Clause 'T.Untyped)
-elabClause sc (pats, exp) = do
+elabClause (pats, exp) = do
         paramPatsUnique pats
-        pats' <- mapM (elabPat sc `traverse`) pats
-        exp' <- elabExpr (extendScope pats sc) `traverse` exp
+        pats' <- mapM (elabPat `traverse`) pats
+        exp' <- local (extendScope pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
 elabDecl ::
-        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.LTopDecl ->
         m (T.TypDefn 'T.Untyped)
-elabDecl sc (L _ (P.DataD id params ctors)) = do
+elabDecl (L _ (P.DataD id params ctors)) = do
         paramNamesUnique params
         dataConUnique $ map fst ctors
         mapM_ (dataConType id) ctors
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
-        ctors' <- forM ctors $
-                \(con, ty) -> (con,) <$> elabType (extendScope params sc) `traverse` ty
+        ctors' <- local (extendScope params) $
+                forM ctors $
+                        \(con, ty) -> (con,) <$> elabType `traverse` ty
         return $ T.DatDefn id qnts ctors'
-elabDecl _ _ = unreachable "data type definition required"
+elabDecl _ = unreachable "data type definition required"
 
 elabTopDecls ::
-        (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-        Scope ->
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
-        m [T.Defn 'T.Untyped]
-elabTopDecls sc tdecs = do
+        m ([T.Defn 'T.Untyped], e)
+elabTopDecls tdecs = do
         let (tdecs', ldecs) = groupDecl tdecs
-        let sc' = extendScope tdecs' sc
-        tdefs <- mapM (elabDecl sc') tdecs'
-        ldecs' <- assembleClauses ldecs
-        let sc'' = extendScope ldecs' sc'
-        mapM_ (checkNumArgs . unLoc) ldecs'
-        binds <- elabLocDecls sc'' ldecs'
-        return $ linearizeTop [T.TypDefn tdefs, T.ValDefn binds]
+        local (extendScope tdecs') $ do
+                tdefs <- mapM elabDecl tdecs'
+                ldecs' <- assembleClauses ldecs
+                local (extendScope ldecs') $ do
+                        mapM_ (checkNumArgs . unLoc) ldecs'
+                        binds <- elabLocDecls ldecs'
+                        asks (linearizeTop [T.TypDefn tdefs, T.ValDefn binds],)
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
@@ -195,7 +190,7 @@ elabTopDecls sc tdecs = do
 -----------------------------------------------------------
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Prog 'T.Untyped)
-psToTyp tdecs = catchErrors $ elabTopDecls mempty tdecs
+psToTyp tdecs = catchErrors $ updateContext $ elabTopDecls tdecs
 
 psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = elabExpr mempty `traverse` exp
+psToTypExpr exp = runReaderT (elabExpr `traverse` exp) =<< getContext =<< ask

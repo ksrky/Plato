@@ -6,6 +6,7 @@ module Plato.PsToTyp.Scoping (
 ) where
 
 import Control.Exception.Safe
+import Control.Monad.Reader.Class
 import Data.Map.Strict qualified as M
 import Prettyprinter
 
@@ -27,8 +28,9 @@ instance HasScope Scope where
         getScope = id
         modifyScope = id
 
-scoping :: MonadThrow m => Ident -> Scope -> m Ident
-scoping id sc = do
+scoping :: (MonadReader e m, HasScope e, MonadThrow m) => Ident -> m Ident
+scoping id = do
+        sc <- asks getScope
         case M.lookup (nameIdent id) sc of
                 Just id' -> return id{stamp = stamp id'}
                 Nothing -> throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]

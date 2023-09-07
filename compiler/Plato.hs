@@ -27,7 +27,6 @@ runPlato filepath = void . unPlato (compileToCore filepath)
 compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = catchErrors $ do
         pssyn <- parseFile src
-        -- pssyn' <- nicify pssyn
         whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn
         typsyn <- psToTyp pssyn
         typsyn' <- typing typsyn
@@ -44,7 +43,6 @@ evaluateCore inp =
                         ( do
                                 pssyn <- undefined --tmp
                                 --  parseExpr inp
-                                -- pssyn' <- nicifyExpr pssyn
                                 typsyn <- psToTypExpr pssyn
                                 typsyn' <- typingExpr typsyn
                                 typToCoreExpr typsyn'

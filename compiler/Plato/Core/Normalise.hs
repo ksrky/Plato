@@ -31,7 +31,7 @@ instance Nf (Clos Term) Term where
         nf' True xs t = nf' True xs =<< eval t
         nf' False xs t = qq xs t
 
-instance Nf Index Term where
+instance Nf Ix Term where
         nf' b xs i = do
                 (PrtInfo x shouldExpand) <- prtE i =<< ask
                 lookupIndex i >>= \case

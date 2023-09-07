@@ -31,7 +31,6 @@ library
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.Uniq
-      Plato.Common.Utils
       Plato.Core.Closure
       Plato.Core.Env
       Plato.Core.Equal
