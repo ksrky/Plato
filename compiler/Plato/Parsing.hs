@@ -3,7 +3,6 @@
 module Plato.Parsing (
         parseFile,
         parsePartial,
-        parseInstr,
         parseExpr,
         parseDecls,
 ) where
@@ -23,6 +22,7 @@ import Plato.Driver.Import
 import Plato.Driver.Monad
 import Plato.Parsing.Error
 import Plato.Parsing.Monad
+import Plato.Nicifier.OpParser
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
@@ -35,7 +35,8 @@ parseFile src = catchPsErrors $ do
                                 Right inp -> return inp
         uref <- getUniq =<< ask
         (prog, _) <- liftIO $ parse src uref inp parser
-        runReaderT (processInstrs prog) emptyImporting
+        tdecs <- runReaderT (processInstrs prog) emptyImporting
+        updateContext $ opParseTop tdecs
 
 processInstrs :: PlatoMonad m => [LInstr] -> ReaderT Importing m [LTopDecl]
 processInstrs [] = return []
@@ -46,31 +47,20 @@ processInstrs (L _ (ImpDecl filename) : rest) = do
 processInstrs (L _ (TopDecls tdecs) : rest) = do
         tdecs' <- processInstrs rest
         return (tdecs ++ tdecs')
-processInstrs (L _ (EvalExpr _exp) : rest) = do
-        processInstrs rest
+processInstrs (L _ (EvalExpr _exp) : rest) = processInstrs rest
 
-parsePartial :: (MonadReader env m, HasUniq env, MonadIO m) => Parser a -> T.Text -> m a
+parsePartial ::
+        (OpParser a, MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadThrow m) =>
+        Parser a ->
+        T.Text ->
+        m a
 parsePartial parser inp = do
         uref <- getUniq =<< ask
-        (ast, _) <- liftIO $ parseLine uref inp parser
-        return ast
+        (a, _) <- liftIO $ parseLine uref inp parser
+        opParse a
 
-parseInstr :: PlatoMonad m => T.Text -> m (Either [LTopDecl] LExpr)
-parseInstr inp = do
-        uref <- getUniq =<< ask
-        instr <- runReaderT (parsePartial instrParser inp) uref
-        runReaderT (processInstr instr) emptyImporting
+parseExpr :: PlatoMonad m => T.Text -> m LExpr
+parseExpr inp = catchPsErrors $ runReaderT (parsePartial exprParser inp) =<< getContext =<< ask
 
-processInstr :: PlatoMonad m => LInstr -> ReaderT Importing m (Either [LTopDecl] LExpr)
-processInstr (L _ (ImpDecl filename)) = do
-        checkCyclicImport filename
-        _ <- unlessImported filename compileToCore
-        return $ Left []
-processInstr (L _ (EvalExpr exp)) = return $ Right exp
-processInstr (L _ TopDecls{}) = return $ Left []
-
-parseExpr :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m LExpr
-parseExpr = catchPsErrors <$> parsePartial exprParser
-
-parseDecls :: (MonadReader env m, HasUniq env, MonadIO m, MonadCatch m) => T.Text -> m [LTopDecl]
-parseDecls = catchPsErrors <$> parsePartial declsParser
+parseDecls :: PlatoMonad m => T.Text -> m [LTopDecl]
+parseDecls inp = catchPsErrors $ runReaderT (parsePartial declsParser inp) =<< getContext =<< ask

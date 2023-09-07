@@ -194,9 +194,7 @@ elabTopDecls sc tdecs = do
 -----------------------------------------------------------
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Prog 'T.Untyped)
-psToTyp tdecs = do
-        catchErrors $ elabTopDecls mempty tdecs
+psToTyp tdecs = catchErrors $ elabTopDecls mempty tdecs
 
 psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = do
-        runReaderT (elabExpr mempty `traverse` exp) =<< getContext =<< ask
+psToTypExpr exp = elabExpr mempty `traverse` exp

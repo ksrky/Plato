@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Nicifier.OpParser (FixityEnv, HasFixityEnv (..), opParse) where
+module Plato.Nicifier.OpParser (FixityEnv, HasFixityEnv (..), OpParser (..), opParseTop) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -28,13 +28,13 @@ instance HasFixityEnv FixityEnv where
         modifyFixityEnv = id
 
 class Linearize a where
-        linearize :: MonadThrow m => Located a -> ReaderT FixityEnv m [Tok a]
+        linearize :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => Located a -> m [Tok a]
 
 instance Linearize Expr where
         linearize (L _ (BinE lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                env <- ask
+                env <- asks getFixityEnv
                 let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
         linearize exp = do
@@ -45,7 +45,7 @@ instance Linearize Pat where
         linearize (L _ (BinP lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                env <- ask
+                env <- asks getFixityEnv
                 let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
         linearize pat = do
@@ -56,7 +56,7 @@ instance Linearize Type where
         linearize (L _ (BinT lhs op rhs)) = do
                 lhs' <- linearize lhs
                 rhs' <- linearize rhs
-                env <- ask
+                env <- asks getFixityEnv
                 -- TODO: infix declaration does not distinguish ConOp or TyConOp
                 let fix = fromMaybe defaultFixity (M.lookup (nameIdent op){nameSpace = ConName} env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
@@ -66,10 +66,10 @@ instance Linearize Type where
 
 -- | Operator parser
 class OpParser a where
-        opParse :: MonadThrow m => a -> ReaderT FixityEnv m a
+        opParse :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => a -> m a
 
 instance OpParser FixityEnv where
-        opParse _ = ask
+        opParse _ = asks getFixityEnv
 
 instance OpParser LExpr where
         opParse (L sp exp) =
@@ -81,7 +81,7 @@ instance OpParser LExpr where
                                 unLoc <$> parse BinE toks
                         LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
-                                (decs', body') <- opParse (decs, body)
+                                (decs', body') <- opParseLoc (decs, body)
                                 return $ LetE decs' body'
                         CaseE match alts -> do
                                 match' <- opParse match
@@ -120,30 +120,33 @@ instance OpParser LType where
                                 unLoc <$> parse BinT toks
                         FactorT ty -> unLoc <$> opParse ty
 
-instance OpParser a => OpParser ([LLocDecl], a) where
-        opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
-                rest' <- forM rest $ \case
-                        L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
-                        L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
-                        dec -> return dec
-                t' <- opParse t
-                return (rest', t')
-            where
-                (fixmap, rest) = execWriter $ forM decs $ \case
-                        L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
-                        d -> tell ([], [d])
+opParseLoc :: (MonadReader e m, HasFixityEnv e, MonadThrow m, OpParser a) => ([LLocDecl], a) -> m ([LLocDecl], a)
+opParseLoc (decs, a) = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env fixmap) $ do
+        rest' <- forM rest $ \case
+                L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
+                L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
+                dec -> return dec
+        a' <- opParse a
+        return (rest', a')
+    where
+        (fixmap, rest) = execWriter $ forM decs $ \case
+                L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
+                d -> tell ([], [d])
 
-instance OpParser a => OpParser ([LTopDecl], a) where
-        opParse (decs, t) = local (\env -> foldr (uncurry M.insert) env fixmap) $ do
-                rest' <- forM rest $ \case
-                        L sp (DataD id params constrs) ->
-                                L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
-                        L sp (LocalD (FunSpecD id ty)) -> L sp . LocalD <$> (FunSpecD id <$> opParse ty)
-                        L sp (LocalD (FunBindD id clauses)) -> L sp . LocalD <$> (FunBindD id <$> mapM opParse clauses)
-                        dec -> return dec
-                t' <- opParse t
-                return (rest', t')
-            where
-                (fixmap, rest) = execWriter $ forM decs $ \case
-                        L _ (LocalD (FixityD id fix)) -> tell ([(nameIdent id, fix)], [])
-                        d -> tell ([], [d])
+opParseTop :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => [LTopDecl] -> m ([LTopDecl], e)
+opParseTop decs = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env fixmap) $ do
+        rest' <- forM rest $ \case
+                L sp (DataD id params constrs) ->
+                        L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
+                L sp (LocalD (FunSpecD id ty)) -> L sp . LocalD <$> (FunSpecD id <$> opParse ty)
+                L sp (LocalD (FunBindD id clauses)) -> L sp . LocalD <$> (FunBindD id <$> mapM opParse clauses)
+                dec -> return dec
+        env <- ask
+        return (rest', env)
+    where
+        (fixmap, rest) = execWriter $ forM decs $ \case
+                L _ (LocalD (FixityD id fix)) -> tell ([(nameIdent id, fix)], [])
+                d -> tell ([], [d])
+
+instance OpParser [LTopDecl] where
+        opParse = (fst <$>) . opParseTop

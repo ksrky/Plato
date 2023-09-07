@@ -18,15 +18,9 @@ nicify tdecs = catchErrors $ updateContext (nicifyDecls tdecs)
 nicifyDecls :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => [LTopDecl] -> m ([LTopDecl], e)
 nicifyDecls decs = do
         fixenv <- asks getFixityEnv
-        (decs', fixenv') <- runReaderT (opParse (decs, fixenv)) fixenv
-        let (tds, lds) = groupingDecl decs'
+        (decs', fixenv') <- runReaderT (opParseTop decs) fixenv
         env <- ask
-        return (tds ++ lds, setFixityEnv fixenv' env)
-
-groupingDecl :: [LTopDecl] -> ([LTopDecl], [LTopDecl])
-groupingDecl decs = execWriter $ forM decs $ \dec -> case dec of
-        L _ DataD{} -> tell ([dec], [])
-        _ -> tell ([], [dec])
+        return (decs', setFixityEnv fixenv' env)
 
 nicifyExpr :: PlatoMonad m => LExpr -> m LExpr
 nicifyExpr exp = do
