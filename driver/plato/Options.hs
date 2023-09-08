@@ -1,12 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Options where
 
+import Data.Text qualified as T
 import Info
 import Options.Applicative
 
 data Options = Options
-        { libraryPaths :: [FilePath]
+        { searchPaths :: [FilePath]
         , logPath :: !(Maybe FilePath)
         , isDebug :: !Bool
         , printParsed :: !Bool
@@ -17,21 +16,24 @@ data Options = Options
 
 data Command
         = REPL [FilePath] Options
-        | Run FilePath Options
+        | Run [FilePath] Options
         | Version String
         deriving (Eq, Show)
 
-pLibraryPaths :: Parser [FilePath]
-pLibraryPaths =
-        -- tmp
-        (\case Just x -> [x]; Nothing -> [])
+pSearchPaths :: Parser [FilePath]
+pSearchPaths =
+        concat
                 <$> optional
-                        ( strOption
-                                ( long "libs"
+                        ( option
+                                strs
+                                ( short 'i'
                                         <> metavar "PATHS..."
-                                        <> help "setting library paths"
+                                        <> help "setting search paths"
                                 )
                         )
+    where
+        strs :: ReadM [String]
+        strs = map T.unpack . T.splitOn ":" . T.pack <$> str
 
 pLogPath :: Parser (Maybe FilePath)
 pLogPath =
@@ -63,7 +65,7 @@ pPrintCore = switch (long "print-core" <> help "Print core program")
 pOptions :: Parser Options
 pOptions =
         Options
-                <$> pLibraryPaths
+                <$> pSearchPaths
                 <*> pLogPath
                 <*> pIsDebug
                 <*> pPrintParsed
@@ -74,7 +76,7 @@ pREPL :: Parser Command
 pREPL = REPL <$> many (argument str (metavar "FILES...")) <*> pOptions
 
 pRun :: Parser Command
-pRun = Run <$> argument str (metavar "FILE...") <*> pOptions
+pRun = Run <$> many (argument str (metavar "FILES...")) <*> pOptions
 
 pVersion :: Parser Command
 pVersion =

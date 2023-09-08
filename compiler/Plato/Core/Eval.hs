@@ -13,15 +13,15 @@ import Plato.Core.Env
 import Plato.Core.Result
 import Plato.Syntax.Core
 
-getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Index
+getIndex :: (MonadReader e m, MonadThrow m) => Ident -> Scope -> m Ix
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
-lookupIndex :: (MonadReader env m, CoreEnv env, MonadIO m) => Index -> m EnvEntry
+lookupIndex :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> m EnvEntry
 lookupIndex i = getE i =<< ask
 
-evalIndex :: (MonadReader env m, CoreEnv env, MonadThrow m, MonadIO m) => Index -> m Val
+evalIndex :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Ix -> m Val
 evalIndex i =
         lookupIndex i >>= \case
                 Index j -> return $ Ne (NVar j)
@@ -33,21 +33,21 @@ decl ::
         PrtInfo ->
         Scope ->
         Maybe (Clos Type) ->
-        m (Index, Scope)
+        m (Ix, Scope)
 decl id fi sc a = do
         i <- extE fi =<< ask
         return (i, extendScope id (i, a) sc)
 
-decl' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ident -> Scope -> m (Index, Scope)
+decl' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ident -> Scope -> m (Ix, Scope)
 decl' x sc = decl x PrtInfo{name = x, expand = True} sc Nothing
 
-defn :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> EnvEntry -> m ()
+defn :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> EnvEntry -> m ()
 defn i ei = setE i ei =<< ask
 
-defn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m ()
+defn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> Clos Type -> m ()
 defn' i = defn i . Closure
 
-letn :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> EnvEntry -> m a -> m a
+letn :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> EnvEntry -> m a -> m a
 letn i ei p = do
         eo <- lookupIndex i
         defn i ei
@@ -55,7 +55,7 @@ letn i ei p = do
         defn i eo
         return a
 
-letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m a -> m a
+letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> Clos Type -> m a -> m a
 letn' i = letn i . Closure
 
 subst :: (MonadReader e m, CoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)

@@ -113,7 +113,7 @@ eqBox (t, _) (t', _)
 instance Equal Boxed where
         Boxed c ~ Boxed c' = eqBox c c'
 
-instance Equal Index where
+instance Equal Ix where
         i0 ~ i1
                 | i0 == i1 = return ()
                 | otherwise = do

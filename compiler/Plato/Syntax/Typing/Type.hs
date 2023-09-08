@@ -1,6 +1,7 @@
 module Plato.Syntax.Typing.Type (
         LType,
         Quant,
+        Quants,
         Type (..),
         TyVar (..),
         MetaTv (..),
@@ -25,12 +26,13 @@ import Plato.Syntax.Typing.Kind
 type LType = Located Type
 
 type Quant = (TyVar, Kind)
+type Quants = [Quant]
 
 data Type
         = VarT TyVar
         | ConT Ident
         | ArrT LType LType
-        | AllT [Quant] (Located Rho)
+        | AllT Quants (Located Rho)
         | AppT LType LType
         | MetaT MetaTv
         deriving (Eq, Show)
@@ -41,7 +43,7 @@ type Tau = Type -- τ
 
 data TyVar
         = BoundTv {unTyVar :: Ident}
-        | SkolemTv {unTyVar :: Ident}
+        | FreeTv {unTyVar :: Ident}
         deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
@@ -51,11 +53,11 @@ data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
 ----------------------------------------------------------------
 instance Show TyVar where
         show (BoundTv id) = "(BoundTv " ++ show id ++ ")"
-        show (SkolemTv id) = "(SkolemTv " ++ show id ++ ")"
+        show (FreeTv id) = "(FreeTv " ++ show id ++ ")"
 
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
-        (SkolemTv id1) == (SkolemTv id2) = id1 == id2
+        (FreeTv id1) == (FreeTv id2) = id1 == id2
         _ == _ = False
 
 instance Eq MetaTv where
@@ -72,7 +74,7 @@ instance Ord MetaTv where
 ----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty id
+        pretty (FreeTv id) = pretty id
 
 instance Pretty MetaTv where
         pretty (MetaTv u _) = dollar <> pretty u
@@ -90,8 +92,8 @@ instance Pretty Type where
 instance PrettyWithContext Type where
         pretty' _ (VarT tv) = pretty tv
         pretty' _ (ConT tc) = pretty tc
-        pretty' c (ArrT arg res) = contextParens c 0 $ hsep [pretty' 1 arg, arrow, pretty res]
-        pretty' c (AllT [] body) = pretty' c body
-        pretty' c (AllT qnts body) = contextParens c 0 $ hsep [braces (prQuants qnts), pretty body]
-        pretty' c (AppT fun arg) = contextParens c 1 $ pretty' 1 fun <+> pretty' 2 arg
+        pretty' p (ArrT arg res) = parenswPrec p 0 $ hsep [pretty' 1 arg, arrow, pretty res]
+        pretty' p (AllT [] body) = pretty' p body
+        pretty' p (AllT qnts body) = parenswPrec p 0 $ hsep [braces (prQuants qnts), pretty body]
+        pretty' p (AppT fun arg) = parenswPrec p 1 $ pretty' 1 fun <+> pretty' 2 arg
         pretty' _ (MetaT tv) = pretty tv

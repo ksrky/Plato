@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (elabDecl, typToCore, typToCoreExpr) where
+module Plato.TypToCore (elabExpr, elabDefn, typToCore, typToCoreExpr) where
 
 import Control.Monad
 import Control.Monad.IO.Class
@@ -22,6 +22,7 @@ import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
+import Data.Graph
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
@@ -34,7 +35,7 @@ elabExpr (T.TAppE fun tyargs) = do
 elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\(tv, kn) t -> C.Lam <$> ((T.unTyVar tv,) <$> elabKind kn) <*> pure t) t qnts
-elabExpr (T.LetE' decs body) = C.Let <$> elabFunDecls decs <*> elabExpr (unLoc body)
+elabExpr (T.LetE' bnds body) = C.Let <$> elabBinds bnds <*> elabExpr (unLoc body)
 elabExpr (T.CaseE' test _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
@@ -76,21 +77,11 @@ elabKind kn@T.MetaK{} = do
         liftIO $ emergencyM platoLog $ "Zonking may " ++ show kn
         unreachable "Plato.TypToCore received MetaK"
 
-elabFunDecls :: (MonadReader e m, HasUniq e, MonadIO m) => [((Ident, T.Type), T.Expr 'T.Typed)] -> m C.Prog
-elabFunDecls decs = do
-        decs' <- mapM (\((id, ty), _) -> C.Decl id <$> elabType ty) decs
-        defs <- mapM (\((id, _), exp) -> C.Defn id <$> elabExpr exp) decs
-        return $ decs' ++ defs
-
-elabDecl :: forall e m. (MonadReader e m, HasUniq e, MonadIO m) => T.Decl 'T.Typed -> m [C.Entry]
-elabDecl (T.SpecDecl (T.TypSpec id kn)) = do
-        kn' <- elabKind kn
-        return [C.Decl id kn']
-elabDecl (T.SpecDecl (T.ValSpec id ty)) = do
-        ty' <- elabType $ unLoc ty
-        return [C.Decl id ty']
-elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
-        (:) <$> (C.Defn id <$> dataDefn) <*> ((++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs)
+elabTypDefn :: forall e m. (MonadReader e m, HasUniq e, MonadIO m) => T.TypDefn 'T.Typed -> m [C.Entry]
+elabTypDefn (T.DatDefn' (id, _) params constrs) = do
+        def <- C.Defn id <$> dataDefn
+        conds <- (++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs
+        return $ def : conds
     where
         labDefns :: m (Ident, C.Type) = do
                 idL <- freshIdent $ genName "l"
@@ -117,17 +108,24 @@ elabDecl (T.DefnDecl (T.DatDefnok id _ params constrs)) = do
                     walk args _ = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
-elabDecl (T.DefnDecl (T.TypDefn id ty)) = do
-        ty' <- elabType $ unLoc ty
-        return [C.Defn id ty']
-elabDecl (T.DefnDecl (T.FunDefnok id exp)) = do
-        exp' <- elabExpr exp
-        return [C.Defn id exp']
 
-typToCore :: PlatoMonad m => T.Program 'T.Typed -> m [C.Entry]
+elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => SCC (T.Bind 'T.Typed) -> m [C.Entry]
+elabBinds bnds = do
+        decs <- forM bnds $ \(T.Bind' (id, ty) _) -> C.Decl id <$> elabType ty
+        defs <- forM bnds $ \(T.Bind' (id, _) exp) -> C.Defn id <$> elabExpr exp
+        return $ toList decs ++ toList defs
+
+elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
+elabDefn (T.TypDefn tdefs) = do
+        decs <- forM tdefs $ \(T.DatDefn' (id, kn) _ _) -> C.Decl id <$> elabKind kn
+        defs <- concat <$> mapM elabTypDefn tdefs
+        return $ decs ++ defs
+elabDefn (T.ValDefn bnds) = elabBinds bnds
+
+typToCore :: PlatoMonad m => T.Prog 'T.Typed -> m [C.Entry]
 typToCore decs = do
         uref <- getUniq =<< ask
-        runReaderT (concat <$> mapM elabDecl decs) uref
+        runReaderT (concat <$> mapM elabDefn decs) uref
 
 typToCoreExpr :: PlatoMonad m => T.LExpr 'T.Typed -> m C.Term
 typToCoreExpr exp = do

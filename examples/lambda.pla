@@ -1,6 +1,3 @@
-import Bool
-import Nat
-
 data Term where
     TVar : Nat -> Term
     TAbs : Term -> Term

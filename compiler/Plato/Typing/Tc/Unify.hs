@@ -12,6 +12,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Set qualified as S
 
+import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -20,7 +21,7 @@ import Plato.Typing.Error
 import Plato.Typing.Misc
 
 unify :: (MonadReader e m, MonadIO m, MonadThrow m) => Tau -> Tau -> m ()
-unify ty1 ty2 | badType ty1 || badType ty2 = throw UnificationFail
+unify ty1 ty2 | badType ty1 || badType ty2 = unreachable $ "bounded type variable in unification" ++ show ty1 ++ show ty2
 unify (VarT tv1) (VarT tv2) | tv1 == tv2 = return ()
 unify (ConT tc1) (ConT tc2) | tc1 == tc2 = return ()
 unify (ArrT arg1 res1) (ArrT arg2 res2) = do
@@ -41,7 +42,7 @@ unifyVar tv1 ty2 = do
                 (Just ty1, _) -> unify ty1 ty2
                 (Nothing, MetaT tv2) ->
                         readMetaTv tv2 >>= \case
-                                Just kn2 -> unify (MetaT tv1) kn2
+                                Just ty2 -> unify (MetaT tv1) ty2
                                 Nothing -> writeMetaTv tv1 ty2
                 (Nothing, _) -> do
                         occursCheck tv1 ty2

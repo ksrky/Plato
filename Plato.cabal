@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Plato
-version:        1.0.1
+version:        1.0.2
 description:    Please see the README on GitHub at <https://github.com/ksrky/Plato#readme>
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
@@ -31,7 +31,6 @@ library
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.Uniq
-      Plato.Common.Utils
       Plato.Core.Closure
       Plato.Core.Env
       Plato.Core.Equal
@@ -46,15 +45,14 @@ library
       Plato.Driver.Interactive
       Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Nicifier
-      Plato.Nicifier.OpParser
-      Plato.Nicifier.OpParser.Resolver
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Error
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.OpParser
+      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
@@ -81,6 +79,7 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
+      Plato.Typing.Linearize
       Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc
@@ -120,6 +119,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Depends
       Info
       Info.TH
       Options
@@ -156,12 +156,6 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.NicifierSpec
-      Plato.Parsing.LexerSpec
-      Plato.Parsing.ParserSpec
-      Plato.PsToTypSpec
-      Plato.TypingSpec
-      Plato.TypToCoreSpec
       Paths_Plato
   hs-source-dirs:
       test

@@ -1,5 +1,6 @@
 module Plato.Common.Location where
 
+import Data.Graph
 import Prettyprinter
 
 -- | Source location includes file name, line number and column number
@@ -61,6 +62,13 @@ instance HasLoc (Located a) where
 
 instance HasLoc a => HasLoc [a] where
         getLoc locs = mconcat (map getLoc locs)
+
+instance (HasLoc a, HasLoc b) => HasLoc (a, b) where
+        getLoc (x, y) = getLoc x <> getLoc y
+
+instance HasLoc a => HasLoc (SCC a) where
+        getLoc (AcyclicSCC x) = getLoc x
+        getLoc (CyclicSCC xs) = getLoc xs
 
 sL :: (HasLoc a, HasLoc b) => a -> b -> c -> Located c
 sL x y = L (getLoc x <> getLoc y)

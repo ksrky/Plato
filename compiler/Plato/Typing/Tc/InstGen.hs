@@ -14,15 +14,15 @@ import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Tc.Coercion
 import Plato.Typing.Misc
-import Plato.Typing.Zonking
+import Plato.Typing.Tc.Coercion
 
 -- | Instantiation
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
-instantiate (AllT tvs tau) = do
-        tys <- mapM (const newTyVar) tvs
-        return (instTrans tys, substTvs (map fst tvs) tys (unLoc tau))
+instantiate (AllT qns tau) = do
+        tys <- mapM (const newTyVar) qns
+        tau' <- substTvs (map fst qns) tys (unLoc tau)
+        return (instTrans tys, tau')
 instantiate ty = return (mempty, ty)
 
 -- | Skolemisation
@@ -31,14 +31,14 @@ skolemise ::
         Sigma ->
         m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
-        sks1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newSkolemTyVar tv) tvs
-        (coercion, sks2, ty') <- skolemise (substTvs (map fst tvs) (map (VarT . fst) sks1) (unLoc rho))
-        return (prpolyTrans sks1 coercion, sks1 ++ sks2, ty')
+        qns1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newFreeTv tv) tvs
+        (coercion, qns2, rho') <- skolemise =<< substTvs (map fst tvs) (map (VarT . fst) qns1) (unLoc rho)
+        return (prpolyTrans qns1 coercion, qns1 ++ qns2, rho')
 skolemise (ArrT arg_ty res_ty) = do
         (coer, sks, res_ty') <- skolemise (unLoc res_ty)
         coer' <- prfunTrans sks (unLoc arg_ty) coer
         return (coer', sks, ArrT arg_ty (noLoc res_ty'))
-skolemise ty = return (mempty, [], ty)
+skolemise rho = return (mempty, [], rho)
 
 -- | Generalization
 generalize ::
@@ -56,10 +56,9 @@ quantify ::
         [MetaTv] ->
         Rho ->
         m ([Quant], Sigma)
-quantify [] ty = return ([], ty)
-quantify tvs ty = do
+quantify [] rho = return ([], rho)
+quantify tvs rho = do
         new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
-        ty' <- zonk ty
-        qnts <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
-        return (qnts, AllT qnts (noLoc ty'))
+        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
+        return (qns, AllT qns (noLoc rho))

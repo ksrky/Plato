@@ -8,18 +8,18 @@ module Plato (
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
+import Control.Monad.Reader
 import Data.Text qualified as T
 
 import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
-import Plato.Nicifier
 import Plato.Parsing
-import Plato.PsToTyp
+import Plato.PsToTyp as PT
 import Plato.Syntax.Core
-import Plato.TypToCore
+import Plato.TypToCore as TC
 import Plato.Typing
 
 runPlato :: FilePath -> Session -> IO ()
@@ -28,24 +28,27 @@ runPlato filepath = void . unPlato (compileToCore filepath)
 compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = catchErrors $ do
         pssyn <- parseFile src
-        pssyn' <- nicify pssyn
-        whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn'
-        typsyn <- psToTyp pssyn'
+        whenFlagOn FPrintParsed $ liftIO $ printList pssyn
+        typsyn <- psToTyp pssyn
         typsyn' <- typing typsyn
-        whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
+        whenFlagOn FPrintTyped $ liftIO $ printList typsyn'
         corsyn <- typToCore typsyn'
-        whenFlagOn FPrintCore $ liftIO $ prettyPrint corsyn
+        whenFlagOn FPrintCore $ liftIO $ printList corsyn
         whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 
 evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
 evaluateCore inp =
-        lift
-                ( do
-                        pssyn <- parseExpr inp
-                        pssyn' <- nicifyExpr pssyn
-                        typsyn <- psToTypExpr pssyn'
-                        typsyn' <- typingExpr typsyn
-                        typToCoreExpr typsyn'
-                )
-                >>= (catchErrors . evalCore)
+        catchErrors $
+                lift
+                        ( runReaderT
+                                ( do
+                                        pssyn <- parseExpr inp
+                                        typsyn <- PT.elabExpr `traverse` pssyn
+                                        typsyn' <- typingExpr typsyn
+                                        TC.elabExpr (unLoc typsyn')
+                                )
+                                =<< getContext
+                                =<< ask
+                        )
+                        >>= evalCore

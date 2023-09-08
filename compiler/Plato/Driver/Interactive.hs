@@ -11,7 +11,6 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.IORef
-import Prettyprinter
 import Prettyprinter.Render.Text
 
 import Plato.Common.Uniq
@@ -71,5 +70,5 @@ runInteractive m = do
 evalCore :: (MonadThrow m, MonadIO m) => Term -> Interactive m ()
 evalCore t = do
         sc <- getCoreScope
-        doc <- evalPrint =<< eval (t, sc)
-        liftIO $ putDoc $ doc <> line
+        liftIO . putDoc =<< evalPrint =<< eval (t, sc)
+        liftIO $ putStrLn ""

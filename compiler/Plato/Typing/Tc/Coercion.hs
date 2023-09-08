@@ -38,28 +38,28 @@ unCoer (Fn f) = f
 
 genTrans :: [Quant] -> Coercion
 genTrans [] = Id
-genTrans tvs = Fn (TAbsE tvs)
+genTrans qnts = Fn (TAbsE qnts)
 
 instTrans :: [Type] -> Coercion
 instTrans [] = Id
-instTrans tys = Fn (`TAppE` tys)
+instTrans arg_tys = Fn (`TAppE` arg_tys)
 
 prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coer = coer
 prpolyTrans _ Id = Id
-prpolyTrans sks1 coer = Fn $ \e -> TAbsE sks1 (unCoer coer $ TAppE e (map (VarT . fst) sks1))
+prpolyTrans qnts coer = Fn $ \e -> TAbsE qnts (unCoer coer $ TAppE e (map (VarT . fst) qnts))
 
 prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
 prfunTrans [] _ coer = return coer
 prfunTrans _ _ Id = return Id
-prfunTrans sks arg_ty coer = do
+prfunTrans qnts arg_ty coer = do
         id <- newVarIdent
-        let coer' e = unCoer coer $ TAbsE sks (AppE' (TAppE e (map (VarT . fst) sks)) (VarE id))
+        let coer' e = unCoer coer $ TAbsE qnts (AppE' (TAppE e (map (VarT . fst) qnts)) (VarE id))
         return $ Fn $ AbsE' id arg_ty . coer'
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 <> coer2
-deepskolTrans skol_tvs coer1 coer2 = coer1 <> Fn (TAbsE skol_tvs) <> coer2
+deepskolTrans fqnts coer1 coer2 = coer1 <> Fn (TAbsE fqnts) <> coer2
 
 funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id

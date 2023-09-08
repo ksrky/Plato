@@ -5,14 +5,18 @@
 module Plato.Syntax.Typing.Expr (
         LExpr,
         Clause,
+        Clauses,
         Expr (..),
         prClause,
 ) where
+
+import Data.Graph
 
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base (TcFlag (..))
+import {-# SOURCE #-} Plato.Syntax.Typing.Decl
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
 
@@ -29,6 +33,9 @@ type family Alt (a :: TcFlag)
 type instance Alt 'Untyped = (LPat, LExpr 'Untyped)
 type instance Alt 'Typed = (LPat, Expr 'Typed)
 
+type Clauses (a :: TcFlag) = [Clause a]
+type Alts (a :: TcFlag) = [Alt a]
+
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: LExpr 'Untyped -> LExpr 'Untyped -> Expr 'Untyped
@@ -36,11 +43,11 @@ data Expr (a :: TcFlag) where
         AbsE :: Ident -> Maybe Type -> LExpr 'Untyped -> Expr 'Untyped
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
-        TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
-        LetE :: [((Ident, LType), [Clause 'Untyped])] -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: [((Ident, Type), Expr 'Typed)] -> LExpr 'Typed -> Expr 'Typed
-        CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
-        CaseE' :: Expr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
+        TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
+        LetE :: (SCC (Bind 'Untyped)) -> LExpr 'Untyped -> Expr 'Untyped
+        LetE' :: (SCC (Bind 'Typed)) -> LExpr 'Typed -> Expr 'Typed
+        CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
+        CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
 
 ----------------------------------------------------------------
@@ -48,12 +55,6 @@ data Expr (a :: TcFlag) where
 ----------------------------------------------------------------
 deriving instance Eq (Expr a)
 deriving instance Show (Expr a)
-
-instance HasLoc ([LPat], LExpr 'Untyped) where
-        getLoc (pats, exp) = getLoc pats <> getLoc exp
-
-instance HasLoc (LPat, LExpr 'Untyped) where
-        getLoc (pat, exp) = getLoc pat <> getLoc exp
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -66,40 +67,35 @@ instance Pretty (Expr a) where
 
 instance PrettyWithContext (Expr a) where
         pretty' _ (VarE var) = pretty var
-        pretty' c (AppE fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
-        pretty' c (AppE' fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
-        pretty' c (AbsE var Nothing body) = contextParens c 0 $ hsep [backslash, pretty var, dot, pretty body]
-        pretty' c (AbsE var (Just var_ty) body) =
-                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty' c (AbsE' var var_ty body) =
-                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty' c (TAppE fun []) = pretty' c fun
-        pretty' c (TAppE fun tyargs) = contextParens c 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
-        pretty' c (TAbsE [] body) = pretty' c body
-        pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty' c (LetE decs body) =
-                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
-            where
-                prdec ((id, ty), clses) =
-                        hsep [pretty id, colon, pretty ty, "where", braces $ map prClause clses `sepBy` semi]
-        pretty' c (LetE' decs body) =
-                contextParens c 0 $ hsep ["let", braces $ map prdec decs `sepBy` semi, "in", pretty body]
-            where
-                prdec ((id, ty), exp) = hsep [pretty id, colon, pretty ty, equals, pretty exp]
-        pretty' c (CaseE match alts) =
-                contextParens c 0 $
+        pretty' p (AppE fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' p (AppE' fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
+        pretty' p (AbsE var (Just var_ty) body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (AbsE' var var_ty body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (TAppE fun []) = pretty' p fun
+        pretty' p (TAppE fun tyargs) = parenswPrec p 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
+        pretty' p (TAbsE [] body) = pretty' p body
+        pretty' p (TAbsE qnts body) = parenswPrec p 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
+        pretty' p (LetE bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (LetE' bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (CaseE match alts) =
+                parenswPrec p 0 $
                         hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
-        pretty' c (CaseE' match _ alts) =
-                contextParens c 0 $
+        pretty' p (CaseE' match _ alts) =
+                parenswPrec p 0 $
                         hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
-        pretty' c (AnnE exp ty) = contextParens c 0 $ hsep [pretty exp, colon, pretty ty]
+        pretty' p (AnnE exp ty) = parenswPrec p 0 $ hsep [pretty exp, colon, pretty ty]

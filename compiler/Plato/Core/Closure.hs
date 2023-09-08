@@ -8,9 +8,9 @@ import Plato.Common.Ident
 import Plato.Common.Pretty
 import Plato.Syntax.Core
 
-type Index = Int
+type Ix = Int
 
-newtype Scope = Scope (IdentMap (Index, Maybe (Clos Type))) deriving (Eq, Show)
+newtype Scope = Scope (IdentMap (Ix, Maybe (Clos Type))) deriving (Eq, Show)
 
 type Clos a = (a, Scope)
 
@@ -20,10 +20,10 @@ instance PrettyWithContext a => PrettyWithContext (Clos a) where
 emptyScope :: Scope
 emptyScope = Scope M.empty
 
-extendScope :: Ident -> (Index, Maybe (Clos Type)) -> Scope -> Scope
+extendScope :: Ident -> (Ix, Maybe (Clos Type)) -> Scope -> Scope
 extendScope id (i, a) (Scope sc) = Scope $ M.insert id (i, a) sc
 
-lookupScope :: Ident -> Scope -> Maybe Index
+lookupScope :: Ident -> Scope -> Maybe Ix
 lookupScope id (Scope sc) = do
         idCon <- M.lookup id sc
         return $! fst idCon

@@ -9,7 +9,7 @@ import Plato.Core.Closure
 import Plato.Syntax.Core
 
 data EnvEntry
-        = Index Index
+        = Index Ix
         | Closure (Clos Term)
         deriving (Show)
 
@@ -21,10 +21,10 @@ data PrtInfo = PrtInfo
 type EnvEntries = V.Vector (EnvEntry, PrtInfo)
 
 class CoreEnv e where
-        extE :: MonadIO m => PrtInfo -> e -> m Index
-        getE :: MonadIO m => Index -> e -> m EnvEntry
-        setE :: MonadIO m => Index -> EnvEntry -> e -> m ()
-        prtE :: MonadIO m => Index -> e -> m PrtInfo
+        extE :: MonadIO m => PrtInfo -> e -> m Ix
+        getE :: MonadIO m => Ix -> e -> m EnvEntry
+        setE :: MonadIO m => Ix -> EnvEntry -> e -> m ()
+        prtE :: MonadIO m => Ix -> e -> m PrtInfo
 
 instance CoreEnv (IORef EnvEntries) where
         extE fi ref = do

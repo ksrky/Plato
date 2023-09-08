@@ -22,7 +22,7 @@ instance HasFlags (IORef [Flag]) where
                 flags <- liftIO $ readIORef ref
                 liftIO $ writeIORef ref (flag : flags)
 
-whenFlagOn :: (MonadReader env m, HasFlags env, MonadIO m) => Flag -> m a -> m ()
+whenFlagOn :: (MonadReader e m, HasFlags e, MonadIO m) => Flag -> m a -> m ()
 whenFlagOn flag action = do
         flagOn <- isFlagOn flag =<< ask
         when flagOn $ void action

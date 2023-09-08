@@ -1,9 +1,5 @@
 -- https://softwarefoundations.cis.upenn.edu/vfa-current/SearchTree.html
 
-import Function
-import Nat
-import Pair
-
 data Tree v where
     E : Tree v
     T : Tree v -> Nat -> v -> Tree v -> Tree v

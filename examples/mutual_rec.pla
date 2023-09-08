@@ -1,6 +1,3 @@
-import Bool
-import Nat
-
 iseven : Nat -> Bool
 iseven Z = True
 iseven (S n) = isodd n

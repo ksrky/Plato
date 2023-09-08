@@ -6,11 +6,10 @@ module Plato.PsToTyp.SynRstrc (
         paramPatsUnique,
         dataConUnique,
         dataConType,
-        bundleClauses,
+        checkNumArgs,
 ) where
 
 import Control.Exception.Safe
-import Control.Monad
 import Data.List qualified
 import Prettyprinter
 
@@ -71,31 +70,14 @@ dataConType id (con, ty) = loop1 ty
 {- | RULE 5: Bundling function clauses \\
 Checking number of arguments
 -}
-bundleClauses :: MonadThrow m => [LLocDecl] -> m [LLocDecl]
-bundleClauses = classify . partition
-
-classify :: MonadThrow m => [[LLocDecl]] -> m [LLocDecl]
-classify [] = return []
-classify ([] : rest) = classify rest
-classify (fspcs@(L _ FunSpecD{} : _) : rest) = (fspcs ++) <$> classify rest
-classify (fbnds@(L sp (FunBindD id [(pats, _)]) : _) : rest) = do
-        clses <-
-                sequence
-                        [ do
-                                when (length psi /= length pats) $ throwLocErr sp "Different number of arguments"
-                                return (psi, ei)
-                        | L sp (FunBindD _ [(psi, ei)]) <- fbnds
-                        ]
-        let spn = mconcat $ sp : [spi | L spi FunBindD{} <- fbnds]
-        (L spn (FunBindD id clses) :) <$> classify rest
-classify ((L _ FunBindD{} : _) : _) = unreachable "malformed clauses"
-classify ((L _ FixityD{} : _) : _) = unreachable "deleted by Nicifier"
-
-partition :: [LLocDecl] -> [[LLocDecl]]
-partition =
-        Data.List.groupBy
-                ( curry $ \case
-                        -- before scoping
-                        (L _ (FunBindD id1 _), L _ (FunBindD id2 _)) -> nameIdent id1 == nameIdent id2
-                        _ -> False
-                )
+checkNumArgs :: MonadThrow m => LocDecl -> m ()
+checkNumArgs (FunBindD id clauses@((pats1, _) : _))
+        | all (\(pats, _) -> length pats == length pats1) clauses = return ()
+        | otherwise =
+                throwLocErr (getLoc clauses) $
+                        hsep
+                                [ "Definition clauses of"
+                                , pretty id
+                                , "have different number of arguments."
+                                ]
+checkNumArgs _ = return ()

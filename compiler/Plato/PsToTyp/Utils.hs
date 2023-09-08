@@ -13,6 +13,9 @@ instance HasDomain a => HasDomain [a] where
 instance HasDomain a => HasDomain (Located a) where
         getDomain = getDomain . unLoc
 
+instance HasDomain Ident where
+        getDomain id = [id]
+
 instance HasDomain Pat where
         getDomain (ConP _ pats) = getDomain pats
         getDomain (VarP id) = [id]
@@ -22,10 +25,10 @@ instance HasDomain Pat where
         getDomain (FactorP pat) = getDomain pat
 
 instance HasDomain TopDecl where
-        getDomain (DataD id _ _) = [id]
+        getDomain (DataD id _ ctors) = id : map fst ctors
         getDomain (LocalD ld) = getDomain ld
 
 instance HasDomain LocDecl where
-        getDomain (FunSpecD id _) = [id]
-        getDomain FunBindD{} = []
+        getDomain FunSpecD{} = []
+        getDomain (FunBindD id _) = [id]
         getDomain FixityD{} = []

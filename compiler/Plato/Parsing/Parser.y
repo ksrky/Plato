@@ -1,9 +1,9 @@
 {
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Parsing.Parser (
     parser,
-    instrParser,
     exprParser,
     typeParser,
     declsParser,
@@ -24,6 +24,7 @@ import Plato.Syntax.Parsing
 
 import Control.Monad.State (lift)
 import Control.Exception.Safe (MonadThrow)
+import qualified Data.List as List
 import qualified Data.Text as T
 import Prettyprinter
 }
@@ -34,7 +35,6 @@ import Prettyprinter
 %error { parseError }
 
 %name parser program
-%name instrParser instr
 %name exprParser expr
 %name typeParser type
 %name declsParser decls
@@ -77,31 +77,7 @@ digit                           { (mkLDigit -> Just $$) }
 %%
 
 program     :: { Program }
-            : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
-            | ';' topdecls                          { [$2] }
-
------------------------------------------------------------
--- Instructions
------------------------------------------------------------
-instr       :: { LInstr }
-            : topdecls                              { $1 }
-            | expr                                  { L (getLoc $1) (EvalExpr $1) }
-
------------------------------------------------------------
--- Imports
------------------------------------------------------------
-impdecls    :: { [LInstr] }
-            : impdecls ';' impdecl                  { $3 : $1 } -- Note: throws error unless tail recursion
-            | impdecl                               { [$1] }
-
-impdecl     :: { LInstr }
-            : 'import' conid                        { sL $1 $2 (ImpDecl $2) }
-
------------------------------------------------------------
--- TopDecls
------------------------------------------------------------
-topdecls    :: { LInstr }
-            : decls                                 { L (mconcat (map getLoc $1)) (TopDecls $1) }
+            : ';' decls                             { $2 }
 
 -----------------------------------------------------------
 -- Declarations
@@ -120,7 +96,6 @@ decl        :: { [LTopDecl] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
                                                     { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
             | fundecl                               { map (fmap LocalD) $1 }
-            | fixdecl                               { [fmap LocalD $1] }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }

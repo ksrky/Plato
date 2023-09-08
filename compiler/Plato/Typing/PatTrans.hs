@@ -48,7 +48,7 @@ constructors ty = getCon [] =<< zonk ty
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
         getCon acc (ConT tc) = do
                 (params, constrs) <- lookupIdent tc =<< asks getConEnv
-                return (map (\(con, ty) -> (con, substTvs params (reverse acc) <$> ty)) constrs)
+                mapM (\(con, tys) -> (con,) <$> mapM (substTvs params (reverse acc)) tys) constrs
         getCon _ _ = unreachable "Not a variant type"
 
 subst :: Expr 'Typed -> Expr 'Typed -> Ident -> Expr 'Typed
@@ -62,8 +62,8 @@ subst exp replace id = subst' exp
         subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
         subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetE' decs body) =
-                LetE' (map (\(idty, exp) -> (idty, subst' exp)) decs) (subst' <$> body)
+        subst' (LetE' bnds body) =
+                LetE' (fmap (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
         subst' (CaseE' test ann_ty alts) =
                 CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
 
@@ -86,14 +86,14 @@ match ::
         m (Expr 'Typed)
 match [(var, ty)] [] = return (CaseE' (VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
-match [] (([], exp) : _) = return $ exp
+match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
 match (vt : vts) clauses
         | all isVar clauses = matchVar vt vts clauses
         | otherwise = matchCon vt vts clauses
 
 matchVar ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->
@@ -109,7 +109,7 @@ matchVar (var, _) rest clauses = do
         match rest clauses'
 
 matchCon ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->
@@ -123,7 +123,7 @@ choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 
 matchClause ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->

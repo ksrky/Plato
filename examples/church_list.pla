@@ -1,6 +1,3 @@
-import Function
-import List
-
 data ChurchList a where
     ChurchList : ({r} (a -> r -> r) -> r -> r) -> ChurchList a
 

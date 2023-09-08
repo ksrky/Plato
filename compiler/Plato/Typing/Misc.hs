@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 
 module Plato.Typing.Misc (
         getEnvTypes,
@@ -6,6 +7,7 @@ module Plato.Typing.Misc (
         getFreeTvs,
         substTvs,
         getMetaKvs,
+        substExpr,
 ) where
 
 import Control.Monad.IO.Class
@@ -14,15 +16,14 @@ import Data.Map.Strict qualified as M
 import Data.Set qualified as S
 import GHC.Stack
 
+import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Typing.Env
 import Plato.Typing.Zonking
 
 getEnvTypes :: (MonadReader e m, HasTypEnv e) => m [Type]
-getEnvTypes = do
-        env <- asks getTypEnv
-        return $ mconcat $ M.elems $ M.map (\case ValBind ty -> [ty]; _ -> []) env
+getEnvTypes = asks (envTypes . getTypEnv)
 
 getMetaTvs :: MonadIO m => Type -> m (S.Set MetaTv)
 getMetaTvs ty = do
@@ -44,7 +45,7 @@ getFreeTvs ty = do
 
 freeTvs :: HasCallStack => Type -> Reader (S.Set TyVar) (S.Set TyVar)
 freeTvs (VarT tv) = do
-        bounded <- asks (\bound -> tv `elem` bound) -- bounded TyVar must be BoundTv
+        bounded <- asks (tv `elem`) -- Note: if bounded, tv must be BoundTv
         if bounded then return S.empty else return $ S.singleton tv
 freeTvs ConT{} = return S.empty
 freeTvs (ArrT arg res) = S.union <$> freeTvs (unLoc arg) <*> freeTvs (unLoc res)
@@ -52,8 +53,8 @@ freeTvs (AllT qnts body) = local ((flip . foldr) (S.insert . fst) qnts) $ freeTv
 freeTvs (AppT fun arg) = S.union <$> freeTvs (unLoc fun) <*> freeTvs (unLoc arg)
 freeTvs MetaT{} = return S.empty
 
-substTvs :: [TyVar] -> [Type] -> Type -> Type
-substTvs tvs tys ty = let s = M.fromList (zip tvs tys) in apply s ty
+substTvs :: MonadIO m => [TyVar] -> [Type] -> Type -> m Type
+substTvs tvs tys ty = let s = M.fromList (zip tvs tys) in apply s <$> zonk ty
 
 apply :: M.Map TyVar Tau -> Type -> Type
 apply s ty@(VarT tv) = M.findWithDefault ty tv s
@@ -70,3 +71,19 @@ metaKvs :: Kind -> S.Set MetaKv
 metaKvs StarK = S.empty
 metaKvs (ArrK kn1 kn2) = metaKvs kn1 `S.union` metaKvs kn2
 metaKvs (MetaK kv) = S.singleton kv
+
+substExpr :: Ident -> Expr 'Typed -> Expr 'Typed -> Expr 'Typed
+substExpr id exp body = subst' body
+    where
+        subst' :: Expr 'Typed -> Expr 'Typed
+        subst' (VarE var)
+                | var == id = exp
+                | otherwise = VarE var
+        subst' (AppE' fun arg) = AppE' (subst' fun) (subst' arg)
+        subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
+        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
+        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
+        subst' (LetE' bnds body) =
+                LetE' (fmap (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
+        subst' (CaseE' test ann_ty alts) =
+                CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)

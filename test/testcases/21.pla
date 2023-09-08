@@ -1,0 +1,9 @@
+data T1 where T1 : T1
+
+data T2 where T2 : T2
+
+a = f T1
+
+f = \x -> x
+
+b = f T2
