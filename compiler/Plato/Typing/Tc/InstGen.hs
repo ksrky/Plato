@@ -21,7 +21,8 @@ import Plato.Typing.Tc.Coercion
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
 instantiate (AllT qns tau) = do
         tys <- mapM (const newTyVar) qns
-        return (instTrans tys, substTvs (map fst qns) tys (unLoc tau))
+        tau' <- substTvs (map fst qns) tys (unLoc tau)
+        return (instTrans tys, tau')
 instantiate ty = return (mempty, ty)
 
 -- | Skolemisation
@@ -31,7 +32,7 @@ skolemise ::
         m (Coercion, [Quant], Rho)
 skolemise (AllT tvs rho) = do
         qns1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newFreeTv tv) tvs
-        (coercion, qns2, rho') <- skolemise (substTvs (map fst tvs) (map (VarT . fst) qns1) (unLoc rho))
+        (coercion, qns2, rho') <- skolemise =<< substTvs (map fst tvs) (map (VarT . fst) qns1) (unLoc rho)
         return (prpolyTrans qns1 coercion, qns1 ++ qns2, rho')
 skolemise (ArrT arg_ty res_ty) = do
         (coer, sks, res_ty') <- skolemise (unLoc res_ty)

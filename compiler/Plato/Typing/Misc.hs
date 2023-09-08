@@ -53,8 +53,8 @@ freeTvs (AllT qnts body) = local ((flip . foldr) (S.insert . fst) qnts) $ freeTv
 freeTvs (AppT fun arg) = S.union <$> freeTvs (unLoc fun) <*> freeTvs (unLoc arg)
 freeTvs MetaT{} = return S.empty
 
-substTvs :: [TyVar] -> [Type] -> Type -> Type
-substTvs tvs tys ty = let s = M.fromList (zip tvs tys) in apply s ty
+substTvs :: MonadIO m => [TyVar] -> [Type] -> Type -> m Type
+substTvs tvs tys ty = let s = M.fromList (zip tvs tys) in apply s <$> zonk ty
 
 apply :: M.Map TyVar Tau -> Type -> Type
 apply s ty@(VarT tv) = M.findWithDefault ty tv s

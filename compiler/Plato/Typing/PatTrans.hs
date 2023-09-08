@@ -48,7 +48,7 @@ constructors ty = getCon [] =<< zonk ty
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
         getCon acc (ConT tc) = do
                 (params, constrs) <- lookupIdent tc =<< asks getConEnv
-                return (map (\(con, ty) -> (con, substTvs params (reverse acc) <$> ty)) constrs)
+                mapM (\(con, tys) -> (con,) <$> mapM (substTvs params (reverse acc)) tys) constrs
         getCon _ _ = unreachable "Not a variant type"
 
 subst :: Expr 'Typed -> Expr 'Typed -> Ident -> Expr 'Typed

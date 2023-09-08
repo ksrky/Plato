@@ -262,7 +262,7 @@ tcBinds (AcyclicSCC (Bind (id, Just ty) clauses)) = do
 tcBinds (AcyclicSCC (Bind (id, Nothing) clauses)) = do
         tv <- newTyVar
         exp <- checkClausesRho clauses tv
-        (qns, sigma) <- generalize tv
+        (qns, sigma) <- generalize tv 
         checkKindStar =<< zonk (noLoc sigma)
         return $ AcyclicSCC $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
 tcBinds (CyclicSCC binds) = do

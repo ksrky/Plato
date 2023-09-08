@@ -22,12 +22,15 @@ data Command
 
 pSearchPaths :: Parser [FilePath]
 pSearchPaths =
-        option
-                strs
-                ( short 'i'
-                        <> metavar "PATHS..."
-                        <> help "setting library paths"
-                )
+        concat
+                <$> optional
+                        ( option
+                                strs
+                                ( short 'i'
+                                        <> metavar "PATHS..."
+                                        <> help "setting search paths"
+                                )
+                        )
     where
         strs :: ReadM [String]
         strs = map T.unpack . T.splitOn ":" . T.pack <$> str
