@@ -22,6 +22,7 @@ import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
+import Data.Graph
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
@@ -108,7 +109,7 @@ elabTypDefn (T.DatDefn' (id, _) params constrs) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 
-elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => T.Rec (T.Bind 'T.Typed) -> m [C.Entry]
+elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => SCC (T.Bind 'T.Typed) -> m [C.Entry]
 elabBinds bnds = do
         decs <- forM bnds $ \(T.Bind' (id, ty) _) -> C.Decl id <$> elabType ty
         defs <- forM bnds $ \(T.Bind' (id, _) exp) -> C.Defn id <$> elabExpr exp

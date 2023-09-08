@@ -4,6 +4,7 @@
 module Plato.Syntax.Typing.Decl where
 
 import Data.Foldable
+import Data.Graph
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -28,7 +29,7 @@ data TypDefn (a :: TcFlag) where
 data Rec a = NonRec a | Rec [a] deriving (Eq, Show)
 
 data Defn (a :: TcFlag)
-        = ValDefn (Rec (Bind a))
+        = ValDefn (SCC (Bind a))
         | TypDefn [TypDefn a]
 
 ----------------------------------------------------------------
@@ -108,3 +109,7 @@ instance Pretty (TypDefn a) where
 instance Pretty (Rec (Bind a)) where
         pretty (NonRec bnd) = pretty bnd
         pretty (Rec bnds) = braces $ map pretty bnds `sepBy` semi
+
+instance Pretty (SCC (Bind a)) where
+        pretty (AcyclicSCC bnd) = pretty bnd
+        pretty (CyclicSCC bnds) = braces $ map pretty bnds `sepBy` semi

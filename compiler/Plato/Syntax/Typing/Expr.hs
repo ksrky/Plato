@@ -10,6 +10,8 @@ module Plato.Syntax.Typing.Expr (
         prClause,
 ) where
 
+import Data.Graph
+
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
@@ -42,8 +44,8 @@ data Expr (a :: TcFlag) where
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
-        LetE :: (Rec (Bind 'Untyped)) -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: (Rec (Bind 'Typed)) -> LExpr 'Typed -> Expr 'Typed
+        LetE :: (SCC (Bind 'Untyped)) -> LExpr 'Untyped -> Expr 'Untyped
+        LetE' :: (SCC (Bind 'Typed)) -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped

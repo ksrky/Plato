@@ -6,6 +6,7 @@ module Plato.Syntax.Typing.Decl where
 import Data.Kind
 import Prettyprinter
 
+import Data.Graph
 import Plato.Syntax.Typing.Base
 
 type role Bind nominal
@@ -20,3 +21,5 @@ data Rec :: Type -> Type
 instance Eq a => Eq (Rec a)
 instance Show a => Show (Rec a)
 instance Pretty (Rec (Bind a))
+
+instance Pretty (SCC (Bind a))

@@ -5,6 +5,7 @@
 module Plato.Typing.Zonking (Zonking (..)) where
 
 import Control.Monad.IO.Class
+import Data.Graph
 
 import Plato.Common.Location
 import Plato.Syntax.Typing
@@ -23,6 +24,9 @@ instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
 instance Zonking a => Zonking (Rec a) where
+        zonk = mapM zonk
+
+instance Zonking a => Zonking (SCC a) where
         zonk = mapM zonk
 
 instance Zonking (Expr 'Typed) where

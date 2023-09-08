@@ -16,6 +16,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Data.Graph
 import Data.List qualified as List
 import GHC.Stack
 
@@ -59,7 +60,7 @@ elabExpr (P.LetE ldecs body) = do
         local (extendScope ldecs') $ do
                 bnds <- elabLocDecls ldecs'
                 body' <- elabExpr `traverse` body
-                return $ T.LetE (T.Rec bnds) body'
+                return $ T.LetE (CyclicSCC bnds) body'
 elabExpr (P.CaseE match alts) = do
         match' <- elabExpr `traverse` match
         alts' <- forM alts $ \(pat, body) -> do
@@ -178,7 +179,7 @@ elabTopDecls tdecs = do
                 local (extendScope ldecs') $ do
                         mapM_ (checkNumArgs . unLoc) ldecs'
                         binds <- elabLocDecls ldecs'
-                        asks (linearizeTop [T.TypDefn tdefs, T.ValDefn (T.Rec binds)],)
+                        asks (linearizeTop [T.TypDefn tdefs, T.ValDefn (CyclicSCC binds)],)
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of

@@ -13,6 +13,7 @@ import Data.Set qualified as S
 import GHC.Stack
 import Prettyprinter
 
+import Data.Graph (SCC (AcyclicSCC, CyclicSCC))
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -46,19 +47,19 @@ inferType = zonk <=< inferSigma
 tcBinds ::
         forall e m.
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
-        Rec (Bind 'Untyped) ->
-        m (Rec (Bind 'Typed))
-tcBinds (NonRec (Bind (id, Just ty) clauses)) = do
+        SCC (Bind 'Untyped) ->
+        m (SCC (Bind 'Typed))
+tcBinds (AcyclicSCC (Bind (id, Just ty) clauses)) = do
         checkKindStar ty
         exp <- checkDefn clauses (unLoc ty)
-        return $ NonRec $ Bind' (id, unLoc ty) exp
-tcBinds (NonRec (Bind (id, Nothing) clauses)) = do
+        return $ AcyclicSCC $ Bind' (id, unLoc ty) exp
+tcBinds (AcyclicSCC (Bind (id, Nothing) clauses)) = do
         tv <- newTyVar
         exp <- tcClauses clauses tv
         (qns, sigma) <- generalize tv
         checkKindStar =<< zonk (noLoc sigma)
-        return $ NonRec $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
-tcBinds (Rec binds) = do
+        return $ AcyclicSCC $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
+tcBinds (CyclicSCC binds) = do
         envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
                 Just ty -> return (id, ty)
                 Nothing -> (id,) . noLoc <$> newTyVar
@@ -71,7 +72,7 @@ tcBinds (Rec binds) = do
                                 tv <- find id =<< asks getTypEnv
                                 exp <- tcClauses clauses tv
                                 return $ Bind' (id, tv) exp
-                Rec
+                CyclicSCC
                         <$> zipWithM
                                 ( \b@(Bind' (id, ty) exp) (Bind (_, mb) _) -> case mb of
                                         Nothing -> do
