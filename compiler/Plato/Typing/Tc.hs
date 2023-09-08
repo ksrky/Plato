@@ -47,6 +47,16 @@ tcBinds ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [Bind 'Untyped] ->
         m [Bind 'Typed]
+tcBinds [Bind (id, Just ty) clauses] = do
+        checkKindStar ty
+        exp <- checkDefn clauses (unLoc ty)
+        return [Bind' (id, unLoc ty) exp]
+tcBinds [Bind (id, Nothing) clauses] = do
+        tv <- newTyVar
+        exp <- tcClauses clauses tv
+        (qns, sigma) <- generalize tv
+        checkKindStar =<< zonk (noLoc sigma)
+        return [Bind' (id, sigma) (unCoer (genTrans qns) exp)]
 tcBinds binds = do
         envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
                 Just ty -> return (id, ty)
@@ -60,11 +70,15 @@ tcBinds binds = do
                                 tv <- find id =<< asks getTypEnv
                                 exp <- tcClauses clauses tv
                                 return $ Bind' (id, tv) exp
-                forM binds' $ \b@(Bind' (id, ty) exp) -> case ty of
-                        MetaT{} -> do
-                                (qns, sigma) <- generalize ty
-                                return $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
-                        _ -> return b
+                zipWithM
+                        ( \b@(Bind' (id, ty) exp) (Bind (_, mb) _) -> case mb of
+                                Nothing -> do
+                                        (qns, sigma) <- generalize ty
+                                        return $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
+                                _ -> return b
+                        )
+                        binds'
+                        binds
 
 data Expected a = Infer (IORef a) | Check a
 
@@ -110,7 +124,6 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
                         throwLocErr sp $
                                 hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
                 binds <- checkPats pats arg_tys
-                -- res_ty' <- zonk res_ty -- Note: Argument type might applied to result type
                 instPatSigma_ res_ty exp_ty
                 return binds
         tcPat' (AnnP pat ann_ty) exp_ty = do
@@ -127,10 +140,12 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
 instPatSigma ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
-        Expected Sigma ->
+        Expected Rho ->
         m ()
-instPatSigma pat_ty (Infer ref) = void $ writeMIORef ref pat_ty
-instPatSigma pat_ty (Check exp_ty) = void $ subsCheck pat_ty exp_ty
+instPatSigma pat_ty (Infer ref) = do
+        (_, rho) <- instantiate pat_ty
+        writeMIORef ref rho
+instPatSigma pat_ty (Check rho) = void $ subsCheck pat_ty rho
 
 instDataCon ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>

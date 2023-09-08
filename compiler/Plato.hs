@@ -30,7 +30,6 @@ compileToCore src = catchErrors $ do
         pssyn <- parseFile src
         whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn
         typsyn <- psToTyp pssyn
-        liftIO $ prettyPrint typsyn
         typsyn' <- typing typsyn
         whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
         corsyn <- typToCore typsyn'

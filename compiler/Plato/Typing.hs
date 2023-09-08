@@ -10,6 +10,7 @@ import Control.Monad.Writer
 import Data.Tuple qualified as Tuple
 
 import Plato.Common.Error
+import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
@@ -31,11 +32,17 @@ typingDefns (ValDefn binds : rest) = do
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
-        let datsig = map (\(DatDefn' idkn _ _) -> idkn) tdefs'
-            ctors = concatMap (\(DatDefn' _ _ ctors) -> ctors) tdefs'
-            extce env = foldr (\(DatDefn' (id, _) qns ctors) -> extendConEnv id (map fst qns) ctors) env tdefs'
-        local (modifyTypEnv $ extendList ctors . extendList datsig) $
-                local (modifyConEnv extce) $
+        let datty = map (\(DatDefn' idkn _ _) -> idkn) tdefs'
+            allctors =
+                concatMap
+                        ( \(DatDefn' _ qns ctors) ->
+                                map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
+                        )
+                        tdefs'
+            extconenv env =
+                foldr (\(DatDefn' (id, _) qns ctors) -> extendConEnv id (map fst qns) ctors) env tdefs'
+        local (modifyTypEnv $ extendList allctors . extendList datty) $
+                local (modifyConEnv extconenv) $
                         typingDefns rest
 
 -----------------------------------------------------------
