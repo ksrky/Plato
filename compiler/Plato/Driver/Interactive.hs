@@ -71,3 +71,4 @@ evalCore :: (MonadThrow m, MonadIO m) => Term -> Interactive m ()
 evalCore t = do
         sc <- getCoreScope
         liftIO . putDoc =<< evalPrint =<< eval (t, sc)
+        liftIO $ putStrLn ""

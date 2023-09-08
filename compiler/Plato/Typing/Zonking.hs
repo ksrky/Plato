@@ -23,9 +23,6 @@ instance (Zonking a, Zonking b) => Zonking (a, b) where
 instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
-instance Zonking a => Zonking (Rec a) where
-        zonk = mapM zonk
-
 instance Zonking a => Zonking (SCC a) where
         zonk = mapM zonk
 

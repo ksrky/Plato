@@ -26,8 +26,6 @@ data TypDefn (a :: TcFlag) where
         DatDefn :: Ident -> Quants -> [(Ident, LType)] -> TypDefn 'Untyped
         DatDefn' :: (Ident, Kind) -> Quants -> [(Ident, LType)] -> TypDefn 'Typed
 
-data Rec a = NonRec a | Rec [a] deriving (Eq, Show)
-
 data Defn (a :: TcFlag)
         = ValDefn (SCC (Bind a))
         | TypDefn [TypDefn a]
@@ -42,27 +40,11 @@ deriving instance Show (TypDefn a)
 deriving instance Eq (Defn a)
 deriving instance Show (Defn a)
 
-instance Foldable Rec where
-        foldMap f (NonRec x) = f x
-        foldMap f (Rec xs) = foldMap f xs
-
-instance Functor Rec where
-        fmap f (NonRec x) = NonRec $ f x
-        fmap f (Rec xs) = Rec $ fmap f xs
-
-instance Traversable Rec where
-        traverse f (NonRec x) = NonRec <$> f x
-        traverse f (Rec xs) = Rec <$> traverse f xs
-
 instance HasLoc (Bind 'Untyped) where
         getLoc (Bind (id, _) c) = getLoc id <> getLoc c
 
 instance HasLoc (TypDefn 'Untyped) where
         getLoc (DatDefn id _ ctors) = getLoc id <> mconcat (map getLoc ctors)
-
-instance HasLoc a => HasLoc (Rec a) where
-        getLoc (NonRec x) = getLoc x
-        getLoc (Rec xs) = mconcat $ map getLoc xs
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -105,10 +87,6 @@ instance Pretty (TypDefn a) where
                         , "where"
                         , braces $ map (\(con, ty) -> hsep [pretty con, colon, pretty ty]) constrs `sepBy` semi
                         ]
-
-instance Pretty (Rec (Bind a)) where
-        pretty (NonRec bnd) = pretty bnd
-        pretty (Rec bnds) = braces $ map pretty bnds `sepBy` semi
 
 instance Pretty (SCC (Bind a)) where
         pretty (AcyclicSCC bnd) = pretty bnd

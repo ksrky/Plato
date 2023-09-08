@@ -34,12 +34,8 @@ typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
         let datty = map (\(DatDefn' idkn _ _) -> idkn) tdefs'
-            allctors =
-                concatMap
-                        ( \(DatDefn' _ qns ctors) ->
-                                map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
-                        )
-                        tdefs'
+            allctors = (`concatMap` tdefs') $ \(DatDefn' _ qns ctors) ->
+                map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
             extconenv env =
                 foldr (\(DatDefn' (id, _) qns ctors) -> extendConEnv id (map fst qns) ctors) env tdefs'
         local (modifyTypEnv $ extendList allctors . extendList datty) $
@@ -56,4 +52,7 @@ typingExpr ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed)
-typingExpr exp = fst <$> inferType exp
+typingExpr exp = do
+        (exp', ty') <- inferSigma exp
+        checkKindStar $ noLoc ty'
+        zonk exp'
