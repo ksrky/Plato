@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Plato
-version:        1.0.1
+version:        1.0.2
 description:    Please see the README on GitHub at <https://github.com/ksrky/Plato#readme>
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
@@ -156,9 +156,6 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.Parsing.LexerSpec
-      Plato.Parsing.ParserSpec
-      Plato.PsToTypSpec
       Paths_Plato
   hs-source-dirs:
       test

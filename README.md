@@ -48,7 +48,7 @@ If you can run the following command, Plato is successfully installed.
 
 ```
 $ plato --version
-Plato version 1.0.1
+Plato version 1.0.2
 ```
 
 ## Getting started
