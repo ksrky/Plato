@@ -17,7 +17,7 @@ data Options = Options
 
 data Command
         = REPL [FilePath] Options
-        | Run FilePath Options
+        | Run [FilePath] Options
         | Version String
         deriving (Eq, Show)
 
@@ -74,7 +74,7 @@ pREPL :: Parser Command
 pREPL = REPL <$> many (argument str (metavar "FILES...")) <*> pOptions
 
 pRun :: Parser Command
-pRun = Run <$> argument str (metavar "FILE...") <*> pOptions
+pRun = Run <$> many (argument str (metavar "FILES...")) <*> pOptions
 
 pVersion :: Parser Command
 pVersion =

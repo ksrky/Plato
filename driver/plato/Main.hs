@@ -16,11 +16,12 @@ processCommands (REPL files opts) = do
         processOptions opts session
         setFlag FEvalCore session
         repl files session
-processCommands (Run src opts) = do
+processCommands (Run files opts) = do
         session <- initSession
-        setInfo src (libraryPaths opts) (logPath opts) session
-        processOptions opts session
-        runPlato src session
+        forM_ files $ \file -> do
+                setInfo file (libraryPaths opts) (logPath opts) session
+                processOptions opts session
+                runPlato file session
 processCommands (Version version) = putStrLn $ "Plato version " ++ version
 
 processOptions :: Options -> Session -> IO ()
