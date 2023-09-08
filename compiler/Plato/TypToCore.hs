@@ -108,11 +108,11 @@ elabTypDefn (T.DatDefn' (id, _) params constrs) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 
-elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => [T.Bind 'T.Typed] -> m [C.Entry]
+elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => T.Rec (T.Bind 'T.Typed) -> m [C.Entry]
 elabBinds bnds = do
         decs <- forM bnds $ \(T.Bind' (id, ty) _) -> C.Decl id <$> elabType ty
         defs <- forM bnds $ \(T.Bind' (id, _) exp) -> C.Defn id <$> elabExpr exp
-        return $ decs ++ defs
+        return $ toList decs ++ toList defs
 
 elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
 elabDefn (T.TypDefn tdefs) = do

@@ -22,6 +22,9 @@ instance (Zonking a, Zonking b) => Zonking (a, b) where
 instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
+instance Zonking a => Zonking (Rec a) where
+        zonk = mapM zonk
+
 instance Zonking (Expr 'Typed) where
         zonk (VarE id) = return (VarE id)
         zonk (AppE' fun arg) = AppE' <$> zonk fun <*> zonk arg

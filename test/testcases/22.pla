@@ -1,0 +1,8 @@
+-- type inference of a recursive function
+
+data Nat where
+    Z : Nat
+    S : Nat -> Nat
+
+selfNat Z = Z
+selfNat (S n) = S (selfNat n)

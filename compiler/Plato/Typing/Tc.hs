@@ -7,6 +7,7 @@ import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM, (<=<))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
+import Data.Foldable qualified as Foldable
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
@@ -45,19 +46,19 @@ inferType = zonk <=< inferSigma
 tcBinds ::
         forall e m.
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
-        [Bind 'Untyped] ->
-        m [Bind 'Typed]
-tcBinds [Bind (id, Just ty) clauses] = do
+        Rec (Bind 'Untyped) ->
+        m (Rec (Bind 'Typed))
+tcBinds (NonRec (Bind (id, Just ty) clauses)) = do
         checkKindStar ty
         exp <- checkDefn clauses (unLoc ty)
-        return [Bind' (id, unLoc ty) exp]
-tcBinds [Bind (id, Nothing) clauses] = do
+        return $ NonRec $ Bind' (id, unLoc ty) exp
+tcBinds (NonRec (Bind (id, Nothing) clauses)) = do
         tv <- newTyVar
         exp <- tcClauses clauses tv
         (qns, sigma) <- generalize tv
         checkKindStar =<< zonk (noLoc sigma)
-        return [Bind' (id, sigma) (unCoer (genTrans qns) exp)]
-tcBinds binds = do
+        return $ NonRec $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
+tcBinds (Rec binds) = do
         envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
                 Just ty -> return (id, ty)
                 Nothing -> (id,) . noLoc <$> newTyVar
@@ -70,15 +71,16 @@ tcBinds binds = do
                                 tv <- find id =<< asks getTypEnv
                                 exp <- tcClauses clauses tv
                                 return $ Bind' (id, tv) exp
-                zipWithM
-                        ( \b@(Bind' (id, ty) exp) (Bind (_, mb) _) -> case mb of
-                                Nothing -> do
-                                        (qns, sigma) <- generalize ty
-                                        return $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
-                                _ -> return b
-                        )
-                        binds'
-                        binds
+                Rec
+                        <$> zipWithM
+                                ( \b@(Bind' (id, ty) exp) (Bind (_, mb) _) -> case mb of
+                                        Nothing -> do
+                                                (qns, sigma) <- generalize ty
+                                                return $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
+                                        _ -> return b
+                                )
+                                binds'
+                                binds
 
 data Expected a = Infer (IORef a) | Check a
 
@@ -207,7 +209,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsE' var var_ty (unLoc body')
         tcRho' (LetE bnds body) exp_ty = do
                 bnds' <- tcBinds bnds
-                let sigs = map (\(Bind' idty _) -> idty) bnds'
+                let sigs = map (\(Bind' idty _) -> idty) (Foldable.toList bnds')
                 local (modifyTypEnv $ extendList sigs) $ do
                         body' <- tcRho body exp_ty
                         return $ LetE' bnds' body'

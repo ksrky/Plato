@@ -19,9 +19,9 @@ import Plato.Typing.Tc.Coercion
 
 -- | Instantiation
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
-instantiate (AllT tvs tau) = do
-        tys <- mapM (const newTyVar) tvs
-        return (instTrans tys, substTvs (map fst tvs) tys (unLoc tau))
+instantiate (AllT qns tau) = do
+        tys <- mapM (const newTyVar) qns
+        return (instTrans tys, substTvs (map fst qns) tys (unLoc tau))
 instantiate ty = return (mempty, ty)
 
 -- | Skolemisation

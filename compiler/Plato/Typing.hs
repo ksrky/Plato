@@ -7,6 +7,7 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Data.Foldable
 import Data.Tuple qualified as Tuple
 
 import Plato.Common.Error
@@ -27,7 +28,7 @@ typingDefns [] = ask
 typingDefns (ValDefn binds : rest) = do
         binds' <- zonk =<< tcBinds binds
         tell [ValDefn binds']
-        let sig = map (\(Bind' idty _) -> idty) binds'
+        let sig = map (\(Bind' idty _) -> idty) (toList binds')
         local (modifyTypEnv $ extendList sig) $ typingDefns rest
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs

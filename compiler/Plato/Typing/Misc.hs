@@ -84,6 +84,6 @@ substExpr id exp body = subst' body
         subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
         subst' (LetE' bnds body) =
-                LetE' (map (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
+                LetE' (fmap (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
         subst' (CaseE' test ann_ty alts) =
                 CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)

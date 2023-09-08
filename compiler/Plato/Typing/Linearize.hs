@@ -49,13 +49,18 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty clses) = Bind idty <$> mapM (\(ps, e) -> (ps,) <$> linearize e) clses
 
-linBinds :: [Bind 'Untyped] -> Writer [Ident] [[Bind 'Untyped]]
-linBinds binds = do
+linBinds :: Rec (Bind 'Untyped) -> Writer [Ident] [Rec (Bind 'Untyped)]
+linBinds (Rec binds) = do
         graph <- forM binds $ \bnd@(Bind (par, _) _) -> do
                 let (bnd', chs) = runWriter $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
         let sccs = stronglyConnComp graph
-        return $ map flattenSCC sccs
+        return $ map sccToBind sccs
+linBinds nonrec = return [nonrec]
+
+sccToBind :: SCC (Bind 'Untyped) -> Rec (Bind 'Untyped)
+sccToBind (AcyclicSCC bnd) = NonRec bnd
+sccToBind (CyclicSCC bnds) = Rec bnds
 
 instance Linearize (TypDefn 'Untyped) where
         linearize (DatDefn id qns ctors) = DatDefn id qns <$> mapM (\(id, ty) -> (id,) <$> linearize ty) ctors

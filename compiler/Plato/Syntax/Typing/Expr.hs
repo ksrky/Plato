@@ -42,8 +42,8 @@ data Expr (a :: TcFlag) where
         AbsE' :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
-        LetE :: [Bind 'Untyped] -> LExpr 'Untyped -> Expr 'Untyped
-        LetE' :: [Bind 'Typed] -> LExpr 'Typed -> Expr 'Typed
+        LetE :: (Rec (Bind 'Untyped)) -> LExpr 'Untyped -> Expr 'Untyped
+        LetE' :: (Rec (Bind 'Typed)) -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
@@ -77,9 +77,9 @@ instance PrettyWithContext (Expr a) where
         pretty' c (TAbsE [] body) = pretty' c body
         pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
         pretty' c (LetE bnds body) =
-                contextParens c 0 $ hsep ["let", braces $ map pretty bnds `sepBy` semi, "in", pretty body]
+                contextParens c 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
         pretty' c (LetE' bnds body) =
-                contextParens c 0 $ hsep ["let", braces $ map pretty bnds `sepBy` semi, "in", pretty body]
+                contextParens c 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
         pretty' c (CaseE match alts) =
                 contextParens c 0 $
                         hsep
