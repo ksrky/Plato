@@ -16,12 +16,12 @@ import System.Log.Logger
 import Plato.Driver.Flag
 import Plato.Driver.Info
 
-getDebugLogPath :: (HasInfo env, MonadIO m) => env -> m FilePath
+getDebugLogPath :: (HasInfo e, MonadIO m) => e -> m FilePath
 getDebugLogPath env = do
         path <- getEntryPath env
         return $ replaceExtension path ".debug.log"
 
-getUserLogPath :: (HasInfo env, MonadIO m) => env -> m FilePath
+getUserLogPath :: (HasInfo e, MonadIO m) => e -> m FilePath
 getUserLogPath env = do
         path <- getLogPath env
         return $ replaceExtension path ".log"
@@ -29,13 +29,13 @@ getUserLogPath env = do
 platoLog :: String
 platoLog = "PlatoLog"
 
-initLogger :: (HasInfo env, HasFlags env, MonadIO m) => env -> m ()
+initLogger :: (HasInfo e, HasFlags e, MonadIO m) => e -> m ()
 initLogger env = do
         liftIO removeAllHandlers
         isDebug <- isFlagOn FDebug env
         when isDebug $ initDebugLogger env
 
-initDebugLogger :: (HasInfo env, MonadIO m) => env -> m ()
+initDebugLogger :: (HasInfo e, MonadIO m) => e -> m ()
 initDebugLogger env = do
         debugLogPath <- getDebugLogPath env
         userLogPath <- getUserLogPath env

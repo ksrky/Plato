@@ -67,35 +67,35 @@ instance Pretty (Expr a) where
 
 instance PrettyWithContext (Expr a) where
         pretty' _ (VarE var) = pretty var
-        pretty' c (AppE fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
-        pretty' c (AppE' fun arg) = contextParens c 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
-        pretty' c (AbsE var Nothing body) = contextParens c 0 $ hsep [backslash, pretty var, dot, pretty body]
-        pretty' c (AbsE var (Just var_ty) body) =
-                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty' c (AbsE' var var_ty body) =
-                contextParens c 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty' c (TAppE fun []) = pretty' c fun
-        pretty' c (TAppE fun tyargs) = contextParens c 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
-        pretty' c (TAbsE [] body) = pretty' c body
-        pretty' c (TAbsE qnts body) = contextParens c 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty' c (LetE bnds body) =
-                contextParens c 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
-        pretty' c (LetE' bnds body) =
-                contextParens c 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
-        pretty' c (CaseE match alts) =
-                contextParens c 0 $
+        pretty' p (AppE fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' p (AppE' fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
+        pretty' p (AbsE var (Just var_ty) body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (AbsE' var var_ty body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (TAppE fun []) = pretty' p fun
+        pretty' p (TAppE fun tyargs) = parenswPrec p 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
+        pretty' p (TAbsE [] body) = pretty' p body
+        pretty' p (TAbsE qnts body) = parenswPrec p 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
+        pretty' p (LetE bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (LetE' bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (CaseE match alts) =
+                parenswPrec p 0 $
                         hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
-        pretty' c (CaseE' match _ alts) =
-                contextParens c 0 $
+        pretty' p (CaseE' match _ alts) =
+                parenswPrec p 0 $
                         hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
-        pretty' c (AnnE exp ty) = contextParens c 0 $ hsep [pretty exp, colon, pretty ty]
+        pretty' p (AnnE exp ty) = parenswPrec p 0 $ hsep [pretty exp, colon, pretty ty]

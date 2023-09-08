@@ -156,6 +156,9 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Plato.Parsing.LexerSpec
+      Plato.Parsing.ParserSpec
+      Plato.PsToTypSpec
       Paths_Plato
   hs-source-dirs:
       test

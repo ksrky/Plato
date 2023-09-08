@@ -1,8 +1,8 @@
 module Plato.Common.Pretty (
         module Prettyprinter,
         sepBy,
-        contextParens,
-        prettyPrint,
+        parenswPrec,
+        printList,
         PrettyWithContext (..),
         wildcard,
         arrow,
@@ -11,18 +11,18 @@ module Plato.Common.Pretty (
 ) where
 
 import Prettyprinter
-import Prettyprinter.Render.Text
 
 import Plato.Common.Location
+import Prettyprinter.Util
 
 sepBy :: [Doc ann] -> Doc ann -> Doc ann
 sepBy doc sep = concatWith (surround (sep <> space)) doc
 
-contextParens :: Int -> Int -> Doc ann -> Doc ann
-contextParens i j doc = if i > j then parens doc else doc
+parenswPrec :: Int -> Int -> Doc ann -> Doc ann
+parenswPrec i j doc = if i > j then parens doc else doc
 
-prettyPrint :: Pretty a => a -> IO ()
-prettyPrint = putDoc . pretty
+printList :: Pretty a => [a] -> IO ()
+printList = putDocW 100 . (<> line) . vsep . map pretty
 
 class PrettyWithContext a where
         pretty' :: Int -> a -> Doc ann

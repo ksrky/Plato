@@ -40,7 +40,7 @@ instance HasImporting Importing where
         modifyImporting = id
 
 checkCyclicImport ::
-        (MonadReader env m, HasImporting env, MonadThrow m) =>
+        (MonadReader e m, HasImporting e, MonadThrow m) =>
         Located T.Text ->
         m ()
 checkCyclicImport (L sp filename) = do
@@ -48,7 +48,7 @@ checkCyclicImport (L sp filename) = do
         when (filename `S.member` impngSet) $ throwLocErr sp "Cyclic dependencies"
 
 unlessImported ::
-        (MonadReader env m, HasInfo env, HasImported env, MonadIO m, MonadThrow m, Monoid a) =>
+        (MonadReader e m, HasInfo e, HasImported e, MonadIO m, MonadThrow m, Monoid a) =>
         Located T.Text ->
         (FilePath -> m a) ->
         ReaderT Importing m a
@@ -62,7 +62,7 @@ unlessImported (L _ filename) parse = do
                         lift $ extendImported filename =<< ask
                         return res
 
-getImportPath :: (MonadReader env m, HasInfo env, MonadIO m, MonadThrow m) => T.Text -> m FilePath
+getImportPath :: (MonadReader e m, HasInfo e, MonadIO m, MonadThrow m) => T.Text -> m FilePath
 getImportPath filename = do
         curpath <- getCurrentDirPath =<< ask
         libpaths <- getLibraryPaths =<< ask

@@ -13,15 +13,15 @@ import Plato.Core.Env
 import Plato.Core.Result
 import Plato.Syntax.Core
 
-getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Ix
+getIndex :: (MonadReader e m, MonadThrow m) => Ident -> Scope -> m Ix
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
-lookupIndex :: (MonadReader env m, CoreEnv env, MonadIO m) => Ix -> m EnvEntry
+lookupIndex :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> m EnvEntry
 lookupIndex i = getE i =<< ask
 
-evalIndex :: (MonadReader env m, CoreEnv env, MonadThrow m, MonadIO m) => Ix -> m Val
+evalIndex :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Ix -> m Val
 evalIndex i =
         lookupIndex i >>= \case
                 Index j -> return $ Ne (NVar j)

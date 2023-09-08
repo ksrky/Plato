@@ -13,6 +13,7 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Parsing.OpParser.Resolver
+import Plato.Parsing.Token
 import Plato.Syntax.Parsing
 
 type FixityEnv = M.Map Name Fixity
@@ -68,8 +69,8 @@ instance Linearize Type where
 class OpParser a where
         opParse :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => a -> m a
 
-instance OpParser FixityEnv where
-        opParse _ = asks getFixityEnv
+instance OpParser [Token] where
+        opParse = return
 
 instance OpParser LExpr where
         opParse (L sp exp) =

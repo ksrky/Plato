@@ -28,12 +28,12 @@ runPlato filepath = void . unPlato (compileToCore filepath)
 compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = catchErrors $ do
         pssyn <- parseFile src
-        whenFlagOn FPrintParsed $ liftIO $ prettyPrint pssyn
+        whenFlagOn FPrintParsed $ liftIO $ printList pssyn
         typsyn <- psToTyp pssyn
         typsyn' <- typing typsyn
-        whenFlagOn FPrintTyped $ liftIO $ prettyPrint typsyn'
+        whenFlagOn FPrintTyped $ liftIO $ printList typsyn'
         corsyn <- typToCore typsyn'
-        whenFlagOn FPrintCore $ liftIO $ prettyPrint corsyn
+        whenFlagOn FPrintCore $ liftIO $ printList corsyn
         whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 

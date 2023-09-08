@@ -92,8 +92,8 @@ instance Pretty Type where
 instance PrettyWithContext Type where
         pretty' _ (VarT tv) = pretty tv
         pretty' _ (ConT tc) = pretty tc
-        pretty' c (ArrT arg res) = contextParens c 0 $ hsep [pretty' 1 arg, arrow, pretty res]
-        pretty' c (AllT [] body) = pretty' c body
-        pretty' c (AllT qnts body) = contextParens c 0 $ hsep [braces (prQuants qnts), pretty body]
-        pretty' c (AppT fun arg) = contextParens c 1 $ pretty' 1 fun <+> pretty' 2 arg
+        pretty' p (ArrT arg res) = parenswPrec p 0 $ hsep [pretty' 1 arg, arrow, pretty res]
+        pretty' p (AllT [] body) = pretty' p body
+        pretty' p (AllT qnts body) = parenswPrec p 0 $ hsep [braces (prQuants qnts), pretty body]
+        pretty' p (AppT fun arg) = parenswPrec p 1 $ pretty' 1 fun <+> pretty' 2 arg
         pretty' _ (MetaT tv) = pretty tv

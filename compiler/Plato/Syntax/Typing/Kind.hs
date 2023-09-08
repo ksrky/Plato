@@ -42,5 +42,5 @@ instance Pretty Kind where
 
 instance PrettyWithContext Kind where
         pretty' _ StarK = asterisk
-        pretty' c (ArrK kn1 kn2) = contextParens c 0 $ hsep [pretty' 0 kn1, arrow, pretty' 1 kn2]
+        pretty' p (ArrK kn1 kn2) = parenswPrec p 0 $ hsep [pretty' 0 kn1, arrow, pretty' 1 kn2]
         pretty' _ (MetaK kv) = pretty kv

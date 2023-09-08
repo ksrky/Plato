@@ -93,7 +93,7 @@ match (vt : vts) clauses
         | otherwise = matchCon vt vts clauses
 
 matchVar ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->
@@ -109,7 +109,7 @@ matchVar (var, _) rest clauses = do
         match rest clauses'
 
 matchCon ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->
@@ -123,7 +123,7 @@ choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 
 matchClause ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
         [Clause 'Typed] ->
