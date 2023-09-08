@@ -1,12 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Options where
 
+import Data.Text qualified as T
 import Info
 import Options.Applicative
 
 data Options = Options
-        { libraryPaths :: [FilePath]
+        { searchPaths :: [FilePath]
         , logPath :: !(Maybe FilePath)
         , isDebug :: !Bool
         , printParsed :: !Bool
@@ -21,17 +20,17 @@ data Command
         | Version String
         deriving (Eq, Show)
 
-pLibraryPaths :: Parser [FilePath]
-pLibraryPaths =
-        -- tmp
-        (\case Just x -> [x]; Nothing -> [])
-                <$> optional
-                        ( strOption
-                                ( long "libs"
-                                        <> metavar "PATHS..."
-                                        <> help "setting library paths"
-                                )
-                        )
+pSearchPaths :: Parser [FilePath]
+pSearchPaths =
+        option
+                strs
+                ( short 'i'
+                        <> metavar "PATHS..."
+                        <> help "setting library paths"
+                )
+    where
+        strs :: ReadM [String]
+        strs = map T.unpack . T.splitOn ":" . T.pack <$> str
 
 pLogPath :: Parser (Maybe FilePath)
 pLogPath =
@@ -63,7 +62,7 @@ pPrintCore = switch (long "print-core" <> help "Print core program")
 pOptions :: Parser Options
 pOptions =
         Options
-                <$> pLibraryPaths
+                <$> pSearchPaths
                 <*> pLogPath
                 <*> pIsDebug
                 <*> pPrintParsed

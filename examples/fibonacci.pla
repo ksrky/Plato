@@ -1,5 +1,3 @@
-import Nat
-
 fib : Nat -> Nat
 fib Z = Z
 fib (S Z) = S Z

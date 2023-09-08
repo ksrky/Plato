@@ -119,6 +119,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Depends
       Info
       Info.TH
       Options

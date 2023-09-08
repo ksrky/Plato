@@ -1,6 +1,3 @@
-import List
-import Nat
-
 qsort : List Nat -> List Nat
 qsort Nil = Nil
 qsort (x :: xs) =

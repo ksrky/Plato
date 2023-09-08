@@ -1,9 +1,5 @@
 -- https://softwarefoundations.cis.upenn.edu/vfa-current/Sort.html
 
-import Nat
-import List
-import Pair
-
 select : Nat -> List Nat -> Nat :,: List Nat 
 select x Nil = x :,: Nil
 select x (h :: t) = case x <= h of
