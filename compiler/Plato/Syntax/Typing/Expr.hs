@@ -49,7 +49,7 @@ data Expr (a :: TcFlag) where
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
-        ClauseE :: [Clause 'Untyped] -> Expr 'Untyped
+        ClauseE :: Clauses 'Untyped -> Expr 'Untyped
 
 ----------------------------------------------------------------
 -- Basic instances

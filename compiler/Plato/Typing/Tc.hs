@@ -227,7 +227,7 @@ checkSigma exp sigma = do
 -- | Type checkinng of Clauses
 checkClausesRho ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
-        [Clause 'Untyped] ->
+        Clauses 'Untyped ->
         Rho ->
         m (Expr 'Typed)
 checkClausesRho clauses rho = do
@@ -280,7 +280,7 @@ tcBinds (CyclicSCC binds) = do
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
 instSigma sigma (Check rho) = subsCheckRho sigma rho
-instSigma sigma (Infer r) = do
+instSigma sigma (Infer ref) = do
         (coer, rho) <- instantiate sigma
-        writeMIORef r rho
+        writeMIORef ref rho
         return coer
