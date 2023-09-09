@@ -28,7 +28,7 @@ data TypDefn (a :: TcFlag) where
 
 data Defn (a :: TcFlag)
         = ValDefn (SCC (Bind a))
-        | TypDefn [TypDefn a]
+        | TypDefn (SCC (TypDefn a))
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -51,7 +51,7 @@ instance HasLoc (TypDefn 'Untyped) where
 ----------------------------------------------------------------
 instance Pretty (Defn a) where
         pretty (ValDefn binds) = indent 2 $ vsep $ toList $ fmap pretty binds
-        pretty (TypDefn tdefs) = indent 2 $ vsep $ map pretty tdefs
+        pretty (TypDefn tdefs) = indent 2 $ vsep $ toList $ fmap pretty tdefs
 
 instance Pretty (Bind a) where
         pretty (Bind (id, Just ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]

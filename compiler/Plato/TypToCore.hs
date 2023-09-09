@@ -11,6 +11,7 @@ import Data.Foldable
 import GHC.Stack
 import System.Log.Logger
 
+import Data.Graph
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -22,7 +23,6 @@ import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
-import Data.Graph
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
@@ -119,7 +119,7 @@ elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.E
 elabDefn (T.TypDefn tdefs) = do
         decs <- forM tdefs $ \(T.DatDefn' (id, kn) _ _) -> C.Decl id <$> elabKind kn
         defs <- concat <$> mapM elabTypDefn tdefs
-        return $ decs ++ defs
+        return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
 typToCore :: PlatoMonad m => T.Prog 'T.Typed -> m [C.Entry]

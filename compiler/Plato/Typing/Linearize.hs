@@ -64,13 +64,13 @@ instance Linearize (TypDefn 'Untyped) where
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
                 return $ DatDefn id qns ctors
 
-linDatDefns :: [TypDefn 'Untyped] -> Writer [Ident] [[TypDefn 'Untyped]]
-linDatDefns tdefs = do
+linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
+linDatDefns (CyclicSCC tdefs) = do
         graph <- forM tdefs $ \tdef@(DatDefn id _ _) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
-        let sccs = stronglyConnComp graph
-        return $ map flattenSCC sccs
+        return $ stronglyConnComp graph
+linDatDefns nonrec = return [nonrec]
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped
 linearizeTop = concatMap $ \case

@@ -33,7 +33,7 @@ typingDefns (ValDefn binds : rest) = do
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
-        let datty = map (\(DatDefn' idkn _ _) -> idkn) tdefs'
+        let datty = map (\(DatDefn' idkn _ _) -> idkn) (toList tdefs')
             allctors = (`concatMap` tdefs') $ \(DatDefn' _ qns ctors) ->
                 map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
             extconenv env =

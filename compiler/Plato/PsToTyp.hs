@@ -179,7 +179,7 @@ elabTopDecls tdecs = do
                 local (extendScope ldecs') $ do
                         mapM_ (checkNumArgs . unLoc) ldecs'
                         binds <- elabLocDecls ldecs'
-                        asks (linearizeTop [T.TypDefn tdefs, T.ValDefn (CyclicSCC binds)],)
+                        asks (linearizeTop [T.TypDefn (CyclicSCC tdefs), T.ValDefn (CyclicSCC binds)],)
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
