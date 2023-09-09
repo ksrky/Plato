@@ -63,7 +63,8 @@ qq xs (Unfold (x, t) u, s) = do
         return (Unfold (x', t') u')
 qq xs (Lam (x, ty) t, s) = do
         (x', t') <- quote xs (x, (t, s))
-        return (Lam (x', ty) t')
+        ty' <- qq xs (ty, s)
+        return (Lam (x', ty') t')
 qq xs (App t u, s) = do
         t' <- qq xs (t, s)
         u' <- qq xs (u, s)

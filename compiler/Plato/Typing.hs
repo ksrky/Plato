@@ -54,5 +54,5 @@ typingExpr ::
         m (LExpr 'Typed)
 typingExpr exp = do
         (exp', ty') <- inferSigma exp
-        checkKindStar $ noLoc ty'
+        checkKindStar =<< zonk (noLoc ty')
         zonk exp'

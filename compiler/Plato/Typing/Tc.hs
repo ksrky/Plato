@@ -9,12 +9,12 @@ import Control.Monad (forM, unless, void, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.Foldable qualified as Foldable
+import Data.Graph
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
 import Prettyprinter
 
-import Data.Graph (SCC (AcyclicSCC, CyclicSCC))
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -139,16 +139,16 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ unCoer coer $ VarE var
         tcRho' (AppE fun arg) exp_ty = do
                 (fun', fun_ty) <- inferRho fun
-                (arg_ty, res_ty) <- unifyFun_ fun_ty
+                (arg_ty, res_ty) <- catches (unifyFun fun_ty) (unifunErrorHandler (getLoc fun) fun_ty)
                 arg' <- checkSigma arg arg_ty
                 coer <- instSigma_ res_ty exp_ty
                 return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var Nothing body) (Check exp_ty) = do
-                (arg_ty, res_ty) <- unifyFun_ exp_ty
+                (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 body' <- local (modifyTypEnv $ extend var arg_ty) (checkRho body res_ty)
                 return $ AbsE' var arg_ty (unLoc body')
         tcRho' (AbsE var (Just var_ty) body) (Check exp_ty) = do
-                (arg_ty, res_ty) <- unifyFun_ exp_ty
+                (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 coer <- instSigma_ arg_ty (Check var_ty)
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body res_ty)
                 return $ AbsE' var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
@@ -186,8 +186,6 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (instSigma sigma (Infer ref))
                         . tcErrorHandler sp sigma
                         =<< readMIORef ref
-        unifyFun_ :: Rho -> m (Sigma, Rho)
-        unifyFun_ rho = catches (unifyFun rho) (unifunErrorHandler sp rho)
 
 zapToMonoType :: (MonadReader e m, HasUniq e, MonadIO m) => Expected Rho -> m (Expected Rho)
 zapToMonoType (Check ty) = return $ Check ty
@@ -262,7 +260,7 @@ tcBinds (AcyclicSCC (Bind (id, Just ty) clauses)) = do
 tcBinds (AcyclicSCC (Bind (id, Nothing) clauses)) = do
         tv <- newTyVar
         exp <- checkClausesRho clauses tv
-        (qns, sigma) <- generalize tv 
+        (qns, sigma) <- generalize tv
         checkKindStar =<< zonk (noLoc sigma)
         return $ AcyclicSCC $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
 tcBinds (CyclicSCC binds) = do

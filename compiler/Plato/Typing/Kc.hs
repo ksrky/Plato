@@ -47,9 +47,10 @@ checkKind (L sp ty) exp_kn = case ty of
                 checkKindStar arg
                 checkKindStar res
                 unify_ exp_kn StarK
-        AllT qnts body ->
+        AllT qnts body -> do
+                unify_ exp_kn StarK
                 local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
-                        checkKind body exp_kn
+                        checkKindStar body
         AppT fun arg -> do
                 arg_kn <- newKnVar
                 checkKind fun (ArrK arg_kn exp_kn)
