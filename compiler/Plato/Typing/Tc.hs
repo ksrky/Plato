@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Typing.Tc (checkSigma, inferSigma, checkClausesSigma, tcBinds) where
+module Plato.Typing.Tc (checkSigma, inferSigma, tcBinds) where
 
 import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM)
@@ -176,6 +176,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 exp' <- checkSigma exp ann_ty
                 coer <- instSigma_ ann_ty exp_ty
                 return $ unCoer coer $ unLoc exp'
+        tcRho' (ClauseE cls) (Check exp_ty) = checkClausesRho cls exp_ty
+        tcRho' (ClauseE cls) (Infer ref) = do
+                exp_ty <- newTyVar
+                exp' <- checkClausesRho cls exp_ty
+                writeMIORef ref exp_ty
+                return exp'
         instSigma_ :: Sigma -> Expected Rho -> m Coercion
         instSigma_ sigma (Check rho) =
                 catches
@@ -235,48 +241,35 @@ checkClausesRho clauses rho = do
                 return (pats', unLoc body')
         transClauses pat_tys clauses'
 
-checkClausesSigma ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
-        [Clause 'Untyped] ->
-        Sigma ->
-        m (Expr 'Typed)
-checkClausesSigma clauses sigma = do
-        (coer, fqns, rho) <- skolemise sigma
-        exp <- checkClausesRho clauses rho
-        esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> (mapM getFreeTvs =<< getEnvTypes))
-        let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst fqns)
-        unless (null bad_tvs) $ throwError "Type not polymorphic enough"
-        return $ unCoer (coer <> genTrans fqns) exp
-
 tcBinds ::
         forall e m.
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         SCC (Bind 'Untyped) ->
         m (SCC (Bind 'Typed))
-tcBinds (AcyclicSCC (Bind (id, Just ty) clauses)) = do
+tcBinds (AcyclicSCC (Bind (id, Just ty) exp)) = do
         checkKindStar ty
-        exp <- checkClausesSigma clauses (unLoc ty)
-        return $ AcyclicSCC $ Bind' (id, unLoc ty) exp
+        exp <- checkSigma exp (unLoc ty)
+        return $ AcyclicSCC $ Bind' (id, unLoc ty) (unLoc exp)
 tcBinds (AcyclicSCC (Bind (id, Nothing) clauses)) = do
         tv <- newTyVar
-        exp <- checkClausesRho clauses tv
+        exp <- checkRho clauses tv
         (qns, sigma) <- generalize tv
         checkKindStar =<< zonk (noLoc sigma)
-        return $ AcyclicSCC $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
+        return $ AcyclicSCC $ Bind' (id, sigma) (unCoer (genTrans qns) (unLoc exp))
 tcBinds (CyclicSCC binds) = do
         envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
                 Just ty -> return (id, ty)
                 Nothing -> (id,) . noLoc <$> newTyVar
         local (modifyTypEnv $ extendList envbinds) $ do
-                bbinds' <- forM binds $ \(Bind (id, mbty) clauses) -> case mbty of
+                bbinds' <- forM binds $ \(Bind (id, mbty) exp) -> case mbty of
                         Just ty -> do
                                 checkKindStar ty
-                                exp <- checkClausesSigma clauses (unLoc ty)
-                                return (True, Bind' (id, unLoc ty) exp)
+                                exp <- checkSigma exp (unLoc ty)
+                                return (True, Bind' (id, unLoc ty) (unLoc exp))
                         Nothing -> do
                                 tv <- find id =<< asks getTypEnv
-                                exp <- checkClausesRho clauses tv
-                                return (False, Bind' (id, tv) exp)
+                                exp <- checkRho exp tv
+                                return (False, Bind' (id, tv) (unLoc exp))
                 binds' <- forM bbinds' $ \case
                         (True, b) -> return b
                         (False, Bind' (id, ty) exp) -> do

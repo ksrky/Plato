@@ -35,6 +35,7 @@ instance Linearize (Expr 'Untyped) where
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
                 return $ CaseE exp' alts'
         linearize (AnnE exp ty) = AnnE <$> linearize exp <*> pure ty
+        linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where
         linearize (VarT tv) = return $ VarT tv
@@ -47,7 +48,7 @@ instance Linearize Type where
         linearize (MetaT tv) = return $ MetaT tv
 
 instance Linearize (Bind 'Untyped) where
-        linearize (Bind idty clses) = Bind idty <$> mapM (\(ps, e) -> (ps,) <$> linearize e) clses
+        linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
 linBinds :: SCC (Bind 'Untyped) -> Writer [Ident] [SCC (Bind 'Untyped)]
 linBinds (CyclicSCC binds) = do

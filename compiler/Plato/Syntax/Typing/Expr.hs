@@ -49,6 +49,7 @@ data Expr (a :: TcFlag) where
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
         AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
+        ClauseE :: [Clause 'Untyped] -> Expr 'Untyped
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -99,3 +100,5 @@ instance PrettyWithContext (Expr a) where
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
         pretty' p (AnnE exp ty) = parenswPrec p 0 $ hsep [pretty exp, colon, pretty ty]
+        pretty' _ (ClauseE clauses) =
+                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]

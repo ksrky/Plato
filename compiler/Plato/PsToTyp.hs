@@ -119,13 +119,13 @@ elabLocDecls ldecs = do
                         id' <- scoping id
                         ty' <- lift $ elabType `traverse` ty
                         tell ([], [(id', ty')])
-                L _ (P.FunBindD id clses) -> do
-                        clses' <- lift $ mapM elabClause clses
-                        tell ([(id, clses')], [])
+                L _ (P.FunBindD id cls) -> do
+                        cls' <- lift $ mapM elabClause cls
+                        tell ([(id, L (getLoc cls') (T.ClauseE cls'))], [])
                 L _ P.FixityD{} -> unreachable "deleted by Nicifier"
-        forM bnds $ \(id, clses) -> case lookup id spcs of
-                Just ty -> return (T.Bind (id, Just ty) clses)
-                _ -> return (T.Bind (id, Nothing) clses)
+        forM bnds $ \(id, exp) -> case lookup id spcs of
+                Just ty -> return (T.Bind (id, Just ty) exp)
+                _ -> return (T.Bind (id, Nothing) exp)
 
 assembleClauses :: [P.LLocDecl] -> [P.LLocDecl]
 assembleClauses = assemble . partition
