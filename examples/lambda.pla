@@ -42,7 +42,7 @@ subst t =
         )
 
 substTop : Term -> Term -> Term
-substTop s t = shift (Z - S Z) (subst (shift (S Z) s) Z t)
+substTop s t = shift (negate (S Z)) (subst (shift (S Z) s) Z t)
 
 eval : Term -> Val
 eval (TAbs t1) = VAbs t1
