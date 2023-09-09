@@ -65,7 +65,7 @@ instance PrettyWithContext Term where
         pretty' p (Q Pi bind ty) =
                 parenswPrec p 0 $ group $ hang 2 $ prettyBind 1 bind <> line <> arrow <+> pretty' 0 ty
         pretty' p (Q Sigma bind ty) =
-                parenswPrec p 0 $ group $ hang 2 $ prettyBind 1 bind <> line <> asterisk <> pretty' 0 ty
+                parenswPrec p 0 $ group $ hang 2 $ prettyBind 1 bind <> line <> asterisk <+> pretty' 0 ty
         pretty' p (Lam (x, ty) t) =
                 parenswPrec p 0 $ group $ do
                         backslash <> prettyId x <> colon <+> pretty' 1 ty <> dot <> softline <> pretty' 0 t

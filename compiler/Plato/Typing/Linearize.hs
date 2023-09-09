@@ -10,6 +10,7 @@ import Data.Graph
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper (splitConstrTy)
 
 class Linearize a where
         linearize :: a -> Writer [Ident] a
@@ -59,7 +60,9 @@ linBinds (CyclicSCC binds) = do
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id qns ctors) = DatDefn id qns <$> mapM (\(id, ty) -> (id,) <$> linearize ty) ctors
+        linearize (DatDefn id qns ctors) = do
+                _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
+                return $ DatDefn id qns ctors
 
 linDatDefns :: [TypDefn 'Untyped] -> Writer [Ident] [[TypDefn 'Untyped]]
 linDatDefns tdefs = do

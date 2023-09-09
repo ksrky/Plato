@@ -41,7 +41,7 @@ instance Show a => Show (Expected a) where
 checkPats ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         [LPat] ->
-        [Rho] ->
+        [Sigma] ->
         m ([LPat], [(Ident, Sigma)])
 checkPats pats pat_tys = do
         (pats', binds) <- unzip <$> zipWithM checkPat pats pat_tys
@@ -51,7 +51,7 @@ checkPats pats pat_tys = do
 checkPat ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LPat ->
-        Rho ->
+        Sigma ->
         m (LPat, [(Ident, Sigma)])
 checkPat pat ty = tcPat pat (Check ty)
 
@@ -83,7 +83,7 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
                 instPatSigma_ ann_ty exp_ty
                 return (pat', binds)
         tcPat' TagP{} _ = unreachable "received TagP"
-        instPatSigma_ :: Sigma -> Expected Rho -> m ()
+        instPatSigma_ :: Sigma -> Expected Sigma -> m ()
         instPatSigma_ sigma (Check rho) =
                 catches (instPatSigma sigma exp_ty) (tcErrorHandler sp sigma rho)
         instPatSigma_ sigma (Infer ref) =
@@ -92,12 +92,10 @@ tcPat (L sp pat) exp_ty = tcPat' pat exp_ty
 instPatSigma ::
         (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
         Sigma ->
-        Expected Rho ->
+        Expected Sigma ->
         m ()
-instPatSigma pat_ty (Infer ref) = do
-        (_, rho) <- instantiate pat_ty
-        writeMIORef ref rho
-instPatSigma pat_ty (Check rho) = void $ subsCheck pat_ty rho
+instPatSigma pat_ty (Infer ref) = writeMIORef ref pat_ty
+instPatSigma pat_ty (Check sigma) = void $ subsCheck pat_ty sigma
 
 instDataCon ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
