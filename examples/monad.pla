@@ -1,0 +1,45 @@
+{-
+dependencies:
+  base:
+    - Maybe
+    - Either
+-}
+
+data Monad m where
+    Monad : ({a} a -> m a)
+         -> ({a b} m a -> (a -> m b) -> m b)
+         -> Monad m
+
+return : {m} Monad m -> {a} a -> m a
+return (Monad ret _) = ret
+
+bind : {m} Monad m -> {a b} m a -> (a -> m b) -> m b
+bind (Monad _ bnd) = bnd
+
+-- Monad instance of Maybe
+maybeMonad : Monad Maybe
+maybeMonad = Monad
+    Just
+    (\m f -> case m of
+        Just x -> f x
+        Nothing -> Nothing)
+
+maybeReturn : {a} a -> Maybe a
+maybeReturn = return maybeMonad
+
+maybeBind : {a b} Maybe a -> (a -> Maybe b) -> Maybe b
+maybeBind = bind maybeMonad
+
+-- Monad instance of Either
+eitherMonad : {e} Monad (Either e)
+eitherMonad = Monad
+    Right
+    (\m f -> case m of
+        Right x -> f x
+        Left e -> Left e)
+
+eitherReturn : {a e} a -> Either e a
+eitherReturn = return eitherMonad
+
+eitherBind : {a b e} Either e a -> (a -> Either e b) -> Either e b
+eitherBind = bind eitherMonad

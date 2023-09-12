@@ -29,15 +29,12 @@ uncons : {a} List a -> Maybe (a :,: List a)
 uncons Nil = Nothing
 uncons (x :: xs) = Just (x :,: xs)
 
-{-
 init : {a} List a -> List a
 init Nil = Nil
-init {a} (x :: xs) =
-    let init' : a -> List a -> List a -- error : Scoped type variables
-        init' y Nil = Nil
+init (x :: xs) =
+    let init' y Nil = Nil
         init' y (z :: zs) = y :: init' z zs
      in init' x xs
--}
 
 null : {a} List a -> Bool
 null Nil = True
@@ -87,21 +84,12 @@ elemBy : {a} (a -> a -> Bool) -> a -> List a -> Bool
 elemBy _ _ Nil = False
 elemBy eq y (x :: xs) = eq x y || elemBy eq y xs
 
-{-
 nubBy : {a} (a -> a -> Bool) -> List a -> List a
 nubBy eq Nil = Nil
 nubBy eq (x :: xs) = x :: nubBy eq (filter (\y -> not (eq x y)) xs)
-nubBy {a} eq l =
-    let nubBy' : List a -> List a -> List a
-        nubBy' Nil _ = Nil
-        nubBy' (y :: ys) xs = case elemBy eq y xs of
-            True -> nubBy' ys xs
-            False -> y :: nubBy' ys (y :: xs)
-    in nubBy' l Nil
 
 unionBy : {a} (a -> a -> Bool) -> List a -> List a -> List a
 unionBy eq xs ys = xs ++ foldl (flip (deleteBy eq)) (nubBy eq ys) xs
--}
 
 deleteBy : {a} (a -> a -> Bool) -> a -> List a -> List a
 deleteBy _ _ Nil = Nil
