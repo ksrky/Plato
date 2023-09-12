@@ -193,5 +193,8 @@ elabTopDecls tdecs = do
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Prog 'T.Untyped)
 psToTyp tdecs = catchErrors $ updateContext $ elabTopDecls tdecs
 
-psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = runReaderT (elabExpr `traverse` exp) =<< getContext =<< ask
+psToTypExpr ::
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        P.LExpr ->
+        m (T.LExpr 'T.Untyped)
+psToTypExpr exp = elabExpr `traverse` exp

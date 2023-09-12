@@ -127,7 +127,5 @@ typToCore decs = do
         uref <- getUniq =<< ask
         runReaderT (concat <$> mapM elabDefn decs) uref
 
-typToCoreExpr :: PlatoMonad m => T.LExpr 'T.Typed -> m C.Term
-typToCoreExpr exp = do
-        uref <- getUniq =<< ask
-        runReaderT (elabExpr $ unLoc exp) uref
+typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.LExpr 'T.Typed -> m C.Term
+typToCoreExpr exp = elabExpr $ unLoc exp
