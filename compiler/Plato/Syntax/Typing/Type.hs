@@ -42,8 +42,8 @@ type Rho = Type -- σ → ρ
 type Tau = Type -- τ
 
 data TyVar
-        = BoundTv {unTyVar :: Ident}
-        | FreeTv {unTyVar :: Ident}
+        = BoundTv Ident
+        | FreeTv Ident
         deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))

@@ -10,11 +10,12 @@ ex1 T1 = T1
 ex1 T2 = T1
 ex1 _ = T1
 -}
--- rejected!
+
+-- Note: add checkKindStar for a test expression of case 
+--       to avoid encoutering MetaK.
 ex2 : ({a} a) -> T1
 ex2 p = case p of
-        x -> T1
-
+    x -> T1
 
 eqT1 : T1 -> T1 -> T1
 eqT1 T1 T1 = T1

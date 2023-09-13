@@ -60,5 +60,5 @@ quantify [] rho = return ([], rho)
 quantify tvs rho = do
         new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
-        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs -- tmp
+        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
         return (qns, AllT qns (noLoc rho))

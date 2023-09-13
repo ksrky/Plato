@@ -37,13 +37,11 @@ checkKind ::
         Kind ->
         m ()
 checkKind (L sp ty) exp_kn = case ty of
-        VarT (BoundTv id) -> do
-                kn <- find id =<< asks getTypEnv
+        VarT (FreeTv _) -> do
+                unify StarK exp_kn --tmp
+        VarT tv -> do
+                kn <- find (unTyVar tv) =<< asks getTypEnv
                 unify_ kn exp_kn
-        VarT FreeTv{} -> do
-                -- warning: Plato.KindCheck.Kc.checkKind passed FreeTv
-                unify StarK exp_kn
-                return ()
         ConT tc -> do
                 kn <- find tc =<< asks getTypEnv
                 unify_ kn exp_kn
@@ -51,9 +49,9 @@ checkKind (L sp ty) exp_kn = case ty of
                 checkKindStar arg
                 checkKindStar res
                 unify_ exp_kn StarK
-        AllT qnts body -> do
+        AllT qns body -> do
                 unify_ exp_kn StarK
-                local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
+                local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)) $
                         checkKindStar body
         AppT fun arg -> do
                 arg_kn <- newKnVar

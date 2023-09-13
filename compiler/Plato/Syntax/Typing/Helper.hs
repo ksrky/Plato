@@ -24,6 +24,10 @@ writeMIORef = (liftIO .) . writeIORef
 newUniq :: (MonadReader e m, HasUniq e, MonadIO m) => m Uniq
 newUniq = pickUniq =<< ask
 
+unTyVar :: TyVar -> Ident
+unTyVar (BoundTv id) = id
+unTyVar (FreeTv id) = id
+
 -- | Variable generation
 newVarIdent :: (MonadReader e m, HasUniq e, MonadIO m) => m Ident
 newVarIdent = freshIdent dummyName
