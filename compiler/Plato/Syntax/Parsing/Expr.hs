@@ -21,7 +21,6 @@ data Expr
         | LamE [LPat] LExpr
         | LetE [LLocDecl] LExpr
         | CaseE LExpr [(LPat, LExpr)]
-        | AnnE LExpr LType
         | FactorE LExpr
         deriving (Eq, Show)
 
@@ -53,7 +52,6 @@ instance Pretty Expr where
                         , "of"
                         , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
                         ]
-        pretty (AnnE exp ty) = parens $ hsep [pretty exp, colon, pretty ty]
         pretty (FactorE exp) = pretty exp
 
 prExpr2 :: Expr -> Doc ann

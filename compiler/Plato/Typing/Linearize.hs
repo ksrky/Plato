@@ -35,7 +35,6 @@ instance Linearize (Expr 'Untyped) where
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
                 return $ CaseE exp' alts'
-        linearize (AnnE exp ty) = AnnE <$> linearize exp <*> pure ty
         linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where

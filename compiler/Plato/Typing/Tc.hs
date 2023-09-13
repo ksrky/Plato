@@ -156,10 +156,6 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         coer <- instSigma_ body_ty exp_ty'
                         return (pat', unCoer coer $ unLoc body')
                 transCase $ CaseE' (unLoc test') pat_ty alts'
-        tcRho' (AnnE exp ann_ty) exp_ty = do
-                exp' <- checkSigma exp ann_ty
-                coer <- instSigma_ ann_ty exp_ty
-                return $ unCoer coer $ unLoc exp'
         tcRho' (ClauseE cls) (Check exp_ty) = checkClausesRho cls exp_ty
         tcRho' (ClauseE cls) (Infer ref) = do
                 exp_ty <- newTyVar

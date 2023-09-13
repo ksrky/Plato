@@ -69,7 +69,6 @@ elabExpr (P.CaseE match alts) = do
                 return (pat', body')
 
         return $ T.CaseE match' alts'
-elabExpr (P.AnnE exp ann_ty) = T.AnnE <$> elabExpr `traverse` exp <*> elabType (unLoc ann_ty)
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
