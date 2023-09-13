@@ -1,0 +1,29 @@
+-- poly type pattern
+
+data T1 where T1 : T1
+data T2 where T2 : T2
+
+{-
+-- rejected!
+ex1 : ({a} a) -> T1
+ex1 T1 = T1
+ex1 T2 = T1
+ex1 _ = T1
+-}
+-- rejected!
+ex2 : ({a} a) -> T1
+ex2 p = case p of
+        x -> T1
+
+
+eqT1 : T1 -> T1 -> T1
+eqT1 T1 T1 = T1
+
+ex3 : ({a} a) -> T1
+ex3 p = eqT1 p T1
+
+{-
+-- rejected
+ex4 : T1 -> T2
+ex4 (T1 : {a} a) = T2
+-}

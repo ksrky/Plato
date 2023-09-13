@@ -30,14 +30,14 @@ skolemise ::
         (MonadReader e m, HasUniq e, MonadIO m) =>
         Sigma ->
         m (Coercion, [Quant], Rho)
-skolemise (AllT tvs rho) = do
-        qns1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newFreeTv tv) tvs
-        (coercion, qns2, rho') <- skolemise =<< substTvs (map fst tvs) (map (VarT . fst) qns1) (unLoc rho)
-        return (prpolyTrans qns1 coercion, qns1 ++ qns2, rho')
+skolemise (AllT qns rho) = do
+        qns1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newFreeTv tv) qns
+        (coer, qns2, rho') <- skolemise =<< substTvs (map fst qns) (map (VarT . fst) qns1) (unLoc rho)
+        return (prpolyTrans qns1 coer, qns1 ++ qns2, rho')
 skolemise (ArrT arg_ty res_ty) = do
-        (coer, sks, res_ty') <- skolemise (unLoc res_ty)
-        coer' <- prfunTrans sks (unLoc arg_ty) coer
-        return (coer', sks, ArrT arg_ty (noLoc res_ty'))
+        (coer, qns, res_ty') <- skolemise (unLoc res_ty)
+        coer' <- prfunTrans qns (unLoc arg_ty) coer
+        return (coer', qns, ArrT arg_ty (noLoc res_ty'))
 skolemise rho = return (mempty, [], rho)
 
 -- | Generalization
@@ -60,5 +60,5 @@ quantify [] rho = return ([], rho)
 quantify tvs rho = do
         new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
         zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
-        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
+        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs -- tmp
         return (qns, AllT qns (noLoc rho))

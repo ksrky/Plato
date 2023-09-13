@@ -10,7 +10,6 @@ import Data.Foldable qualified as Foldable
 import Data.Graph
 import GHC.Stack
 
-import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -41,7 +40,10 @@ checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
                 kn <- find id =<< asks getTypEnv
                 unify_ kn exp_kn
-        VarT FreeTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed FreeTv"
+        VarT FreeTv{} -> do
+                -- warning: Plato.KindCheck.Kc.checkKind passed FreeTv
+                unify StarK exp_kn
+                return ()
         ConT tc -> do
                 kn <- find tc =<< asks getTypEnv
                 unify_ kn exp_kn
