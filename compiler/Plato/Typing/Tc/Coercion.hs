@@ -46,7 +46,6 @@ instTrans arg_tys = Fn (`TAppE` arg_tys)
 
 prpolyTrans :: [Quant] -> Coercion -> Coercion
 prpolyTrans [] coer = coer
-prpolyTrans _ Id = Id
 prpolyTrans qnts coer = Fn $ \e -> TAbsE qnts (unCoer coer $ TAppE e (map (VarT . fst) qnts))
 
 prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coercion -> m Coercion
@@ -59,7 +58,7 @@ prfunTrans qnts arg_ty coer = do
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
 deepskolTrans [] coer1 coer2 = coer1 <> coer2
-deepskolTrans fqnts coer1 coer2 = coer1 <> Fn (TAbsE fqnts) <> coer2
+deepskolTrans qns coer1 coer2 = coer1 <> Fn (TAbsE qns) <> coer2
 
 funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id
