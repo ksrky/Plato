@@ -3,8 +3,8 @@ f $ x = f x
 
 infixr 0 $
 
-(.) : {a b c} (a -> b) -> (b -> c) -> a -> c
-f . g = \x -> g (f x)
+(.) : {a b c} (b -> c) -> (a -> b) -> a -> c
+f . g = \x -> f (g x)
 
 infixr 9 .
 
