@@ -150,12 +150,12 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
         tcRho' (CaseE test alts) exp_ty = do
                 (test', pat_ty) <- inferSigma test
                 exp_ty' <- zapToMonoType exp_ty
-                checkKindStar =<< zonk (noLoc pat_ty)
                 alts' <- forM alts $ \(pat, body) -> do
                         (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma_ body_ty exp_ty'
                         return (pat', unCoer coer $ unLoc body')
+                checkKindStar =<< zonk (noLoc pat_ty)
                 transCase $ CaseE' (unLoc test') pat_ty alts'
         tcRho' (ClauseE cls) (Check exp_ty) = checkClausesRho cls exp_ty
         tcRho' (ClauseE cls) (Infer ref) = do

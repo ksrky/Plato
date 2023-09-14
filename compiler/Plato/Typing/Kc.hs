@@ -37,11 +37,10 @@ checkKind ::
         Kind ->
         m ()
 checkKind (L sp ty) exp_kn = case ty of
-        VarT (FreeTv _) -> do
-                unify StarK exp_kn --tmp
-        VarT tv -> do
-                kn <- find (unTyVar tv) =<< asks getTypEnv
+        VarT (BoundTv id) -> do
+                kn <- find id =<< asks getTypEnv
                 unify_ kn exp_kn
+        VarT FreeTv{} -> return ()
         ConT tc -> do
                 kn <- find tc =<< asks getTypEnv
                 unify_ kn exp_kn
