@@ -56,6 +56,7 @@ dataConType :: MonadThrow m => Ident -> (Ident, LType) -> m ()
 dataConType id (con, ty) = loop1 ty
     where
         loop1 :: MonadThrow m => LType -> m ()
+        loop1 (L sp AllT{}) = throwLocErr sp "A data constructor is not allowed to have polytype."
         loop1 (L _ (ArrT _ ty2)) = loop1 ty2
         loop1 ty = loop2 ty
         loop2 :: MonadThrow m => LType -> m ()
@@ -63,13 +64,11 @@ dataConType id (con, ty) = loop1 ty
         loop2 (L _ (BinT _ op _))
                 | nameIdent id == nameIdent op = return ()
         loop2 (L _ (ConT id2)) | nameIdent id == nameIdent id2 = return ()
-        loop2 (L sp ty) = do
+        loop2 (L sp ty) =
                 throwLocErr sp $
                         hsep ["Data constructor", squotes $ pretty con, "returns", pretty ty]
 
-{- | RULE 5: Bundling function clauses \\
-Checking number of arguments
--}
+-- | RULE 5: Checking number of arguments
 checkNumArgs :: MonadThrow m => LocDecl -> m ()
 checkNumArgs (FunBindD id clauses@((pats1, _) : _))
         | all (\(pats, _) -> length pats == length pats1) clauses = return ()

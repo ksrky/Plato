@@ -70,7 +70,7 @@ kcTypDefn (DatDefn id params constrs) = do
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
         let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
         kn' <- find id =<< asks getTypEnv
-        unify kn kn'
+        catches (unify kn kn') (kcErrorHandler (getLoc id <> getLoc constrs) kn kn')
         return $ DatDefn' (id, kn) params constrs
 
 kcTypDefns ::

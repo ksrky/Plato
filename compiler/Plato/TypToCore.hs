@@ -71,7 +71,7 @@ elabKind T.StarK = return C.Type
 elabKind (T.ArrK arg res) = do
         idWC <- freshIdent wcName
         C.Q C.Pi <$> ((idWC,) <$> elabKind arg) <*> elabKind res
-elabKind T.MetaK{} = unreachable "Plato.TypToCore received MetaK"
+elabKind T.MetaK{} = return C.Type
 
 elabTypDefn ::
         forall e m.

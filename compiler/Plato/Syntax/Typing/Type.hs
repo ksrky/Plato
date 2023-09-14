@@ -69,6 +69,10 @@ instance Show MetaTv where
 instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
 
+instance HasLoc TyVar where
+        getLoc (BoundTv id) = getLoc id
+        getLoc (FreeTv id) = getLoc id
+
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
