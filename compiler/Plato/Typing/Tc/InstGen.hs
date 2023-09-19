@@ -7,9 +7,12 @@ module Plato.Typing.Tc.InstGen (
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+import Data.List qualified as List
 import Data.Set qualified as S
 
+import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
@@ -52,13 +55,18 @@ generalize ty = do
         quantify (S.toList all_tvs) ty
 
 quantify ::
-        (MonadReader e m, HasUniq e, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) =>
         [MetaTv] ->
         Rho ->
         m ([Quant], Sigma)
 quantify [] rho = return ([], rho)
 quantify tvs rho = do
-        new_bndrs <- mapM (const $ BoundTv <$> newVarIdent) tvs
-        zipWithM_ writeMetaTv tvs (map VarT new_bndrs)
-        qns <- mapM (\tv -> (tv,) <$> newKnVar) new_bndrs
+        ftvs <- mconcat <$> (mapM getFreeTvs =<< getEnvTypes)
+        let ftvnames = map (nameIdent . unTyVar) (S.toList ftvs)
+        newtvs <- zipWithM (\n -> const $ BoundTv <$> freshIdent n) (nameSupply List.\\ ftvnames) tvs
+        zipWithM_ writeMetaTv tvs (map VarT newtvs)
+        qns <- mapM (\tv -> (tv,) <$> newKnVar) newtvs
         return (qns, AllT qns (noLoc rho))
+
+nameSupply :: [Name]
+nameSupply = [str2tyvarName (x : show i) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]

@@ -123,9 +123,7 @@ elabDefn (T.TypDefn tdefs) = do
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
 typToCore :: PlatoMonad m => T.Prog 'T.Typed -> m [C.Entry]
-typToCore decs = do
-        uref <- getUniq =<< ask
-        runReaderT (concat <$> mapM elabDefn decs) uref
+typToCore decs = runReaderT (concat <$> mapM elabDefn decs) =<< getUniq =<< ask
 
 typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.LExpr 'T.Typed -> m C.Term
-typToCoreExpr exp = elabExpr $ unLoc exp
+typToCoreExpr = elabExpr . unLoc

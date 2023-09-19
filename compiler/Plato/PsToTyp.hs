@@ -51,7 +51,7 @@ elabExpr (P.LamE pats body) = do
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
-                v <- newVarIdent
+                v <- labelVarId "pl"
                 return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
@@ -190,10 +190,10 @@ elabTopDecls tdecs = do
 -----------------------------------------------------------
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Prog 'T.Untyped)
-psToTyp tdecs = catchErrors $ updateContext $ elabTopDecls tdecs
+psToTyp = catchErrors . updateContext . elabTopDecls
 
 psToTypExpr ::
         (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.LExpr ->
         m (T.LExpr 'T.Untyped)
-psToTypExpr exp = elabExpr `traverse` exp
+psToTypExpr = traverse elabExpr

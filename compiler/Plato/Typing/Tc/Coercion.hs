@@ -52,7 +52,7 @@ prfunTrans :: (MonadReader e m, HasUniq e, MonadIO m) => [Quant] -> Sigma -> Coe
 prfunTrans [] _ coer = return coer
 prfunTrans _ _ Id = return Id
 prfunTrans qnts arg_ty coer = do
-        id <- newVarIdent
+        id <- labelVarId "pf"
         let coer' e = unCoer coer $ TAbsE qnts (AppE' (TAppE e (map (VarT . fst) qnts)) (VarE id))
         return $ Fn $ AbsE' id arg_ty . coer'
 
@@ -63,5 +63,5 @@ deepskolTrans qns coer1 coer2 = coer1 <> Fn (TAbsE qns) <> coer2
 funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coercion -> m Coercion
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
-        id <- newVarIdent
+        id <- labelVarId "fu"
         return $ Fn $ \f -> AbsE' id a2 (unCoer co_res $ AppE' f (unCoer co_arg $ VarE id))

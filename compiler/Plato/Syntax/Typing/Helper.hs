@@ -29,8 +29,8 @@ unTyVar (BoundTv id) = id
 unTyVar (FreeTv id) = id
 
 -- | Variable generation
-newVarIdent :: (MonadReader e m, HasUniq e, MonadIO m) => m Ident
-newVarIdent = freshIdent dummyName
+labelVarId :: (MonadReader e m, HasUniq e, MonadIO m) => String -> m Ident
+labelVarId = freshIdent . str2varName
 
 -- | Type variable generation
 newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type

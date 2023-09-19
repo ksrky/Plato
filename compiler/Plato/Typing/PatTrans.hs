@@ -26,7 +26,7 @@ transClauses ::
         Clauses 'Typed ->
         m (Expr 'Typed)
 transClauses tys clauses = do
-        vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
+        vars <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
         exp <- match vars clauses
         return $ foldr (uncurry AbsE') exp vars
 
@@ -35,7 +35,7 @@ transCase ::
         Expr 'Typed ->
         m (Expr 'Typed)
 transCase (CaseE' exp ty alts) = do
-        var <- newVarIdent
+        var <- labelVarId "cv"
         let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
         altsexp <- match [(var, ty)] clauses
         return $ AppE' (AbsE' var ty altsexp) exp
@@ -119,18 +119,18 @@ matchClause (con, _) _ [] =
                         , "Required constructor pattern: " <+> squotes (pretty con)
                         ] -- TODO: error message
 matchClause (con, arg_tys) vts clauses = do
-        args <- mapM (const newVarIdent) arg_tys
+        args <- mapM (\i -> labelVarId ("pv" ++ show i)) [1 .. length arg_tys]
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        let con_exp :: Expr 'Typed = foldl AppE' (VarE con) (map VarE args)
-                        return (vps ++ ps', substExpr v con_exp e)
+                        let con_exp = foldl AppE' (VarE con) (map VarE args)
+                            dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', substExpr v con_exp e)
                 (L _ WildP : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        return (vps ++ ps', e)
+                        let dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', e)
                 (L _ AnnP{} : _, _) -> unreachable " received AnnP"
                 (L _ TagP{} : _, _) -> unreachable "received TagP"
-                ([], _) -> unreachable "empty patterns"
+                ([], e) -> return ([], e)
         let ats = zip args arg_tys
         (noLoc $ TagP con ats,) <$> match (ats ++ vts) clauses'
