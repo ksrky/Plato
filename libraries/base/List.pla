@@ -32,7 +32,7 @@ uncons (x :: xs) = Just (x :,: xs)
 init : {a} List a -> List a
 init Nil = Nil
 init (x :: xs) =
-    let init' y Nil = Nil
+    let init' _ Nil = Nil
         init' y (z :: zs) = y :: init' z zs
      in init' x xs
 

@@ -8,7 +8,6 @@ import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
-import Data.Foldable qualified as Foldable
 import Data.Graph
 import Data.IORef (IORef)
 import Data.Set qualified as S
@@ -143,8 +142,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 return $ AbsE' var var_ty (unLoc body')
         tcRho' (LetE bnds body) exp_ty = do
                 bnds' <- tcBinds bnds
-                let sigs = map (\(Bind' idty _) -> idty) (Foldable.toList bnds')
-                local (modifyTypEnv $ extendList sigs) $ do
+                local (modifyTypEnv $ extendBinds bnds') $ do
                         body' <- tcRho body exp_ty
                         return $ LetE' bnds' body'
         tcRho' (CaseE test alts) exp_ty = do
@@ -198,7 +196,7 @@ checkSigma ::
         m (LExpr 'Typed)
 checkSigma exp sigma = do
         (coer, qns, rho) <- skolemise sigma
-        exp' <- checkRho exp rho
+        exp' <- checkRho exp rho -- local (modifyTypEnv $ extendQuants qns) $ checkRho exp rho
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst qns)
