@@ -1,7 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Plato.PsToTyp.SynRstrc (
-        defNamesUnique,
+        decNamesUnique,
         paramNamesUnique,
         paramPatsUnique,
         dataConUnique,
@@ -20,8 +18,8 @@ import Plato.PsToTyp.Utils
 import Plato.Syntax.Parsing
 
 -- | RULE 1: Declared name uniqueness
-defNamesUnique :: MonadThrow m => [Ident] -> m ()
-defNamesUnique = loop
+decNamesUnique :: MonadThrow m => [Ident] -> m ()
+decNamesUnique = loop
     where
         loop :: MonadThrow m => [Ident] -> m ()
         loop [] = return ()
@@ -48,25 +46,24 @@ paramPatsUnique pats = do
 
 -- | RULE 3: Data constructor name uniqueness
 dataConUnique :: MonadThrow m => [Ident] -> m ()
-dataConUnique = defNamesUnique
+dataConUnique = decNamesUnique
 
 -- | RULE 4: Constructor signature rule
 dataConType :: MonadThrow m => Ident -> (Ident, LType) -> m ()
--- before scoping
 dataConType id (con, ty) = loop1 ty
     where
         loop1 :: MonadThrow m => LType -> m ()
         loop1 (L sp AllT{}) = throwLocErr sp "A data constructor is not allowed to have polytype."
         loop1 (L _ (ArrT _ ty2)) = loop1 ty2
+        loop1 (L _ (BinT _ op _))
+                | nameIdent id == nameIdent op = return ()
         loop1 ty = loop2 ty
         loop2 :: MonadThrow m => LType -> m ()
         loop2 (L _ (AppT ty1 _)) = loop2 ty1
-        loop2 (L _ (BinT _ op _))
-                | nameIdent id == nameIdent op = return ()
         loop2 (L _ (ConT id2)) | nameIdent id == nameIdent id2 = return ()
         loop2 (L sp ty) =
                 throwLocErr sp $
-                        hsep ["Data constructor", squotes $ pretty con, "returns", pretty ty]
+                        hsep ["Data constructor", squotes $ pretty con, "returns", pretty ty, "instead of", pretty id]
 
 -- | RULE 5: Checking number of arguments
 checkNumArgs :: MonadThrow m => LocDecl -> m ()
@@ -75,8 +72,8 @@ checkNumArgs (FunBindD id clauses@((pats1, _) : _))
         | otherwise =
                 throwLocErr (getLoc clauses) $
                         hsep
-                                [ "Definition clauses of"
+                                [ "Each clause of the definition of"
                                 , pretty id
-                                , "have different number of arguments."
+                                , "has different number of arguments."
                                 ]
 checkNumArgs _ = return ()

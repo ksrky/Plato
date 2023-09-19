@@ -4,6 +4,7 @@
 module Plato.Typing.Kc (checkKindStar, inferKind, checkKind, kcTypDefns) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Foldable qualified as Foldable
@@ -67,9 +68,7 @@ kcTypDefn ::
 kcTypDefn (DatDefn id params constrs) = do
         let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
-        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
-        kn' <- find id =<< asks getTypEnv
-        catches (unify kn kn') (kcErrorHandler (getLoc id <> getLoc constrs) kn kn')
+        kn <- find id =<< asks getTypEnv
         return $ DatDefn' (id, kn) params constrs
 
 kcTypDefns ::
@@ -77,5 +76,7 @@ kcTypDefns ::
         SCC (TypDefn 'Untyped) ->
         m (SCC (TypDefn 'Typed))
 kcTypDefns tdefs = do
-        extenv <- extendList <$> mapM (\(DatDefn id _ _) -> (id,) <$> newKnVar) (Foldable.toList tdefs)
-        local (modifyTypEnv extenv) $ mapM kcTypDefn tdefs
+        envbinds <-
+                forM (Foldable.toList tdefs) $ \(DatDefn id params _) ->
+                        return (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
+        local (modifyTypEnv $ extendList envbinds) $ mapM kcTypDefn tdefs

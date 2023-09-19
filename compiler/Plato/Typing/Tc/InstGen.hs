@@ -69,4 +69,4 @@ quantify tvs rho = do
         return (qns, AllT qns (noLoc rho))
 
 nameSupply :: [Name]
-nameSupply = [str2tyvarName (x : show i) | i <- [1 :: Integer ..], x <- ['a' .. 'z']]
+nameSupply = [str2tyvarName (x : show i) | i <- [1 :: Integer .. 10], x <- ['a' .. 'z']]
