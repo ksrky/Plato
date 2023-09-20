@@ -45,7 +45,7 @@ elabExpr (P.BinE left op right) = do
         right' <- elabExpr `traverse` right
         return $ T.AppE (sL left' op $ T.AppE (L (getLoc op) (T.VarE op')) left') right'
 elabExpr (P.LamE pats body) = do
-        paramPatsUnique pats
+        argPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
         body' <- local (extendScope pats) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
@@ -96,7 +96,7 @@ elabType (P.VarT var) = do
 elabType (P.ConT con) = T.ConT <$> scoping con
 elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
 elabType (P.AllT vars body) = do
-        paramNamesUnique vars
+        argNamesUnique vars
         qnts <- mapM (\id -> do kv <- newKnVar; return (T.BoundTv id, kv)) vars
         body' <- local (extendScope vars) $ elabType `traverse` body
         return $ T.AllT qnts body'
@@ -146,7 +146,7 @@ elabClause ::
         P.Clause ->
         m (T.Clause 'T.Untyped)
 elabClause (pats, exp) = do
-        paramPatsUnique pats
+        argPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
         exp' <- local (extendScope pats) $ elabExpr `traverse` exp
         return (pats', exp')
@@ -156,7 +156,7 @@ elabDecl ::
         P.LTopDecl ->
         m (T.TypDefn 'T.Untyped)
 elabDecl (L _ (P.DataD id params ctors)) = do
-        paramNamesUnique params
+        argNamesUnique params
         dataConUnique $ map fst ctors
         mapM_ (dataConType id) ctors
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params

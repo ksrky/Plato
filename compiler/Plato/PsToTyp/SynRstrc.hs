@@ -1,7 +1,7 @@
 module Plato.PsToTyp.SynRstrc (
         decNamesUnique,
-        paramNamesUnique,
-        paramPatsUnique,
+        argNamesUnique,
+        argPatsUnique,
         dataConUnique,
         dataConType,
         checkNumArgs,
@@ -29,9 +29,9 @@ decNamesUnique = loop
                                 hsep ["Multiple declarations for", squotes $ pretty id2]
                 Nothing -> loop ids
 
--- | RULE 2: Paramter name uniqueness
-paramNamesUnique :: MonadThrow m => [Ident] -> m ()
-paramNamesUnique ids = do
+-- | RULE 2: Argument name uniqueness
+argNamesUnique :: MonadThrow m => [Ident] -> m ()
+argNamesUnique ids = do
         let dup = [(id1, id2) | id1 <- ids, id2 <- ids, stamp id1 /= stamp id2, nameIdent id1 == nameIdent id2]
         case dup of
                 [] -> return ()
@@ -39,16 +39,16 @@ paramNamesUnique ids = do
                         throwLocErr (getLoc id1 <> getLoc id2) $
                                 hsep ["Conflicting definitions for", squotes $ pretty id2]
 
-paramPatsUnique :: MonadThrow m => [LPat] -> m ()
-paramPatsUnique pats = do
+argPatsUnique :: MonadThrow m => [LPat] -> m ()
+argPatsUnique pats = do
         let ids = getDomain pats
-        paramNamesUnique ids
+        argNamesUnique ids
 
 -- | RULE 3: Data constructor name uniqueness
 dataConUnique :: MonadThrow m => [Ident] -> m ()
 dataConUnique = decNamesUnique
 
--- | RULE 4: Constructor signature rule
+-- | RULE 4: Restriction for datacon signature declarations
 dataConType :: MonadThrow m => Ident -> (Ident, LType) -> m ()
 dataConType id (con, ty) = loop1 ty
     where
