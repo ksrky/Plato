@@ -70,7 +70,7 @@ elabKind :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Kind -> m
 elabKind T.StarK = return C.Type
 elabKind (T.ArrK arg res) = do
         idWC <- freshIdent wcName
-        C.Q C.Pi <$> ((idWC,) <$> elabKind arg) <*> elabKind res
+        C.Q C.Pi idWC <$> elabKind arg <*> elabKind res
 elabKind T.MetaK{} = return C.Type
 
 elabTypDefn ::
@@ -91,8 +91,8 @@ elabTypDefn (T.DatDefn' (id, _) params constrs) = do
                         [] -> return (nameIdent con, tUnit)
                         tys -> (nameIdent con,) . C.Rec . C.Box <$> mkTTuple tys
         dataDefn :: m C.Term = do
-                idL <- fst <$> labDefns
-                C.Q C.Sigma <$> labDefns <*> (C.Case (C.Var idL) <$> caseAlts)
+                (idL, lty) <- labDefns
+                C.Q C.Sigma idL lty <$> (C.Case (C.Var idL) <$> caseAlts)
         constrDecl :: (Ident, T.LType) -> m C.Entry
         constrDecl (con, ty) = C.Decl con <$> elabType (unLoc ty)
         constrDefn :: (Ident, T.LType) -> m C.Entry

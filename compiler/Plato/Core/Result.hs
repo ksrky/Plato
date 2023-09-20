@@ -47,9 +47,9 @@ instance PrettyWithContext Val where
         pretty' p (Ne ne) = pretty' p ne
         pretty' _ VType = "Type"
         pretty' p (VQ Pi ((bind, ty), _)) =
-                parenswPrec p 0 $ hsep [prettyBind 1 bind, "->", pretty' 0 ty]
+                parenswPrec p 0 $ hsep [prettyArg bind, "->", pretty' 0 ty]
         pretty' p (VQ Sigma ((bind, ty), _)) =
-                parenswPrec p 0 $ hsep [prettyBind 1 bind, "*", pretty' 0 ty]
+                parenswPrec p 0 $ hsep [prettyArg bind, "*", pretty' 0 ty]
         pretty' p (VLam (((x, ty), t), _)) =
                 parenswPrec p 0 $ hsep ["\\", prettyId x, colon, pretty' 1 ty, dot, pretty' 0 t]
         pretty' _ (VPair ((t, u), _)) = parens $ map (pretty' 0) [t, u] `sepBy` comma

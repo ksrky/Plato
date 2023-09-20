@@ -75,7 +75,7 @@ eqBox (Let p t, s) c = do
         s' <- evalProg (p, s)
         eqBox (t, s') c
 eqBox c c'@(Let _ _, _) = eqBox c' c
-eqBox (Q ps (x, a) b, s) (Q ps' (x', a') b', s') | ps == ps' = do
+eqBox (Q ps x a b, s) (Q ps' x' a' b', s') | ps == ps' = do
         eqBox (a, s) (a', s')
         (x, Boxed (b, s)) ~ (x', Boxed (b', s'))
 eqBox (Lam (x, _) t, s) (Lam (x', _) t', s') = (x, Boxed (t, s)) ~ (x', Boxed (t', s'))

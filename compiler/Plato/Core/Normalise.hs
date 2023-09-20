@@ -8,7 +8,7 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-
+ 
 import Plato.Common.Ident
 import Plato.Common.Uniq
 import Plato.Core.Closure
@@ -50,10 +50,10 @@ qq xs (Var x, s) = quote xs =<< getIndex x s
 qq xs (Let g t, s) = do
         s' <- evalProg (g, s)
         qq (xs ++ decls g) (t, s')
-qq xs (Q ps (x, a) b, s) = do
+qq xs (Q ps x a b, s) = do
         a' <- qq xs (a, s)
         (x', b') <- quote xs (x, (b, s))
-        return (Q ps (x', a') b')
+        return (Q ps x' a' b')
 qq xs (Lift t, s) = Lift <$> qq xs (t, s)
 qq xs (Rec t, s) = Rec <$> qq xs (t, s)
 qq xs (Fold t, s) = Fold <$> qq xs (t, s)
@@ -100,7 +100,7 @@ instance Nf Val Term where
         nf' b xs (VQ ps (((x, a), c), s)) = do
                 a' <- nf' b xs (a, s)
                 (x', c') <- nf' b xs (x, (c, s))
-                return (Q ps (x', a') c')
+                return (Q ps x' a' c')
         nf' b xs (VLift c) = Lift <$> nf' b xs c
         nf' b xs (VRec c) = Rec <$> nf' b xs c
         nf' b xs (VFold c) = Fold <$> nf' b xs c

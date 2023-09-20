@@ -73,7 +73,7 @@ eval :: forall e m. (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clo
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
-eval (Q ps bind body, sc) = return (VQ ps ((bind, body), sc))
+eval (Q ps x arg body, sc) = return (VQ ps (((x, arg), body), sc))
 eval (Lam (x, ty) t, sc) = return $ VLam (((x, ty), t), sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
