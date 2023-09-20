@@ -42,7 +42,7 @@ null _ = False
 
 length : {a} List a -> Nat
 length Nil = Z
-length (x :: xs) = S (length xs)
+length (_ :: xs) = S (length xs)
 
 map : {a b} (a -> b) -> List a -> List b
 map _ Nil = Nil
@@ -50,8 +50,7 @@ map f (x :: xs) = f x :: map f xs
 
 reverse : {a} List a -> List a
 reverse l =
-    let rev : {a} List a -> List a -> List a
-        rev Nil a = a
+    let rev Nil a = a
         rev (x :: xs) a = rev xs (x :: a)
      in rev l Nil
 
@@ -85,14 +84,14 @@ elemBy _ _ Nil = False
 elemBy eq y (x :: xs) = eq x y || elemBy eq y xs
 
 nubBy : {a} (a -> a -> Bool) -> List a -> List a
-nubBy eq Nil = Nil
+nubBy _ Nil = Nil
 nubBy eq (x :: xs) = x :: nubBy eq (filter (\y -> not (eq x y)) xs)
-
-unionBy : {a} (a -> a -> Bool) -> List a -> List a -> List a
-unionBy eq xs ys = xs ++ foldl (flip (deleteBy eq)) (nubBy eq ys) xs
 
 deleteBy : {a} (a -> a -> Bool) -> a -> List a -> List a
 deleteBy _ _ Nil = Nil
 deleteBy eq x (y :: ys) = case eq x y of
     True -> ys
     False -> y :: deleteBy eq x ys
+
+unionBy : {a} (a -> a -> Bool) -> List a -> List a -> List a
+unionBy eq xs ys = xs ++ foldl (flip (deleteBy eq)) (nubBy eq ys) xs
