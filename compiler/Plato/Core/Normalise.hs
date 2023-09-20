@@ -8,7 +8,7 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
- 
+
 import Plato.Common.Ident
 import Plato.Common.Uniq
 import Plato.Core.Closure
@@ -57,10 +57,9 @@ qq xs (Q ps x a b, s) = do
 qq xs (Lift t, s) = Lift <$> qq xs (t, s)
 qq xs (Rec t, s) = Rec <$> qq xs (t, s)
 qq xs (Fold t, s) = Fold <$> qq xs (t, s)
-qq xs (Unfold (x, t) u, s) = do
+qq xs (Unfold t, s) = do
         t' <- qq xs (t, s)
-        (x', u') <- quote xs (x, (u, s))
-        return (Unfold (x', t') u')
+        return (Unfold t')
 qq xs (Lam (x, ty) t, s) = do
         (x', t') <- quote xs (x, (t, s))
         ty' <- qq xs (ty, s)
@@ -132,7 +131,6 @@ instance Nf Ne Term where
                         return (l, u')
                 return (Case t' lus')
         nf' _ xs (NForce t) = Force <$> nf xs t
-        nf' b xs (NUnfold t xu) = do
+        nf' b xs (NUnfold t) = do
                 t' <- nf' b xs t
-                (x', u') <- nf' b xs xu
-                return (Unfold (x', t') u')
+                return (Unfold t')

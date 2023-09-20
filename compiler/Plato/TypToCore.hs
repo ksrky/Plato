@@ -39,8 +39,7 @@ elabExpr (T.CaseE' test _ alts) = do
         idY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do
                 (con, args) <- elabPat (unLoc pat)
-                t <- mkUnfold $ C.Var idY
-                (con,) <$> (C.Box <$> (mkSplits t args =<< elabExpr exp))
+                (con,) <$> (C.Box <$> (mkSplits (C.Unfold (C.Var idY)) args =<< elabExpr exp))
         C.Split
                 <$> elabExpr test
                 <*> pure (idX, idY)

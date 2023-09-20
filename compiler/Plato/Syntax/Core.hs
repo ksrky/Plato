@@ -41,7 +41,7 @@ data Term
         | Force Term
         | Rec Term
         | Fold Term
-        | Unfold (Ident, Term) Term
+        | Unfold Term
         deriving (Show, Eq)
 
 instance Pretty Entry where
@@ -91,6 +91,4 @@ instance PrettyWithContext Term where
         pretty' p (Force t) = parenswPrec p 1 $ "!" <> pretty' 2 t
         pretty' p (Rec t) = parenswPrec p 1 $ "Rec" <+> pretty' 2 t
         pretty' p (Fold t) = parenswPrec p 1 $ "fold" <+> pretty' 2 t
-        pretty' p (Unfold (x, t) u) =
-                parenswPrec p 0 $ hang 2 $ do
-                        hsep ["unfold", pretty' 0 t, "as", prettyId x, "->", pretty' 0 u]
+        pretty' p (Unfold t) = parenswPrec p 0 $ hang 2 $ hsep ["unfold", pretty' 2 t]
