@@ -6,13 +6,13 @@ import Control.Monad.Reader
 import Data.IORef
 import Data.Vector qualified as V
 
-import Machine.Utils
-
 type Ptr = Int
 
 data Cell
         = Int Integer
         | Cons Ptr Ptr
+
+data Reg = S | E | C | D | F
 
 data Stack = Stack
         { cells :: V.Vector (IORef Cell)
@@ -25,51 +25,47 @@ data Stack = Stack
 
 type SECD m = ReaderT Stack m
 
-getS :: MonadIO m => SECD m Ptr
-getS = readMIORef =<< asks regS
+regSwitch :: Reg -> Stack -> IORef Ptr
+regSwitch reg = case reg of
+        S -> regS
+        E -> regE
+        C -> regC
+        D -> regD
+        F -> regF
 
-getE :: MonadIO m => SECD m Ptr
-getE = readMIORef =<< asks regE
+readReg :: MonadIO m => Reg -> SECD m Ptr
+readReg reg = liftIO . readIORef =<< asks (regSwitch reg)
 
-getC :: MonadIO m => SECD m Ptr
-getC = readMIORef =<< asks regC
-
-writeC :: MonadIO m => Ptr -> SECD m ()
-writeC p = do
-        c <- asks regC
-        writeMIORef c p
-
-getD :: MonadIO m => SECD m Ptr
-getD = readMIORef =<< asks regD
-
-getF :: MonadIO m => SECD m Ptr
-getF = readMIORef =<< asks regF
+writeReg :: MonadIO m => Reg -> Ptr -> SECD m ()
+writeReg reg p = do
+        r <- asks $ regSwitch reg
+        liftIO $ writeIORef r p
 
 incrF :: MonadIO m => SECD m ()
 incrF = do
         f <- asks regF
-        modifyMIORef f (+ 1)
-
-writeCell :: MonadIO m => Ptr -> Cell -> SECD m ()
-writeCell p c = do
-        cells <- asks cells
-        writeMIORef (cells V.! p) c
+        liftIO $ modifyIORef' f (+ 1)
 
 readCell :: MonadIO m => Ptr -> SECD m Cell
 readCell p = do
         cells <- asks cells
-        readMIORef (cells V.! p)
+        liftIO $ readIORef (cells V.! p)
+
+writeCell :: MonadIO m => Ptr -> Cell -> SECD m ()
+writeCell p c = do
+        cells <- asks cells
+        liftIO $ writeIORef (cells V.! p) c
 
 makeInt :: MonadIO m => Integer -> SECD m Ptr
 makeInt n = do
-        i <- getF
+        i <- readReg F
         writeCell i (Int n)
         incrF
         return i
 
 makeCons :: MonadIO m => Ptr -> Ptr -> SECD m Ptr
 makeCons p1 p2 = do
-        i <- getF
+        i <- readReg F
         writeCell i (Cons p1 p2)
         incrF
         return i
@@ -86,12 +82,15 @@ getCons p =
                 Cons p1 p2 -> return (p1, p2)
                 _ -> fail "Cons required"
 
-push :: MonadIO m => Ptr -> IORef Ptr -> SECD m ()
-push i r = liftIO . writeIORef r =<< makeCons i =<< readMIORef r
+push :: MonadIO m => Reg -> Ptr -> SECD m ()
+push reg i = do
+        r <- asks $ regSwitch reg
+        liftIO . writeIORef r =<< makeCons i =<< liftIO (readIORef r)
 
-pop :: (MonadIO m, MonadFail m) => IORef Ptr -> SECD m Ptr
-pop r = do
-        p <- readMIORef r
+pop :: (MonadIO m, MonadFail m) => Reg -> SECD m Ptr
+pop reg = do
+        r <- asks $ regSwitch reg
+        p <- liftIO $ readIORef r
         (p1, p2) <- getCons p
         liftIO $ writeIORef r p2
         return p1
@@ -109,8 +108,13 @@ locate ij r = do
         p <- flip loc r =<< car ij
         flip loc p =<< car ij
 
-binOp :: (MonadIO m, MonadFail m) => IORef Ptr -> (Ptr -> Ptr -> SECD m Ptr) -> SECD m ()
-binOp r op = do
-        x <- pop r
-        y <- pop r
-        flip push r =<< op x y
+binOp :: (MonadIO m, MonadFail m) => (Ptr -> Ptr -> SECD m Ptr) -> SECD m ()
+binOp op = do
+        x <- pop S
+        y <- pop S
+        push S =<< op x y
+
+rplaca :: (MonadIO m, MonadFail m) => Ptr -> Ptr -> SECD m Ptr
+rplaca x y = do
+        writeCell x . Cons y =<< cdr x
+        return x

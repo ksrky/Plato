@@ -2,7 +2,6 @@ module Machine.Interpret where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader
 import Machine.Stack
 import Prelude hiding (EQ, GT, LT)
 
@@ -96,30 +95,21 @@ loadInstrs = foldM loadInstr 0 . reverse
 
 runCommand :: (MonadIO m, MonadFail m) => SECD m ()
 runCommand = do
-        n <- getInt =<< getC
+        n <- getInt =<< readReg C
         case n of
-                0 {- STOP -} -> return ()
+                0 {- STOP -} -> writeReg C 0
                 1 {- LDC -} -> do
-                        x <- pop =<< asks regC
-                        push x =<< asks regS
+                        push S =<< pop C
                 2 {- LD -} -> do
-                        ij <- pop =<< asks regC
-                        p <- locate ij =<< getE
-                        push p =<< asks regS
-                3 {- NIL -} -> do
-                        i <- makeInt 0
-                        push i =<< asks regS
-                4 {- CAR -} -> do
-                        p <- car =<< pop =<< asks regS
-                        push p =<< asks regS
-                5 {- CDR -} -> do
-                        p <- cdr =<< pop =<< asks regS
-                        push p =<< asks regS
+                        ij <- pop C
+                        push S =<< locate ij =<< readReg E
+                3 {- NIL -} -> push S =<< makeInt 0
+                4 {- CAR -} -> push S =<< car =<< pop S
+                5 {- CDR -} -> push S =<< cdr =<< pop S
                 6 {- CONS -} -> do
-                        p2 <- pop =<< asks regS
-                        p1 <- pop =<< asks regS
-                        p <- makeCons p1 p2
-                        push p =<< asks regS
+                        p2 <- pop S
+                        p1 <- pop S
+                        push S =<< makeCons p1 p2
                 7 {- ADD -} -> arithOp (+)
                 8 {- SUB -} -> arithOp (-)
                 9 {- MUL -} -> arithOp (*)
@@ -132,22 +122,54 @@ runCommand = do
                 16 {- GT -} -> relOp (>)
                 17 {- GE -} -> relOp (>=)
                 21 {- SEL -} -> do
-                        b <- getInt =<< getS
-                        ct <- pop =<< asks regC
-                        cf <- pop =<< asks regC
-                        c <- getC
-                        push c =<< asks regD
-                        writeC $ if b == 0 then ct else cf
+                        b <- getInt =<< readReg S
+                        ct <- pop C
+                        cf <- pop C
+                        push D =<< readReg C
+                        writeReg C $ if b == 0 then ct else cf
+                22 {- JOIN -} -> writeReg C =<< pop D
+                23 {- LDF -} -> do
+                        f <- pop C
+                        fe <- makeCons f =<< readReg E
+                        push S fe
+                24 {- RTN -} -> do
+                        x <- pop S
+                        writeReg S =<< pop D
+                        push S x
+                        writeReg E =<< pop D
+                        writeReg C =<< pop D
+                25 {- AP -} -> do
+                        (f, e') <- getCons =<< pop S
+                        v <- pop S
+                        push D =<< readReg C
+                        writeReg C f
+                        push D =<< readReg E
+                        writeReg E e'
+                        push E v
+                        push D =<< readReg S
+                        writeReg S 0
+                26 {- DUM -} -> push E 0
+                27 {- RAP -} -> do
+                        (f, ne) <- getCons =<< pop S
+                        v <- pop S
+                        push D =<< readReg C
+                        writeReg C f
+                        push D =<< cdr =<< readReg E
+                        writeReg E =<< rplaca ne v
+                        push D =<< readReg S
+                        writeReg S 0
+                28 {- READ -} -> do
+                        i <- makeInt =<< liftIO readLn
+                        push S i
+                29 {- PRINT -} -> do
+                        n <- getInt =<< pop S
+                        liftIO $ print n
                 _ -> fail "Invalid operation"
     where
         bool2integer :: Bool -> Integer
         bool2integer True = 1
         bool2integer False = 0
         arithOp :: (MonadIO m, MonadFail m) => (Integer -> Integer -> Integer) -> SECD m ()
-        arithOp op = do
-                s <- asks regS
-                binOp s (\x y -> makeInt =<< op <$> getInt x <*> getInt y)
+        arithOp op = binOp (\x y -> makeInt =<< op <$> getInt x <*> getInt y)
         relOp :: (MonadIO m, MonadFail m) => (Integer -> Integer -> Bool) -> SECD m ()
-        relOp op = do
-                s <- asks regS
-                binOp s (\x y -> (makeInt . bool2integer) =<< (op <$> getInt x <*> getInt y))
+        relOp op = binOp (\x y -> (makeInt . bool2integer) =<< (op <$> getInt x <*> getInt y))
