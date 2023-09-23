@@ -19,6 +19,10 @@ S m - S n = m - n
 Z * n = Z
 S m * n = n + m * n  
 
+negate : Nat -> Nat
+negate Z = Z
+negate (S n) = n
+
 infix 4 ==
 infix 4 <
 infix 4 <=

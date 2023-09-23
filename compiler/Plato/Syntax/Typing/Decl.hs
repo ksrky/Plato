@@ -19,7 +19,7 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 
 data Bind (a :: TcFlag) where
-        Bind :: (Ident, Maybe LType) -> Clauses 'Untyped -> Bind 'Untyped
+        Bind :: (Ident, Maybe LType) -> LExpr 'Untyped -> Bind 'Untyped
         Bind' :: (Ident, Type) -> Expr 'Typed -> Bind 'Typed
 
 data TypDefn (a :: TcFlag) where
@@ -28,7 +28,7 @@ data TypDefn (a :: TcFlag) where
 
 data Defn (a :: TcFlag)
         = ValDefn (SCC (Bind a))
-        | TypDefn [TypDefn a]
+        | TypDefn (SCC (TypDefn a))
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -51,23 +51,11 @@ instance HasLoc (TypDefn 'Untyped) where
 ----------------------------------------------------------------
 instance Pretty (Defn a) where
         pretty (ValDefn binds) = indent 2 $ vsep $ toList $ fmap pretty binds
-        pretty (TypDefn tdefs) = indent 2 $ vsep $ map pretty tdefs
+        pretty (TypDefn tdefs) = indent 2 $ vsep $ toList $ fmap pretty tdefs
 
 instance Pretty (Bind a) where
-        pretty (Bind (id, Just ty) clauses) =
-                hsep
-                        [ pretty id
-                        , colon
-                        , pretty ty
-                        , "where"
-                        , braces $ map prClause clauses `sepBy` semi
-                        ]
-        pretty (Bind (id, Nothing) clauses) =
-                hsep
-                        [ pretty id
-                        , "where"
-                        , braces $ map prClause clauses `sepBy` semi
-                        ]
+        pretty (Bind (id, Just ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]
+        pretty (Bind (id, Nothing) exp) = hsep [pretty id, "where", pretty exp]
         pretty (Bind' (id, ty) exp) = hsep [pretty id, colon, pretty ty, equals, pretty exp]
 
 instance Pretty (TypDefn a) where

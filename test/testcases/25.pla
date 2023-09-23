@@ -1,0 +1,15 @@
+-- Mutually recursive data types
+
+data Expr where
+    NumExpr : Number -> Expr
+    LetExpr : Decl -> Expr -> Expr
+
+data Decl where
+    Decl : Ident -> Expr -> Decl
+
+data Number where Number : Number
+
+data Ident where Ident : Ident
+
+exp : Expr
+exp = LetExpr (Decl Ident (NumExpr Number)) (NumExpr Number)

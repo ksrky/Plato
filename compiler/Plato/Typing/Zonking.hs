@@ -38,11 +38,11 @@ instance Zonking (Expr 'Typed) where
                 bnds' <- zonk bnds
                 body' <- zonk body
                 return $ LetE' bnds' body'
-        zonk (CaseE' test ann alts) = do
-                match' <- zonk test
-                ann' <- zonk ann
-                alts' <- mapM (\(pats, exp) -> (,) <$> mapM zonk pats <*> zonk exp) alts
-                return $ CaseE' match' ann' alts'
+        zonk (CaseE' test ann_ty alts) = do
+                test' <- zonk test
+                ann_ty' <- zonk ann_ty
+                alts' <- mapM (\(p, e) -> (,) <$> mapM zonk p <*> zonk e) alts
+                return $ CaseE' test' ann_ty' alts'
 
 instance Zonking Pat where
         zonk (TagP con args) = TagP con <$> mapM (\(arg, ty) -> (arg,) <$> zonk ty) args

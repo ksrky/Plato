@@ -12,14 +12,14 @@ import Control.Monad.Reader
 import Data.Text qualified as T
 
 import Plato.Common.Error
-import Plato.Common.Location
 import Plato.Common.Pretty
+import Plato.Driver.Context
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
 import Plato.Parsing
-import Plato.PsToTyp as PT
+import Plato.PsToTyp
 import Plato.Syntax.Core
-import Plato.TypToCore as TC
+import Plato.TypToCore
 import Plato.Typing
 
 runPlato :: FilePath -> Session -> IO ()
@@ -37,18 +37,8 @@ compileToCore src = catchErrors $ do
         whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 
-evaluateCore :: PlatoMonad m => T.Text -> Interactive m ()
-evaluateCore inp =
-        catchErrors $
-                lift
-                        ( runReaderT
-                                ( do
-                                        pssyn <- parseExpr inp
-                                        typsyn <- PT.elabExpr `traverse` pssyn
-                                        typsyn' <- typingExpr typsyn
-                                        TC.elabExpr (unLoc typsyn')
-                                )
-                                =<< getContext
-                                =<< ask
-                        )
-                        >>= evalCore
+evaluateCore :: forall m. PlatoMonad m => T.Text -> Interactive m ()
+evaluateCore inp = catchErrors $ evalCore =<< lift (compExpr =<< getContext =<< ask)
+    where
+        compExpr :: Context -> m Term
+        compExpr = runReaderT $ parseExpr inp >>= psToTypExpr >>= typingExpr >>= typToCoreExpr

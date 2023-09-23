@@ -7,9 +7,9 @@ either f _ (Left x) = f x
 either _ g (Right y) = g y
 
 isLeft : {a b} Either a b -> Bool
-isLeft (Left x) = True
+isLeft (Left _) = True
 isLeft _ = False
 
 isRight : {a b} Either a b -> Bool
-isRight (Right y) = True
+isRight (Right _) = True
 isRight _ = False

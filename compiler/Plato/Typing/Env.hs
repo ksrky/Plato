@@ -1,33 +1,38 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
         TypEnv,
         HasTypEnv (..),
         EnvManager (..),
+        extendQuants,
+        extendBinds,
         envTypes,
         Constrs,
         ConEnv,
         HasConEnv (..),
-        extendConEnv,
+        extendConstrs,
 ) where
 
 import Control.Exception.Safe
+import Data.Foldable qualified as Foldable
+import Data.Graph
 import Data.Map.Strict qualified as M
 import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
-import Plato.Syntax.Typing.Kind
-import Plato.Syntax.Typing.Type
 
-data Bind
+data EnvBind
         = ValBind Type
         | TypBind Kind
         deriving (Eq, Show)
 
-type TypEnv = IdentMap Bind
+type TypEnv = IdentMap EnvBind
 
 class HasTypEnv a where
         getTypEnv :: a -> TypEnv
@@ -63,6 +68,12 @@ instance EnvManager Kind where
                         TypBind kn -> return kn
                         _ -> throwLocErr (getLoc id) $ hsep [squotes $ pretty id, "is not a type-level identifier"]
 
+extendQuants :: Quants -> TypEnv -> TypEnv
+extendQuants qns = extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)
+
+extendBinds :: SCC (Bind 'Typed) -> TypEnv -> TypEnv
+extendBinds binds = extendList $ map (\(Bind' (id, ty) _) -> (id, ty)) (Foldable.toList binds)
+
 envTypes :: TypEnv -> [Type]
 envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)
 
@@ -84,7 +95,7 @@ instance HasConEnv ConEnv where
         getConEnv = id
         modifyConEnv = id
 
-extendConEnv :: HasConEnv env => Ident -> [TyVar] -> [(Ident, LType)] -> env -> env
-extendConEnv id params constrs = modifyConEnv $ M.insert id (params, constrs')
+extendConstrs :: HasConEnv env => Ident -> [TyVar] -> [(Ident, LType)] -> env -> env
+extendConstrs id params constrs = modifyConEnv $ M.insert id (params, constrs')
     where
         constrs' = map (\(con, ty) -> (con, fst $ splitConstrTy (unLoc ty))) constrs

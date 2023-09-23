@@ -23,10 +23,10 @@ import Plato.Typing.Zonking
 transClauses ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
-        [Clause 'Typed] ->
+        Clauses 'Typed ->
         m (Expr 'Typed)
 transClauses tys clauses = do
-        vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
+        vars <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
         exp <- match vars clauses
         return $ foldr (uncurry AbsE') exp vars
 
@@ -35,8 +35,8 @@ transCase ::
         Expr 'Typed ->
         m (Expr 'Typed)
 transCase (CaseE' exp ty alts) = do
-        var <- newVarIdent
-        let clauses :: [Clause 'Typed] = map (\(p, e) -> ([p], e)) alts
+        var <- labelVarId "cv"
+        let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
         altsexp <- match [(var, ty)] clauses
         return $ AppE' (AbsE' var ty altsexp) exp
 transCase _ = unreachable "Expected type-checked case expression"
@@ -50,22 +50,6 @@ constructors ty = getCon [] =<< zonk ty
                 (params, constrs) <- lookupIdent tc =<< asks getConEnv
                 mapM (\(con, tys) -> (con,) <$> mapM (substTvs params (reverse acc)) tys) constrs
         getCon _ _ = unreachable "Not a variant type"
-
-subst :: Expr 'Typed -> Expr 'Typed -> Ident -> Expr 'Typed
-subst exp replace id = subst' exp
-    where
-        subst' :: Expr 'Typed -> Expr 'Typed
-        subst' (VarE var)
-                | var == id = replace
-                | otherwise = VarE var
-        subst' (AppE' fun arg) = AppE' (subst' fun) (subst' arg)
-        subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
-        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
-        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetE' bnds body) =
-                LetE' (fmap (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
-        subst' (CaseE' test ann_ty alts) =
-                CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
 
 isVar :: Clause 'Typed -> Bool
 isVar (L _ WildP{} : _, _) = True
@@ -82,7 +66,7 @@ isVarorSameCon _ _ = True
 match ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [(Ident, Type)] ->
-        [Clause 'Typed] ->
+        Clauses 'Typed ->
         m (Expr 'Typed)
 match [(var, ty)] [] = return (CaseE' (VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
@@ -96,12 +80,12 @@ matchVar ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
-        [Clause 'Typed] ->
+        Clauses 'Typed ->
         m (Expr 'Typed)
 matchVar (var, _) rest clauses = do
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
-                (L _ (VarP vp) : pats, exp) -> (pats, subst exp (VarE var) vp)
+                (L _ (VarP vp) : pats, exp) -> (pats, substExpr vp (VarE var) exp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 (L _ TagP{} : _, _) -> unreachable "TagP"
@@ -112,21 +96,21 @@ matchCon ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
-        [Clause 'Typed] ->
+        Clauses 'Typed ->
         m (Expr 'Typed)
 matchCon (var, ty) rest clauses = do
         constrs <- constructors ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
         return $ CaseE' (VarE var) ty alts
 
-choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
+choose :: Ident -> Clauses 'Typed -> Clauses 'Typed
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 
 matchClause ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
-        [Clause 'Typed] ->
+        Clauses 'Typed ->
         m (LPat, Expr 'Typed)
 matchClause (con, _) _ [] =
         throwError $
@@ -135,18 +119,18 @@ matchClause (con, _) _ [] =
                         , "Required constructor pattern: " <+> squotes (pretty con)
                         ] -- TODO: error message
 matchClause (con, arg_tys) vts clauses = do
-        args <- mapM (const newVarIdent) arg_tys
+        args <- mapM (\i -> labelVarId ("pv" ++ show i)) [1 .. length arg_tys]
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        let con_exp :: Expr 'Typed = foldl AppE' (VarE con) (map VarE args)
-                        return (vps ++ ps', subst e con_exp v)
+                        let con_exp = foldl AppE' (VarE con) (map VarE args)
+                            dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', substExpr v con_exp e)
                 (L _ WildP : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        return (vps ++ ps', e)
+                        let dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', e)
                 (L _ AnnP{} : _, _) -> unreachable " received AnnP"
                 (L _ TagP{} : _, _) -> unreachable "received TagP"
-                ([], _) -> unreachable "empty patterns"
+                ([], e) -> return ([], e)
         let ats = zip args arg_tys
         (noLoc $ TagP con ats,) <$> match (ats ++ vts) clauses'

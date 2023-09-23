@@ -48,7 +48,7 @@ data Expr (a :: TcFlag) where
         LetE' :: (SCC (Bind 'Typed)) -> LExpr 'Typed -> Expr 'Typed
         CaseE :: LExpr 'Untyped -> Alts 'Untyped -> Expr 'Untyped
         CaseE' :: Expr 'Typed -> Type -> Alts 'Typed -> Expr 'Typed
-        AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
+        ClauseE :: Clauses 'Untyped -> Expr 'Untyped
 
 ----------------------------------------------------------------
 -- Basic instances
@@ -67,15 +67,15 @@ instance Pretty (Expr a) where
 
 instance PrettyWithContext (Expr a) where
         pretty' _ (VarE var) = pretty var
-        pretty' p (AppE fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
-        pretty' p (AppE' fun arg) = parenswPrec p 0 $ hsep [pretty' 0 fun, pretty' 1 arg]
+        pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
+        pretty' p (AppE' fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
         pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
         pretty' p (AbsE var (Just var_ty) body) =
                 parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
         pretty' p (AbsE' var var_ty body) =
                 parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
         pretty' p (TAppE fun []) = pretty' p fun
-        pretty' p (TAppE fun tyargs) = parenswPrec p 0 $ hsep (pretty' 1 fun : map (pretty' 1) tyargs)
+        pretty' p (TAppE fun tyargs) = parenswPrec p 0 $ hsep (pretty' 1 fun : map (pretty' 2) tyargs)
         pretty' p (TAbsE [] body) = pretty' p body
         pretty' p (TAbsE qnts body) = parenswPrec p 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
         pretty' p (LetE bnds body) =
@@ -98,4 +98,5 @@ instance PrettyWithContext (Expr a) where
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
-        pretty' p (AnnE exp ty) = parenswPrec p 0 $ hsep [pretty exp, colon, pretty ty]
+        pretty' _ (ClauseE clauses) =
+                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]

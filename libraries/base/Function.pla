@@ -1,18 +1,26 @@
-($) : {a b} (a -> b) -> a -> b
-f $ x = f x
-
-infixr 0 $
-
-(.) : {a b c} (a -> b) -> (b -> c) -> a -> c
-f . g = \x -> g (f x)
-
-infixr 9 .
-
 id : {a} a -> a
 id x = x
 
 const : {a b} a -> b -> a
 const x _ = x
 
+infixr 9 .
+
+(.) : {a b c} (b -> c) -> (a -> b) -> a -> c
+f . g = \x -> f (g x)
+
 flip : {a b c}  (a -> b -> c) -> b -> a -> c
 flip f x y = f y x
+
+infixr 0 $
+
+($) : {a b} (a -> b) -> a -> b
+f $ x = f x
+
+infixl 1 &
+
+(&) : {a b} a -> (a -> b) -> b
+x & f = f x
+
+fix : {a} (a -> a) -> a
+fix f = let x = f x in x

@@ -1,0 +1,8 @@
+-- type inference of unused vars
+
+f x y z = z
+
+-- unused type variables (meta kind will remain)
+
+g : {a b} b -> b
+g x = x

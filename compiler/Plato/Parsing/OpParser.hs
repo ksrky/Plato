@@ -88,7 +88,6 @@ instance OpParser LExpr where
                                 match' <- opParse match
                                 alts' <- mapM (\(p, e) -> (,) <$> opParse p <*> opParse e) alts
                                 return $ CaseE match' alts'
-                        AnnE exp ann_ty -> AnnE <$> opParse exp <*> opParse ann_ty
                         FactorE e -> unLoc <$> opParse e
 
 instance OpParser Clause where

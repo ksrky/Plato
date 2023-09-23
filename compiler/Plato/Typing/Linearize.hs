@@ -10,6 +10,7 @@ import Data.Graph
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper (splitConstrTy)
 
 class Linearize a where
         linearize :: a -> Writer [Ident] a
@@ -34,7 +35,7 @@ instance Linearize (Expr 'Untyped) where
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
                 return $ CaseE exp' alts'
-        linearize (AnnE exp ty) = AnnE <$> linearize exp <*> pure ty
+        linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where
         linearize (VarT tv) = return $ VarT tv
@@ -47,7 +48,7 @@ instance Linearize Type where
         linearize (MetaT tv) = return $ MetaT tv
 
 instance Linearize (Bind 'Untyped) where
-        linearize (Bind idty clses) = Bind idty <$> mapM (\(ps, e) -> (ps,) <$> linearize e) clses
+        linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
 linBinds :: SCC (Bind 'Untyped) -> Writer [Ident] [SCC (Bind 'Untyped)]
 linBinds (CyclicSCC binds) = do
@@ -58,15 +59,17 @@ linBinds (CyclicSCC binds) = do
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id qns ctors) = DatDefn id qns <$> mapM (\(id, ty) -> (id,) <$> linearize ty) ctors
+        linearize (DatDefn id qns ctors) = do
+                _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
+                return $ DatDefn id qns ctors
 
-linDatDefns :: [TypDefn 'Untyped] -> Writer [Ident] [[TypDefn 'Untyped]]
-linDatDefns tdefs = do
+linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
+linDatDefns (CyclicSCC tdefs) = do
         graph <- forM tdefs $ \tdef@(DatDefn id _ _) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
-        let sccs = stronglyConnComp graph
-        return $ map flattenSCC sccs
+        return $ stronglyConnComp graph
+linDatDefns nonrec = return [nonrec]
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped
 linearizeTop = concatMap $ \case

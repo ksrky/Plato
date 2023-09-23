@@ -1,0 +1,14 @@
+-- higher-lanked data constructors
+
+data T where
+    MkT : ({a} a -> a) -> T
+
+data A where A : A
+data B where B : B
+
+data Pair where
+    Pair : A -> B -> Pair
+
+ex1 : T -> Pair
+ex1 x = case x of
+    MkT v -> Pair (v A) (v B)

@@ -42,8 +42,8 @@ type Rho = Type -- σ → ρ
 type Tau = Type -- τ
 
 data TyVar
-        = BoundTv {unTyVar :: Ident}
-        | FreeTv {unTyVar :: Ident}
+        = BoundTv Ident
+        | FreeTv Ident
         deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
@@ -68,6 +68,10 @@ instance Show MetaTv where
 
 instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
+
+instance HasLoc TyVar where
+        getLoc (BoundTv id) = getLoc id
+        getLoc (FreeTv id) = getLoc id
 
 ----------------------------------------------------------------
 -- Pretty printing

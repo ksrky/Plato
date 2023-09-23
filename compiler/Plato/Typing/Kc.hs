@@ -4,11 +4,13 @@
 module Plato.Typing.Kc (checkKindStar, inferKind, checkKind, kcTypDefns) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+import Data.Foldable qualified as Foldable
+import Data.Graph
 import GHC.Stack
 
-import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -39,7 +41,7 @@ checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
                 kn <- find id =<< asks getTypEnv
                 unify_ kn exp_kn
-        VarT FreeTv{} -> unreachable "Plato.KindCheck.Kc.checkKind passed FreeTv"
+        VarT FreeTv{} -> return ()
         ConT tc -> do
                 kn <- find tc =<< asks getTypEnv
                 unify_ kn exp_kn
@@ -47,9 +49,9 @@ checkKind (L sp ty) exp_kn = case ty of
                 checkKindStar arg
                 checkKindStar res
                 unify_ exp_kn StarK
-        AllT qnts body ->
-                local (modifyTypEnv $ extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qnts)) $
-                        checkKind body exp_kn
+        AllT qns body -> do
+                unify_ exp_kn StarK
+                local (modifyTypEnv $ extendQuants qns) $ checkKindStar body
         AppT fun arg -> do
                 arg_kn <- newKnVar
                 checkKind fun (ArrK arg_kn exp_kn)
@@ -66,15 +68,15 @@ kcTypDefn ::
 kcTypDefn (DatDefn id params constrs) = do
         let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
-        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
-        kn' <- find id =<< asks getTypEnv
-        unify kn kn'
+        kn <- find id =<< asks getTypEnv
         return $ DatDefn' (id, kn) params constrs
 
 kcTypDefns ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
-        [TypDefn 'Untyped] ->
-        m [TypDefn 'Typed]
+        SCC (TypDefn 'Untyped) ->
+        m (SCC (TypDefn 'Typed))
 kcTypDefns tdefs = do
-        extenv <- extendList <$> mapM (\(DatDefn id _ _) -> (id,) <$> newKnVar) tdefs
-        local (modifyTypEnv extenv) $ mapM kcTypDefn tdefs
+        envbinds <-
+                forM (Foldable.toList tdefs) $ \(DatDefn id params _) ->
+                        return (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
+        local (modifyTypEnv $ extendList envbinds) $ mapM kcTypDefn tdefs

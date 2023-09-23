@@ -23,13 +23,15 @@ import Plato.Parsing.OpParser
 import Plato.Parsing.Parser
 import Plato.Syntax.Parsing
 
+openFile :: (MonadCatch m, MonadIO m) => FilePath -> m T.Text
+openFile src =
+        try (liftIO $ T.readFile src) >>= \case
+                Left (_ :: SomeException) -> throwError $ pretty src <> ": file does not exist."
+                Right inp -> return inp
+
 parseFile :: PlatoMonad m => FilePath -> m Program
 parseFile src = catchPsErrors $ do
-        inp <-
-                liftIO $
-                        try (T.readFile src) >>= \case
-                                Left (_ :: SomeException) -> throwError $ pretty src <> ": file does not exist."
-                                Right inp -> return inp
+        inp <- openFile src
         uref <- getUniq =<< ask
         (prog, _) <- liftIO $ parse src uref inp parser
         updateContext $ opParseTop prog

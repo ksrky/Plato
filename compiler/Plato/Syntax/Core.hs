@@ -15,6 +15,8 @@ type Prog = [Entry]
 
 type Type = Term
 
+type Arg = (Ident, Type)
+
 type Bind a = (Ident, a)
 
 data PiSigma
@@ -26,8 +28,8 @@ data Term
         = Var Ident
         | Let Prog Term
         | Type
-        | Q PiSigma (Bind Type) Type
-        | Lam (Bind Type) Term
+        | Q PiSigma Ident Type Type
+        | Lam Arg Term
         | App Term Term
         | Pair Term Term
         | Split Term (Ident, Ident) Term
@@ -39,16 +41,16 @@ data Term
         | Force Term
         | Rec Term
         | Fold Term
-        | Unfold (Ident, Term) Term
+        | Unfold Term
         deriving (Show, Eq)
 
 instance Pretty Entry where
         pretty (Decl x ty) = prettyId x <+> colon <+> hang 2 (pretty ty)
         pretty (Defn x t) = prettyId x <+> equals <+> hang 2 (pretty t)
 
-prettyBind :: PrettyWithContext a => Int -> Bind a -> Doc ann
-prettyBind p (id, ty)
-        | nameIdent id == wcName = pretty' p ty
+prettyArg :: Arg -> Doc ann
+prettyArg (id, ty)
+        | nameIdent id == wcName = pretty' 1 ty
         | otherwise = parens $ hsep [prettyId id, colon, pretty' 0 ty]
 
 instance Pretty Term where
@@ -62,10 +64,10 @@ instance PrettyWithContext Term where
             where
                 bindings = align . encloseSep lbrace (space <> rbrace) semi . map (indent 1 . pretty)
         pretty' _ Type = "Type"
-        pretty' p (Q Pi bind ty) =
-                parenswPrec p 0 $ group $ hang 2 $ prettyBind 1 bind <> line <> arrow <+> pretty' 0 ty
-        pretty' p (Q Sigma bind ty) =
-                parenswPrec p 0 $ group $ hang 2 $ prettyBind 1 bind <> line <> asterisk <> pretty' 0 ty
+        pretty' p (Q Pi x ty1 ty2) =
+                parenswPrec p 0 $ group $ hang 2 $ prettyArg (x, ty1) <> line <> arrow <+> pretty' 0 ty2
+        pretty' p (Q Sigma x ty1 ty2) =
+                parenswPrec p 0 $ group $ hang 2 $ prettyArg (x, ty1) <> line <> asterisk <+> pretty' 0 ty2
         pretty' p (Lam (x, ty) t) =
                 parenswPrec p 0 $ group $ do
                         backslash <> prettyId x <> colon <+> pretty' 1 ty <> dot <> softline <> pretty' 0 t
@@ -89,6 +91,4 @@ instance PrettyWithContext Term where
         pretty' p (Force t) = parenswPrec p 1 $ "!" <> pretty' 2 t
         pretty' p (Rec t) = parenswPrec p 1 $ "Rec" <+> pretty' 2 t
         pretty' p (Fold t) = parenswPrec p 1 $ "fold" <+> pretty' 2 t
-        pretty' p (Unfold (x, t) u) =
-                parenswPrec p 0 $ hang 2 $ do
-                        hsep ["unfold", pretty' 0 t, "as", prettyId x, "->", pretty' 0 u]
+        pretty' p (Unfold t) = parenswPrec p 0 $ hang 2 $ hsep ["unfold", pretty' 2 t]

@@ -181,7 +181,6 @@ fexpr       :: { LExpr }
 aexpr       :: { LExpr }
             : '(' op ')'                            { sL $1 $3 (VarE $2) }
             | '(' expr ')'                          { sL $1 $3 (FactorE $2) }
-            | '(' expr ':' type ')'                 { sL $1 $5 (AnnE $2 $4) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 

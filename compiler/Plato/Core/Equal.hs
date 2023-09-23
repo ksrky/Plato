@@ -75,7 +75,7 @@ eqBox (Let p t, s) c = do
         s' <- evalProg (p, s)
         eqBox (t, s') c
 eqBox c c'@(Let _ _, _) = eqBox c' c
-eqBox (Q ps (x, a) b, s) (Q ps' (x', a') b', s') | ps == ps' = do
+eqBox (Q ps x a b, s) (Q ps' x' a' b', s') | ps == ps' = do
         eqBox (a, s) (a', s')
         (x, Boxed (b, s)) ~ (x', Boxed (b', s'))
 eqBox (Lam (x, _) t, s) (Lam (x', _) t', s') = (x, Boxed (t, s)) ~ (x', Boxed (t', s'))
@@ -103,9 +103,7 @@ eqBox (Box t, s) (Box t', s') = eqBox (t, s) (t', s')
 eqBox (Force t, s) (Force t', s') = eqBox (t, s) (t', s')
 eqBox (Rec t, s) (Rec t', s') = eqBox (t, s) (t', s')
 eqBox (Fold t, s) (Fold t', s') = eqBox (t, s) (t', s')
-eqBox (Unfold (x, t) u, s) (Unfold (x', t') u', s') = do
-        eqBox (t, s) (t', s')
-        (x, Boxed (u, s)) ~ (x', Boxed (u', s'))
+eqBox (Unfold t, s) (Unfold t', s') = eqBox (t, s) (t', s')
 eqBox (t, _) (t', _)
         | t == t' = return () -- Type, Label, Enum
         | otherwise = throwError "Different terms"
@@ -154,7 +152,5 @@ instance Equal Ne where
                                 eqBranches lus0' lus1'
                 eqBranches _ _ = throwError "Case: branches differ"
         NForce t ~ NForce t' = t ~ t'
-        NUnfold t xu ~ NUnfold t' xu' = do
-                t ~ t'
-                xu ~ xu'
+        NUnfold t ~ NUnfold t' = t ~ t'
         t ~ u = throwError $ hsep ["Different neutrals:", pretty t, "/=", pretty u]

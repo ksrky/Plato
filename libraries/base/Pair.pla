@@ -17,3 +17,5 @@ uncurry f (x :,: y) = f x y
 
 swap : {a b} a :,: b -> b :,: a
 swap (x :,: y) = y :,: x
+
+data Unit where Unit : Unit

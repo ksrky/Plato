@@ -29,12 +29,12 @@ subsCheck ::
         Sigma ->
         m Coercion
 subsCheck sigma1 sigma2 = do
-        (coercion1, fqnts, rho2) <- skolemise sigma2
-        coercion2 <- subsCheckRho sigma1 rho2
+        (coer1, qns, rho2) <- skolemise sigma2
+        coer2 <- subsCheckRho sigma1 rho2
         esc_tvs <- S.union <$> getFreeTvs sigma1 <*> getFreeTvs sigma2
-        let bad_tvs = S.fromList (map fst fqnts) `S.intersection` esc_tvs
+        let bad_tvs = S.fromList (map fst qns) `S.intersection` esc_tvs
         unless (null bad_tvs) $ throw SubsCheckFail
-        return $ deepskolTrans fqnts coercion1 coercion2
+        return $ deepskolTrans qns coer1 coer2
 
 -- | Subsumption checking. Coersing sigma to rho.
 subsCheckRho ::
@@ -43,13 +43,9 @@ subsCheckRho ::
         Rho ->
         m Coercion
 subsCheckRho sigma1@AllT{} rho2 = do
-        (coercion1, rho1) <- instantiate sigma1
-        coercion2 <- subsCheckRho rho1 rho2
-        return (coercion2 <> coercion1)
-subsCheckRho (AppT fun1 arg1) (AppT fun2 arg2) = do
-        coer_fun <- subsCheckRho (unLoc fun1) (unLoc fun2)
-        coer_arg <- subsCheck (unLoc arg1) (unLoc arg2)
-        return (coer_fun <> coer_arg)
+        (coer1, rho1) <- instantiate sigma1
+        coer2 <- subsCheckRho rho1 rho2
+        return (coer2 <> coer1)
 subsCheckRho rho1 (ArrT a2 r2) = do
         (a1, r1) <- unifyFun rho1
         subsCheckFun a1 r1 (unLoc a2) (unLoc r2)

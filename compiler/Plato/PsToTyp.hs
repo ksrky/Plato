@@ -45,13 +45,13 @@ elabExpr (P.BinE left op right) = do
         right' <- elabExpr `traverse` right
         return $ T.AppE (sL left' op $ T.AppE (L (getLoc op) (T.VarE op')) left') right'
 elabExpr (P.LamE pats body) = do
-        paramPatsUnique pats
+        argPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
         body' <- local (extendScope pats) $ elabExpr `traverse` body
         let patlam :: T.LExpr 'T.Untyped -> T.LPat -> m (T.LExpr 'T.Untyped)
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
-                v <- newVarIdent
+                v <- labelVarId "pl"
                 return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
@@ -69,7 +69,6 @@ elabExpr (P.CaseE match alts) = do
                 return (pat', body')
 
         return $ T.CaseE match' alts'
-elabExpr (P.AnnE exp ann_ty) = T.AnnE <$> elabExpr `traverse` exp <*> elabType (unLoc ann_ty)
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
@@ -97,7 +96,7 @@ elabType (P.VarT var) = do
 elabType (P.ConT con) = T.ConT <$> scoping con
 elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
 elabType (P.AllT vars body) = do
-        paramNamesUnique vars
+        argNamesUnique vars
         qnts <- mapM (\id -> do kv <- newKnVar; return (T.BoundTv id, kv)) vars
         body' <- local (extendScope vars) $ elabType `traverse` body
         return $ T.AllT qnts body'
@@ -119,13 +118,13 @@ elabLocDecls ldecs = do
                         id' <- scoping id
                         ty' <- lift $ elabType `traverse` ty
                         tell ([], [(id', ty')])
-                L _ (P.FunBindD id clses) -> do
-                        clses' <- lift $ mapM elabClause clses
-                        tell ([(id, clses')], [])
+                L _ (P.FunBindD id cls) -> do
+                        cls' <- lift $ mapM elabClause cls
+                        tell ([(id, L (getLoc cls') (T.ClauseE cls'))], [])
                 L _ P.FixityD{} -> unreachable "deleted by Nicifier"
-        forM bnds $ \(id, clses) -> case lookup id spcs of
-                Just ty -> return (T.Bind (id, Just ty) clses)
-                _ -> return (T.Bind (id, Nothing) clses)
+        forM bnds $ \(id, exp) -> case lookup id spcs of
+                Just ty -> return (T.Bind (id, Just ty) exp)
+                _ -> return (T.Bind (id, Nothing) exp)
 
 assembleClauses :: [P.LLocDecl] -> [P.LLocDecl]
 assembleClauses = assemble . partition
@@ -147,7 +146,7 @@ elabClause ::
         P.Clause ->
         m (T.Clause 'T.Untyped)
 elabClause (pats, exp) = do
-        paramPatsUnique pats
+        argPatsUnique pats
         pats' <- mapM (elabPat `traverse`) pats
         exp' <- local (extendScope pats) $ elabExpr `traverse` exp
         return (pats', exp')
@@ -157,7 +156,7 @@ elabDecl ::
         P.LTopDecl ->
         m (T.TypDefn 'T.Untyped)
 elabDecl (L _ (P.DataD id params ctors)) = do
-        paramNamesUnique params
+        argNamesUnique params
         dataConUnique $ map fst ctors
         mapM_ (dataConType id) ctors
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
@@ -179,7 +178,7 @@ elabTopDecls tdecs = do
                 local (extendScope ldecs') $ do
                         mapM_ (checkNumArgs . unLoc) ldecs'
                         binds <- elabLocDecls ldecs'
-                        asks (linearizeTop [T.TypDefn tdefs, T.ValDefn (CyclicSCC binds)],)
+                        asks (linearizeTop [T.TypDefn (CyclicSCC tdefs), T.ValDefn (CyclicSCC binds)],)
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
@@ -191,7 +190,10 @@ elabTopDecls tdecs = do
 -----------------------------------------------------------
 
 psToTyp :: PlatoMonad m => [P.LTopDecl] -> m (T.Prog 'T.Untyped)
-psToTyp tdecs = catchErrors $ updateContext $ elabTopDecls tdecs
+psToTyp = catchErrors . updateContext . elabTopDecls
 
-psToTypExpr :: PlatoMonad m => P.LExpr -> m (T.LExpr 'T.Untyped)
-psToTypExpr exp = runReaderT (elabExpr `traverse` exp) =<< getContext =<< ask
+psToTypExpr ::
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        P.LExpr ->
+        m (T.LExpr 'T.Untyped)
+psToTypExpr = traverse elabExpr
