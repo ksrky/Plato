@@ -14,9 +14,9 @@ instance Closure Boxed where
 data Val
         = Ne Ne
         | VType
-        | VQ PiSigma (Clos (Bind Type, Type))
+        | VQ PiSigma (Clos ((Ident, Type), Type))
         | VLift (Clos Type)
-        | VLam (Clos (Bind Type, Term))
+        | VLam (Clos (Var, Term))
         | VPair (Clos (Term, Term))
         | VEnum [Label]
         | VLabel Label
@@ -29,7 +29,7 @@ data Val
 data Ne
         = NVar Ix
         | Ne :.. (Clos Term)
-        | NSplit Ne (Bind (Bind (Clos Term)))
+        | NSplit Ne (Var, (Var, Clos Term))
         | NCase Ne (Clos [(Label, Term)])
         | NForce Ne
         | NUnfold Ne
@@ -45,7 +45,7 @@ instance PrettyWithContext Ne where
         pretty' _ (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
         pretty' p (NSplit ne (x, (y, (t, _)))) =
                 parenswPrec p 0 $ hang 2 $ do
-                        hsep ["split", pretty' 0 ne, "with", tupled [prettyId x, prettyId y], "->", pretty' 0 t]
+                        hsep ["split", pretty' 0 ne, "with", tupled [pretty x, pretty y], "->", pretty' 0 t]
         pretty' _ (NCase ne (lts, _)) =
                 hang 1 $
                         hsep

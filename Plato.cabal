@@ -24,9 +24,9 @@ source-repository head
 
 library
   exposed-modules:
+      Machine.Compile
       Machine.Interpret
       Machine.Stack
-      Machine.Utils
       Plato
       Plato.Common.Error
       Plato.Common.Ident

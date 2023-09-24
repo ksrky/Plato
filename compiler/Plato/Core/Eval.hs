@@ -58,22 +58,22 @@ letn i ei p = do
 letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> Clos Type -> m a -> m a
 letn' i = letn i . Closure
 
-subst :: (MonadReader e m, CoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
+subst :: (MonadReader e m, CoreEnv e, MonadIO m) => (Var, Clos Term) -> Clos Term -> m (Clos Term)
 subst (x, (t, sc)) u = do
-        (i, s') <- decl' x sc
+        (i, s') <- decl' (varIdent x) sc
         defn' i u
         return (t, s')
 
 eval :: forall e m. (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> m Val
-eval (Var id, sc) = evalIndex =<< getIndex id sc
+eval (Var var, sc) = evalIndex =<< getIndex (varIdent var) sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
 eval (Q ps x arg body, sc) = return (VQ ps (((x, arg), body), sc))
-eval (Lam (x, ty) t, sc) = return $ VLam (((x, ty), t), sc)
+eval (Lam v t, sc) = return $ VLam ((v, t), sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
         evalApp :: Clos Term -> Val -> m Val
-        evalApp u (VLam (((x, _), t), sc)) = eval =<< subst (x, (t, sc)) u
+        evalApp u (VLam ((x, t), sc)) = eval =<< subst (x, (t, sc)) u
         evalApp u (Ne t) = return (Ne (t :.. u))
         evalApp _ _ = throwError "function expected"
 eval (Pair t u, sc) = return $ VPair ((t, u), sc)

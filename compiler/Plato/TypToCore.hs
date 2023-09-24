@@ -22,10 +22,13 @@ import Plato.Syntax.Core.Helper
 import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
 
+elabVar :: (MonadReader e m, HasUniq e, MonadIO m) => (Ident, T.Type) -> m C.Var
+elabVar (id, ty) = C.V id <$> elabType ty
+
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
 elabExpr (T.AppE' fun arg) = C.App <$> elabExpr fun <*> elabExpr arg
-elabExpr (T.AbsE' id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
+elabExpr (T.AbsE' id ty exp) = C.Lam <$> (C.V id <$> elabType ty) <*> elabExpr exp
 elabExpr (T.TAppE fun tyargs) = do
         t <- elabExpr fun
         tys <- mapM elabType tyargs
@@ -34,16 +37,16 @@ elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\qn t -> C.Lam <$> elabQuant qn <*> pure t) t qnts
 elabExpr (T.LetE' bnds body) = C.Let <$> elabBinds bnds <*> elabExpr (unLoc body)
-elabExpr (T.CaseE' test _ alts) = do
-        idX <- freshIdent $ genName "x"
-        idY <- freshIdent $ genName "y"
+elabExpr (T.CaseE' test ty alts) = do
+        varX <- C.V <$> freshIdent (genName "x") <*> elabType ty
+        varY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do
                 (con, args) <- elabPat (unLoc pat)
-                (con,) <$> (C.Box <$> (mkSplits (C.Unfold (C.Var idY)) args =<< elabExpr exp))
+                (con,) <$> (C.Box <$> (mkSplits (C.Unfold (C.Var varY)) args =<< elabExpr exp))
         C.Split
                 <$> elabExpr test
-                <*> pure (idX, idY)
-                <*> pure (C.Force $ C.Case (C.Var idX) alts')
+                <*> pure (varX, varY)
+                <*> pure (C.Force $ C.Case (C.Var varX) alts')
 
 elabPat ::
         (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) =>
@@ -54,12 +57,12 @@ elabPat (T.TagP con args) = do
         return (nameIdent con, args')
 elabPat _ = unreachable "allowed only tagged constructor pattern"
 
-elabQuant :: (MonadReader e m, HasUniq e, MonadIO m) => T.Quant -> m (C.Bind C.Type)
-elabQuant (tv, kn) = (unTyVar tv,) <$> elabKind kn
+elabQuant :: (MonadReader e m, HasUniq e, MonadIO m) => T.Quant -> m C.Var
+elabQuant (tv, kn) = C.V (unTyVar tv) <$> elabKind kn
 
 elabType :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Type -> m C.Type
-elabType (T.VarT tv) = return $ C.Var (unTyVar tv)
-elabType (T.ConT tc) = return $ C.Var tc
+elabType (T.VarT tv) = return $ C.Var $ C.V (unTyVar tv) C.Type
+elabType (T.ConT tc) = return $ C.Var $ C.V tc C.Type
 elabType (T.ArrT arg res) = join $ mkArr <$> elabType (unLoc arg) <*> elabType (unLoc res)
 elabType (T.AllT qns body) = mkPis <$> mapM elabQuant qns <*> elabType (unLoc body)
 elabType (T.AppT fun arg) = C.App <$> elabType (unLoc fun) <*> elabType (unLoc arg)
@@ -91,18 +94,19 @@ elabTypDefn (T.DatDefn' (id, _) params constrs) = do
                         tys -> (nameIdent con,) . C.Rec . C.Box <$> mkTTuple tys
         dataDefn :: m C.Term = do
                 (idL, lty) <- labDefns
-                C.Q C.Sigma idL lty <$> (C.Case (C.Var idL) <$> caseAlts)
+                C.Q C.Sigma idL lty <$> (C.Case (C.Var (C.V idL lty)) <$> caseAlts)
         constrDecl :: (Ident, T.LType) -> m C.Entry
         constrDecl (con, ty) = C.Decl con <$> elabType (unLoc ty)
         constrDefn :: (Ident, T.LType) -> m C.Entry
         constrDefn (con, ty) = do
-                let walk :: [Ident] -> T.Type -> m C.Term
+                let walk :: [C.Var] -> T.Type -> m C.Term
                     walk [] (T.AllT qnts body) = do
                         body' <- walk [] $ unLoc body
                         foldrM (\qn t -> C.Lam <$> elabQuant qn <*> pure t) body' qnts
                     walk args (T.ArrT fun arg) = do
                         id <- freshIdent $ str2genName $ show (length args)
-                        C.Lam <$> ((id,) <$> elabType (unLoc fun)) <*> walk (id : args) (unLoc arg)
+                        fun' <- elabType $ unLoc fun
+                        C.Lam <$> (C.V id <$> elabType (unLoc fun)) <*> walk (C.V id fun' : args) (unLoc arg)
                     walk [] _ = return $ C.Pair (C.Label $ nameIdent con) unit
                     walk args _ = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))

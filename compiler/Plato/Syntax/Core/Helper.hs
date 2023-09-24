@@ -14,22 +14,22 @@ unit = Label (genName "unit")
 tUnit :: Type
 tUnit = Enum [genName "unit"]
 
-mkLam :: [Bind Type] -> Term -> Term
+mkLam :: [(Ident, Type)] -> Term -> Term
 mkLam [] t = t
-mkLam ((x, ty) : rest) t = Lam (x, ty) (mkLam rest t)
+mkLam ((id, ty) : rest) t = Lam (V id ty) (mkLam rest t)
 
 mkArr :: (MonadReader e m, HasUniq e, MonadIO m) => Type -> Type -> m Type
 mkArr arg res = do
         idWC <- freshIdent wcName
         return $ Q Pi idWC arg res
 
-mkQ :: PiSigma -> [Bind Type] -> Type -> Type
+mkQ :: PiSigma -> [(Ident, Type)] -> Type -> Type
 mkQ pisigma binds body = foldr (uncurry $ Q pisigma) body binds
 
-mkPis :: [Bind Type] -> Type -> Type
+mkPis :: [(Ident, Type)] -> Type -> Type
 mkPis = mkQ Pi
 
-mkSigmas :: [Bind Type] -> Type -> Type
+mkSigmas :: [(Ident, Type)] -> Type -> Type
 mkSigmas = mkQ Sigma
 
 mkProduct :: [Term] -> Term
@@ -56,11 +56,11 @@ mkSplits t vars body = loop t vars
         loop :: Term -> [(Ident, Type)] -> m Term
         loop _ [] = return body
         loop t [(x, ty)] = return $ Let [Decl x ty, Defn x t] body
-        loop t ((x, _) : [(y, _)]) = return $ Split t (x, y) body
-        loop t ((x, _) : xs) = do
-                idYZ <- freshIdent $ genName "ys"
-                u <- loop (Var idYZ) xs
-                return $ Split t (x, idYZ) u
+        loop t ((x, tyx) : [(y, tyy)]) = return $ Split t (V x tyx, V y tyy) body
+        loop t ((x, tyx) : xs) = do
+                varYZ <- V <$> freshIdent (genName "ys") <*> undefined
+                u <- loop (Var varYZ) xs
+                return $ Split t (V x tyx, varYZ) u
 
 decls :: Prog -> [Ident]
 decls [] = []

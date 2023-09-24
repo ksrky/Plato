@@ -15,24 +15,27 @@ type Prog = [Entry]
 
 type Type = Term
 
-type Arg = (Ident, Type)
+type Abs a = (Ident, a)
 
-type Bind a = (Ident, a)
+type Bind a = (Var, a)
 
 data PiSigma
         = Pi
         | Sigma
         deriving (Show, Eq)
 
+data Var = V {varIdent :: Ident, varType :: Type}
+        deriving (Show, Eq)
+
 data Term
-        = Var Ident
+        = Var Var
         | Let Prog Term
         | Type
         | Q PiSigma Ident Type Type
-        | Lam Arg Term
+        | Lam Var Term
         | App Term Term
         | Pair Term Term
-        | Split Term (Ident, Ident) Term
+        | Split Term (Var, Var) Term
         | Enum [Label]
         | Label Label
         | Case Term [(Label, Term)]
@@ -53,11 +56,14 @@ prettyArg (id, ty)
         | nameIdent id == wcName = pretty' 1 ty
         | otherwise = parens $ hsep [prettyId id, colon, pretty' 0 ty]
 
+instance Pretty Var where
+        pretty (V id ty) = parens $ prettyId id <+> colon <+> pretty ty
+
 instance Pretty Term where
         pretty = pretty' 0
 
 instance PrettyWithContext Term where
-        pretty' _ (Var id) = prettyId id
+        pretty' _ (Var var) = pretty var
         pretty' p (Let prog t) =
                 parenswPrec p 0 $ do
                         group $ align $ "let" <+> bindings prog <> line <> "in" <+> pretty' 0 t
@@ -68,7 +74,7 @@ instance PrettyWithContext Term where
                 parenswPrec p 0 $ group $ hang 2 $ prettyArg (x, ty1) <> line <> arrow <+> pretty' 0 ty2
         pretty' p (Q Sigma x ty1 ty2) =
                 parenswPrec p 0 $ group $ hang 2 $ prettyArg (x, ty1) <> line <> asterisk <+> pretty' 0 ty2
-        pretty' p (Lam (x, ty) t) =
+        pretty' p (Lam (V x ty) t) =
                 parenswPrec p 0 $ group $ do
                         backslash <> prettyId x <> colon <+> pretty' 1 ty <> dot <> softline <> pretty' 0 t
         pretty' p (App t1 t2) =
@@ -76,13 +82,13 @@ instance PrettyWithContext Term where
         pretty' _ (Pair t1 t2) = tupled $ map (pretty' 0) [t1, t2]
         pretty' p (Split t (x, y) u) =
                 parenswPrec p 0 $ hang 2 $ group $ do
-                        "split" <+> pretty' 0 t <+> "with" <+> tuple <+> arrow <> softline <> pretty' 0 u
+                        "split" <+> pretty' 1 t <+> "with" <+> tuple <+> arrow <> softline <> pretty' 0 u
             where
-                tuple = parens $ prettyId x <> comma <+> prettyId y
+                tuple = parens $ pretty x <> comma <+> pretty y
         pretty' _ (Enum labs) = braces $ map pretty labs `sepBy` comma
         pretty' _ (Label lab) = "`" <> pretty lab
         pretty' p (Case t lts) =
-                parenswPrec p 0 $ group $ "case" <+> pretty' 0 t <+> "of" <> line <> branches lts
+                parenswPrec p 0 $ group $ "case" <+> pretty' 1 t <+> "of" <> line <> branches lts
             where
                 branch (l, t) = indent 1 $ hsep [pretty l, arrow, pretty' 0 t]
                 branches = encloseSep lbrace (space <> rbrace) comma . map branch
