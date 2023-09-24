@@ -200,7 +200,12 @@ checkSigma exp sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst qns)
-        unless (null bad_tvs) $ throwLocErr (getLoc exp) "Type not polymorphic enough"
+        unless (null bad_tvs) $ throwLocErr (getLoc exp) $ do
+                vsep
+                        [ "Polymorphic recursion is not allowed."
+                        , "The following type variables are instantiated by different types:"
+                                <+> concatWith (surround (semi <> space)) (map pretty (S.toList bad_tvs))
+                        ]
         return $ unCoer (coer <> genTrans qns) <$> exp'
 
 -- | Type checkinng of Clauses
