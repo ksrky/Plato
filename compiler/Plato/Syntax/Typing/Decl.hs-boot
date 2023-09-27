@@ -11,8 +11,12 @@ import Plato.Syntax.Typing.Base
 type role Bind nominal
 data Bind (a :: TcFlag)
 
-instance Eq (Bind a)
-instance Show (Bind a)
-instance Pretty (Bind a)
+instance Eq (Bind 'Untyped)
+instance Eq (Bind 'Typed)
+instance Show (Bind 'Untyped)
+instance Show (Bind 'Typed)
+instance Pretty (Bind 'Untyped)
+instance Pretty (Bind 'Typed)
 
-instance Pretty (SCC (Bind a))
+instance Pretty (SCC (Bind 'Untyped))
+instance Pretty (SCC (Bind 'Typed))

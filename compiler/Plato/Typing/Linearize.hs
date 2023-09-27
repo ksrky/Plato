@@ -31,10 +31,10 @@ instance Linearize (Expr 'Untyped) where
                 bindss <- linBinds binds
                 exp' <- linearize exp
                 return $ unLoc $ foldr (\b e -> sL b e $ LetE b e) exp' bindss
-        linearize (CaseE exp alts) = do
+        linearize (CaseE exp mbty alts) = do
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
-                return $ CaseE exp' alts'
+                return $ CaseE exp' mbty alts'
         linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where
@@ -59,13 +59,13 @@ linBinds (CyclicSCC binds) = do
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id qns ctors) = do
+        linearize (DatDefn id kn qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
-                return $ DatDefn id qns ctors
+                return $ DatDefn id kn qns ctors
 
 linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
 linDatDefns (CyclicSCC tdefs) = do
-        graph <- forM tdefs $ \tdef@(DatDefn id _ _) -> do
+        graph <- forM tdefs $ \tdef@(DatDefn id _ _ _) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
         return $ stronglyConnComp graph

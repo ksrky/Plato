@@ -32,11 +32,11 @@ typingDefns (ValDefn binds : rest) = do
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
-        let datty = map (\(DatDefn' idkn _ _) -> idkn) (Foldable.toList tdefs')
-            allctors = (`concatMap` tdefs') $ \(DatDefn' _ qns ctors) ->
+        let datty = map (\(DatDefn id kn _ _) -> (id, kn)) (Foldable.toList tdefs')
+            allctors = (`concatMap` tdefs') $ \(DatDefn _ _ qns ctors) ->
                 map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
             extconenv env =
-                foldr (\(DatDefn' (id, _) qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
+                foldr (\(DatDefn id _ qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
         local (modifyTypEnv $ extendList allctors . extendList datty) $
                 local (modifyConEnv extconenv) $
                         typingDefns rest

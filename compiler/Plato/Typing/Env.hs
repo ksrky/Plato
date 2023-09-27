@@ -72,7 +72,7 @@ extendQuants :: Quants -> TypEnv -> TypEnv
 extendQuants qns = extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)
 
 extendBinds :: SCC (Bind 'Typed) -> TypEnv -> TypEnv
-extendBinds binds = extendList $ map (\(Bind' (id, ty) _) -> (id, ty)) (Foldable.toList binds)
+extendBinds binds = extendList $ map (\(Bind (id, ty) _) -> (id, ty)) (Foldable.toList binds)
 
 envTypes :: TypEnv -> [Type]
 envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)

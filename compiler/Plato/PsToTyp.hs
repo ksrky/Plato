@@ -52,7 +52,7 @@ elabExpr (P.LamE pats body) = do
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
                 v <- labelVarId "pl"
-                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
+                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) Nothing [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
@@ -68,7 +68,7 @@ elabExpr (P.CaseE match alts) = do
                 body' <- local (extendScope pat) $ elabExpr `traverse` body
                 return (pat', body')
 
-        return $ T.CaseE match' alts'
+        return $ T.CaseE match' Nothing alts'
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
@@ -163,7 +163,7 @@ elabDecl (L _ (P.DataD id params ctors)) = do
         ctors' <- local (extendScope params) $
                 forM ctors $
                         \(con, ty) -> (con,) <$> elabType `traverse` ty
-        return $ T.DatDefn id qnts ctors'
+        return $ T.DatDefn id () qnts ctors'
 elabDecl _ = unreachable "data type definition required"
 
 elabTopDecls ::
