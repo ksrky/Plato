@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Parsing.OpParser (FixityEnv, HasFixityEnv (..), OpParser (..), opParseTop) where
+module Plato.Parsing.OpParser (FixityEnv, HasFixityEnv (..), OpParser (..), opParseTop, opParseInstr) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -150,3 +150,11 @@ opParseTop decs = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env 
 
 instance OpParser [LTopDecl] where
         opParse = (fst <$>) . opParseTop
+
+opParseInstr :: (MonadReader e m, HasFixityEnv e, Monoid e, MonadThrow m) => Instr -> m (Instr, e)
+opParseInstr (InstrEval exp) = do
+        exp' <- opParse exp
+        return (InstrEval exp', mempty)
+opParseInstr (InstrDecls decs) = do
+        (decs', env) <- opParseTop decs
+        return (InstrDecls decs', env) 

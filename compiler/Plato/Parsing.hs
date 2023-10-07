@@ -36,6 +36,12 @@ parseFile src = catchPsErrors $ do
         (prog, _) <- liftIO $ parse src uref inp parser
         updateContext $ opParseTop prog
 
+{- parseInstr :: (MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadCatch m) => T.Text -> m Instr
+parseInstr inp = do
+        uref <- getUniq =<< ask
+        (instr, _) <- liftIO $ parseLine uref inp instrParser
+        updateContext $ opParseInstr instr -}
+
 parsePartial ::
         (OpParser a, MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadThrow m) =>
         Parser a ->
