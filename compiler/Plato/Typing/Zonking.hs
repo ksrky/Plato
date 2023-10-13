@@ -5,25 +5,24 @@
 module Plato.Typing.Zonking (Zonking (..)) where
 
 import Control.Monad.IO.Class
-import Data.Graph
 
 import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 
 class Zonking a where
-        zonk :: MonadIO m => a -> m a
+        zonk :: (MonadIO m) => a -> m a
 
-instance Zonking a => Zonking (Located a) where
+instance (Zonking a) => Zonking (Located a) where
         zonk = traverse zonk
 
 instance (Zonking a, Zonking b) => Zonking (a, b) where
         zonk (a, b) = (,) <$> zonk a <*> zonk b
 
-instance Zonking a => Zonking [a] where
+instance (Zonking a) => Zonking [a] where
         zonk = mapM zonk
 
-instance Zonking a => Zonking (SCC a) where
+instance (Zonking a) => Zonking (RecBlock a) where
         zonk = mapM zonk
 
 instance Zonking (Expr 'Typed) where

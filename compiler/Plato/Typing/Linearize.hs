@@ -15,10 +15,10 @@ import Plato.Syntax.Typing.Helper (splitConstrTy)
 class Linearize a where
         linearize :: a -> Writer [Ident] a
 
-instance Linearize a => Linearize (Located a) where
+instance (Linearize a) => Linearize (Located a) where
         linearize = traverse linearize
 
-instance Linearize a => Linearize [a] where
+instance (Linearize a) => Linearize [a] where
         linearize = mapM linearize
 
 instance Linearize (Expr 'Untyped) where
@@ -27,8 +27,8 @@ instance Linearize (Expr 'Untyped) where
                 return $ VarE id
         linearize (AppE fun arg) = AppE <$> linearize fun <*> linearize arg
         linearize (AbsE id mbty exp) = AbsE id mbty <$> linearize exp
-        linearize (LetE binds exp) = do
-                bindss <- linBinds binds
+        linearize (LetE bnds exp) = do
+                bindss <- linBinds bnds
                 exp' <- linearize exp
                 return $ unLoc $ foldr (\b e -> sL b e $ LetE b e) exp' bindss
         linearize (CaseE exp mbty alts) = do
@@ -50,12 +50,12 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
-linBinds :: SCC (Bind 'Untyped) -> Writer [Ident] [SCC (Bind 'Untyped)]
-linBinds (CyclicSCC binds) = do
-        graph <- forM binds $ \bnd@(Bind (par, _) _) -> do
+linBinds :: RecBlock (XBind 'Untyped) -> Writer [Ident] [RecBlock (XBind 'Untyped)]
+linBinds (RecBlock (CyclicSCC bnds)) = do
+        graph <- forM bnds $ \bnd@(L _ (Bind (par, _) _)) -> do
                 let (bnd', chs) = runWriter $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
-        return $ stronglyConnComp graph
+        return $ map RecBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
@@ -63,12 +63,12 @@ instance Linearize (TypDefn 'Untyped) where
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
                 return $ DatDefn id kn qns ctors
 
-linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
-linDatDefns (CyclicSCC tdefs) = do
-        graph <- forM tdefs $ \tdef@(DatDefn id _ _ _) -> do
+linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
+linDatDefns (RecBlock (CyclicSCC tdefs)) = do
+        graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
-        return $ stronglyConnComp graph
+        return $ map RecBlock (stronglyConnComp graph)
 linDatDefns nonrec = return [nonrec]
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped

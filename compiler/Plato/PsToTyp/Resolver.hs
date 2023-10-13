@@ -7,8 +7,7 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Fixity
 import Plato.Common.Ident
-import Plato.Common.Location
-import Plato.Syntax.Parsing
+import Plato.Common.Location 
 
 data Tok a = TTerm (Located a) | TOp Ident Fixity deriving (Eq, Show)
 

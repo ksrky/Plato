@@ -29,7 +29,7 @@ openFile src =
                 Left (_ :: SomeException) -> throwError $ pretty src <> ": file does not exist."
                 Right inp -> return inp
 
-parseFile :: PlatoMonad m => FilePath -> m Program
+parseFile :: (PlatoMonad m) => FilePath -> m Program
 parseFile src = catchPsErrors $ do
         inp <- openFile src
         uref <- getUniq =<< ask
