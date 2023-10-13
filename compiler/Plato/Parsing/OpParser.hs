@@ -9,13 +9,13 @@ import Control.Monad.Trans.Writer
 import Data.Map.Strict qualified as M
 import Data.Maybe
 
+import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Parsing.OpParser.Resolver
 import Plato.Parsing.Token
 import Plato.Syntax.Parsing
-import Plato.Common.Fixity
 
 type FixityEnv = M.Map Name Fixity
 
@@ -29,40 +29,43 @@ instance HasFixityEnv FixityEnv where
         getFixityEnv = id
         modifyFixityEnv = id
 
-class Linearize a where
-        linearize :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => Located a -> m [Tok a]
+extendFixities :: (HasFixityEnv a) => [(Name, Fixity)] -> a -> a
+extendFixities fixs = modifyFixityEnv $ \env -> foldr (uncurry M.insert) env fixs
 
-instance Linearize Expr where
-        linearize (L _ (BinE lhs op rhs)) = do
-                lhs' <- linearize lhs
-                rhs' <- linearize rhs
+class Expandable a where
+        expand :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => Located a -> m [Tok (Located a)]
+
+instance Expandable Expr where
+        expand (L _ (BinE lhs op rhs)) = do
+                lhs' <- expand lhs
+                rhs' <- expand rhs
                 env <- asks getFixityEnv
-                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
+                let fix = fromMaybe operFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
-        linearize exp = do
+        expand exp = do
                 exp' <- opParse exp
                 return [TTerm exp']
 
-instance Linearize Pat where
-        linearize (L _ (BinP lhs op rhs)) = do
-                lhs' <- linearize lhs
-                rhs' <- linearize rhs
+instance Expandable Pat where
+        expand (L _ (BinP lhs op rhs)) = do
+                lhs' <- expand lhs
+                rhs' <- expand rhs
                 env <- asks getFixityEnv
-                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op) env)
+                let fix = fromMaybe operFixity (M.lookup (nameIdent op) env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
-        linearize pat = do
+        expand pat = do
                 pat' <- opParse pat
                 return [TTerm pat']
 
-instance Linearize Type where
-        linearize (L _ (BinT lhs op rhs)) = do
-                lhs' <- linearize lhs
-                rhs' <- linearize rhs
+instance Expandable Type where
+        expand (L _ (BinT lhs op rhs)) = do
+                lhs' <- expand lhs
+                rhs' <- expand rhs
                 env <- asks getFixityEnv
                 -- TODO: infix declaration does not distinguish ConOp or TyConOp
-                let fix = fromMaybe defaultFixity (M.lookup (nameIdent op){nameSpace = ConName} env)
+                let fix = fromMaybe operFixity (M.lookup (nameIdent op){nameSpace = ConName} env)
                 return $ lhs' ++ [TOp op fix] ++ rhs'
-        linearize ty = do
+        expand ty = do
                 ty' <- opParse ty
                 return [TTerm ty']
 
@@ -79,8 +82,8 @@ instance OpParser LExpr where
                         VarE{} -> return exp
                         AppE fun arg -> AppE <$> opParse fun <*> opParse arg
                         BinE{} -> do
-                                toks <- linearize (L sp exp)
-                                unLoc <$> parse BinE toks
+                                toks <- expand (L sp exp)
+                                unLoc <$> parse (\op e1 e2 -> sL e1 e2 (BinE e1 op e2)) toks
                         LamE pats exp -> LamE <$> mapM opParse pats <*> opParse exp
                         LetE decs body -> do
                                 (decs', body') <- opParseLoc (decs, body)
@@ -103,8 +106,8 @@ instance OpParser LPat where
                         VarP{} -> return pat
                         WildP -> return WildP
                         BinP{} -> do
-                                toks <- linearize (L sp pat)
-                                unLoc <$> parse BinP toks
+                                toks <- expand (L sp pat)
+                                unLoc <$> parse (\op p1 p2 -> sL p1 p2 (BinP p1 op p2)) toks
                         AnnP pat ann_ty -> AnnP <$> opParse pat <*> opParse ann_ty
                         FactorP p -> unLoc <$> opParse p
 
@@ -117,12 +120,12 @@ instance OpParser LType where
                         AllT tvs body -> AllT tvs <$> opParse body
                         AppT fun arg -> AppT <$> opParse fun <*> opParse arg
                         BinT{} -> do
-                                toks <- linearize (L sp ty)
-                                unLoc <$> parse BinT toks
+                                toks <- expand (L sp ty)
+                                unLoc <$> parse (\op t1 t2 -> sL t1 t2 (BinT t1 op t2)) toks
                         FactorT ty -> unLoc <$> opParse ty
 
 opParseLoc :: (MonadReader e m, HasFixityEnv e, MonadThrow m, OpParser a) => ([LLocDecl], a) -> m ([LLocDecl], a)
-opParseLoc (decs, a) = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env fixmap) $ do
+opParseLoc (decs, a) = local (extendFixities fixs) $ do
         rest' <- forM rest $ \case
                 L sp (FunSpecD id ty) -> L sp <$> (FunSpecD id <$> opParse ty)
                 L sp (FunBindD id clauses) -> L sp <$> (FunBindD id <$> mapM opParse clauses)
@@ -130,12 +133,12 @@ opParseLoc (decs, a) = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert)
         a' <- opParse a
         return (rest', a')
     where
-        (fixmap, rest) = execWriter $ forM decs $ \case
+        (fixs, rest) = execWriter $ forM decs $ \case
                 L _ (FixityD id fix) -> tell ([(nameIdent id, fix)], [])
                 d -> tell ([], [d])
 
 opParseTop :: (MonadReader e m, HasFixityEnv e, MonadThrow m) => [LTopDecl] -> m ([LTopDecl], e)
-opParseTop decs = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env fixmap) $ do
+opParseTop decs = local (extendFixities fixs) $ do
         rest' <- forM rest $ \case
                 L sp (DataD id params constrs) ->
                         L sp <$> (DataD id params <$> mapM (\(con, ty) -> (con,) <$> opParse ty) constrs)
@@ -145,7 +148,7 @@ opParseTop decs = local (modifyFixityEnv $ \env -> foldr (uncurry M.insert) env 
         env <- ask
         return (rest', env)
     where
-        (fixmap, rest) = execWriter $ forM decs $ \case
+        (fixs, rest) = execWriter $ forM decs $ \case
                 L _ (LocalD (FixityD id fix)) -> tell ([(nameIdent id, fix)], [])
                 d -> tell ([], [d])
 
@@ -158,4 +161,4 @@ opParseInstr (InstrEval exp) = do
         return (InstrEval exp', mempty)
 opParseInstr (InstrDecls decs) = do
         (decs', env) <- opParseTop decs
-        return (InstrDecls decs', env) 
+        return (InstrDecls decs', env)
