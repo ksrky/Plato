@@ -11,12 +11,18 @@ import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
+import Plato.Common.Fixity
 
 -- | Identifier
-data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
+data Ident = Ident
+        { nameIdent :: Name
+        , spanIdent :: Span
+        , fixityIdent :: Fixity
+        , stamp :: Uniq
+        }
 
 instance Show Ident where
-        show (Ident name _ uniq) = show name ++ "_" ++ show uniq
+        show (Ident name _ _ uniq) = show name ++ "_" ++ show uniq
 
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2
@@ -34,7 +40,9 @@ prettyId :: Ident -> Doc ann
 prettyId id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
 
 ident :: Located Name -> Uniq -> Ident
-ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
+ident (L sp name) uniq =
+        Ident{nameIdent = name, spanIdent = sp, fixityIdent = identFixity, stamp = uniq}
+
 
 fromIdent :: Ident -> Located Name
 fromIdent id = L (getLoc id) (nameIdent id)
@@ -42,7 +50,10 @@ fromIdent id = L (getLoc id) (nameIdent id)
 freshIdent :: (MonadReader e m, HasUniq e, MonadIO m) => Name -> m Ident
 freshIdent name = do
         uniq <- pickUniq =<< ask
-        return Ident{nameIdent = name, spanIdent = NoSpan, stamp = uniq}
+        return $ ident (noLoc name) uniq
+
+setFixity :: Fixity -> Ident -> Ident
+setFixity fix id = id{fixityIdent = fix}
 
 reassignUniq :: (MonadReader e m, HasUniq e, MonadIO m) => Ident -> m Ident
 reassignUniq id = do

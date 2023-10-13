@@ -15,6 +15,7 @@ import Plato.Common.Name
 import Plato.Parsing.OpParser.Resolver
 import Plato.Parsing.Token
 import Plato.Syntax.Parsing
+import Plato.Common.Fixity
 
 type FixityEnv = M.Map Name Fixity
 
