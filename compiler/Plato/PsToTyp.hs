@@ -22,7 +22,6 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Name
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.PsToTyp.Resolver
@@ -62,7 +61,7 @@ instance Expandable P.LType T.LType where
                 op' <- scoping op
                 rhs' <- expand rhs
                 -- TODO: infix declaration does not distinguish ConOp or TyConOp
-                return $ lhs' ++ [TOp op'{nameIdent = (nameIdent op'){nameSpace = ConName}}] ++ rhs'
+                return $ lhs' ++ [TOp op'] ++ rhs'
         expand ty = do
                 ty' <- elabType `traverse` ty
                 return [TTerm ty']
@@ -104,7 +103,7 @@ elabExpr (P.CaseE match alts) = do
                 return (pat', body')
 
         return $ T.CaseE match' Nothing alts'
-elabExpr P.FactorE{} = unreachable "fixity resolution failed"
+elabExpr (P.FactorE exp) = elabExpr (unLoc exp)
 
 elabPat ::
         (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
@@ -122,17 +121,17 @@ elabPat pat@P.BinP{} = do
             elab op l r = sL l r $ T.ConP op [l, r]
         unLoc <$> parseTok elab toks
 elabPat (P.AnnP pat ann_ty) = T.AnnP <$> elabPat `traverse` pat <*> elabType (unLoc ann_ty)
-elabPat P.FactorP{} = unreachable "fixity resolution failed"
+elabPat (P.FactorP pat) = elabPat (unLoc pat)
 
 elabType ::
-        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Type ->
         m T.Type
 elabType (P.VarT var) = do
         var' <- scoping var
         return $ T.VarT (T.BoundTv var')
 elabType (P.ConT con) = T.ConT <$> scoping con
-elabType (P.ArrT arg res) = T.ArrT <$> (elabType `traverse` arg) <*> (elabType `traverse` res)
+elabType (P.ArrT arg res) = T.ArrT <$> elabType `traverse` arg <*> elabType `traverse` res
 elabType (P.AllT vars body) = do
         argNamesUnique vars
         qnts <- mapM (\id -> do kv <- newKnVar; return (T.BoundTv id, kv)) vars
@@ -144,10 +143,10 @@ elabType ty@P.BinT{} = do
         let elab :: Ident -> T.LType -> T.LType -> T.LType
             elab op l r = sL l r $ T.AppT (sL l op $ T.AppT (L (getLoc op) (T.ConT op)) l) r
         unLoc <$> parseTok elab toks
-elabType P.FactorT{} = unreachable "fixity resolution failed"
+elabType (P.FactorT ty) = elabType (unLoc ty)
 
 elabLocDecls ::
-        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LLocDecl] ->
         m [T.XBind 'T.Untyped]
 elabLocDecls ldecs = do
@@ -159,7 +158,7 @@ elabLocDecls ldecs = do
                 L _ (P.FunBindD id cls) -> do
                         cls' <- lift $ mapM elabClause cls
                         tell ([(id, L (getLoc cls') (T.ClauseE cls'))], [])
-                L _ P.FixityD{} -> unreachable "fixity declarations removed"
+                L _ P.FixityD{} -> tell ([], [])
         forM bnds $ \(id, exp) -> case lookup id spcs of
                 Just ty -> return $ sL id exp (T.Bind (id, Just ty) exp)
                 _ -> return $ sL id exp (T.Bind (id, Nothing) exp)
@@ -167,15 +166,13 @@ elabLocDecls ldecs = do
 assembleClauses :: [P.LLocDecl] -> [P.LLocDecl]
 assembleClauses ldecs = assemble $ partition ldecs
     where
-        fixs = [(nameIdent id, fix) | L _ (P.FixityD id fix) <- ldecs]
+        fixities = [(name, fix) | L _ (P.FixityD (L _ name) fix) <- ldecs]
         assemble :: [[P.LLocDecl]] -> [P.LLocDecl]
         assemble [] = []
         assemble (bnds@(L _ (P.FunBindD id _) : _) : rest) = do
                 let clses = [(psi, ei) | L _ (P.FunBindD _ [(psi, ei)]) <- bnds]
                     spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
-                    id' = case lookup (nameIdent id) fixs of
-                        Just fix -> setFixity fix id
-                        Nothing -> id
+                    id' = maybe id (setFixity id) (lookup (nameIdent id) fixities)
                 L spn (P.FunBindD id' clses) : assemble rest
         assemble (ldecs : rest) = ldecs ++ assemble rest
         partition :: [P.LLocDecl] -> [[P.LLocDecl]]
@@ -194,7 +191,7 @@ elabClause (pats, exp) = do
         return (pats', exp')
 
 elabDecl ::
-        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.LTopDecl ->
         m (T.XTypDefn 'T.Untyped)
 elabDecl (L sp (P.DataD id params ctors)) = do
@@ -211,9 +208,9 @@ elabTopDecls ::
         (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
         m ([T.Defn 'T.Untyped], e)
-elabTopDecls tdecs =
-        local (extendScope tdecs') $ do
-                tdefs <- mapM elabDecl tdecs'
+elabTopDecls tdecs = do
+        local (extendScope tdecs'') $ do
+                tdefs <- mapM elabDecl tdecs''
                 let ldecs' = assembleClauses ldecs
                 mapM_ (checkNumArgs . unLoc) ldecs'
                 local (extendScope ldecs') $ do
@@ -222,9 +219,25 @@ elabTopDecls tdecs =
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
-                L sp (P.DataD id params ctors) -> tell ([L sp (P.DataD id params ctors)], [])
+                L _ P.DataD{} -> tell ([dec], [])
                 L sp (P.LocalD ld) -> tell ([], [L sp ld])
         (tdecs', ldecs) = groupDecl tdecs
+        fixs = [(name, fix) | L _ (P.FixityD (L _ name) fix) <- ldecs]
+        tdecs'' =
+                map
+                        ( \case
+                                (L sp (P.DataD id params ctors)) ->
+                                        let ctors' =
+                                                map
+                                                        ( \(con, ty) ->
+                                                                let con' = maybe con (setFixity con) (lookup (nameIdent con) fixs)
+                                                                 in (con', ty)
+                                                        )
+                                                        ctors
+                                         in L sp (P.DataD id params ctors')
+                                d -> d
+                        )
+                        tdecs'
 
 -----------------------------------------------------------
 -- psToTyp

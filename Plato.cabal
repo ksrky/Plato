@@ -52,8 +52,6 @@ library
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
-      Plato.Parsing.OpParser
-      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp

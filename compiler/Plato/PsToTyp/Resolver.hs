@@ -4,6 +4,7 @@ import Control.Exception.Safe
 import Control.Monad
 import GHC.Stack
 
+import Control.Monad.IO.Class
 import Plato.Common.Error
 import Plato.Common.Fixity
 import Plato.Common.Ident
@@ -17,7 +18,7 @@ instance (HasLoc a) => HasLoc (Tok a) where
 
 parseTok ::
         forall a m.
-        (HasCallStack, HasLoc a, MonadThrow m) =>
+        (HasCallStack, HasLoc a, MonadIO m, MonadThrow m) =>
         (Ident -> a -> a -> a) ->
         [Tok a] ->
         m a
@@ -37,8 +38,9 @@ parseTok elab toks = do
                         throwLocErr
                                 (getLoc lhs <> getLoc tokop)
                                 "Error at parsing infix expression"
-                | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest)
+                | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest) -- liftIO (print dir) >>
                 | otherwise = do
+                        -- liftIO $ print dir
                         (rhs, rest') <- parseTerm (fixityIdent op) rest
                         parseOp lfix (elab op lhs rhs) rest'
             where

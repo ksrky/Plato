@@ -8,10 +8,10 @@ import Prettyprinter
 import Prelude hiding (span)
 
 import Plato.Common.Error
+import Plato.Common.Fixity
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
-import Plato.Common.Fixity
 
 -- | Identifier
 data Ident = Ident
@@ -43,6 +43,9 @@ ident :: Located Name -> Uniq -> Ident
 ident (L sp name) uniq =
         Ident{nameIdent = name, spanIdent = sp, fixityIdent = identFixity, stamp = uniq}
 
+oper :: Located Name -> Uniq -> Ident
+oper (L sp name) uniq =
+        Ident{nameIdent = name, spanIdent = sp, fixityIdent = operFixity, stamp = uniq}
 
 fromIdent :: Ident -> Located Name
 fromIdent id = L (getLoc id) (nameIdent id)
@@ -52,8 +55,8 @@ freshIdent name = do
         uniq <- pickUniq =<< ask
         return $ ident (noLoc name) uniq
 
-setFixity :: Fixity -> Ident -> Ident
-setFixity fix id = id{fixityIdent = fix}
+setFixity :: Ident -> Fixity -> Ident
+setFixity id fix = id{fixityIdent = fix}
 
 reassignUniq :: (MonadReader e m, HasUniq e, MonadIO m) => Ident -> m Ident
 reassignUniq id = do
@@ -63,7 +66,7 @@ reassignUniq id = do
 -- | Identifier Map
 type IdentMap a = M.Map Ident a
 
-lookupIdent :: MonadThrow m => Ident -> M.Map Ident a -> m a
+lookupIdent :: (MonadThrow m) => Ident -> M.Map Ident a -> m a
 lookupIdent id idmap = case M.lookup id idmap of
         Just val -> return val
         Nothing -> throwLocErr (spanIdent id) $ hsep ["Unknown identifier", squotes $ pretty id]

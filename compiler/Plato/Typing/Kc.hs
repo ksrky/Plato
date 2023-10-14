@@ -4,7 +4,6 @@
 module Plato.Typing.Kc (checkKindStar, inferKind, checkKind, kcTypDefns) where
 
 import Control.Exception.Safe
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Foldable qualified as Foldable
@@ -75,10 +74,13 @@ kcTypDefns ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         XTypDefns 'Untyped ->
         m (XTypDefns 'Typed)
-kcTypDefns (RecBlock (AcyclicSCC tdef)) = RecBlock . AcyclicSCC <$> kcTypDefn tdef
+kcTypDefns (RecBlock (AcyclicSCC tdef)) = do
+        let DatDefn id _ params _ = unLoc tdef
+        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
+        local (modifyTypEnv $ extend id kn) $ RecBlock . AcyclicSCC <$> kcTypDefn tdef
 kcTypDefns (RecBlock (CyclicSCC tdefs)) = do
-        envbinds <-
-                forM (Foldable.toList tdefs) $ \(L _ (DatDefn id _ params _)) ->
-                        return (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
+        let envbinds =
+                (`map` Foldable.toList tdefs) $ \(L _ (DatDefn id _ params _)) ->
+                        (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
         local (modifyTypEnv $ extendList envbinds) $ do
                 RecBlock . CyclicSCC <$> mapM kcTypDefn tdefs

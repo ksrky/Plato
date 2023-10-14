@@ -3,6 +3,7 @@ module Plato.Syntax.Parsing.Expr where
 import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Syntax.Parsing.Pat
 import Plato.Syntax.Parsing.Type
@@ -28,7 +29,7 @@ data Expr
 data LocDecl
         = FunSpecD Ident LType
         | FunBindD Ident [Clause]
-        | FixityD Ident Fixity
+        | FixityD (Located Name) Fixity
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -72,4 +73,4 @@ instance Pretty LocDecl where
                         , "where"
                         , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
                         ]
-        pretty (FixityD id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
+        pretty (FixityD name (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty name]
