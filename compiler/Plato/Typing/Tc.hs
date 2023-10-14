@@ -8,7 +8,6 @@ import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
-import Data.Graph
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
@@ -33,7 +32,7 @@ import Plato.Typing.Zonking
 
 data Expected a = Infer (IORef a) | Check a
 
-instance Show a => Show (Expected a) where
+instance (Show a) => Show (Expected a) where
         show Infer{} = "{tyref}"
         show (Check ty) = show ty
 
@@ -61,8 +60,8 @@ checkPat (L sp pat) exp_ty = tcPat pat exp_ty
         tcPat (ConP con pats) exp_ty = do
                 (arg_tys, res_ty) <- instDataCon con
                 unless (length pats == length arg_tys) $ do
-                        throwLocErr sp $
-                                hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+                        throwLocErr sp
+                                $ hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
                 (pats', binds) <- checkPats pats arg_tys
                 instPatSigma_ res_ty exp_ty
                 return (L sp (ConP con pats'), binds)
@@ -236,22 +235,22 @@ checkClausesRho clauses rho = do
 tcBinds ::
         forall e m.
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
-        SCC (Bind 'Untyped) ->
-        m (SCC (Bind 'Typed))
-tcBinds (AcyclicSCC (Bind (id, Just ty) exp)) = do
+        XBinds 'Untyped ->
+        m (XBinds 'Typed)
+tcBinds (Nonrec (L _ (Bind (id, Just ty) exp))) = do
         checkKindStar ty
         exp' <- checkSigma exp (unLoc ty)
-        return $ AcyclicSCC $ Bind (id, unLoc ty) (unLoc exp')
-tcBinds (AcyclicSCC (Bind (id, Nothing) exp)) = do
+        return $ Nonrec $ Bind (id, unLoc ty) (unLoc exp')
+tcBinds (Nonrec (L _ (Bind (id, Nothing) exp))) = do
         (exp', sigma) <- inferSigma exp
         checkKindStar =<< zonk (noLoc sigma)
-        return $ AcyclicSCC $ Bind (id, sigma) (unLoc exp')
-tcBinds (CyclicSCC binds) = do
-        envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
+        return $ Nonrec $ Bind (id, sigma) (unLoc exp')
+tcBinds (Mutrec bnds) = do
+        envbinds <- forM bnds $ \(L _ (Bind (id, mbty) _)) -> case mbty of
                 Just ty -> return (id, ty)
                 Nothing -> (id,) . noLoc <$> newTyVar
         local (modifyTypEnv $ extendList envbinds) $ do
-                bbinds' <- forM binds $ \(Bind (id, mbty) exp) -> case mbty of
+                bbnds' <- forM bnds $ \(L _ (Bind (id, mbty) exp)) -> case mbty of
                         Just ty -> do
                                 checkKindStar ty
                                 exp <- checkSigma exp (unLoc ty)
@@ -260,13 +259,13 @@ tcBinds (CyclicSCC binds) = do
                                 rho <- find id =<< asks getTypEnv
                                 exp <- checkRho exp rho
                                 return (False, Bind (id, rho) (unLoc exp))
-                binds' <- forM bbinds' $ \case
+                bnds' <- forM bbnds' $ \case
                         (True, b) -> return b
                         (False, Bind (id, ty) exp) -> do
                                 (qns, sigma) <- generalize ty
                                 checkKindStar =<< zonk (noLoc sigma)
                                 return $ Bind (id, sigma) (unCoer (genTrans qns) exp)
-                return $ CyclicSCC binds'
+                return $ Mutrec bnds'
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion

@@ -10,7 +10,6 @@ import Control.Monad.Reader
 import Data.Foldable
 import GHC.Stack
 
-import Data.Graph
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -108,7 +107,7 @@ elabTypDefn (T.DatDefn id _ params constrs) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 
-elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => SCC (T.Bind 'T.Typed) -> m [C.Entry]
+elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => T.Block (T.Bind 'T.Typed) -> m [C.Entry]
 elabBinds bnds = do
         decs <- forM bnds $ \(T.Bind (id, ty) _) -> C.Decl id <$> elabType ty
         defs <- forM bnds $ \(T.Bind (id, _) exp) -> C.Defn id <$> elabExpr exp
@@ -121,7 +120,7 @@ elabDefn (T.TypDefn tdefs) = do
         return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
-typToCore :: PlatoMonad m => T.Prog 'T.Typed -> m [C.Entry]
+typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
 typToCore decs = runReaderT (concat <$> mapM elabDefn decs) =<< getUniq =<< ask
 
 typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.LExpr 'T.Typed -> m C.Term

@@ -11,6 +11,7 @@ module Plato.Parsing.Parser (
     tokenParser,
 ) where
 
+import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
@@ -136,9 +137,9 @@ fundecl     :: { [LLocDecl] }
 
 -- | Fixity declaration
 fixdecl     :: { LLocDecl }
-            : 'infix' digit op                      { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Nonfix)) }
-            | 'infixl' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Leftfix)) }
-            | 'infixr' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Rightfix)) }
+            : 'infix' digit op                      { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Nonfix)) }
+            | 'infixl' digit op                     { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Leftfix)) }
+            | 'infixr' digit op                     { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Rightfix)) }
 
 -----------------------------------------------------------
 -- Types
@@ -279,15 +280,15 @@ tycon       :: { Ident }
 
 -- | VarOp
 varop       :: { Ident }
-            : varsym                                {% mkIdent varName $1 }
+            : varsym                                {% mkOper varName $1 }
 
 -- | ConOp
 conop       :: { Ident }
-            : consym                                {% mkIdent conName $1 }
+            : consym                                {% mkOper conName $1 }
 
 -- | TyconOp
 tyconop     :: { Ident }
-            : consym                                {% mkIdent tyconName $1 }
+            : consym                                {% mkOper tyconName $1 }
 
 -- | Op
 op          :: { Ident }
@@ -368,4 +369,9 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
+
+mkOper :: (T.Text -> Name) -> Located T.Text -> Parser Ident
+mkOper f x = do
+    u <- freshUniq
+    return $ oper (mkLName f x) u
 }

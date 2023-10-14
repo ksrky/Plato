@@ -10,6 +10,9 @@ module Plato.Syntax.Typing.Expr (
         Clauses,
         Alts,
         Annot,
+        Bind (..),
+        XBind,
+        XBinds,
         Expr (..),
         prClause,
 ) where
@@ -20,7 +23,6 @@ import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base
-import {-# SOURCE #-} Plato.Syntax.Typing.Decl
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
 
@@ -43,13 +45,21 @@ type family Annot (b :: TcFlag) where
         Annot 'Untyped = Maybe LType
         Annot 'Typed = Type
 
+data Bind (a :: TcFlag) = Bind (Ident, Annot a) (XExpr a)
+
+type family XBind (a :: TcFlag) where
+        XBind 'Untyped = Located (Bind 'Untyped)
+        XBind 'Typed = Bind 'Typed
+
+type XBinds (a :: TcFlag) = Block (XBind a)
+
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: XExpr a -> XExpr a -> Expr a
         AbsE :: Ident -> Annot a -> XExpr a -> Expr a
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
         TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
-        LetE :: (SCC (Bind a)) -> XExpr a -> Expr a
+        LetE :: XBinds a -> XExpr a -> Expr a
         CaseE :: XExpr a -> Annot a -> Alts a -> Expr a
         ClauseE :: Clauses 'Untyped -> Expr 'Untyped
 
@@ -60,6 +70,10 @@ deriving instance Eq (Expr 'Untyped)
 deriving instance Show (Expr 'Untyped)
 deriving instance Eq (Expr 'Typed)
 deriving instance Show (Expr 'Typed)
+deriving instance Eq (Bind 'Untyped)
+deriving instance Eq (Bind 'Typed)
+deriving instance Show (Bind 'Untyped)
+deriving instance Show (Bind 'Typed)
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -82,8 +96,8 @@ instance PrettyWithContext (Expr 'Untyped) where
         pretty' p (LetE bnds body) =
                 parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
         pretty' p (CaseE match _ alts) =
-                parenswPrec p 0 $
-                        hsep
+                parenswPrec p 0
+                        $ hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
@@ -104,10 +118,25 @@ instance PrettyWithContext (Expr 'Typed) where
         pretty' p (LetE bnds body) =
                 parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
         pretty' p (CaseE match _ alts) =
-                parenswPrec p 0 $
-                        hsep
+                parenswPrec p 0
+                        $ hsep
                                 [ "case"
                                 , pretty match
                                 , "of"
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
+
+instance Pretty (Bind 'Untyped) where
+        pretty (Bind (id, Just ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]
+        pretty (Bind (id, Nothing) exp) = hsep [pretty id, "where", pretty exp]
+
+instance Pretty (Bind 'Typed) where
+        pretty (Bind (id, ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]
+
+instance Pretty (SCC (Bind 'Untyped)) where
+        pretty (AcyclicSCC bnd) = pretty bnd
+        pretty (CyclicSCC bnds) = braces $ map pretty bnds `sepBy` semi
+
+instance Pretty (SCC (Bind 'Typed)) where
+        pretty (AcyclicSCC bnd) = pretty bnd
+        pretty (CyclicSCC bnds) = braces $ map pretty bnds `sepBy` semi

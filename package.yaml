@@ -30,6 +30,7 @@ dependencies:
   - hslogger
   - mtl
   - prettyprinter
+  - recursion-schemes
   - safe-exceptions
   - transformers
   - text
