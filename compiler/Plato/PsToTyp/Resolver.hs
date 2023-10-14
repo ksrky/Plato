@@ -2,9 +2,9 @@ module Plato.PsToTyp.Resolver (Tok (..), parseTok) where
 
 import Control.Exception.Safe
 import Control.Monad
+import Control.Monad.IO.Class
 import GHC.Stack
 
-import Control.Monad.IO.Class
 import Plato.Common.Error
 import Plato.Common.Fixity
 import Plato.Common.Ident
@@ -35,12 +35,9 @@ parseTok elab toks = do
         parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
-                        throwLocErr
-                                (getLoc lhs <> getLoc tokop)
-                                "Error at parsing infix expression"
-                | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest) -- liftIO (print dir) >>
+                        throwLocErr (getLoc lhs <> getLoc tokop) "Error at parsing infix expression"
+                | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest)
                 | otherwise = do
-                        -- liftIO $ print dir
                         (rhs, rest') <- parseTerm (fixityIdent op) rest
                         parseOp lfix (elab op lhs rhs) rest'
             where
