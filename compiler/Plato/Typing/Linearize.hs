@@ -10,15 +10,15 @@ import Data.Graph
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Syntax.Typing.Helper (splitConstrTy)
+import Plato.Syntax.Typing.Helper
 
 class Linearize a where
         linearize :: a -> Writer [Ident] a
 
-instance Linearize a => Linearize (Located a) where
+instance (Linearize a) => Linearize (Located a) where
         linearize = traverse linearize
 
-instance Linearize a => Linearize [a] where
+instance (Linearize a) => Linearize [a] where
         linearize = mapM linearize
 
 instance Linearize (Expr 'Untyped) where
@@ -27,14 +27,14 @@ instance Linearize (Expr 'Untyped) where
                 return $ VarE id
         linearize (AppE fun arg) = AppE <$> linearize fun <*> linearize arg
         linearize (AbsE id mbty exp) = AbsE id mbty <$> linearize exp
-        linearize (LetE binds exp) = do
-                bindss <- linBinds binds
+        linearize (LetE bnds exp) = do
+                bindss <- linBinds bnds
                 exp' <- linearize exp
                 return $ unLoc $ foldr (\b e -> sL b e $ LetE b e) exp' bindss
-        linearize (CaseE exp alts) = do
+        linearize (CaseE exp mbty alts) = do
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
-                return $ CaseE exp' alts'
+                return $ CaseE exp' mbty alts'
         linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where
@@ -50,25 +50,25 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
-linBinds :: SCC (Bind 'Untyped) -> Writer [Ident] [SCC (Bind 'Untyped)]
-linBinds (CyclicSCC binds) = do
-        graph <- forM binds $ \bnd@(Bind (par, _) _) -> do
+linBinds :: Block (XBind 'Untyped) -> Writer [Ident] [Block (XBind 'Untyped)]
+linBinds (Mutrec bnds) = do
+        graph <- forM bnds $ \bnd@(L _ (Bind (par, _) _)) -> do
                 let (bnd', chs) = runWriter $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
-        return $ stronglyConnComp graph
+        return $ map sccToBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id qns ctors) = do
+        linearize (DatDefn id kn qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
-                return $ DatDefn id qns ctors
+                return $ DatDefn id kn qns ctors
 
-linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
-linDatDefns (CyclicSCC tdefs) = do
-        graph <- forM tdefs $ \tdef@(DatDefn id _ _) -> do
+linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
+linDatDefns (Mutrec tdefs) = do
+        graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
-        return $ stronglyConnComp graph
+        return $ map sccToBlock (stronglyConnComp graph)
 linDatDefns nonrec = return [nonrec]
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped

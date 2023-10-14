@@ -77,7 +77,7 @@ zipWith _ _ Nil = Nil
 zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
 unzip : {a b} List (a :,: b) -> List a :,: List b
-unzip = foldr (\(x :,: y) (xs :,: ys) -> x :: xs :,: y :: ys) (Nil :,: Nil)
+unzip = foldr (\(x :,: y) (xs :,: ys) -> x :: xs :,: (y :: ys)) (Nil :,: Nil)
 
 elemBy : {a} (a -> a -> Bool) -> a -> List a -> Bool
 elemBy _ _ Nil = False

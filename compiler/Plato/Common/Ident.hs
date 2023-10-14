@@ -8,15 +8,21 @@ import Prettyprinter
 import Prelude hiding (span)
 
 import Plato.Common.Error
+import Plato.Common.Fixity
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
 
 -- | Identifier
-data Ident = Ident {nameIdent :: Name, spanIdent :: Span, stamp :: Uniq}
+data Ident = Ident
+        { nameIdent :: Name
+        , spanIdent :: Span
+        , fixityIdent :: Fixity
+        , stamp :: Uniq
+        }
 
 instance Show Ident where
-        show (Ident name _ uniq) = show name ++ "_" ++ show uniq
+        show (Ident name _ _ uniq) = show name ++ "_" ++ show uniq
 
 instance Eq Ident where
         id1 == id2 = stamp id1 == stamp id2
@@ -34,7 +40,12 @@ prettyId :: Ident -> Doc ann
 prettyId id = pretty (nameIdent id) <> "_" <> pretty (stamp id)
 
 ident :: Located Name -> Uniq -> Ident
-ident (L sp x) u = Ident{nameIdent = x, spanIdent = sp, stamp = u}
+ident (L sp name) uniq =
+        Ident{nameIdent = name, spanIdent = sp, fixityIdent = identFixity, stamp = uniq}
+
+oper :: Located Name -> Uniq -> Ident
+oper (L sp name) uniq =
+        Ident{nameIdent = name, spanIdent = sp, fixityIdent = operFixity, stamp = uniq}
 
 fromIdent :: Ident -> Located Name
 fromIdent id = L (getLoc id) (nameIdent id)
@@ -42,7 +53,10 @@ fromIdent id = L (getLoc id) (nameIdent id)
 freshIdent :: (MonadReader e m, HasUniq e, MonadIO m) => Name -> m Ident
 freshIdent name = do
         uniq <- pickUniq =<< ask
-        return Ident{nameIdent = name, spanIdent = NoSpan, stamp = uniq}
+        return $ ident (noLoc name) uniq
+
+setFixity :: Ident -> Fixity -> Ident
+setFixity id fix = id{fixityIdent = fix}
 
 reassignUniq :: (MonadReader e m, HasUniq e, MonadIO m) => Ident -> m Ident
 reassignUniq id = do
@@ -52,7 +66,7 @@ reassignUniq id = do
 -- | Identifier Map
 type IdentMap a = M.Map Ident a
 
-lookupIdent :: MonadThrow m => Ident -> M.Map Ident a -> m a
+lookupIdent :: (MonadThrow m) => Ident -> M.Map Ident a -> m a
 lookupIdent id idmap = case M.lookup id idmap of
         Just val -> return val
         Nothing -> throwLocErr (spanIdent id) $ hsep ["Unknown identifier", squotes $ pretty id]
