@@ -26,7 +26,6 @@ library
   exposed-modules:
       Plato
       Plato.Common.Error
-      Plato.Common.Fixity
       Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Name
@@ -52,10 +51,11 @@ library
       Plato.Parsing.Layout
       Plato.Parsing.Lexer
       Plato.Parsing.Monad
+      Plato.Parsing.OpParser
+      Plato.Parsing.OpParser.Resolver
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
-      Plato.PsToTyp.Resolver
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
@@ -110,7 +110,6 @@ library
     , hslogger
     , mtl
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , text
     , transformers
@@ -146,7 +145,6 @@ executable plato
     , mtl
     , optparse-applicative
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , template-haskell
     , text
@@ -180,7 +178,6 @@ test-suite Plato-test
     , hspec-discover
     , mtl
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , text
     , transformers

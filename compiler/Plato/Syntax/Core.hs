@@ -73,7 +73,7 @@ instance PrettyWithContext Term where
                         backslash <> prettyId x <> colon <+> pretty' 1 ty <> dot <> softline <> pretty' 0 t
         pretty' p (App t1 t2) =
                 group $ hang 2 $ parenswPrec p 1 $ hsep [pretty' 1 t1, pretty' 2 t2]
-        pretty' _ (Pair t1 t2) = group $ hang 2 $ tupled $ map (pretty' 0) [t1, t2]
+        pretty' _ (Pair t1 t2) = tupled $ map (pretty' 0) [t1, t2]
         pretty' p (Split t (x, y) u) =
                 parenswPrec p 0 $ hang 2 $ group $ do
                         "split" <+> pretty' 0 t <+> "with" <+> tuple <+> arrow <> softline <> pretty' 0 u
@@ -90,5 +90,5 @@ instance PrettyWithContext Term where
         pretty' _ (Box t) = brackets $ pretty' 0 t
         pretty' p (Force t) = parenswPrec p 1 $ "!" <> pretty' 2 t
         pretty' p (Rec t) = parenswPrec p 1 $ "Rec" <+> pretty' 2 t
-        pretty' p (Fold t) = group $ hang 2 $ parenswPrec p 1 $ "fold" <+> pretty' 2 t
+        pretty' p (Fold t) = parenswPrec p 1 $ "fold" <+> pretty' 2 t
         pretty' p (Unfold t) = parenswPrec p 0 $ hang 2 $ hsep ["unfold", pretty' 2 t]

@@ -79,11 +79,11 @@ substExpr id exp body = subst' body
         subst' (VarE var)
                 | var == id = exp
                 | otherwise = VarE var
-        subst' (AppE fun arg) = AppE (subst' fun) (subst' arg)
-        subst' (AbsE var ty body) = AbsE var ty (subst' body)
+        subst' (AppE' fun arg) = AppE' (subst' fun) (subst' arg)
+        subst' (AbsE' var ty body) = AbsE' var ty (subst' body)
         subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
         subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetE bnds body) =
-                LetE (fmap (\(Bind idty exp) -> Bind idty (subst' exp)) bnds) (subst' body)
-        subst' (CaseE test ann_ty alts) =
-                CaseE (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
+        subst' (LetE' bnds body) =
+                LetE' (fmap (\(Bind' idty exp) -> Bind' idty (subst' exp)) bnds) (subst' <$> body)
+        subst' (CaseE' test ann_ty alts) =
+                CaseE' (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
