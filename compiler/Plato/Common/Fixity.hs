@@ -1,6 +1,6 @@
 module Plato.Common.Fixity where
 
-import Prettyprinter
+import Plato.Common.Pretty
 
 newtype FixPrec = FixPrec Int
         deriving (Eq, Ord)

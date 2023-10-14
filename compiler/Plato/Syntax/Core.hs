@@ -54,9 +54,6 @@ prettyArg (id, ty)
         | otherwise = parens $ hsep [prettyId id, colon, pretty' 0 ty]
 
 instance Pretty Term where
-        pretty = pretty' 0
-
-instance PrettyWithContext Term where
         pretty' _ (Var id) = prettyId id
         pretty' p (Let prog t) =
                 parenswPrec p 0 $ do

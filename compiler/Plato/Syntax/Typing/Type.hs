@@ -12,7 +12,7 @@ module Plato.Syntax.Typing.Type (
         prQuants,
 ) where
 
-import Data.IORef (IORef)
+import Data.IORef
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -91,9 +91,6 @@ prQuants [qnt] = prQuant qnt
 prQuants qnts = hsep $ map (parens . prQuant) qnts
 
 instance Pretty Type where
-        pretty = pretty' 0
-
-instance PrettyWithContext Type where
         pretty' _ (VarT tv) = pretty tv
         pretty' _ (ConT tc) = pretty tc
         pretty' p (ArrT arg res) = parenswPrec p 0 $ hsep [pretty' 1 arg, arrow, pretty res]

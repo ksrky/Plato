@@ -8,12 +8,12 @@ module Plato.PsToTyp.Scoping (
 import Control.Exception.Safe
 import Control.Monad.Reader.Class
 import Data.Map.Strict qualified as M
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Common.Pretty
 import Plato.PsToTyp.Utils
 
 type Scope = M.Map Name Ident

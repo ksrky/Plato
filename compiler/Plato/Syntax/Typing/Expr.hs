@@ -17,8 +17,6 @@ module Plato.Syntax.Typing.Expr (
         prClause,
 ) where
 
-import Data.Graph
-
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
@@ -78,16 +76,11 @@ deriving instance Show (Bind 'Typed)
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
+
 prClause :: Clause 'Untyped -> Doc ann
 prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 instance Pretty (Expr 'Untyped) where
-        pretty = pretty' 0
-
-instance Pretty (Expr 'Typed) where
-        pretty = pretty' 0
-
-instance PrettyWithContext (Expr 'Untyped) where
         pretty' _ (VarE var) = pretty var
         pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
         pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
@@ -106,7 +99,7 @@ instance PrettyWithContext (Expr 'Untyped) where
         pretty' _ (ClauseE clauses) =
                 hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]
 
-instance PrettyWithContext (Expr 'Typed) where
+instance Pretty (Expr 'Typed) where
         pretty' _ (VarE var) = pretty var
         pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
         pretty' p (AbsE var var_ty body) =
@@ -132,11 +125,3 @@ instance Pretty (Bind 'Untyped) where
 
 instance Pretty (Bind 'Typed) where
         pretty (Bind (id, ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]
-
-instance Pretty (SCC (Bind 'Untyped)) where
-        pretty (AcyclicSCC bnd) = pretty bnd
-        pretty (CyclicSCC bnds) = braces $ map pretty bnds `sepBy` semi
-
-instance Pretty (SCC (Bind 'Typed)) where
-        pretty (AcyclicSCC bnd) = pretty bnd
-        pretty (CyclicSCC bnds) = braces $ map pretty bnds `sepBy` semi

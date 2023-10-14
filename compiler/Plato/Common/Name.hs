@@ -2,7 +2,8 @@ module Plato.Common.Name where
 
 import Data.Map.Strict qualified as M
 import Data.Text qualified as T
-import Prettyprinter
+
+import Plato.Common.Pretty
 
 ----------------------------------------------------------------
 -- Name

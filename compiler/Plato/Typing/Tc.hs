@@ -11,11 +11,11 @@ import Control.Monad.Reader.Class (MonadReader (local), asks)
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
@@ -61,7 +61,7 @@ checkPat (L sp pat) exp_ty = tcPat pat exp_ty
                 (arg_tys, res_ty) <- instDataCon con
                 unless (length pats == length arg_tys) $ do
                         throwLocErr sp
-                                $ hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+                                $ hsep ["The constrcutor", squotes $ pretty con, "should have", pretty (length pats), "arguments"]
                 (pats', binds) <- checkPats pats arg_tys
                 instPatSigma_ res_ty exp_ty
                 return (L sp (ConP con pats'), binds)

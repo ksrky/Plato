@@ -17,11 +17,11 @@ module Plato.Typing.Env (
 
 import Control.Exception.Safe
 import Data.Map.Strict qualified as M
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 

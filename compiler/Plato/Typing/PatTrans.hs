@@ -8,11 +8,11 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
@@ -113,8 +113,8 @@ matchClause ::
         Clauses 'Typed ->
         m (LPat, Expr 'Typed)
 matchClause (con, _) _ [] =
-        throwError $
-                vsep
+        throwError
+                $ vsep
                         [ "Pattern matching is non-exhaustive."
                         , "Required constructor pattern: " <+> squotes (pretty con)
                         ] -- TODO: error message

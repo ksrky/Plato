@@ -12,9 +12,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
-import Prettyprinter
 
 import Plato.Common.Error
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Parsing.Error

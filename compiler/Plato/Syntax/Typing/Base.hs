@@ -2,9 +2,8 @@
 
 module Plato.Syntax.Typing.Base where
 
-import Prettyprinter
-
 import Plato.Common.Location
+import Plato.Common.Pretty
 
 data TcFlag = Typed | Untyped
 

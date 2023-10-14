@@ -4,9 +4,9 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Prettyprinter
 
 import Plato.Common.Error
+import Plato.Common.Pretty
 import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Eval
