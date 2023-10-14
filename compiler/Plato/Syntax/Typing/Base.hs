@@ -1,23 +1,20 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Plato.Syntax.Typing.Base where
 
-import Data.Graph
 import Prettyprinter
 
 import Plato.Common.Location
 
 data TcFlag = Typed | Untyped
 
-newtype RecBlock a = RecBlock (SCC a)
-        deriving (Eq, Show, Foldable, Functor, Traversable)
+data Block a = Mutrec [a] | Nonrec a
+        deriving (Eq, Show, Functor, Foldable, Traversable)
 
-mutrec :: [a] -> RecBlock a
-mutrec = RecBlock . CyclicSCC
+instance (HasLoc a) => HasLoc (Block a) where
+        getLoc (Mutrec bnds) = getLoc bnds
+        getLoc (Nonrec bnd) = getLoc bnd
 
-nonrec :: a -> RecBlock a
-nonrec = RecBlock . AcyclicSCC
-
-instance (HasLoc a) => HasLoc (RecBlock a) where
-        getLoc (RecBlock scc) = getLoc scc
-
-instance (Pretty a) => Pretty (RecBlock a) where
-        pretty (RecBlock scc) = vsep $ map pretty $ flattenSCC scc
+instance (Pretty a) => Pretty (Block a) where
+        pretty (Mutrec bnds) = vsep $ map pretty bnds
+        pretty (Nonrec bnd) = pretty bnd

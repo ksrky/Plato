@@ -16,7 +16,6 @@ module Plato.Typing.Env (
 ) where
 
 import Control.Exception.Safe
-import Data.Foldable qualified as Foldable
 import Data.Map.Strict qualified as M
 import Prettyprinter
 
@@ -45,7 +44,7 @@ instance HasTypEnv TypEnv where
 
 class EnvManager a where
         extend :: Ident -> a -> TypEnv -> TypEnv
-        extendList :: [(Ident, a)] -> TypEnv -> TypEnv
+        extendList :: (Foldable t) => t (Ident, a) -> TypEnv -> TypEnv
         find :: (MonadThrow m) => Ident -> TypEnv -> m a
         extendList l env = foldr (uncurry extend) env l
 
@@ -71,7 +70,7 @@ extendQuants :: Quants -> TypEnv -> TypEnv
 extendQuants qns = extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)
 
 extendBinds :: XBinds 'Typed -> TypEnv -> TypEnv
-extendBinds (RecBlock binds) = extendList $ map (\(Bind (id, ty) _) -> (id, ty)) (Foldable.toList binds)
+extendBinds binds = extendList $ fmap (\(Bind (id, ty) _) -> (id, ty)) binds
 
 envTypes :: TypEnv -> [Type]
 envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)

@@ -10,7 +10,7 @@ import Data.Graph
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Syntax.Typing
-import Plato.Syntax.Typing.Helper (splitConstrTy)
+import Plato.Syntax.Typing.Helper
 
 class Linearize a where
         linearize :: a -> Writer [Ident] a
@@ -50,12 +50,12 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
-linBinds :: RecBlock (XBind 'Untyped) -> Writer [Ident] [RecBlock (XBind 'Untyped)]
-linBinds (RecBlock (CyclicSCC bnds)) = do
+linBinds :: Block (XBind 'Untyped) -> Writer [Ident] [Block (XBind 'Untyped)]
+linBinds (Mutrec bnds) = do
         graph <- forM bnds $ \bnd@(L _ (Bind (par, _) _)) -> do
                 let (bnd', chs) = runWriter $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
-        return $ map RecBlock (stronglyConnComp graph)
+        return $ map sccToBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
@@ -64,11 +64,11 @@ instance Linearize (TypDefn 'Untyped) where
                 return $ DatDefn id kn qns ctors
 
 linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
-linDatDefns (RecBlock (CyclicSCC tdefs)) = do
+linDatDefns (Mutrec tdefs) = do
         graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
                 let (tdef', chs) = runWriter $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
-        return $ map RecBlock (stronglyConnComp graph)
+        return $ map sccToBlock (stronglyConnComp graph)
 linDatDefns nonrec = return [nonrec]
 
 linearizeTop :: Prog 'Untyped -> Prog 'Untyped

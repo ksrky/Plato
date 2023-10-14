@@ -7,7 +7,6 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Data.Foldable qualified as Foldable
 import Data.Tuple qualified as Tuple
 
 import Plato.Common.Error
@@ -32,19 +31,19 @@ typingDefns (ValDefn binds : rest) = do
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
-        let datty = map (\(DatDefn id kn _ _) -> (id, kn)) (Foldable.toList tdefs')
+        let datty = fmap (\(DatDefn id kn _ _) -> (id, kn)) tdefs'
             allctors = (`concatMap` tdefs') $ \(DatDefn _ _ qns ctors) ->
                 map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
             extconenv env =
                 foldr (\(DatDefn id _ qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
-        local (modifyTypEnv $ extendList allctors . extendList datty) $
-                local (modifyConEnv extconenv) $
-                        typingDefns rest
+        local (modifyTypEnv $ extendList allctors . extendList datty)
+                $ local (modifyConEnv extconenv)
+                $ typingDefns rest
 
 -----------------------------------------------------------
 -- typing
 -----------------------------------------------------------
-typing :: PlatoMonad m => Prog 'Untyped -> m (Prog 'Typed)
+typing :: (PlatoMonad m) => Prog 'Untyped -> m (Prog 'Typed)
 typing defs = catchErrors $ updateContext $ Tuple.swap <$> runWriterT (typingDefns defs)
 
 typingExpr ::

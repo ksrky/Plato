@@ -94,7 +94,7 @@ elabExpr (P.LetE ldecs body) = do
         local (extendScope ldecs') $ do
                 bnds <- elabLocDecls ldecs'
                 body' <- elabExpr `traverse` body
-                return $ T.LetE (T.mutrec bnds) body'
+                return $ T.LetE (T.Mutrec bnds) body'
 elabExpr (P.CaseE match alts) = do
         match' <- elabExpr `traverse` match
         alts' <- forM alts $ \(pat, body) -> do
@@ -215,7 +215,7 @@ elabTopDecls tdecs = do
                 mapM_ (checkNumArgs . unLoc) ldecs'
                 local (extendScope ldecs') $ do
                         binds <- elabLocDecls ldecs'
-                        asks (linearizeTop [T.TypDefn (T.mutrec tdefs), T.ValDefn (T.mutrec binds)],)
+                        asks (linearizeTop [T.TypDefn (T.Mutrec tdefs), T.ValDefn (T.Mutrec binds)],)
     where
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of

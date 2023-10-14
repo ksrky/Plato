@@ -29,7 +29,7 @@ type family XTypDefn (a :: TcFlag) where
         XTypDefn 'Untyped = Located (TypDefn 'Untyped)
         XTypDefn 'Typed = TypDefn 'Typed
 
-type XTypDefns (a :: TcFlag) = RecBlock (XTypDefn a)
+type XTypDefns (a :: TcFlag) = Block (XTypDefn a)
 
 data Defn (a :: TcFlag)
         = ValDefn (XValDefns a)

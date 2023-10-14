@@ -51,7 +51,7 @@ type family XBind (a :: TcFlag) where
         XBind 'Untyped = Located (Bind 'Untyped)
         XBind 'Typed = Bind 'Typed
 
-type XBinds (a :: TcFlag) = RecBlock (XBind a)
+type XBinds (a :: TcFlag) = Block (XBind a)
 
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a

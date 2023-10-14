@@ -22,7 +22,7 @@ instance (Zonking a, Zonking b) => Zonking (a, b) where
 instance (Zonking a) => Zonking [a] where
         zonk = mapM zonk
 
-instance (Zonking a) => Zonking (RecBlock a) where
+instance (Zonking a) => Zonking (Block a) where
         zonk = mapM zonk
 
 instance Zonking (Expr 'Typed) where

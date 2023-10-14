@@ -8,7 +8,6 @@ import Control.Exception.Safe (MonadCatch, MonadThrow, catches)
 import Control.Monad (forM, unless, void, zipWithM)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader.Class (MonadReader (local), asks)
-import Data.Graph
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
@@ -238,15 +237,15 @@ tcBinds ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         XBinds 'Untyped ->
         m (XBinds 'Typed)
-tcBinds (RecBlock (AcyclicSCC (L _ (Bind (id, Just ty) exp)))) = do
+tcBinds (Nonrec (L _ (Bind (id, Just ty) exp))) = do
         checkKindStar ty
         exp' <- checkSigma exp (unLoc ty)
-        return $ RecBlock $ AcyclicSCC $ Bind (id, unLoc ty) (unLoc exp')
-tcBinds (RecBlock ((AcyclicSCC (L _ (Bind (id, Nothing) exp))))) = do
+        return $ Nonrec $ Bind (id, unLoc ty) (unLoc exp')
+tcBinds (Nonrec (L _ (Bind (id, Nothing) exp))) = do
         (exp', sigma) <- inferSigma exp
         checkKindStar =<< zonk (noLoc sigma)
-        return $ RecBlock $ AcyclicSCC $ Bind (id, sigma) (unLoc exp')
-tcBinds (RecBlock (CyclicSCC bnds)) = do
+        return $ Nonrec $ Bind (id, sigma) (unLoc exp')
+tcBinds (Mutrec bnds) = do
         envbinds <- forM bnds $ \(L _ (Bind (id, mbty) _)) -> case mbty of
                 Just ty -> return (id, ty)
                 Nothing -> (id,) . noLoc <$> newTyVar
@@ -266,7 +265,7 @@ tcBinds (RecBlock (CyclicSCC bnds)) = do
                                 (qns, sigma) <- generalize ty
                                 checkKindStar =<< zonk (noLoc sigma)
                                 return $ Bind (id, sigma) (unCoer (genTrans qns) exp)
-                return $ RecBlock $ CyclicSCC bnds'
+                return $ Mutrec bnds'
 
 -- | Instantiation of Sigma
 instSigma :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Expected Rho -> m Coercion
