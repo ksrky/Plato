@@ -1,9 +1,7 @@
 module Plato.Syntax.Parsing.Expr where
 
-import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
-import Plato.Common.Name
 import Plato.Common.Pretty
 import Plato.Syntax.Parsing.Pat
 import Plato.Syntax.Parsing.Type
@@ -29,8 +27,13 @@ data Expr
 data LocDecl
         = FunSpecD Ident LType
         | FunBindD Ident [Clause]
-        | FixityD (Located Name) Fixity
+        | FixityD Ident Fixity
         deriving (Eq, Show)
+
+type FixPrec = Int
+data FixDir = Leftfix | Rightfix | Nonfix deriving (Eq, Show)
+
+data Fixity = Fixity FixPrec FixDir deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Pretty printing
@@ -73,4 +76,9 @@ instance Pretty LocDecl where
                         , "where"
                         , braces $ concatWith (surround $ semi <> space) (map prClause clauses)
                         ]
-        pretty (FixityD name (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty name]
+        pretty (FixityD id (Fixity prec dir)) = hsep [pretty dir, pretty prec, pretty id]
+
+instance Pretty FixDir where
+        pretty Leftfix = "infixl"
+        pretty Rightfix = "infixr"
+        pretty Nonfix = "infix"

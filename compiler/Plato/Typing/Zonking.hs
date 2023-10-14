@@ -5,43 +5,44 @@
 module Plato.Typing.Zonking (Zonking (..)) where
 
 import Control.Monad.IO.Class
+import Data.Graph
 
 import Plato.Common.Location
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 
 class Zonking a where
-        zonk :: (MonadIO m) => a -> m a
+        zonk :: MonadIO m => a -> m a
 
-instance (Zonking a) => Zonking (Located a) where
+instance Zonking a => Zonking (Located a) where
         zonk = traverse zonk
 
 instance (Zonking a, Zonking b) => Zonking (a, b) where
         zonk (a, b) = (,) <$> zonk a <*> zonk b
 
-instance (Zonking a) => Zonking [a] where
+instance Zonking a => Zonking [a] where
         zonk = mapM zonk
 
-instance (Zonking a) => Zonking (Block a) where
+instance Zonking a => Zonking (SCC a) where
         zonk = mapM zonk
 
 instance Zonking (Expr 'Typed) where
         zonk (VarE id) = return (VarE id)
-        zonk (AppE fun arg) = AppE <$> zonk fun <*> zonk arg
-        zonk (AbsE var ty body) = AbsE var <$> zonk ty <*> zonk body
+        zonk (AppE' fun arg) = AppE' <$> zonk fun <*> zonk arg
+        zonk (AbsE' var ty body) = AbsE' var <$> zonk ty <*> zonk body
         zonk (TAppE exp tys) = TAppE <$> zonk exp <*> mapM zonk tys
         zonk (TAbsE qnts body) = do
                 qnts' <- mapM (\(tv, kn) -> (tv,) <$> zonk kn) qnts
                 TAbsE qnts' <$> zonk body
-        zonk (LetE bnds body) = do
+        zonk (LetE' bnds body) = do
                 bnds' <- zonk bnds
                 body' <- zonk body
-                return $ LetE bnds' body'
-        zonk (CaseE test ann_ty alts) = do
+                return $ LetE' bnds' body'
+        zonk (CaseE' test ann_ty alts) = do
                 test' <- zonk test
                 ann_ty' <- zonk ann_ty
                 alts' <- mapM (\(p, e) -> (,) <$> mapM zonk p <*> zonk e) alts
-                return $ CaseE test' ann_ty' alts'
+                return $ CaseE' test' ann_ty' alts'
 
 instance Zonking Pat where
         zonk (TagP con args) = TagP con <$> mapM (\(arg, ty) -> (arg,) <$> zonk ty) args
@@ -79,11 +80,11 @@ instance Zonking Kind where
                                 return kn'
 
 instance Zonking (Bind 'Typed) where
-        zonk (Bind (id, ty) exp) = Bind <$> ((id,) <$> zonk ty) <*> zonk exp
+        zonk (Bind' (id, ty) exp) = Bind' <$> ((id,) <$> zonk ty) <*> zonk exp
 
 instance Zonking (TypDefn 'Typed) where
-        zonk (DatDefn id kn params constrs) =
-                DatDefn id
-                        <$> zonk kn
+        zonk (DatDefn' (id, kn) params constrs) =
+                DatDefn'
+                        <$> ((id,) <$> zonk kn)
                         <*> mapM (\(p, kn) -> (p,) <$> zonk kn) params
                         <*> mapM (\(con, ty) -> (con,) <$> zonk ty) constrs

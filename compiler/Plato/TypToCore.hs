@@ -10,6 +10,7 @@ import Control.Monad.Reader
 import Data.Foldable
 import GHC.Stack
 
+import Data.Graph
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -23,8 +24,8 @@ import Plato.Syntax.Typing.Helper
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 elabExpr (T.VarE id) = return $ C.Var id
-elabExpr (T.AppE fun arg) = C.App <$> elabExpr fun <*> elabExpr arg
-elabExpr (T.AbsE id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
+elabExpr (T.AppE' fun arg) = C.App <$> elabExpr fun <*> elabExpr arg
+elabExpr (T.AbsE' id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
 elabExpr (T.TAppE fun tyargs) = do
         t <- elabExpr fun
         tys <- mapM elabType tyargs
@@ -32,8 +33,8 @@ elabExpr (T.TAppE fun tyargs) = do
 elabExpr (T.TAbsE qnts exp) = do
         t <- elabExpr exp
         foldrM (\qn t -> C.Lam <$> elabQuant qn <*> pure t) t qnts
-elabExpr (T.LetE bnds body) = C.Let <$> elabBinds bnds <*> elabExpr body
-elabExpr (T.CaseE test _ alts) = do
+elabExpr (T.LetE' bnds body) = C.Let <$> elabBinds bnds <*> elabExpr (unLoc body)
+elabExpr (T.CaseE' test _ alts) = do
         idX <- freshIdent $ genName "x"
         idY <- freshIdent $ genName "y"
         alts' <- forM alts $ \(pat, exp) -> do
@@ -76,7 +77,7 @@ elabTypDefn ::
         (MonadReader e m, HasUniq e, MonadIO m) =>
         T.TypDefn 'T.Typed ->
         m [C.Entry]
-elabTypDefn (T.DatDefn id _ params constrs) = do
+elabTypDefn (T.DatDefn' (id, _) params constrs) = do
         def <- C.Defn id <$> dataDefn
         conds <- (++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs
         return $ def : conds
@@ -107,20 +108,20 @@ elabTypDefn (T.DatDefn id _ params constrs) = do
                         return $ C.Pair (C.Label (nameIdent con)) (C.Fold $ foldl1 (flip C.Pair) (map C.Var args))
                 C.Defn con <$> walk [] (T.AllT params ty)
 
-elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => T.Block (T.Bind 'T.Typed) -> m [C.Entry]
+elabBinds :: (MonadReader e m, HasUniq e, MonadIO m) => SCC (T.Bind 'T.Typed) -> m [C.Entry]
 elabBinds bnds = do
-        decs <- forM bnds $ \(T.Bind (id, ty) _) -> C.Decl id <$> elabType ty
-        defs <- forM bnds $ \(T.Bind (id, _) exp) -> C.Defn id <$> elabExpr exp
+        decs <- forM bnds $ \(T.Bind' (id, ty) _) -> C.Decl id <$> elabType ty
+        defs <- forM bnds $ \(T.Bind' (id, _) exp) -> C.Defn id <$> elabExpr exp
         return $ toList decs ++ toList defs
 
 elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
 elabDefn (T.TypDefn tdefs) = do
-        decs <- forM tdefs $ \(T.DatDefn id kn _ _) -> C.Decl id <$> elabKind kn
+        decs <- forM tdefs $ \(T.DatDefn' (id, kn) _ _) -> C.Decl id <$> elabKind kn
         defs <- concat <$> mapM elabTypDefn tdefs
         return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
-typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
+typToCore :: PlatoMonad m => T.Prog 'T.Typed -> m [C.Entry]
 typToCore decs = runReaderT (concat <$> mapM elabDefn decs) =<< getUniq =<< ask
 
 typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.LExpr 'T.Typed -> m C.Term

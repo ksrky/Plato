@@ -25,7 +25,7 @@ import Plato.Typing
 runPlato :: FilePath -> Session -> IO ()
 runPlato filepath = void . unPlato (compileToCore filepath)
 
-compileToCore :: (PlatoMonad m) => FilePath -> m Prog
+compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = catchErrors $ do
         pssyn <- parseFile src
         whenFlagOn FPrintParsed $ liftIO $ printList pssyn
@@ -37,7 +37,7 @@ compileToCore src = catchErrors $ do
         whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 
-evaluateCore :: forall m. (PlatoMonad m) => T.Text -> Interactive m ()
+evaluateCore :: forall m. PlatoMonad m => T.Text -> Interactive m ()
 evaluateCore inp = catchErrors $ evalCore =<< lift (compExpr =<< getContext =<< ask)
     where
         compExpr :: Context -> m Term

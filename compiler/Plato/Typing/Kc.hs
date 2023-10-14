@@ -4,8 +4,11 @@
 module Plato.Typing.Kc (checkKindStar, inferKind, checkKind, kcTypDefns) where
 
 import Control.Exception.Safe
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
+import Data.Foldable qualified as Foldable
+import Data.Graph
 import GHC.Stack
 
 import Plato.Common.Location
@@ -60,25 +63,20 @@ checkKind (L sp ty) exp_kn = case ty of
 
 kcTypDefn ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
-        XTypDefn 'Untyped ->
-        m (XTypDefn 'Typed)
-kcTypDefn (L _ (DatDefn id _ params constrs)) = do
+        TypDefn 'Untyped ->
+        m (TypDefn 'Typed)
+kcTypDefn (DatDefn id params constrs) = do
         let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
         kn <- find id =<< asks getTypEnv
-        return $ DatDefn id kn params constrs
+        return $ DatDefn' (id, kn) params constrs
 
 kcTypDefns ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
-        XTypDefns 'Untyped ->
-        m (XTypDefns 'Typed)
-kcTypDefns (Nonrec tdef) = do
-        let DatDefn id _ params _ = unLoc tdef
-        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
-        local (modifyTypEnv $ extend id kn) $ Nonrec <$> kcTypDefn tdef
-kcTypDefns (Mutrec tdefs) = do
-        let envbinds =
-                (`fmap` tdefs) $ \(L _ (DatDefn id _ params _)) ->
-                        (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
-        local (modifyTypEnv $ extendList envbinds) $ do
-                Mutrec <$> mapM kcTypDefn tdefs
+        SCC (TypDefn 'Untyped) ->
+        m (SCC (TypDefn 'Typed))
+kcTypDefns tdefs = do
+        envbinds <-
+                forM (Foldable.toList tdefs) $ \(DatDefn id params _) ->
+                        return (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
+        local (modifyTypEnv $ extendList envbinds) $ mapM kcTypDefn tdefs
