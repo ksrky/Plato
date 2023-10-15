@@ -53,7 +53,7 @@ instance Linearize (Bind 'Untyped) where
 linBinds :: Block (XBind 'Untyped) -> Writer [Ident] [Block (XBind 'Untyped)]
 linBinds (Mutrec bnds) = do
         graph <- forM bnds $ \bnd@(L _ (Bind (par, _) _)) -> do
-                let (bnd', chs) = runWriter $ linearize bnd
+                (bnd', chs) <- listen $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
         return $ map sccToBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
@@ -66,7 +66,7 @@ instance Linearize (TypDefn 'Untyped) where
 linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
 linDatDefns (Mutrec tdefs) = do
         graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
-                let (tdef', chs) = runWriter $ linearize tdef
+                (tdef', chs) <- listen $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
         return $ map sccToBlock (stronglyConnComp graph)
 linDatDefns nonrec = return [nonrec]
