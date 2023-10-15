@@ -37,7 +37,7 @@ compileToCore src = catchErrors $ do
         whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 
-evaluateCore :: forall m. PlatoMonad m => T.Text -> Interactive m ()
+evaluateCore :: forall m. (PlatoMonad m) => T.Text -> Interactive m ()
 evaluateCore inp = catchErrors $ evalCore =<< lift (compExpr =<< getContext =<< ask)
     where
         compExpr :: Context -> m Term
