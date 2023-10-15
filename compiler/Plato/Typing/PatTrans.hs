@@ -28,17 +28,17 @@ transClauses ::
 transClauses tys clauses = do
         vars <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
         exp <- match vars clauses
-        return $ foldr (uncurry AbsE') exp vars
+        return $ foldr (uncurry AbsE) exp vars
 
 transCase ::
         (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         Expr 'Typed ->
         m (Expr 'Typed)
-transCase (CaseE' exp ty alts) = do
+transCase (CaseE exp ty alts) = do
         var <- labelVarId "cv"
         let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
         altsexp <- match [(var, ty)] clauses
-        return $ AppE' (AbsE' var ty altsexp) exp
+        return $ AppE (AbsE var ty altsexp) exp
 transCase _ = unreachable "Expected type-checked case expression"
 
 constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
@@ -68,7 +68,7 @@ match ::
         [(Ident, Type)] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
-match [(var, ty)] [] = return (CaseE' (VarE var) ty [])
+match [(var, ty)] [] = return (CaseE (VarE var) ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
 match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
@@ -101,7 +101,7 @@ matchCon ::
 matchCon (var, ty) rest clauses = do
         constrs <- constructors ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ CaseE' (VarE var) ty alts
+        return $ CaseE (VarE var) ty alts
 
 choose :: Ident -> Clauses 'Typed -> Clauses 'Typed
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
@@ -123,7 +123,7 @@ matchClause (con, arg_tys) vts clauses = do
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
-                        let con_exp = foldl AppE' (VarE con) (map VarE args)
+                        let con_exp = foldl AppE (VarE con) (map VarE args)
                             dummy_pats = map (const $ noLoc WildP) arg_tys
                         return (dummy_pats ++ ps', substExpr v con_exp e)
                 (L _ WildP : ps', e) -> do

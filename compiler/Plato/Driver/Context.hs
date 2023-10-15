@@ -4,14 +4,12 @@ import Control.Monad.IO.Class
 import Data.IORef
 
 import Plato.Common.Uniq
-import Plato.Parsing.OpParser
 import Plato.PsToTyp.Scoping
 import Plato.Syntax.Core
 import Plato.Typing.Env
 
 data Context = Context
         { ctx_uniq :: !(IORef Uniq)
-        , ctx_fixityEnv :: !FixityEnv
         , ctx_scope :: !Scope
         , ctx_typEnv :: !TypEnv
         , ctx_conEnv :: !ConEnv
@@ -24,7 +22,6 @@ initContext = do
         return $
                 Context
                         { ctx_uniq = uref
-                        , ctx_fixityEnv = mempty
                         , ctx_scope = mempty
                         , ctx_typEnv = mempty
                         , ctx_conEnv = mempty
@@ -34,10 +31,6 @@ initContext = do
 instance HasUniq Context where
         getUniq = return . ctx_uniq
         setUniq uniq ctx = liftIO $ writeIORef (ctx_uniq ctx) uniq
-
-instance HasFixityEnv Context where
-        getFixityEnv = ctx_fixityEnv
-        modifyFixityEnv f ctx = ctx{ctx_fixityEnv = f (ctx_fixityEnv ctx)}
 
 instance HasScope Context where
         getScope = ctx_scope
