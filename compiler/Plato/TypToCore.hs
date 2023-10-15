@@ -76,7 +76,7 @@ elabTypDefn ::
         (MonadReader e m, HasUniq e, MonadIO m) =>
         T.TypDefn 'T.Typed ->
         m [C.Entry]
-elabTypDefn (T.DatDefn id _ params constrs) = do
+elabTypDefn (T.DatDefn id params constrs) = do
         def <- C.Defn id <$> dataDefn
         conds <- (++) <$> mapM constrDecl constrs <*> mapM constrDefn constrs
         return $ def : conds
@@ -115,7 +115,7 @@ elabBinds bnds = do
 
 elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
 elabDefn (T.TypDefn tdefs) = do
-        decs <- forM tdefs $ \(T.DatDefn id kn _ _) -> C.Decl id <$> elabKind kn
+        decs <- forM tdefs $ \(T.DatDefn id params _) -> C.Decl id <$> elabKind (dataSignat params)
         defs <- concat <$> mapM elabTypDefn tdefs
         return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds

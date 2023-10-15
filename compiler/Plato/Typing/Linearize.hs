@@ -59,13 +59,13 @@ linBinds (Mutrec bnds) = do
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id kn qns ctors) = do
+        linearize (DatDefn id qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
-                return $ DatDefn id kn qns ctors
+                return $ DatDefn id qns ctors
 
 linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
 linDatDefns (Mutrec tdefs) = do
-        graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
+        graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _)) -> do
                 (tdef', chs) <- listen $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
         return $ map sccToBlock (stronglyConnComp graph)

@@ -39,7 +39,7 @@ type Alt (a :: TcFlag) = (LPat, XExpr a)
 type Clauses (a :: TcFlag) = [Clause a]
 type Alts (a :: TcFlag) = [Alt a]
 
-type family Annot (b :: TcFlag) where
+type family Annot (a :: TcFlag) where
         Annot 'Untyped = Maybe LType
         Annot 'Typed = Type
 

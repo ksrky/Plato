@@ -206,7 +206,7 @@ elabDataDecl (L sp (P.DataD id params ctors)) = do
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
         ctors' <- local (extendScope params) $ forM ctors $ \(con, ty) ->
                 (con,) <$> elabType `traverse` ty
-        return $ L sp (T.DatDefn id () qnts ctors')
+        return $ L sp (T.DatDefn id  qnts ctors')
 elabDataDecl _ = unreachable "data type definition required"
 
 elabTopDecls ::

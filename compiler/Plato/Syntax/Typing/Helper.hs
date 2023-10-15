@@ -64,10 +64,13 @@ writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
 
 splitConstrTy :: Rho -> ([Sigma], Tau)
 splitConstrTy = go []
-  where
-    go :: [Sigma] -> Rho -> ([Sigma], Tau)
-    go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
-    go acc tau = (reverse acc, tau)
+ where
+  go :: [Sigma] -> Rho -> ([Sigma], Tau)
+  go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
+  go acc tau = (reverse acc, tau)
+
+dataSignat :: Quants -> Kind
+dataSignat = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK
 
 sccToBlock :: SCC a -> Block a
 sccToBlock (AcyclicSCC x) = Nonrec x

@@ -62,23 +62,20 @@ kcTypDefn ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         XTypDefn 'Untyped ->
         m (XTypDefn 'Typed)
-kcTypDefn (L _ (DatDefn id _ params constrs)) = do
+kcTypDefn (L _ (DatDefn id params constrs)) = do
         let extenv = extendList $ map (\(tv, kn) -> (unTyVar tv, kn)) params
         local (modifyTypEnv extenv) $ mapM_ (checkKindStar . snd) constrs
-        kn <- find id =<< asks getTypEnv
-        return $ DatDefn id kn params constrs
+        return $ DatDefn id params constrs
 
 kcTypDefns ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         XTypDefns 'Untyped ->
         m (XTypDefns 'Typed)
 kcTypDefns (Nonrec tdef) = do
-        let DatDefn id _ params _ = unLoc tdef
-        let kn = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params
+        let DatDefn id params _ = unLoc tdef
+        let kn = dataSignat params
         local (modifyTypEnv $ extend id kn) $ Nonrec <$> kcTypDefn tdef
 kcTypDefns (Mutrec tdefs) = do
-        let envbinds =
-                (`fmap` tdefs) $ \(L _ (DatDefn id _ params _)) ->
-                        (id, foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK params)
+        let envbinds = (`fmap` tdefs) $ \(L _ (DatDefn id params _)) -> (id, dataSignat params)
         local (modifyTypEnv $ extendList envbinds) $ do
                 Mutrec <$> mapM kcTypDefn tdefs

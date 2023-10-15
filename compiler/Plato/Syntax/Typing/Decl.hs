@@ -11,19 +11,14 @@ import Plato.Common.Location
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Expr
-import Plato.Syntax.Typing.Kind
 import Plato.Syntax.Typing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
-type family AnnotKn (a :: TcFlag) where
-        AnnotKn 'Untyped = ()
-        AnnotKn 'Typed = Kind
-
 type XValDefns (a :: TcFlag) = XBinds a
 
-data TypDefn (a :: TcFlag) = DatDefn Ident (AnnotKn a) Quants [(Ident, LType)]
+data TypDefn (a :: TcFlag) = DatDefn Ident Quants [(Ident, LType)]
 
 type family XTypDefn (a :: TcFlag) where
         XTypDefn 'Untyped = Located (TypDefn 'Untyped)
@@ -59,7 +54,7 @@ instance Pretty (Defn 'Typed) where
         pretty (TypDefn tdefs) = indent 2 $ vsep $ toList $ fmap pretty tdefs
 
 instance Pretty (TypDefn a) where
-        pretty (DatDefn id _ params constrs) =
+        pretty (DatDefn id params constrs) =
                 hsep
                         [ "data"
                         , hsep (pretty id : map (parens . prQuant) params)

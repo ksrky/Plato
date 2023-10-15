@@ -14,6 +14,7 @@ import Plato.Common.Location
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Kc
 import Plato.Typing.Tc
@@ -31,12 +32,12 @@ typingDefns (ValDefn binds : rest) = do
 typingDefns (TypDefn tdefs : rest) = do
         tdefs' <- zonk =<< kcTypDefns tdefs
         tell [TypDefn tdefs']
-        let datty = fmap (\(DatDefn id kn _ _) -> (id, kn)) tdefs'
-            allctors = (`concatMap` tdefs') $ \(DatDefn _ _ qns ctors) ->
+        let datasig = fmap (\(DatDefn id params _) -> (id, dataSignat params)) tdefs'
+            allctors = (`concatMap` tdefs') $ \(DatDefn _ qns ctors) ->
                 map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
             extconenv env =
-                foldr (\(DatDefn id _ qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
-        local (modifyTypEnv $ extendList allctors . extendList datty)
+                foldr (\(DatDefn id qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
+        local (modifyTypEnv $ extendList allctors . extendList datasig)
                 $ local (modifyConEnv extconenv)
                 $ typingDefns rest
 
