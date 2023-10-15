@@ -31,6 +31,7 @@ data NameSpace
         | ConName
         | TyvarName
         | TyconName
+        | ModName
         | GenName
         deriving (Eq, Ord, Show)
 
@@ -46,6 +47,9 @@ tyvarName = Name TyvarName
 tyconName :: T.Text -> Name
 tyconName = Name TyconName
 
+modName :: T.Text -> Name
+modName = Name ModName
+
 genName :: T.Text -> Name
 genName = Name GenName
 
@@ -60,6 +64,9 @@ str2tyvarName = tyvarName . T.pack
 
 str2tyconName :: String -> Name
 str2tyconName = tyconName . T.pack
+
+str2modName :: String -> Name
+str2modName = modName . T.pack
 
 str2genName :: String -> Name
 str2genName = genName . T.pack

@@ -30,6 +30,7 @@ library
       Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Name
+      Plato.Common.Path
       Plato.Common.Pretty
       Plato.Common.Uniq
       Plato.Core.Closure
