@@ -70,12 +70,12 @@ instance Pretty Term where
                         backslash <> prettyId x <> colon <+> pretty' 1 ty <> dot <> softline <> pretty' 0 t
         pretty' p (App t1 t2) =
                 group $ hang 2 $ parenswPrec p 1 $ hsep [pretty' 1 t1, pretty' 2 t2]
-        pretty' _ (Pair t1 t2) = group $ hang 2 $ tupled $ map (pretty' 0) [t1, t2]
+        pretty' _ (Pair t1 t2) = align $ tupled $ map (pretty' 0) [t1, t2]
         pretty' p (Split t (x, y) u) =
                 parenswPrec p 0 $ hang 2 $ group $ do
-                        "split" <+> pretty' 0 t <+> "with" <+> tuple <+> arrow <> softline <> pretty' 0 u
+                        "split" <+> pretty' 0 t <+> "with" <+> tup <+> arrow <> softline <> pretty' 0 u
             where
-                tuple = parens $ prettyId x <> comma <+> prettyId y
+                tup = tupled [prettyId x, prettyId y]
         pretty' _ (Enum labs) = braces $ map pretty labs `sepBy` comma
         pretty' _ (Label lab) = "`" <> pretty lab
         pretty' p (Case t lts) =

@@ -32,7 +32,7 @@ scoping :: (MonadReader e m, HasScope e, MonadThrow m) => Ident -> m Ident
 scoping id = do
         sc <- asks getScope
         case M.lookup (nameIdent id) sc of
-                Just id' -> return id{stamp = stamp id'} --  return id'
+                Just id' -> return id{fixityIdent = fixityIdent id', stamp = stamp id'} --  return id'
                 Nothing -> throwLocErr (getLoc id) $ hsep ["Not in scope", squotes $ pretty id]
 
 extendScope :: (HasDomain a, HasScope e) => a -> e -> e

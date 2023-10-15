@@ -71,9 +71,15 @@ $ plato examples/fibonacci.pla -i libraries/base
 >> :q
 $ plato examples/quick_sort.pla -i libraries/base
 >> qsort (S (S Z) :: Z :: S Z :: S (S (S Z)) :: Nil)
-(`::, fold ((`Z, `unit), (`::, fold ((`S, fold (`Z, `unit)), (`::, 
-fold ((`S, fold (`S, fold (`Z, `unit))), (`::, fold ((`S, fold (`S, 
-fold (`S, fold (`Z, `unit)))), (`Nil, `unit)))))))))
+( `::
+, fold ( (`Z, `unit)
+       , ( `::
+         , fold ( (`S, fold (`Z, `unit))
+                , ( `::
+                  , fold ( (`S, fold (`S, fold (`Z, `unit)))
+                         , ( `::
+                           , fold ( (`S, fold (`S, fold (`S, fold (`Z, `unit))))
+                                  , (`Nil, `unit) ) ) ) ) ) ) ) )
 ```
 
 `-i` option appends a colon-separated list of dirs to the search path. All the files under the search path are compiled before compiling the main files.

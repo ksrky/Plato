@@ -109,7 +109,6 @@ library
     , hslogger
     , mtl
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , text
     , transformers
@@ -145,7 +144,6 @@ executable plato
     , mtl
     , optparse-applicative
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , template-haskell
     , text
@@ -179,7 +177,6 @@ test-suite Plato-test
     , hspec-discover
     , mtl
     , prettyprinter
-    , recursion-schemes
     , safe-exceptions
     , text
     , transformers

@@ -195,6 +195,20 @@ elabClause (pats, exp) = do
         exp' <- local (extendScope pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
+elabDataDecl ::
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+        P.LTopDecl ->
+        m (T.XTypDefn 'T.Untyped)
+elabDataDecl (L sp (P.DataD id params ctors)) = do
+        argNamesUnique params
+        dataConUnique $ map fst ctors
+        mapM_ (dataConType id) ctors
+        qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
+        ctors' <- local (extendScope params) $ forM ctors $ \(con, ty) ->
+                (con,) <$> elabType `traverse` ty
+        return $ L sp (T.DatDefn id () qnts ctors')
+elabDataDecl _ = unreachable "data type definition required"
+
 elabTopDecls ::
         (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         [P.LTopDecl] ->
@@ -208,26 +222,16 @@ elabTopDecls tdecs = do
                         binds <- elabLocDecls ldecs'
                         asks (linearizeTop [T.TypDefn (T.Mutrec tdefs), T.ValDefn (T.Mutrec binds)],)
     where
+        fixities = [(name, fix) | L _ (P.LocalD (P.FixityD (L _ name) fix)) <- tdecs]
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
-                L _ P.DataD{} -> tell ([dec], [])
+                L sp (P.DataD id params ctors) -> do
+                        ctors' <- forM ctors $ \(con, ty) -> do
+                                let con' = maybe con (setFixity con) (lookup (nameIdent con) fixities)
+                                return (con', ty)
+                        tell ([L sp (P.DataD id params ctors')], [])
                 L sp (P.LocalD ld) -> tell ([], [L sp ld])
         (tdecs', ldecs) = groupDecl tdecs
-        fixs = [(name, fix) | L _ (P.FixityD (L _ name) fix) <- ldecs]
-        elabDataDecl ::
-                (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
-                P.LTopDecl ->
-                m (T.XTypDefn 'T.Untyped)
-        elabDataDecl (L sp (P.DataD id params ctors)) = do
-                argNamesUnique params
-                dataConUnique $ map fst ctors
-                mapM_ (dataConType id) ctors
-                qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
-                ctors' <- local (extendScope params) $ forM ctors $ \(con, ty) -> do
-                        let con' = maybe con (setFixity con) (lookup (nameIdent con) fixs)
-                        (con',) <$> elabType `traverse` ty
-                return $ L sp (T.DatDefn id () qnts ctors')
-        elabDataDecl _ = unreachable "data type definition required"
 
 -----------------------------------------------------------
 -- psToTyp

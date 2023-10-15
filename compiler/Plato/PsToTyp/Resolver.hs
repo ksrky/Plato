@@ -10,7 +10,11 @@ import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
 
-data Tok a = TTerm a | TOp Ident deriving (Eq, Show)
+data Tok a = TTerm a | TOp Ident deriving (Eq)
+
+instance (Show a) => Show (Tok a) where
+        show (TTerm tm) = show tm
+        show (TOp Ident{fixityIdent = fix}) = show fix
 
 instance (HasLoc a) => HasLoc (Tok a) where
         getLoc (TTerm tm) = getLoc tm
@@ -35,7 +39,7 @@ parseTok elab toks = do
         parseOp _ result [] = return (result, [])
         parseOp lfix@(Fixity lprec ldir) lhs (tokop@(TOp op) : rest)
                 | lprec == prec && (ldir /= dir || ldir == Nonfix) =
-                        throwLocErr (getLoc lhs <> getLoc tokop) "Error at parsing infix expression"
+                        throwLocErr (getLoc lhs <> getLoc op) "Error at parsing infix expression"
                 | lprec > prec || (lprec == prec && ldir == Leftfix) = return (lhs, tokop : rest)
                 | otherwise = do
                         (rhs, rest') <- parseTerm (fixityIdent op) rest
