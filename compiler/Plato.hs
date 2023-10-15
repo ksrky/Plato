@@ -25,7 +25,7 @@ import Plato.Typing
 runPlato :: FilePath -> Session -> IO ()
 runPlato filepath = void . unPlato (compileToCore filepath)
 
-compileToCore :: (PlatoMonad m) => FilePath -> m Prog
+compileToCore :: PlatoMonad m => FilePath -> m Prog
 compileToCore src = catchErrors $ do
         pssyn <- parseFile src
         whenFlagOn FPrintParsed $ liftIO $ printList pssyn

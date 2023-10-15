@@ -16,6 +16,8 @@ module Plato.Typing.Env (
 ) where
 
 import Control.Exception.Safe
+import Data.Foldable qualified as Foldable
+import Data.Graph
 import Data.Map.Strict qualified as M
 
 import Plato.Common.Error
@@ -44,11 +46,11 @@ instance HasTypEnv TypEnv where
 
 class EnvManager a where
         extend :: Ident -> a -> TypEnv -> TypEnv
-        extendList :: (Foldable t) => t (Ident, a) -> TypEnv -> TypEnv
-        find :: (MonadThrow m) => Ident -> TypEnv -> m a
+        extendList :: [(Ident, a)] -> TypEnv -> TypEnv
+        find :: MonadThrow m => Ident -> TypEnv -> m a
         extendList l env = foldr (uncurry extend) env l
 
-instance (EnvManager a) => EnvManager (Located a) where
+instance EnvManager a => EnvManager (Located a) where
         extend id x = extend id (unLoc x)
         find = ((noLoc <$>) .) . find
 
@@ -69,8 +71,8 @@ instance EnvManager Kind where
 extendQuants :: Quants -> TypEnv -> TypEnv
 extendQuants qns = extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)
 
-extendBinds :: XBinds 'Typed -> TypEnv -> TypEnv
-extendBinds binds = extendList $ fmap (\(Bind (id, ty) _) -> (id, ty)) binds
+extendBinds :: SCC (Bind 'Typed) -> TypEnv -> TypEnv
+extendBinds binds = extendList $ map (\(Bind' (id, ty) _) -> (id, ty)) (Foldable.toList binds)
 
 envTypes :: TypEnv -> [Type]
 envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)
@@ -93,7 +95,7 @@ instance HasConEnv ConEnv where
         getConEnv = id
         modifyConEnv = id
 
-extendConstrs :: (HasConEnv e) => Ident -> [TyVar] -> [(Ident, LType)] -> e -> e
+extendConstrs :: HasConEnv env => Ident -> [TyVar] -> [(Ident, LType)] -> env -> env
 extendConstrs id params constrs = modifyConEnv $ M.insert id (params, constrs')
     where
         constrs' = map (\(con, ty) -> (con, fst $ splitConstrTy (unLoc ty))) constrs

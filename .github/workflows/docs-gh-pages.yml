@@ -26,5 +26,8 @@ jobs:
           pip install -r requirements.txt
       - name: Build MkDocs
         run: mkdocs build --config-file en/mkdocs.yml
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --config-file en/mkdocs.yml
+      - name: Deploy MkDocs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+           github_token: ${{ secrets.GITHUB_TOKEN }}
+           publish_dir: site/en

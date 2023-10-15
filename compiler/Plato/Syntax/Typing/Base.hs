@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Plato.Syntax.Typing.Base where
 
 import Plato.Common.Location
