@@ -25,13 +25,11 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.IORef
 import Data.Maybe
-import Data.Set qualified as S
 import System.FilePath
 
 import Plato.Common.Uniq
 import Plato.Driver.Context
 import Plato.Driver.Flag
-import Plato.Driver.Import
 import Plato.Driver.Info
 import Plato.Driver.Logger
 
@@ -43,7 +41,6 @@ data PlatoEnv = PlatoEnv
         , plt_libraryPaths :: ![FilePath]
         , plt_logPath :: !FilePath
         , plt_context :: !Context
-        , plt_imported :: !Imported
         , plt_flags :: [Flag]
         }
 
@@ -56,7 +53,6 @@ initPlatoEnv = do
                         , plt_libraryPaths = []
                         , plt_logPath = ""
                         , plt_context = ctx
-                        , plt_imported = S.empty
                         , plt_flags = []
                         }
 
@@ -102,14 +98,6 @@ instance HasInfo Session where
                                 , plt_logPath = fromMaybe entryPath logPath
                                 }
                 liftIO $ writeIORef ref env'
-
-instance HasImported Session where
-        getImported (Session ref) = do
-                env <- liftIO $ readIORef ref
-                return $ plt_imported env
-        setImported impedSet (Session ref) = do
-                env <- liftIO $ readIORef ref
-                liftIO $ writeIORef ref env{plt_imported = impedSet}
 
 instance HasFlags Session where
         getFlags (Session ref) = do
