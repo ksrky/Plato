@@ -149,15 +149,21 @@ elabLocDecls ::
         [P.LLocDecl] ->
         m [T.XBind 'T.Untyped]
 elabLocDecls ldecs = do
-        (bnds, spcs) <- execWriterT $ forM ldecs $ \case
-                L _ (P.FunSpecD id ty) -> do
-                        id' <- scoping id
-                        ty' <- lift $ elabType `traverse` ty
-                        tell ([], [(id', ty')])
-                L _ (P.FunBindD id cls) -> do
-                        cls' <- lift $ mapM elabClause cls
-                        tell ([(id, L (getLoc cls') (T.ClauseE cls'))], [])
-                L _ P.FixityD{} -> tell ([], [])
+        bnds <-
+                sequence
+                        [ do
+                                cls' <- mapM elabClause cls
+                                return (id, L (getLoc cls') (T.ClauseE cls'))
+                        | L _ (P.FunBindD id cls) <- ldecs
+                        ]
+        spcs <-
+                sequence
+                        [ do
+                                id' <- scoping id
+                                ty' <- elabType `traverse` ty
+                                return (id', ty')
+                        | L _ (P.FunSpecD id ty) <- ldecs
+                        ]
         forM bnds $ \(id, exp) -> case lookup id spcs of
                 Just ty -> return $ sL id exp (T.Bind (id, Just ty) exp)
                 _ -> return $ sL id exp (T.Bind (id, Nothing) exp)
@@ -170,9 +176,9 @@ assembleClauses ldecs = assemble $ partition ldecs
         assemble [] = []
         assemble (bnds@(L _ (P.FunBindD id _) : _) : rest) = do
                 let clses = [(psi, ei) | L _ (P.FunBindD _ [(psi, ei)]) <- bnds]
-                    spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
+                    sp = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
                     id' = maybe id (setFixity id) (lookup (nameIdent id) fixities)
-                L spn (P.FunBindD id' clses) : assemble rest
+                L sp (P.FunBindD id' clses) : assemble rest
         assemble (ldecs : rest) = ldecs ++ assemble rest
         partition :: [P.LLocDecl] -> [[P.LLocDecl]]
         partition =
