@@ -137,9 +137,14 @@ fundecl     :: { [LLocDecl] }
 
 -- | Fixity declaration
 fixdecl     :: { LLocDecl }
-            : 'infix' digit op                      { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Nonfix)) }
-            | 'infixl' digit op                     { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Leftfix)) }
-            | 'infixr' digit op                     { sL $1 $3 (FixityD (fromIdent $3) (Fixity (FixPrec (unLoc $2)) Rightfix)) }
+            : 'infix' digit opname                  { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Nonfix)) }
+            | 'infixl' digit opname                 { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Leftfix)) }
+            | 'infixr' digit opname                 { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Rightfix)) }
+
+opname      :: { Located Name }
+            : varop                                 { fromIdent $1 }
+            | conop                                 { fromIdent $1 }
+            | 'data' tyconop                        { fromIdent $2 }
 
 -----------------------------------------------------------
 -- Types

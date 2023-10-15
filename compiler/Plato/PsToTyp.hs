@@ -206,7 +206,7 @@ elabDataDecl (L sp (P.DataD id params ctors)) = do
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
         ctors' <- local (extendScope params) $ forM ctors $ \(con, ty) ->
                 (con,) <$> elabType `traverse` ty
-        return $ L sp (T.DatDefn id  qnts ctors')
+        return $ L sp (T.DatDefn id qnts ctors')
 elabDataDecl _ = unreachable "data type definition required"
 
 elabTopDecls ::
@@ -226,10 +226,11 @@ elabTopDecls tdecs = do
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
                 L sp (P.DataD id params ctors) -> do
+                        let id' = maybe id (setFixity id) (lookup (nameIdent id) fixities)
                         ctors' <- forM ctors $ \(con, ty) -> do
                                 let con' = maybe con (setFixity con) (lookup (nameIdent con) fixities)
                                 return (con', ty)
-                        tell ([L sp (P.DataD id params ctors')], [])
+                        tell ([L sp (P.DataD id' params ctors')], [])
                 L sp (P.LocalD ld) -> tell ([], [L sp ld])
         (tdecs', ldecs) = groupDecl tdecs
 

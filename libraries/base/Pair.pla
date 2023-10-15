@@ -1,6 +1,7 @@
 data a :,: b where
     (:,:) : a -> b -> a :,: b
 
+infixr 1 data :,:
 infixr 1 :,:
 
 fst : {a b} a :,: b -> a
