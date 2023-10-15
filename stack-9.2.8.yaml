@@ -1,5 +1,0 @@
-resolver: lts-20.26
-compiler: ghc-9.2.8
-
-packages:
-  - .

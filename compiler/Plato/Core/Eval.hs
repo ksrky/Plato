@@ -4,10 +4,10 @@ module Plato.Core.Eval where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
+import Plato.Common.Pretty
 import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Result

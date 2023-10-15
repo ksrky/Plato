@@ -31,10 +31,10 @@ instance Linearize (Expr 'Untyped) where
                 bindss <- linBinds binds
                 exp' <- linearize exp
                 return $ unLoc $ foldr (\b e -> sL b e $ LetE b e) exp' bindss
-        linearize (CaseE exp mbty alts) = do
+        linearize (CaseE exp alts) = do
                 exp' <- linearize exp
                 alts' <- mapM (\(p, e) -> (p,) <$> linearize e) alts
-                return $ CaseE exp' mbty alts'
+                return $ CaseE exp' alts'
         linearize (ClauseE cls) = ClauseE <$> mapM (\(ps, e) -> (ps,) <$> linearize e) cls
 
 instance Linearize Type where
@@ -50,23 +50,23 @@ instance Linearize Type where
 instance Linearize (Bind 'Untyped) where
         linearize (Bind idty exp) = Bind idty <$> mapM linearize exp
 
-linBinds :: SCC (Bind 'Untyped) -> Writer [Ident] [SCC (Bind 'Untyped)]
-linBinds (CyclicSCC binds) = do
-        graph <- forM binds $ \bnd@(Bind (par, _) _) -> do
-                let (bnd', chs) = runWriter $ linearize bnd
+linBinds :: Block (XBind 'Untyped) -> Writer [Ident] [Block (XBind 'Untyped)]
+linBinds (Mutrec bnds) = do
+        graph <- forM bnds $ \bnd@(L _ (Bind (par, _) _)) -> do
+                (bnd', chs) <- listen $ linearize bnd
                 return (bnd', stamp par, map stamp chs)
         return $ stronglyConnComp graph
 linBinds nonrec = return [nonrec]
 
 instance Linearize (TypDefn 'Untyped) where
-        linearize (DatDefn id kn qns ctors) = do
+        linearize (DatDefn id qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
-                return $ DatDefn id kn qns ctors
+                return $ DatDefn id qns ctors
 
-linDatDefns :: SCC (TypDefn 'Untyped) -> Writer [Ident] [SCC (TypDefn 'Untyped)]
-linDatDefns (CyclicSCC tdefs) = do
-        graph <- forM tdefs $ \tdef@(DatDefn id _ _ _) -> do
-                let (tdef', chs) = runWriter $ linearize tdef
+linDatDefns :: XTypDefns 'Untyped -> Writer [Ident] [XTypDefns 'Untyped]
+linDatDefns (Mutrec tdefs) = do
+        graph <- forM tdefs $ \tdef@(L _ (DatDefn id _ _ _)) -> do
+                (tdef', chs) <- listen $ linearize tdef
                 return (tdef', stamp id, map stamp chs)
         return $ stronglyConnComp graph
 linDatDefns nonrec = return [nonrec]

@@ -19,11 +19,11 @@ import Control.Exception.Safe
 import Data.Foldable qualified as Foldable
 import Data.Graph
 import Data.Map.Strict qualified as M
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 
@@ -72,7 +72,7 @@ extendQuants :: Quants -> TypEnv -> TypEnv
 extendQuants qns = extendList (map (\(tv, kn) -> (unTyVar tv, kn)) qns)
 
 extendBinds :: SCC (Bind 'Typed) -> TypEnv -> TypEnv
-extendBinds binds = extendList $ map (\(Bind (id, ty) _) -> (id, ty)) (Foldable.toList binds)
+extendBinds binds = extendList $ map (\(Bind' (id, ty) _) -> (id, ty)) (Foldable.toList binds)
 
 envTypes :: TypEnv -> [Type]
 envTypes = M.elems . M.mapMaybe (\case ValBind ty -> Just ty; _ -> Nothing)

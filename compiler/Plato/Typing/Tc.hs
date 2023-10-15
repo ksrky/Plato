@@ -12,11 +12,11 @@ import Data.Graph
 import Data.IORef (IORef)
 import Data.Set qualified as S
 import GHC.Stack
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
@@ -61,8 +61,8 @@ checkPat (L sp pat) exp_ty = tcPat pat exp_ty
         tcPat (ConP con pats) exp_ty = do
                 (arg_tys, res_ty) <- instDataCon con
                 unless (length pats == length arg_tys) $ do
-                        throwLocErr sp $
-                                hsep ["The constrcutor", squotes $ pretty con, "should have", viaShow (length pats), "arguments"]
+                        throwLocErr sp
+                                $ hsep ["The constrcutor", squotes $ pretty con, "should have", pretty (length pats), "arguments"]
                 (pats', binds) <- checkPats pats arg_tys
                 instPatSigma_ res_ty exp_ty
                 return (L sp (ConP con pats'), binds)
@@ -125,50 +125,42 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (arg_ty, res_ty) <- catches (unifyFun fun_ty) (unifunErrorHandler (getLoc fun) fun_ty)
                 arg' <- checkSigma arg arg_ty
                 coer <- instSigma_ res_ty exp_ty
-                return $ unCoer coer $ AppE (unLoc fun') (unLoc arg')
+                return $ unCoer coer $ AppE' (unLoc fun') (unLoc arg')
         tcRho' (AbsE var Nothing body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 body' <- local (modifyTypEnv $ extend var arg_ty) (checkRho body res_ty)
-                return $ AbsE var arg_ty (unLoc body')
-        tcRho' (AbsE var (Just (L _ var_ty)) body) (Check exp_ty) = do
+                return $ AbsE' var arg_ty (unLoc body')
+        tcRho' (AbsE var (Just var_ty) body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 coer <- instSigma_ arg_ty (Check var_ty)
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body res_ty)
-                return $ AbsE var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
+                return $ AbsE' var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
         tcRho' (AbsE var mbty body) (Infer ref) = do
-                var_ty <- maybe newTyVar (return . unLoc) mbty
+                var_ty <- maybe newTyVar return mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsE var var_ty (unLoc body')
+                return $ AbsE' var var_ty (unLoc body')
         tcRho' (LetE bnds body) exp_ty = do
                 bnds' <- tcBinds bnds
                 local (modifyTypEnv $ extendBinds bnds') $ do
                         body' <- tcRho body exp_ty
-                        return $ LetE bnds' (unLoc body')
-        tcRho' (CaseE test Nothing alts) exp_ty = do
-                (test', pat_ty) <- inferRho test
+                        return $ LetE' bnds' body'
+        tcRho' (CaseE test alts) exp_ty = do
+                (test', pat_ty) <- inferSigma test
+                exp_ty' <- zapToMonoType exp_ty
+                alts' <- forM alts $ \(pat, body) -> do
+                        (pat', binds) <- checkPat pat pat_ty
+                        (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
+                        coer <- instSigma_ body_ty exp_ty'
+                        return (pat', unCoer coer $ unLoc body')
                 checkKindStar =<< zonk (noLoc pat_ty)
-                alts' <- tcAlts pat_ty alts exp_ty
-                transCase $ CaseE (unLoc test') pat_ty alts'
-        tcRho' (CaseE test (Just ty@(L _ pat_ty)) alts) exp_ty = do
-                checkKindStar =<< zonk ty
-                test' <- checkSigma test pat_ty
-                alts' <- tcAlts pat_ty alts exp_ty
-                transCase $ CaseE (unLoc test') pat_ty alts'
+                transCase $ CaseE' (unLoc test') pat_ty alts'
         tcRho' (ClauseE cls) (Check exp_ty) = checkClausesRho cls exp_ty
         tcRho' (ClauseE cls) (Infer ref) = do
                 exp_ty <- newTyVar
                 exp' <- checkClausesRho cls exp_ty
                 writeMIORef ref exp_ty
                 return exp'
-        tcAlts :: Type -> Alts 'Untyped -> Expected Rho -> m (Alts 'Typed)
-        tcAlts pat_ty alts exp_ty = do
-                exp_ty' <- zapToMonoType exp_ty
-                forM alts $ \(pat, body) -> do
-                        (pat', binds) <- checkPat pat pat_ty
-                        (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
-                        coer <- instSigma_ body_ty exp_ty'
-                        return (pat', unCoer coer $ unLoc body')
         instSigma_ :: Sigma -> Expected Rho -> m Coercion
         instSigma_ sigma (Check rho) =
                 catches
@@ -208,12 +200,7 @@ checkSigma exp sigma = do
         env_tys <- getEnvTypes
         esc_tvs <- S.union <$> getFreeTvs sigma <*> (mconcat <$> mapM getFreeTvs env_tys)
         let bad_tvs = esc_tvs `S.intersection` S.fromList (map fst qns)
-        unless (null bad_tvs) $ throwLocErr (getLoc exp) $ do
-                vsep
-                        [ "Polymorphic recursion is not allowed."
-                        , "The following type variables are instantiated by different types:"
-                                <+> concatWith (surround (semi <> space)) (map pretty (S.toList bad_tvs))
-                        ]
+        unless (null bad_tvs) $ throwLocErr (getLoc exp) "Type not polymorphic enough"
         return $ unCoer (coer <> genTrans qns) <$> exp'
 
 -- | Type checkinng of Clauses
@@ -241,11 +228,11 @@ tcBinds ::
 tcBinds (AcyclicSCC (Bind (id, Just ty) exp)) = do
         checkKindStar ty
         exp' <- checkSigma exp (unLoc ty)
-        return $ AcyclicSCC $ Bind (id, unLoc ty) (unLoc exp')
+        return $ AcyclicSCC $ Bind' (id, unLoc ty) (unLoc exp')
 tcBinds (AcyclicSCC (Bind (id, Nothing) exp)) = do
         (exp', sigma) <- inferSigma exp
         checkKindStar =<< zonk (noLoc sigma)
-        return $ AcyclicSCC $ Bind (id, sigma) (unLoc exp')
+        return $ AcyclicSCC $ Bind' (id, sigma) (unLoc exp')
 tcBinds (CyclicSCC binds) = do
         envbinds <- forM binds $ \(Bind (id, mbty) _) -> case mbty of
                 Just ty -> return (id, ty)
@@ -255,17 +242,17 @@ tcBinds (CyclicSCC binds) = do
                         Just ty -> do
                                 checkKindStar ty
                                 exp <- checkSigma exp (unLoc ty)
-                                return (True, Bind (id, unLoc ty) (unLoc exp))
+                                return (True, Bind' (id, unLoc ty) (unLoc exp))
                         Nothing -> do
                                 rho <- find id =<< asks getTypEnv
                                 exp <- checkRho exp rho
-                                return (False, Bind (id, rho) (unLoc exp))
+                                return (False, Bind' (id, rho) (unLoc exp))
                 binds' <- forM bbinds' $ \case
                         (True, b) -> return b
-                        (False, Bind (id, ty) exp) -> do
+                        (False, Bind' (id, ty) exp) -> do
                                 (qns, sigma) <- generalize ty
                                 checkKindStar =<< zonk (noLoc sigma)
-                                return $ Bind (id, sigma) (unCoer (genTrans qns) exp)
+                                return $ Bind' (id, sigma) (unCoer (genTrans qns) exp)
                 return $ CyclicSCC binds'
 
 -- | Instantiation of Sigma

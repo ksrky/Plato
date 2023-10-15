@@ -52,7 +52,7 @@ elabExpr (P.LamE pats body) = do
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
                 v <- labelVarId "pl"
-                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) Nothing [(p, e)]
+                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
@@ -68,7 +68,7 @@ elabExpr (P.CaseE match alts) = do
                 body' <- local (extendScope pat) $ elabExpr `traverse` body
                 return (pat', body')
 
-        return $ T.CaseE match' Nothing alts'
+        return $ T.CaseE match' alts'
 elabExpr P.FactorE{} = unreachable "fixity resolution failed"
 
 elabPat :: (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) => P.Pat -> m T.Pat
@@ -113,6 +113,23 @@ elabLocDecls ::
         [P.LLocDecl] ->
         m [T.Bind 'T.Untyped]
 elabLocDecls ldecs = do
+<<<<<<< HEAD
+        bnds <-
+                sequence
+                        [ do
+                                cls' <- mapM elabClause cls
+                                return (id, L (getLoc cls') (T.ClauseE cls'))
+                        | L _ (P.FunBindD id cls) <- ldecs
+                        ]
+        spcs <-
+                sequence
+                        [ do
+                                id' <- scoping id
+                                ty' <- elabType `traverse` ty
+                                return (id', ty')
+                        | L _ (P.FunSpecD id ty) <- ldecs
+                        ]
+=======
         (bnds, spcs) <- execWriterT $ forM ldecs $ \case
                 L _ (P.FunSpecD id ty) -> do
                         id' <- scoping id
@@ -122,6 +139,7 @@ elabLocDecls ldecs = do
                         cls' <- lift $ mapM elabClause cls
                         tell ([(id, L (getLoc cls') (T.ClauseE cls'))], [])
                 L _ P.FixityD{} -> unreachable "deleted by Nicifier"
+>>>>>>> 6b0e1924f2daa9a6d174a89345b81b28a9c4f38f
         forM bnds $ \(id, exp) -> case lookup id spcs of
                 Just ty -> return (T.Bind (id, Just ty) exp)
                 _ -> return (T.Bind (id, Nothing) exp)
@@ -133,8 +151,14 @@ assembleClauses = assemble . partition
         assemble [] = []
         assemble (bnds@(L _ (P.FunBindD id _) : _) : rest) = do
                 let clses = [(psi, ei) | L _ (P.FunBindD _ [(psi, ei)]) <- bnds]
+<<<<<<< HEAD
+                    sp = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
+                    id' = maybe id (setFixity id) (lookup (nameIdent id) fixities)
+                L sp (P.FunBindD id' clses) : assemble rest
+=======
                     spn = mconcat $ [spi | L spi P.FunBindD{} <- bnds]
                  in L spn (P.FunBindD id clses) : assemble rest
+>>>>>>> 6b0e1924f2daa9a6d174a89345b81b28a9c4f38f
         assemble (ldecs : rest) = ldecs ++ assemble rest
         partition :: [P.LLocDecl] -> [[P.LLocDecl]]
         partition =
@@ -151,20 +175,19 @@ elabClause (pats, exp) = do
         exp' <- local (extendScope pats) $ elabExpr `traverse` exp
         return (pats', exp')
 
-elabDecl ::
-        (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
+elabDataDecl ::
+        (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.LTopDecl ->
-        m (T.TypDefn 'T.Untyped)
-elabDecl (L _ (P.DataD id params ctors)) = do
+        m (T.XTypDefn 'T.Untyped)
+elabDataDecl (L sp (P.DataD id params ctors)) = do
         argNamesUnique params
         dataConUnique $ map fst ctors
         mapM_ (dataConType id) ctors
         qnts <- mapM (\p -> (T.BoundTv p,) <$> newKnVar) params
-        ctors' <- local (extendScope params) $
-                forM ctors $
-                        \(con, ty) -> (con,) <$> elabType `traverse` ty
-        return $ T.DatDefn id () qnts ctors'
-elabDecl _ = unreachable "data type definition required"
+        ctors' <- local (extendScope params) $ forM ctors $ \(con, ty) ->
+                (con,) <$> elabType `traverse` ty
+        return $ L sp (T.DatDefn id () qnts ctors')
+elabDataDecl _ = unreachable "data type definition required"
 
 elabTopDecls ::
         (MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
@@ -180,10 +203,16 @@ elabTopDecls tdecs = do
                         binds <- elabLocDecls ldecs'
                         asks (linearizeTop [T.TypDefn (CyclicSCC tdefs), T.ValDefn (CyclicSCC binds)],)
     where
+        fixities = [(name, fix) | L _ (P.LocalD (P.FixityD (L _ name) fix)) <- tdecs]
         groupDecl :: [P.LTopDecl] -> ([P.LTopDecl], [P.LLocDecl])
         groupDecl decs = execWriter $ forM decs $ \dec -> case dec of
-                L _ P.DataD{} -> tell ([dec], [])
+                L sp (P.DataD id params ctors) -> do
+                        ctors' <- forM ctors $ \(con, ty) -> do
+                                let con' = maybe con (setFixity con) (lookup (nameIdent con) fixities)
+                                return (con', ty)
+                        tell ([L sp (P.DataD id params ctors')], [])
                 L sp (P.LocalD ld) -> tell ([], [L sp ld])
+        (tdecs', ldecs) = groupDecl tdecs
 
 -----------------------------------------------------------
 -- psToTyp

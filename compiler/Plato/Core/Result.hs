@@ -38,17 +38,14 @@ data Ne
 infix 5 :..
 
 instance Pretty Ne where
-        pretty = pretty' 0
-
-instance PrettyWithContext Ne where
         pretty' _ (NVar i) = pretty i
         pretty' _ (ne :.. (t, _)) = hsep [pretty ne, ":..", pretty t]
         pretty' p (NSplit ne (x, (y, (t, _)))) =
                 parenswPrec p 0 $ hang 2 $ do
                         hsep ["split", pretty' 0 ne, "with", tupled [prettyId x, prettyId y], "->", pretty' 0 t]
         pretty' _ (NCase ne (lts, _)) =
-                hang 1 $
-                        hsep
+                hang 1
+                        $ hsep
                                 [ "case"
                                 , pretty' 0 ne
                                 , "of"

@@ -4,12 +4,12 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.Map.Strict qualified as M
-import Prettyprinter
 import Prelude hiding (span)
 
 import Plato.Common.Error
 import Plato.Common.Location
 import Plato.Common.Name
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 
 -- | Identifier

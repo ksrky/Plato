@@ -3,10 +3,10 @@ module Plato.Common.Error where
 import Control.Exception.Safe
 import Control.Monad.IO.Class
 import GHC.Stack
-import Prettyprinter
+import Prettyprinter.Render.Text
 
 import Plato.Common.Location
-import Prettyprinter.Render.Text
+import Plato.Common.Pretty
 
 defaultHandler :: (MonadIO m, Monoid a) => Handler m a
 defaultHandler = Handler $ \(e :: SomeException) -> liftIO (print e) >> return mempty
@@ -20,7 +20,7 @@ catchErrors =
                 ]
         )
 
-unreachable :: HasCallStack => String -> a
+unreachable :: (HasCallStack) => String -> a
 unreachable s = error $ "unreachable:\n" ++ s ++ "\n"
 
 -- | Error with location
@@ -31,7 +31,7 @@ instance Show LocatedError where
 
 instance Exception LocatedError
 
-throwLocErr :: MonadThrow m => Span -> Doc ann -> m a
+throwLocErr :: (MonadThrow m) => Span -> Doc ann -> m a
 throwLocErr sp doc = throw $ LocErr sp doc
 
 printLocErr :: LocatedError -> IO ()
@@ -47,7 +47,7 @@ instance Show PlainError where
 
 instance Exception PlainError
 
-throwError :: MonadThrow m => Doc ann -> m a
+throwError :: (MonadThrow m) => Doc ann -> m a
 throwError doc = throw $ PlainErr doc
 
 printPlainErr :: PlainError -> IO ()

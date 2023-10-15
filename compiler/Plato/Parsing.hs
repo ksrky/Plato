@@ -12,9 +12,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
-import Prettyprinter
 
 import Plato.Common.Error
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.Parsing.Error
@@ -35,12 +35,6 @@ parseFile src = catchPsErrors $ do
         uref <- getUniq =<< ask
         (prog, _) <- liftIO $ parse src uref inp parser
         updateContext $ opParseTop prog
-
-{- parseInstr :: (MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadCatch m) => T.Text -> m Instr
-parseInstr inp = do
-        uref <- getUniq =<< ask
-        (instr, _) <- liftIO $ parseLine uref inp instrParser
-        updateContext $ opParseInstr instr -}
 
 parsePartial ::
         (OpParser a, MonadReader e m, HasUniq e, HasFixityEnv e, MonadIO m, MonadThrow m) =>

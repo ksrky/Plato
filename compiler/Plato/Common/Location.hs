@@ -1,7 +1,7 @@
 module Plato.Common.Location where
 
 import Data.Graph
-import Prettyprinter
+import Plato.Common.Pretty
 
 -- | Source location includes file name, line number and column number
 data Loc

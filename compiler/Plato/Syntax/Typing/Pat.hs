@@ -22,9 +22,6 @@ data Pat
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Pat where
-        pretty = pretty' 0
-
-instance PrettyWithContext Pat where
         pretty' _ (ConP con []) = pretty con
         pretty' p (ConP con pats) = parenswPrec p 0 $ hsep (pretty con : map (pretty' 1) pats)
         pretty' _ (VarP var) = pretty var

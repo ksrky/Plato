@@ -9,7 +9,7 @@ import Plato.Common.Location
 import Plato.Parsing.Monad
 import Plato.Parsing.Token
 
-catchPsErrors :: MonadCatch m => m a -> m a
+catchPsErrors :: (MonadCatch m) => m a -> m a
 catchPsErrors =
         ( `catches`
                 [ Handler $ \(LexError sp msg) -> throwLocErr sp (pretty msg)
@@ -25,7 +25,7 @@ instance Show LexError where
 
 instance Exception LexError
 
-throwLexError :: MonadThrow m => Span -> String -> ParserT m a
+throwLexError :: (MonadThrow m) => Span -> String -> ParserT m a
 throwLexError sp msg = lift $ throw $ LexError sp msg
 
 -- | Parser error
@@ -36,5 +36,5 @@ instance Show PsError where
 
 instance Exception PsError
 
-throwPsError :: MonadThrow m => Span -> Token -> ParserT m a
+throwPsError :: (MonadThrow m) => Span -> Token -> ParserT m a
 throwPsError sp tok = lift $ throw $ PsError sp tok
