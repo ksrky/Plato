@@ -22,7 +22,7 @@ import Plato.Syntax.Typing qualified as T
 import Plato.Syntax.Typing.Helper
 
 elabExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
-elabExpr (T.VarE id) = return $ C.Var id
+elabExpr (T.VarE path) = return $ C.Var undefined -- TODO
 elabExpr (T.AppE fun arg) = C.App <$> elabExpr fun <*> elabExpr arg
 elabExpr (T.AbsE id ty exp) = C.Lam <$> ((id,) <$> elabType ty) <*> elabExpr exp
 elabExpr (T.TAppE fun tyargs) = do
@@ -50,7 +50,7 @@ elabPat ::
         m (C.Label, [(Ident, C.Type)])
 elabPat (T.TagP con args) = do
         args' <- mapM (\(arg, ty) -> (arg,) <$> elabType ty) args
-        return (nameIdent con, args')
+        return (nameIdent undefined, args') -- TODO
 elabPat _ = unreachable "allowed only tagged constructor pattern"
 
 elabQuant :: (MonadReader e m, HasUniq e, MonadIO m) => T.Quant -> m (C.Bind C.Type)
@@ -58,7 +58,7 @@ elabQuant (tv, kn) = (unTyVar tv,) <$> elabKind kn
 
 elabType :: (HasCallStack, MonadReader e m, HasUniq e, MonadIO m) => T.Type -> m C.Type
 elabType (T.VarT tv) = return $ C.Var (unTyVar tv)
-elabType (T.ConT tc) = return $ C.Var tc
+elabType (T.ConT tc) = return $ C.Var undefined -- tc
 elabType (T.ArrT arg res) = join $ mkArr <$> elabType (unLoc arg) <*> elabType (unLoc res)
 elabType (T.AllT qns body) = mkPis <$> mapM elabQuant qns <*> elabType (unLoc body)
 elabType (T.AppT fun arg) = C.App <$> elabType (unLoc fun) <*> elabType (unLoc arg)
@@ -74,7 +74,7 @@ elabKind T.MetaK{} = return C.Type
 elabTypDefn ::
         forall e m.
         (MonadReader e m, HasUniq e, MonadIO m) =>
-        T.TypDefn 'T.Typed ->
+        T.TypDefn ->
         m [C.Entry]
 elabTypDefn (T.DatDefn id params constrs) = do
         def <- C.Defn id <$> dataDefn
@@ -114,11 +114,12 @@ elabBinds bnds = do
         return $ toList decs ++ toList defs
 
 elabDefn :: (MonadReader e m, HasUniq e, MonadIO m) => T.Defn 'T.Typed -> m [C.Entry]
+elabDefn (T.ValDefn bnds) = elabBinds bnds
 elabDefn (T.TypDefn tdefs) = do
         decs <- forM tdefs $ \(T.DatDefn id params _) -> C.Decl id <$> elabKind (dataSignat params)
         defs <- concat <$> mapM elabTypDefn tdefs
         return $ toList decs ++ toList defs
-elabDefn (T.ValDefn bnds) = elabBinds bnds
+elabDefn (T.ModDefn _mod) = undefined -- TODO
 
 typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
 typToCore decs = runReaderT (concat <$> mapM elabDefn decs) =<< getUniq =<< ask

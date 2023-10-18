@@ -81,7 +81,7 @@ instance Zonking Kind where
 instance Zonking (Bind 'Typed) where
         zonk (Bind (id, ty) exp) = Bind <$> ((id,) <$> zonk ty) <*> zonk exp
 
-instance Zonking (TypDefn 'Typed) where
+instance Zonking TypDefn where
         zonk (DatDefn id params constrs) =
                 DatDefn id
                         <$> mapM (\(p, kn) -> (p,) <$> zonk kn) params

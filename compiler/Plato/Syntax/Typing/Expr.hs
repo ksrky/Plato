@@ -19,6 +19,7 @@ module Plato.Syntax.Typing.Expr (
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Pat
@@ -52,7 +53,7 @@ type family XBind (a :: TcFlag) where
 type XBinds (a :: TcFlag) = Block (XBind a)
 
 data Expr (a :: TcFlag) where
-        VarE :: Ident -> Expr a
+        VarE :: Path -> Expr a
         AppE :: XExpr a -> XExpr a -> Expr a
         AbsE :: Ident -> Annot a -> XExpr a -> Expr a
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
@@ -81,7 +82,7 @@ prClause :: Clause 'Untyped -> Doc ann
 prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 instance Pretty (Expr 'Untyped) where
-        pretty' _ (VarE var) = pretty var
+        pretty' _ (VarE path) = pretty path
         pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
         pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
         pretty' p (AbsE var (Just var_ty) body) =

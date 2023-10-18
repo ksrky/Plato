@@ -36,7 +36,7 @@ checkKind ::
         m ()
 checkKind (L sp ty) exp_kn = case ty of
         VarT (BoundTv id) -> do
-                kn <- find id =<< asks getTypEnv
+                kn <- findId id =<< asks getTypEnv
                 unify_ kn exp_kn
         VarT FreeTv{} -> return ()
         ConT tc -> do

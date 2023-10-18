@@ -15,6 +15,7 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
@@ -83,7 +84,7 @@ instPatSigma pat_ty exp_ty = void $ subsCheck pat_ty exp_ty
 
 instDataCon ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadThrow m, MonadIO m) =>
-        Ident ->
+        Path ->
         m ([Sigma], Tau)
 instDataCon con = do
         sigma <- find con =<< asks getTypEnv
@@ -92,14 +93,14 @@ instDataCon con = do
 
 -- | Type checking of Rho
 checkRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Rho ->
         m (LExpr 'Typed)
 checkRho exp ty = tcRho exp (Check ty)
 
 inferRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Rho)
 inferRho exp = do
@@ -108,7 +109,7 @@ inferRho exp = do
 
 tcRho ::
         forall e m.
-        (HasCallStack, MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (HasCallStack, MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Expected Rho ->
         m (LExpr 'Typed)
@@ -133,7 +134,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 coer <- instSigma_ arg_ty (Check var_ty)
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body res_ty)
-                return $ AbsE var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
+                return $ AbsE var var_ty (substExpr var (unCoer coer $ VarE $ PIdent var) (unLoc body'))
         tcRho' (AbsE var mbty body) (Infer ref) = do
                 var_ty <- maybe newTyVar (return . unLoc) mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
@@ -188,7 +189,7 @@ zapToMonoType (Infer ref) = do
 
 -- | Type checking of Sigma
 inferSigma ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (LExpr 'Typed, Sigma)
 inferSigma exp = do
@@ -197,7 +198,7 @@ inferSigma exp = do
         return (unCoer (genTrans qns) <$> exp', sigma)
 
 checkSigma ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Sigma ->
         m (LExpr 'Typed)
@@ -217,7 +218,7 @@ checkSigma exp sigma = do
 
 -- | Type checkinng of Clauses
 checkClausesRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         Clauses 'Untyped ->
         Rho ->
         m (Expr 'Typed)
@@ -234,7 +235,7 @@ checkClausesRho clauses rho = do
 
 tcBinds ::
         forall e m.
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         XBinds 'Untyped ->
         m (XBinds 'Typed)
 tcBinds (Nonrec (L _ (Bind (id, Just ty) exp))) = do
@@ -256,7 +257,7 @@ tcBinds (Mutrec bnds) = do
                                 exp <- checkSigma exp (unLoc ty)
                                 return (True, Bind (id, unLoc ty) (unLoc exp))
                         Nothing -> do
-                                rho <- find id =<< asks getTypEnv
+                                rho <- find (PIdent id) =<< asks getTypEnv
                                 exp <- checkRho exp rho
                                 return (False, Bind (id, rho) (unLoc exp))
                 bnds' <- forM bbnds' $ \case

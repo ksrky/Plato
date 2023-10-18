@@ -9,6 +9,7 @@ import Data.Graph
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 
@@ -22,9 +23,10 @@ instance (Linearize a) => Linearize [a] where
         linearize = mapM linearize
 
 instance Linearize (Expr 'Untyped) where
-        linearize (VarE id) = do
+        linearize (VarE (PIdent id)) = do
                 tell [id]
-                return $ VarE id
+                return $ VarE (PIdent id)
+        linearize e@VarE{} = return e
         linearize (AppE fun arg) = AppE <$> linearize fun <*> linearize arg
         linearize (AbsE id mbty exp) = AbsE id mbty <$> linearize exp
         linearize (LetE bnds exp) = do
@@ -39,9 +41,10 @@ instance Linearize (Expr 'Untyped) where
 
 instance Linearize Type where
         linearize (VarT tv) = return $ VarT tv
-        linearize (ConT tc) = do
-                tell [tc]
-                return $ ConT tc
+        linearize (ConT (PIdent id)) = do
+                tell [id]
+                return $ ConT (PIdent id)
+        linearize t@ConT{} = return t
         linearize (ArrT arg_ty res_ty) = ArrT <$> linearize arg_ty <*> linearize res_ty
         linearize (AllT qns body) = AllT qns <$> linearize body
         linearize (AppT fun_ty arg_ty) = AppT <$> linearize fun_ty <*> linearize arg_ty
@@ -58,7 +61,7 @@ linBinds (Mutrec bnds) = do
         return $ map sccToBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
 
-instance Linearize (TypDefn 'Untyped) where
+instance Linearize TypDefn where
         linearize (DatDefn id qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
                 return $ DatDefn id qns ctors
@@ -75,3 +78,4 @@ linearizeTop :: Prog 'Untyped -> Prog 'Untyped
 linearizeTop = concatMap $ \case
         ValDefn binds -> fst $ runWriter $ map ValDefn <$> linBinds binds
         TypDefn tdefs -> fst $ runWriter $ map TypDefn <$> linDatDefns tdefs
+        ModDefn mod -> [ModDefn mod]

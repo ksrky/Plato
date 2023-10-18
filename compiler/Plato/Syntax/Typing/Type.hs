@@ -16,6 +16,7 @@ import Data.IORef
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing.Kind
@@ -30,7 +31,7 @@ type Quants = [Quant]
 
 data Type
         = VarT TyVar
-        | ConT Ident
+        | ConT Path
         | ArrT LType LType
         | AllT Quants (Located Rho)
         | AppT LType LType

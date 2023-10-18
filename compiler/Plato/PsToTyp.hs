@@ -21,6 +21,7 @@ import GHC.Stack
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Common.Uniq
 import Plato.Driver.Monad
 import Plato.PsToTyp.Resolver
@@ -70,12 +71,12 @@ elabExpr ::
         (HasCallStack, MonadReader e m, HasUniq e, HasScope e, MonadIO m, MonadThrow m) =>
         P.Expr ->
         m (T.Expr 'T.Untyped)
-elabExpr (P.VarE id) = T.VarE <$> scoping id
+elabExpr (P.VarE id) = T.VarE . PIdent <$> scoping id
 elabExpr (P.AppE fun arg) = T.AppE <$> elabExpr `traverse` fun <*> elabExpr `traverse` arg
 elabExpr exp@P.BinE{} = do
         toks <- expand $ noLoc exp
         let elab :: Ident -> T.LExpr 'T.Untyped -> T.LExpr 'T.Untyped -> T.LExpr 'T.Untyped
-            elab op l r = sL l r $ T.AppE (sL l op $ T.AppE (L (getLoc op) (T.VarE op)) l) r
+            elab op l r = sL l r $ T.AppE (sL l op $ T.AppE (L (getLoc op) (T.VarE $ PIdent op)) l) r
         unLoc <$> parseTok elab toks
 elabExpr (P.LamE pats body) = do
         argPatsUnique pats
@@ -85,7 +86,7 @@ elabExpr (P.LamE pats body) = do
             patlam e p@(L _ (T.VarP id)) = return $ sL p e $ T.AbsE id Nothing e
             patlam e p = do
                 v <- labelVarId "pl"
-                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE v) Nothing [(p, e)]
+                return $ sL p e $ T.AbsE v Nothing $ sL p e $ T.CaseE (noLoc $ T.VarE $ PIdent v) Nothing [(p, e)]
         unLoc <$> foldM patlam body' (reverse pats')
 elabExpr (P.LetE ldecs body) = do
         mapM_ (checkNumArgs . unLoc) ldecs
@@ -111,13 +112,13 @@ elabPat ::
 elabPat (P.ConP con pats) = do
         con' <- scoping con
         pats' <- mapM (elabPat `traverse`) pats
-        return $ T.ConP con' pats'
+        return $ T.ConP (PIdent con') pats'
 elabPat (P.VarP var) = return $ T.VarP var
 elabPat P.WildP = return T.WildP
 elabPat pat@P.BinP{} = do
         toks <- expand $ noLoc pat
         let elab :: Ident -> T.LPat -> T.LPat -> T.LPat
-            elab op l r = sL l r $ T.ConP op [l, r]
+            elab op l r = sL l r $ T.ConP (PIdent op) [l, r]
         unLoc <$> parseTok elab toks
 elabPat (P.AnnP pat ann_ty) = T.AnnP <$> elabPat `traverse` pat <*> elabType (unLoc ann_ty)
 elabPat (P.FactorP pat) = elabPat (unLoc pat)
@@ -129,7 +130,7 @@ elabType ::
 elabType (P.VarT var) = do
         var' <- scoping var
         return $ T.VarT (T.BoundTv var')
-elabType (P.ConT con) = T.ConT <$> scoping con
+elabType (P.ConT con) = T.ConT . PIdent <$> scoping con
 elabType (P.ArrT arg res) = T.ArrT <$> elabType `traverse` arg <*> elabType `traverse` res
 elabType (P.AllT vars body) = do
         argNamesUnique vars
@@ -140,7 +141,7 @@ elabType (P.AppT fun arg) = T.AppT <$> elabType `traverse` fun <*> elabType `tra
 elabType ty@P.BinT{} = do
         toks <- expand $ noLoc ty
         let elab :: Ident -> T.LType -> T.LType -> T.LType
-            elab op l r = sL l r $ T.AppT (sL l op $ T.AppT (L (getLoc op) (T.ConT op)) l) r
+            elab op l r = sL l r $ T.AppT (sL l op $ T.AppT (L (getLoc op) (T.ConT $ PIdent op)) l) r
         unLoc <$> parseTok elab toks
 elabType (P.FactorT ty) = elabType (unLoc ty)
 

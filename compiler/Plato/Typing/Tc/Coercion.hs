@@ -14,6 +14,7 @@ module Plato.Typing.Tc.Coercion (
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 
+import Plato.Common.Path
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
@@ -53,7 +54,7 @@ prfunTrans [] _ coer = return coer
 prfunTrans _ _ Id = return Id
 prfunTrans qnts arg_ty coer = do
         id <- labelVarId "pf"
-        let coer' e = unCoer coer $ TAbsE qnts (AppE (TAppE e (map (VarT . fst) qnts)) (VarE id))
+        let coer' e = unCoer coer $ TAbsE qnts (AppE (TAppE e (map (VarT . fst) qnts)) (VarE $ PIdent id))
         return $ Fn $ AbsE id arg_ty . coer'
 
 deepskolTrans :: [Quant] -> Coercion -> Coercion -> Coercion
@@ -64,4 +65,4 @@ funTrans :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> Coercion -> Coer
 funTrans _ Id Id = return Id
 funTrans a2 co_arg co_res = do
         id <- labelVarId "fu"
-        return $ Fn $ \f -> AbsE id a2 (unCoer co_res $ AppE f (unCoer co_arg $ VarE id))
+        return $ Fn $ \f -> AbsE id a2 (unCoer co_res $ AppE f (unCoer co_arg $ VarE $ PIdent id))

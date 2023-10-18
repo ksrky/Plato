@@ -2,6 +2,7 @@ module Plato.Syntax.Typing.Pat (LPat, Pat (..)) where
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Path
 import Plato.Common.Pretty
 import Plato.Syntax.Typing.Type
 
@@ -11,11 +12,11 @@ import Plato.Syntax.Typing.Type
 type LPat = Located Pat
 
 data Pat
-        = ConP Ident [LPat]
+        = ConP Path [LPat]
         | VarP Ident
         | WildP
         | AnnP LPat Type
-        | TagP Ident [(Ident, Type)]
+        | TagP Path [(Ident, Type)]
         deriving (Eq, Show)
 
 ----------------------------------------------------------------
@@ -27,4 +28,4 @@ instance Pretty Pat where
         pretty' _ (VarP var) = pretty var
         pretty' _ WildP = wildcard
         pretty' _ (AnnP pat ann_ty) = parens $ hsep [pretty' 0 pat, colon, pretty' 0 ann_ty]
-        pretty' _ (TagP con args) = hsep $ map pretty (con : map fst args)
+        pretty' _ (TagP con args) = hsep $ pretty con : map (pretty . fst) args
