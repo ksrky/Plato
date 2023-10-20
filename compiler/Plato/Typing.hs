@@ -21,7 +21,7 @@ import Plato.Typing.Tc
 import Plato.Typing.Zonking
 
 typingDefns ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         [Defn 'Untyped] ->
         WriterT [Defn 'Typed] m e
 typingDefns [] = ask
@@ -35,11 +35,8 @@ typingDefns (TypDefn tdefs : rest) = do
         let datasig = fmap (\(DatDefn id params _) -> (id, dataSignat params)) tdefs'
             allctors = (`concatMap` tdefs') $ \(DatDefn _ qns ctors) ->
                 map (\(id, ty) -> (id, L (getLoc ty) $ AllT qns ty)) ctors
-            extconenv env =
-                foldr (\(DatDefn id qns ctors) -> extendConstrs id (map fst qns) ctors) env tdefs'
-        local (modifyTypEnv $ extendList allctors . extendList datasig)
-                $ local (modifyConEnv extconenv)
-                $ typingDefns rest
+            extconenv env = foldr extendDataBinds env tdefs'
+        local (modifyTypEnv $ extendList allctors . extendList datasig . extconenv) $ typingDefns rest
 
 -----------------------------------------------------------
 -- typing
@@ -48,7 +45,7 @@ typing :: (PlatoMonad m) => Prog 'Untyped -> m (Prog 'Typed)
 typing defs = catchErrors $ updateContext $ Tuple.swap <$> runWriterT (typingDefns defs)
 
 typingExpr ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         LExpr 'Untyped ->
         m (Expr 'Typed)
 typingExpr exp = do

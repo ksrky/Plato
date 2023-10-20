@@ -18,11 +18,12 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 type XValDefns (a :: TcFlag) = XBinds a
 
-data TypDefn (a :: TcFlag) = DatDefn Ident Quants [(Ident, LType)]
+data TypDefn = DatDefn Ident Quants [(Ident, LType)]
+        deriving (Eq, Show)
 
 type family XTypDefn (a :: TcFlag) where
-        XTypDefn 'Untyped = Located (TypDefn 'Untyped)
-        XTypDefn 'Typed = TypDefn 'Typed
+        XTypDefn 'Untyped = Located TypDefn
+        XTypDefn 'Typed = TypDefn
 
 type XTypDefns (a :: TcFlag) = Block (XTypDefn a)
 
@@ -30,13 +31,6 @@ data Defn (a :: TcFlag)
         = ValDefn (XValDefns a)
         | TypDefn (XTypDefns a)
 
-----------------------------------------------------------------
--- Basic instances
-----------------------------------------------------------------
-deriving instance Eq (TypDefn 'Untyped)
-deriving instance Eq (TypDefn 'Typed)
-deriving instance Show (TypDefn 'Untyped)
-deriving instance Show (TypDefn 'Typed)
 deriving instance Eq (Defn 'Untyped)
 deriving instance Eq (Defn 'Typed)
 deriving instance Show (Defn 'Untyped)
@@ -53,7 +47,7 @@ instance Pretty (Defn 'Typed) where
         pretty (ValDefn binds) = indent 2 $ vsep $ toList $ fmap pretty binds
         pretty (TypDefn tdefs) = indent 2 $ vsep $ toList $ fmap pretty tdefs
 
-instance Pretty (TypDefn a) where
+instance Pretty TypDefn where
         pretty (DatDefn id params constrs) =
                 hsep
                         [ "data"

@@ -21,7 +21,7 @@ import Plato.Typing.Misc
 import Plato.Typing.Zonking
 
 transClauses ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
@@ -31,7 +31,7 @@ transClauses tys clauses = do
         return $ foldr (uncurry AbsE) exp vars
 
 transCase ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         Expr 'Typed ->
         m (Expr 'Typed)
 transCase (CaseE exp ty alts) = do
@@ -41,13 +41,13 @@ transCase (CaseE exp ty alts) = do
         return $ AppE (AbsE var ty altsexp) exp
 transCase _ = unreachable "Expected type-checked case expression"
 
-constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
+constructors :: forall e m. (MonadReader e m, HasTypEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
 constructors ty = getCon [] =<< zonk ty
     where
         getCon :: [Type] -> Type -> m Constrs
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
         getCon acc (ConT tc) = do
-                (params, constrs) <- lookupIdent tc =<< asks getConEnv
+                (params, constrs) <- find tc =<< asks getTypEnv
                 mapM (\(con, tys) -> (con,) <$> mapM (substTvs params (reverse acc)) tys) constrs
         getCon _ _ = unreachable "Not a variant type"
 
@@ -64,7 +64,7 @@ isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [(Ident, Type)] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
@@ -77,7 +77,7 @@ match (vt : vts) clauses
         | otherwise = matchCon vt vts clauses
 
 matchVar ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         Clauses 'Typed ->
@@ -93,7 +93,7 @@ matchVar (var, _) rest clauses = do
         match rest clauses'
 
 matchCon ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, Type) ->
         [(Ident, Type)] ->
         Clauses 'Typed ->
@@ -107,7 +107,7 @@ choose :: Ident -> Clauses 'Typed -> Clauses 'Typed
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 
 matchClause ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
         [(Ident, Type)] ->
         Clauses 'Typed ->

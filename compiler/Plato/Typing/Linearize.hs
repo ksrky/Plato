@@ -58,7 +58,7 @@ linBinds (Mutrec bnds) = do
         return $ map sccToBlock (stronglyConnComp graph)
 linBinds nonrec = return [nonrec]
 
-instance Linearize (TypDefn 'Untyped) where
+instance Linearize TypDefn where
         linearize (DatDefn id qns ctors) = do
                 _ <- linearize $ concatMap (fst . splitConstrTy . unLoc . snd) ctors
                 return $ DatDefn id qns ctors

@@ -12,19 +12,17 @@ data Context = Context
         { ctx_uniq :: !(IORef Uniq)
         , ctx_scope :: !Scope
         , ctx_typEnv :: !TypEnv
-        , ctx_conEnv :: !ConEnv
         , ctx_coreProg :: !Prog
         }
 
 initContext :: IO Context
 initContext = do
         uref <- initUniq
-        return $
-                Context
+        return
+                $ Context
                         { ctx_uniq = uref
                         , ctx_scope = mempty
                         , ctx_typEnv = mempty
-                        , ctx_conEnv = mempty
                         , ctx_coreProg = mempty
                         }
 
@@ -39,7 +37,3 @@ instance HasScope Context where
 instance HasTypEnv Context where
         getTypEnv = ctx_typEnv
         modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
-
-instance HasConEnv Context where
-        getConEnv = ctx_conEnv
-        modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}

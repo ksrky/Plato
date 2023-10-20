@@ -92,14 +92,14 @@ instDataCon con = do
 
 -- | Type checking of Rho
 checkRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Rho ->
         m (Expr 'Typed)
 checkRho exp ty = tcRho exp (Check ty)
 
 inferRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (Expr 'Typed, Rho)
 inferRho exp = do
@@ -108,7 +108,7 @@ inferRho exp = do
 
 tcRho ::
         forall e m.
-        (HasCallStack, MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (HasCallStack, MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Expected Rho ->
         m (Expr 'Typed)
@@ -188,7 +188,7 @@ zapToMonoType (Infer ref) = do
 
 -- | Type checking of Sigma
 inferSigma ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         m (Expr 'Typed, Sigma)
 inferSigma exp = do
@@ -197,7 +197,7 @@ inferSigma exp = do
         return (unCoer (genTrans qns) exp', sigma)
 
 checkSigma ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Sigma ->
         m (Expr 'Typed)
@@ -217,7 +217,7 @@ checkSigma exp sigma = do
 
 -- | Type checkinng of Clauses
 checkClausesRho ::
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         Clauses 'Untyped ->
         Rho ->
         m (Expr 'Typed)
@@ -234,7 +234,7 @@ checkClausesRho clauses rho = do
 
 tcBinds ::
         forall e m.
-        (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         XBinds 'Untyped ->
         m (XBinds 'Typed)
 tcBinds (Nonrec (L _ (Bind (id, Just ty) exp))) = do

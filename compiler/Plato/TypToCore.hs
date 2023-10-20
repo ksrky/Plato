@@ -74,7 +74,7 @@ elabKind T.MetaK{} = return C.Type
 elabTypDefn ::
         forall e m.
         (MonadReader e m, HasUniq e, MonadIO m) =>
-        T.TypDefn 'T.Typed ->
+        T.TypDefn ->
         m [C.Entry]
 elabTypDefn (T.DatDefn id params constrs) = do
         def <- C.Defn id <$> dataDefn
