@@ -50,7 +50,7 @@ typing defs = catchErrors $ updateContext $ Tuple.swap <$> runWriterT (typingDef
 typingExpr ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
         LExpr 'Untyped ->
-        m (LExpr 'Typed)
+        m (Expr 'Typed)
 typingExpr exp = do
         (exp', ty') <- inferSigma exp
         checkKindStar =<< zonk (noLoc ty')

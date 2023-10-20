@@ -95,13 +95,13 @@ checkRho ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Rho ->
-        m (LExpr 'Typed)
+        m (Expr 'Typed)
 checkRho exp ty = tcRho exp (Check ty)
 
 inferRho ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
-        m (LExpr 'Typed, Rho)
+        m (Expr 'Typed, Rho)
 inferRho exp = do
         ref <- newMIORef (unreachable "inferRho: empty result")
         (,) <$> tcRho exp (Infer ref) <*> readMIORef ref
@@ -111,8 +111,8 @@ tcRho ::
         (HasCallStack, MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Expected Rho ->
-        m (LExpr 'Typed)
-tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
+        m (Expr 'Typed)
+tcRho (L sp exp) exp_ty = tcRho' exp exp_ty
     where
         tcRho' :: Expr 'Untyped -> Expected Rho -> m (Expr 'Typed)
         tcRho' (VarE var) exp_ty = do
@@ -124,36 +124,36 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                 (arg_ty, res_ty) <- catches (unifyFun fun_ty) (unifunErrorHandler (getLoc fun) fun_ty)
                 arg' <- checkSigma arg arg_ty
                 coer <- instSigma_ res_ty exp_ty
-                return $ unCoer coer $ AppE (unLoc fun') (unLoc arg')
+                return $ unCoer coer $ AppE fun' arg'
         tcRho' (AbsE var Nothing body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 body' <- local (modifyTypEnv $ extend var arg_ty) (checkRho body res_ty)
-                return $ AbsE var arg_ty (unLoc body')
+                return $ AbsE var arg_ty body'
         tcRho' (AbsE var (Just (L _ var_ty)) body) (Check exp_ty) = do
                 (arg_ty, res_ty) <- catches (unifyFun exp_ty) (unifunErrorHandler sp exp_ty)
                 coer <- instSigma_ arg_ty (Check var_ty)
                 body' <- local (modifyTypEnv $ extend var var_ty) (checkRho body res_ty)
-                return $ AbsE var var_ty (substExpr var (unCoer coer $ VarE var) (unLoc body'))
+                return $ AbsE var var_ty (substExpr var (unCoer coer $ VarE var) body')
         tcRho' (AbsE var mbty body) (Infer ref) = do
                 var_ty <- maybe newTyVar (return . unLoc) mbty
                 (body', body_ty) <- local (modifyTypEnv $ extend var var_ty) (inferRho body)
                 writeMIORef ref (ArrT (noLoc var_ty) (noLoc body_ty))
-                return $ AbsE var var_ty (unLoc body')
+                return $ AbsE var var_ty body'
         tcRho' (LetE bnds body) exp_ty = do
                 bnds' <- tcBinds bnds
                 local (modifyTypEnv $ extendBinds bnds') $ do
                         body' <- tcRho body exp_ty
-                        return $ LetE bnds' (unLoc body')
+                        return $ LetE bnds' body'
         tcRho' (CaseE test Nothing alts) exp_ty = do
                 (test', pat_ty) <- inferRho test
                 checkKindStar =<< zonk (noLoc pat_ty)
                 alts' <- tcAlts pat_ty alts exp_ty
-                transCase $ CaseE (unLoc test') pat_ty alts'
+                transCase $ CaseE test' pat_ty alts'
         tcRho' (CaseE test (Just ty@(L _ pat_ty)) alts) exp_ty = do
                 checkKindStar =<< zonk ty
                 test' <- checkSigma test pat_ty
                 alts' <- tcAlts pat_ty alts exp_ty
-                transCase $ CaseE (unLoc test') pat_ty alts'
+                transCase $ CaseE test' pat_ty alts'
         tcRho' (ClauseE cls) (Check exp_ty) = checkClausesRho cls exp_ty
         tcRho' (ClauseE cls) (Infer ref) = do
                 exp_ty <- newTyVar
@@ -167,7 +167,7 @@ tcRho (L sp exp) exp_ty = L sp <$> tcRho' exp exp_ty
                         (pat', binds) <- checkPat pat pat_ty
                         (body', body_ty) <- local (modifyTypEnv $ extendList binds) $ inferRho body
                         coer <- instSigma_ body_ty exp_ty'
-                        return (pat', unCoer coer $ unLoc body')
+                        return (pat', unCoer coer body')
         instSigma_ :: Sigma -> Expected Rho -> m Coercion
         instSigma_ sigma (Check rho) =
                 catches
@@ -190,17 +190,17 @@ zapToMonoType (Infer ref) = do
 inferSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
-        m (LExpr 'Typed, Sigma)
+        m (Expr 'Typed, Sigma)
 inferSigma exp = do
         (exp', rho) <- inferRho exp
         (qns, sigma) <- generalize rho
-        return (unCoer (genTrans qns) <$> exp', sigma)
+        return (unCoer (genTrans qns) exp', sigma)
 
 checkSigma ::
         (MonadReader e m, HasTypEnv e, HasConEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
         LExpr 'Untyped ->
         Sigma ->
-        m (LExpr 'Typed)
+        m (Expr 'Typed)
 checkSigma exp sigma = do
         (coer, qns, rho) <- skolemise sigma
         exp' <- checkRho exp rho -- local (modifyTypEnv $ extendQuants qns) $ checkRho exp rho
@@ -213,7 +213,7 @@ checkSigma exp sigma = do
                         , "The following type variables are instantiated by different types:"
                                 <+> concatWith (surround (semi <> space)) (map pretty (S.toList bad_tvs))
                         ]
-        return $ unCoer (coer <> genTrans qns) <$> exp'
+        return $ unCoer (coer <> genTrans qns) exp'
 
 -- | Type checkinng of Clauses
 checkClausesRho ::
@@ -229,7 +229,7 @@ checkClausesRho clauses rho = do
         clauses' <- forM clauses $ \(pats, body) -> do
                 (pats', binds) <- checkPats pats pat_tys
                 body' <- local (modifyTypEnv $ extendList binds) $ checkRho body res_ty
-                return (pats', unLoc body')
+                return (pats', body')
         transClauses pat_tys clauses'
 
 tcBinds ::
@@ -240,11 +240,11 @@ tcBinds ::
 tcBinds (Nonrec (L _ (Bind (id, Just ty) exp))) = do
         checkKindStar ty
         exp' <- checkSigma exp (unLoc ty)
-        return $ Nonrec $ Bind (id, unLoc ty) (unLoc exp')
+        return $ Nonrec $ Bind (id, unLoc ty) exp'
 tcBinds (Nonrec (L _ (Bind (id, Nothing) exp))) = do
         (exp', sigma) <- inferSigma exp
         checkKindStar =<< zonk (noLoc sigma)
-        return $ Nonrec $ Bind (id, sigma) (unLoc exp')
+        return $ Nonrec $ Bind (id, sigma) exp'
 tcBinds (Mutrec bnds) = do
         envbinds <- forM bnds $ \(L _ (Bind (id, mbty) _)) -> case mbty of
                 Just ty -> return (id, ty)
@@ -254,11 +254,11 @@ tcBinds (Mutrec bnds) = do
                         Just ty -> do
                                 checkKindStar ty
                                 exp <- checkSigma exp (unLoc ty)
-                                return (True, Bind (id, unLoc ty) (unLoc exp))
+                                return (True, Bind (id, unLoc ty) exp)
                         Nothing -> do
                                 rho <- find id =<< asks getTypEnv
                                 exp <- checkRho exp rho
-                                return (False, Bind (id, rho) (unLoc exp))
+                                return (False, Bind (id, rho) exp)
                 bnds' <- forM bbnds' $ \case
                         (True, b) -> return b
                         (False, Bind (id, ty) exp) -> do

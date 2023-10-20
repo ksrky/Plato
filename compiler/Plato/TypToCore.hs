@@ -120,8 +120,11 @@ elabDefn (T.TypDefn tdefs) = do
         return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
-typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
-typToCore decs = runReaderT (concat <$> mapM elabDefn decs) =<< getUniq =<< ask
+elabDefns :: (MonadReader e m, HasUniq e, MonadIO m) => [T.Defn 'T.Typed] -> m [C.Entry]
+elabDefns decs = concat <$> mapM elabDefn decs
 
-typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.LExpr 'T.Typed -> m C.Term
-typToCoreExpr = elabExpr . unLoc
+typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
+typToCore decs = runReaderT (elabDefns decs) =<< getUniq =<< ask
+
+typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
+typToCoreExpr = elabExpr
