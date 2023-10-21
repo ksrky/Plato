@@ -76,7 +76,6 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
-      Plato.Typing.Linearize
       Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc

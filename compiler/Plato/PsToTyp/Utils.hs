@@ -7,10 +7,10 @@ import Plato.Syntax.Parsing
 class HasDomain a where
         getDomain :: a -> [Ident]
 
-instance HasDomain a => HasDomain [a] where
+instance (HasDomain a) => HasDomain [a] where
         getDomain = concatMap getDomain
 
-instance HasDomain a => HasDomain (Located a) where
+instance (HasDomain a) => HasDomain (Located a) where
         getDomain = getDomain . unLoc
 
 instance HasDomain Ident where
