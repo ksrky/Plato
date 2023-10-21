@@ -3,18 +3,17 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Plato.Syntax.Typing.Expr (
+        Expr (..),
         LExpr,
         XExpr,
         Clause,
-        Alt,
         Clauses,
+        Alt,
         Alts,
         Annot,
         Bind (..),
         XBind,
         XBinds,
-        Expr (..),
-        prClause,
 ) where
 
 import Plato.Common.Ident
@@ -27,30 +26,6 @@ import Plato.Syntax.Typing.Type
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
-type LExpr a = Located (Expr a)
-
-type family XExpr (a :: TcFlag) where
-        XExpr 'Untyped = LExpr 'Untyped
-        XExpr 'Typed = Expr 'Typed
-
-type Clause (a :: TcFlag) = ([LPat], XExpr a)
-type Alt (a :: TcFlag) = (LPat, XExpr a)
-
-type Clauses (a :: TcFlag) = [Clause a]
-type Alts (a :: TcFlag) = [Alt a]
-
-type family Annot (a :: TcFlag) where
-        Annot 'Untyped = Maybe LType
-        Annot 'Typed = Type
-
-data Bind (a :: TcFlag) = Bind (Ident, Annot a) (XExpr a)
-
-type family XBind (a :: TcFlag) where
-        XBind 'Untyped = Located (Bind 'Untyped)
-        XBind 'Typed = Bind 'Typed
-
-type XBinds (a :: TcFlag) = Block (XBind a)
-
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
         AppE :: XExpr a -> XExpr a -> Expr a
@@ -61,24 +36,45 @@ data Expr (a :: TcFlag) where
         CaseE :: XExpr a -> Annot a -> Alts a -> Expr a
         ClauseE :: Clauses 'Untyped -> Expr 'Untyped
 
-----------------------------------------------------------------
--- Basic instances
-----------------------------------------------------------------
 deriving instance Eq (Expr 'Untyped)
 deriving instance Show (Expr 'Untyped)
 deriving instance Eq (Expr 'Typed)
 deriving instance Show (Expr 'Typed)
+
+type LExpr a = Located (Expr a)
+
+type family XExpr (a :: TcFlag) where
+        XExpr 'Untyped = LExpr 'Untyped
+        XExpr 'Typed = Expr 'Typed
+
+type Clause (a :: TcFlag) = ([LPat], XExpr a)
+type Clauses (a :: TcFlag) = [Clause a]
+
+type Alt (a :: TcFlag) = (LPat, XExpr a)
+type Alts (a :: TcFlag) = [Alt a]
+
+type family Annot (a :: TcFlag) where
+        Annot 'Untyped = Maybe LType
+        Annot 'Typed = Type
+
+data Bind (a :: TcFlag) = Bind (Ident, Annot a) (XExpr a)
+
 deriving instance Eq (Bind 'Untyped)
 deriving instance Eq (Bind 'Typed)
 deriving instance Show (Bind 'Untyped)
 deriving instance Show (Bind 'Typed)
 
+type family XBind (a :: TcFlag) where
+        XBind 'Untyped = Located (Bind 'Untyped)
+        XBind 'Typed = Bind 'Typed
+
+type XBinds (a :: TcFlag) = Block (XBind a)
+
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-
-prClause :: Clause 'Untyped -> Doc ann
-prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
+instance Pretty ([LPat], LExpr 'Untyped) where
+        pretty (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 instance Pretty (Expr 'Untyped) where
         pretty' _ (VarE var) = pretty var
@@ -97,7 +93,7 @@ instance Pretty (Expr 'Untyped) where
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
         pretty' _ (ClauseE clauses) =
-                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]
+                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map pretty clauses)]
 
 instance Pretty (Expr 'Typed) where
         pretty' _ (VarE var) = pretty var

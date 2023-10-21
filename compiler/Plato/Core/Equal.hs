@@ -14,7 +14,7 @@ import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Equal a where
-        (~) :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => a -> a -> m ()
+        (~) :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => a -> a -> m ()
 
 instance Equal (Clos Term) where
         (~) t u = do
@@ -29,7 +29,7 @@ infix 1 ~
 -- eq' ((t,u),s) = eq (t,s) (u,s)
 
 eqBind ::
-        (MonadReader e m, CoreEnv e, MonadIO m, Closure a) =>
+        (MonadReader e m, HasCoreEnv e, MonadIO m, Closure a) =>
         (a -> a -> m ()) ->
         Bind a ->
         Bind a ->
@@ -65,7 +65,7 @@ instance Equal Val where
                 | otherwise = throwError "Different values"
 
 {- eqBox implements alpha equality -}
-eqBox :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> Clos Term -> m ()
+eqBox :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> Clos Term -> m ()
 -- eqBox c c' | c == c' = return ()
 eqBox (Var x, s) (Var y, s') = do
         x' <- getIndex x s

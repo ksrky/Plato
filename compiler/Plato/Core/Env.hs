@@ -2,6 +2,7 @@ module Plato.Core.Env where
 
 import Control.Monad.IO.Class
 import Data.IORef
+import Data.Map.Strict qualified as M
 import Data.Vector qualified as V
 
 import Plato.Common.Ident
@@ -14,30 +15,49 @@ data EnvEntry
         deriving (Show)
 
 data PrtInfo = PrtInfo
-        { name :: Ident
-        , expand :: Bool
+        { prt_ident :: Ident
+        , prt_expand :: Bool
         }
 
 type EnvEntries = V.Vector (EnvEntry, PrtInfo)
 
-class CoreEnv e where
-        extE :: MonadIO m => PrtInfo -> e -> m Ix
-        getE :: MonadIO m => Ix -> e -> m EnvEntry
-        setE :: MonadIO m => Ix -> EnvEntry -> e -> m ()
-        prtE :: MonadIO m => Ix -> e -> m PrtInfo
+type CoreEnv = (IORef EnvEntries)
 
-instance CoreEnv (IORef EnvEntries) where
-        extE fi ref = do
-                env <- liftIO $ readIORef ref
-                let i = length env
-                liftIO $ writeIORef ref (env `V.snoc` (Index i, fi))
-                return i
-        getE i ref = do
-                env <- liftIO $ readIORef ref
-                return $ fst $ env V.! i
-        setE i v ref = do
-                env <- liftIO $ readIORef ref
-                liftIO $ writeIORef ref (env V.// [(i, (v, snd $ env V.! i))])
-        prtE i ref = do
-                env <- liftIO $ readIORef ref
-                return $ snd $ env V.! i
+initCoreEnv :: IO (IORef EnvEntries)
+initCoreEnv = newIORef mempty
+
+class HasCoreEnv e where
+        getCoreEnv :: (MonadIO m) => e -> m (IORef EnvEntries)
+        setCoreEnv :: (MonadIO m) => e -> EnvEntries -> m ()
+        readCoreEnv :: (MonadIO m) => e -> m EnvEntries
+        readCoreEnv ref = liftIO . readIORef =<< getCoreEnv ref
+
+instance HasCoreEnv CoreEnv where
+        getCoreEnv = return
+        setCoreEnv ref = liftIO . writeIORef ref
+
+extE :: (HasCoreEnv e, MonadIO m) => PrtInfo -> e -> m Ix
+extE fi ref = do
+        env <- readCoreEnv ref
+        let i = length env
+        setCoreEnv ref (env `V.snoc` (Index i, fi))
+        return i
+
+getE :: (HasCoreEnv e, MonadIO m) => Ix -> e -> m EnvEntry
+getE i ref = do
+        env <- readCoreEnv ref
+        return $ fst $ env V.! i
+
+setE :: (HasCoreEnv e, MonadIO m) => Ix -> EnvEntry -> e -> m ()
+setE i v ref = do
+        env <- readCoreEnv ref
+        setCoreEnv ref (env V.// [(i, (v, snd $ env V.! i))])
+
+prtE :: (HasCoreEnv e, MonadIO m) => Ix -> e -> m PrtInfo
+prtE i ref = do
+        env <- readCoreEnv ref
+        return $ snd $ env V.! i
+
+restoreScope :: EnvEntries -> Scope
+restoreScope =
+        Scope . M.fromList . zipWith (\i (_, fi) -> (prt_ident fi, (i, Nothing))) [0 ..] . V.toList

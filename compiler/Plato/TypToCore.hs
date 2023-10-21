@@ -10,11 +10,14 @@ import Control.Monad.Reader
 import Data.Foldable
 import GHC.Stack
 
+import Control.Exception.Safe
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
 import Plato.Common.Uniq
+import Plato.Core.Env
+import Plato.Core.Eval
 import Plato.Driver.Monad
 import Plato.Syntax.Core qualified as C
 import Plato.Syntax.Core.Helper
@@ -120,11 +123,15 @@ elabDefn (T.TypDefn tdefs) = do
         return $ toList decs ++ toList defs
 elabDefn (T.ValDefn bnds) = elabBinds bnds
 
-elabDefns :: (MonadReader e m, HasUniq e, MonadIO m) => [T.Defn 'T.Typed] -> m [C.Entry]
-elabDefns decs = concat <$> mapM elabDefn decs
+elabDefns :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadIO m, MonadThrow m) => [T.Defn 'T.Typed] -> m [C.Entry]
+elabDefns decs = do
+        sc <- restoreScope <$> (readCoreEnv =<< ask)
+        ents <- concat <$> mapM elabDefn decs
+        _sc' <- evalProg (ents, sc)
+        return ents
 
 typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
-typToCore decs = runReaderT (elabDefns decs) =<< getUniq =<< ask
+typToCore decs = runContext (elabDefns decs)
 
 typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 typToCoreExpr = elabExpr

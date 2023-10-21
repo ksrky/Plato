@@ -34,7 +34,6 @@ compileToCore src = catchErrors $ do
         whenFlagOn FPrintTyped $ liftIO $ printList typsyn'
         corsyn <- typToCore typsyn'
         whenFlagOn FPrintCore $ liftIO $ printList corsyn
-        whenFlagOn FEvalCore $ appendProg corsyn
         return corsyn
 
 evaluateCore :: forall m. (PlatoMonad m) => T.Text -> Interactive m ()

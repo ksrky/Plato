@@ -21,11 +21,11 @@ import Plato.Syntax.Core.Helper
 type Vars = [Ident]
 
 class Nf a b | a -> b where
-        nf :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        nf :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         nf = nf' True
-        quote :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        quote :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         quote = nf' False
-        nf' :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
+        nf' :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
 
 instance Nf (Clos Term) Term where
         nf' True xs t = nf' True xs =<< eval t
@@ -44,7 +44,7 @@ instance Nf Ix Term where
                                 -- the let cannot be expanded if inside a box!
                                         return (Var x)
 
-qq :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
+qq :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
 qq xs (Var x, s) = quote xs =<< getIndex x s
 -- qq _  (Let _ _ _, _) = return (Label  "*quote-let-not-implemented*")
 qq xs (Let g t, s) = do

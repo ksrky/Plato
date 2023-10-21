@@ -18,17 +18,17 @@ getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
-lookupIndex :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> m EnvEntry
+lookupIndex :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> m EnvEntry
 lookupIndex i = getE i =<< ask
 
-evalIndex :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Ix -> m Val
+evalIndex :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Ix -> m Val
 evalIndex i =
         lookupIndex i >>= \case
                 Index j -> return $ Ne (NVar j)
                 Closure t -> eval t
 
 decl ::
-        (MonadReader e m, CoreEnv e, MonadIO m) =>
+        (MonadReader e m, HasCoreEnv e, MonadIO m) =>
         Ident ->
         PrtInfo ->
         Scope ->
@@ -38,16 +38,16 @@ decl id fi sc a = do
         i <- extE fi =<< ask
         return (i, extendScope id (i, a) sc)
 
-decl' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ident -> Scope -> m (Ix, Scope)
-decl' x sc = decl x PrtInfo{name = x, expand = True} sc Nothing
+decl' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ident -> Scope -> m (Ix, Scope)
+decl' x sc = decl x PrtInfo{prt_ident = x, prt_expand = True} sc Nothing
 
-defn :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> EnvEntry -> m ()
+defn :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> EnvEntry -> m ()
 defn i ei = setE i ei =<< ask
 
-defn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> Clos Type -> m ()
+defn' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> Clos Type -> m ()
 defn' i = defn i . Closure
 
-letn :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> EnvEntry -> m a -> m a
+letn :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> EnvEntry -> m a -> m a
 letn i ei p = do
         eo <- lookupIndex i
         defn i ei
@@ -55,16 +55,16 @@ letn i ei p = do
         defn i eo
         return a
 
-letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ix -> Clos Type -> m a -> m a
+letn' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> Clos Type -> m a -> m a
 letn' i = letn i . Closure
 
-subst :: (MonadReader e m, CoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
+subst :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
 subst (x, (t, sc)) u = do
         (i, s') <- decl' x sc
         defn' i u
         return (t, s')
 
-eval :: forall e m. (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> m Val
+eval :: forall e m. (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> m Val
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
@@ -113,7 +113,7 @@ eval (Unfold t, sc) = unfold =<< eval (t, sc)
         unfold (Ne n) = return $ Ne (NUnfold n)
         unfold _ = throwError "Fold expected"
 
-evalProg :: (MonadReader e m, CoreEnv e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
+evalProg :: (MonadReader e m, HasCoreEnv e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
 evalProg ([], sc) = return sc
 evalProg ((Decl id _) : tel, sc) = do
         (_, sc') <- decl id (PrtInfo id False) sc Nothing

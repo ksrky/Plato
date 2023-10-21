@@ -6,6 +6,7 @@ module Plato.Driver.Monad (
         setContext,
         PlatoMonad (..),
         updateContext,
+        runContext,
         PlatoT,
         unPlato,
         Plato,
@@ -27,7 +28,6 @@ import Data.IORef
 import Data.Maybe
 import System.FilePath
 
-import Plato.Common.Uniq
 import Plato.Driver.Context
 import Plato.Driver.Flag
 import Plato.Driver.Info
@@ -61,22 +61,16 @@ initPlatoEnv = do
 ----------------------------------------------------------------
 data Session = Session {unSession :: !(IORef PlatoEnv)}
 
-initSession :: MonadIO m => m Session
+initSession :: (MonadIO m) => m Session
 initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
 
-getContext :: MonadIO m => Session -> m Context
+getContext :: (MonadIO m) => Session -> m Context
 getContext (Session ref) = liftIO $ plt_context <$> readIORef ref
 
-setContext :: MonadIO m => Context -> Session -> m ()
+setContext :: (MonadIO m) => Context -> Session -> m ()
 setContext ctx (Session ref) = do
         env <- liftIO $ readIORef ref
         liftIO $ writeIORef ref env{plt_context = ctx}
-
-instance HasUniq Session where
-        getUniq session = ctx_uniq <$> getContext session
-        setUniq uniq session = do
-                ctx <- getContext session
-                liftIO $ writeIORef (ctx_uniq ctx) uniq
 
 instance HasInfo Session where
         getEntryPath (Session ref) = do
@@ -114,12 +108,17 @@ class (MonadReader Session m, MonadIO m, MonadCatch m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
 
-updateContext :: PlatoMonad m => ReaderT Context m (a, Context) -> m a
+updateContext :: (PlatoMonad m) => ReaderT Context m (a, Context) -> m a
 updateContext m = do
         ctx <- getContext =<< ask
         (res, ctx') <- runReaderT m ctx
         setContext ctx' =<< ask
         return res
+
+runContext :: (PlatoMonad m) => ReaderT Context m a -> m a
+runContext m = do
+        ctx <- getContext =<< ask
+        runReaderT m ctx
 
 type PlatoT m = ReaderT Session m
 
@@ -139,5 +138,5 @@ type Plato = PlatoT IO
 ---------------------------------------------------------------
 -- Utilities
 ----------------------------------------------------------------
-getFileName :: PlatoMonad m => m String
+getFileName :: (PlatoMonad m) => m String
 getFileName = takeBaseName <$> (getEntryPath =<< ask)

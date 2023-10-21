@@ -14,7 +14,7 @@ import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Print a where
-        evalPrint :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
+        evalPrint :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
 
 instance Print Ident where
         evalPrint = return . prettyId
