@@ -131,7 +131,7 @@ elabDefns decs = do
         return ents
 
 typToCore :: (PlatoMonad m) => T.Prog 'T.Typed -> m [C.Entry]
-typToCore decs = runContext (elabDefns decs)
+typToCore = catchErrors . runContext . elabDefns
 
 typToCoreExpr :: (MonadReader e m, HasUniq e, MonadIO m) => T.Expr 'T.Typed -> m C.Term
 typToCoreExpr = elabExpr

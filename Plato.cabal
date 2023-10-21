@@ -41,9 +41,7 @@ library
       Plato.Core.Result
       Plato.Driver.Context
       Plato.Driver.Flag
-      Plato.Driver.Info
       Plato.Driver.Interactive
-      Plato.Driver.Logger
       Plato.Driver.Monad
       Plato.Parsing
       Plato.Parsing.Action
