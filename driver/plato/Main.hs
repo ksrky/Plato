@@ -14,7 +14,6 @@ processCommands :: Command -> IO ()
 processCommands (REPL files opts) = do
         session <- initSession
         setFlags opts session
-        setFlag FEvalCore session
         libfiles <- concat <$> mapM readDepend (searchPaths opts)
         repl (libfiles ++ files) session
 processCommands (Run files opts) = do

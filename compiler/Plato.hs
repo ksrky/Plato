@@ -12,7 +12,6 @@ import Control.Monad.Reader
 import Data.Text qualified as T
 
 import Plato.Common.Error
-import Plato.Common.Pretty
 import Plato.Driver.Context
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
@@ -37,7 +36,7 @@ compileToCore src = catchErrors $ do
         return corsyn
 
 evaluateCore :: forall m. (PlatoMonad m) => T.Text -> Interactive m ()
-evaluateCore inp = catchErrors $ evalCore =<< lift (compExpr =<< getContext =<< ask)
+evaluateCore inp = catchErrors $ evalCore =<< lift (compExpr =<< getContext)
     where
         compExpr :: Context -> m Term
         compExpr = runReaderT $ parseExpr inp >>= psToTypExpr >>= typingExpr >>= typToCoreExpr

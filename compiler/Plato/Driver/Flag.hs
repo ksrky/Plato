@@ -5,13 +5,13 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
 import Data.IORef
 
-data Flag = FDebug | FPrintParsed | FPrintTyped | FPrintCore | FEvalCore
+data Flag = FDebug | FPrintParsed | FPrintTyped | FPrintCore
         deriving (Eq, Show)
 
 class HasFlags a where
-        getFlags :: MonadIO m => a -> m [Flag]
-        setFlag :: MonadIO m => Flag -> a -> m ()
-        isFlagOn :: MonadIO m => Flag -> a -> m Bool
+        getFlags :: (MonadIO m) => a -> m [Flag]
+        setFlag :: (MonadIO m) => Flag -> a -> m ()
+        isFlagOn :: (MonadIO m) => Flag -> a -> m Bool
         isFlagOn flag env = do
                 flags <- getFlags env
                 return $ flag `elem` flags

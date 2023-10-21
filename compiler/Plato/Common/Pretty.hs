@@ -3,7 +3,6 @@ module Plato.Common.Pretty (
         Pretty (..),
         sepBy,
         parenswPrec,
-        printList,
         wildcard,
         arrow,
         dollar,
@@ -12,8 +11,6 @@ module Plato.Common.Pretty (
 
 import Prettyprinter hiding (Pretty (..))
 import Prettyprinter qualified
-
-import Prettyprinter.Util
 
 class Pretty a where
         pretty :: a -> Doc ann
@@ -32,9 +29,6 @@ sepBy doc sep = concatWith (surround (sep <> space)) doc
 
 parenswPrec :: Int -> Int -> Doc ann -> Doc ann
 parenswPrec i j doc = if i > j then parens doc else doc
-
-printList :: (Pretty a) => [a] -> IO ()
-printList = putDocW 100 . (<> line) . vsep . map pretty
 
 wildcard :: Doc ann
 wildcard = "_"

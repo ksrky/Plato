@@ -31,7 +31,7 @@ openFile src =
 parseFile :: (PlatoMonad m) => FilePath -> m Program
 parseFile src = catchPsErrors $ do
         inp <- openFile src
-        uref <- getUniq =<< getContext =<< ask
+        uref <- getUniq =<< getContext
         (prog, _) <- liftIO $ parse src uref inp parser
         return prog
 

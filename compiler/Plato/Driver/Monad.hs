@@ -2,11 +2,11 @@ module Plato.Driver.Monad (
         PlatoEnv (..),
         Session (..),
         initSession,
+        PlatoMonad (..),
         getContext,
         setContext,
-        PlatoMonad (..),
         updateContext,
-        runContext,
+        applyContext,
         PlatoT,
         unPlato,
         Plato,
@@ -42,20 +42,12 @@ initPlatoEnv = do
                         }
 
 ----------------------------------------------------------------
--- Plato Monad
+-- Session
 ----------------------------------------------------------------
 data Session = Session {unSession :: !(IORef PlatoEnv)}
 
 initSession :: (MonadIO m) => m Session
 initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
-
-getContext :: (MonadIO m) => Session -> m Context
-getContext (Session ref) = liftIO $ plt_context <$> readIORef ref
-
-setContext :: (MonadIO m) => Context -> Session -> m ()
-setContext ctx (Session ref) = do
-        env <- liftIO $ readIORef ref
-        liftIO $ writeIORef ref env{plt_context = ctx}
 
 instance HasFlags Session where
         getFlags (Session ref) = do
@@ -72,22 +64,27 @@ class (MonadReader Session m, MonadIO m, MonadCatch m) => PlatoMonad m where
         getSession :: m PlatoEnv
         setSession :: PlatoEnv -> m ()
 
+getContext :: (PlatoMonad m) => m Context
+getContext = plt_context <$> getSession
+
+setContext :: (PlatoMonad m) => Context -> m ()
+setContext ctx = do
+        env <- getSession
+        setSession env{plt_context = ctx}
+
+updateContext :: (PlatoMonad m) => ReaderT Context m (a, Context) -> m a
+updateContext m = do
+        (res, ctx') <- runReaderT m =<< getContext
+        setContext ctx'
+        return res
+
+applyContext :: (PlatoMonad m) => ReaderT Context m a -> m a
+applyContext m = runReaderT m =<< getContext
+
 type PlatoT m = ReaderT Session m
 
 unPlato :: PlatoT m a -> Session -> m a
 unPlato = runReaderT
-
-updateContext :: (PlatoMonad m) => ReaderT Context m (a, Context) -> m a
-updateContext m = do
-        ctx <- getContext =<< ask
-        (res, ctx') <- runReaderT m ctx
-        setContext ctx' =<< ask
-        return res
-
-runContext :: (PlatoMonad m) => ReaderT Context m a -> m a
-runContext m = do
-        ctx <- getContext =<< ask
-        runReaderT m ctx
 
 instance (MonadIO m, MonadCatch m) => PlatoMonad (PlatoT m) where
         getSession = do
