@@ -2,8 +2,9 @@ module Plato (
         runPlato,
         compileToCore,
         evaluateCore,
-        module Plato.Driver.Monad,
+        module Plato.Driver.Flag,
         module Plato.Driver.Interactive,
+        module Plato.Driver.Monad,
 ) where
 
 import Control.Monad
@@ -13,6 +14,7 @@ import Data.Text qualified as T
 
 import Plato.Common.Error
 import Plato.Driver.Context
+import Plato.Driver.Flag
 import Plato.Driver.Interactive
 import Plato.Driver.Monad
 import Plato.Parsing

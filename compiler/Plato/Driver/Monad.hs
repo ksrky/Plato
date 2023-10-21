@@ -9,11 +9,7 @@ module Plato.Driver.Monad (
         applyContext,
         PlatoT,
         unPlato,
-        Plato,
-        -- Plato.Driver.Flag
-        HasFlags (..),
-        Flag (..),
-        whenFlagOn,
+        Plato
 ) where
 
 import Control.Exception.Safe

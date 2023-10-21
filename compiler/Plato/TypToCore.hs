@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.TypToCore (elabExpr, elabDefn, typToCore, typToCoreExpr) where
+module Plato.TypToCore (typToCore, typToCoreExpr) where
 
 import Control.Monad
 import Control.Monad.IO.Class

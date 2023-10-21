@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Typing.Linearize where
+module Plato.Typing.Linearize (linearizeTop) where
 
 import Control.Monad.Writer
 import Data.Graph

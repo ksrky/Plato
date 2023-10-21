@@ -1,4 +1,4 @@
-module Plato.Driver.Flag where
+module Plato.Driver.Flag (Flag (..), HasFlags (..), whenFlagOn) where
 
 import Control.Monad
 import Control.Monad.IO.Class

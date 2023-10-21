@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Plato.Typing.Env (
+        Constrs,
         TypEnv,
         HasTypEnv (..),
         EnvManager (..),
@@ -10,7 +11,6 @@ module Plato.Typing.Env (
         extendBinds,
         extendDataBinds,
         envTypes,
-        Constrs,
 ) where
 
 import Control.Exception.Safe

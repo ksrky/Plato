@@ -1,4 +1,4 @@
-module Plato.Core.Pretty where
+module Plato.Core.Pretty (Print (..)) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class

@@ -1,4 +1,4 @@
-module Plato.Core.Result where
+module Plato.Core.Result (Val (..), Ne (..), Boxed (..)) where
 
 import Plato.Common.Ident
 import Plato.Common.Pretty

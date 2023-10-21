@@ -1,4 +1,16 @@
-module Plato.Core.Env where
+module Plato.Core.Env (
+        EnvEntry (..),
+        PrtInfo (..),
+        EnvEntries,
+        CoreEnv,
+        initCoreEnv,
+        HasCoreEnv (..),
+        extE,
+        getE,
+        setE,
+        prtE,
+        restoreScope,
+) where
 
 import Control.Monad.IO.Class
 import Data.IORef

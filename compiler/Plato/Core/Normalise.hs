@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Plato.Core.Normalise where
+module Plato.Core.Normalise (Nf (..)) where
 
 import Control.Exception.Safe
 import Control.Monad

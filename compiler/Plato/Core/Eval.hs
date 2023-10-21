@@ -1,6 +1,15 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Core.Eval where
+module Plato.Core.Eval (
+        getIndex,
+        lookupIndex,
+        decl,
+        decl',
+        letn,
+        letn',
+        eval,
+        evalProg,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader

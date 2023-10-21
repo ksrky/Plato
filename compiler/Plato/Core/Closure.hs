@@ -1,4 +1,13 @@
-module Plato.Core.Closure where
+module Plato.Core.Closure (
+        Ix,
+        Scope (..),
+        Clos,
+        emptyScope,
+        extendScope,
+        lookupScope,
+        lookupCon,
+        Closure (..),
+) where
 
 import Data.Map.Strict qualified as M
 import Data.Maybe

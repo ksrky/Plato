@@ -1,14 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.PsToTyp (
-        elabExpr,
-        elabPat,
-        elabType,
-        elabTopDecls,
-        psToTyp,
-        psToTypExpr,
-) where
+module Plato.PsToTyp (psToTyp, psToTypExpr) where
 
 import Control.Exception.Safe
 import Control.Monad

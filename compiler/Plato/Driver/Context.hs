@@ -1,4 +1,4 @@
-module Plato.Driver.Context where
+module Plato.Driver.Context (Context, initContext) where
 
 import Control.Monad.IO.Class
 import Data.IORef

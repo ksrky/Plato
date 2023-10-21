@@ -1,4 +1,4 @@
-module Plato.Core.Equal where
+module Plato.Core.Equal (Equal (..)) where
 
 import Control.Exception.Safe
 import Control.Monad
