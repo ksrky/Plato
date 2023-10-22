@@ -98,7 +98,6 @@ elabExpr (P.CaseE match alts) = do
                 pat' <- elabPat `traverse` pat
                 body' <- local (extendScope pat) $ elabExpr `traverse` body
                 return (pat', body')
-
         return $ T.CaseE match' Nothing alts'
 elabExpr (P.FactorE exp) = elabExpr (unLoc exp)
 

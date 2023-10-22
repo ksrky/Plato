@@ -73,8 +73,8 @@ type XBinds (a :: TcFlag) = Block (XBind a)
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-instance Pretty ([LPat], LExpr 'Untyped) where
-        pretty (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
+prClause :: ([LPat], LExpr 'Untyped) -> Doc ann
+prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
 instance Pretty (Expr 'Untyped) where
         pretty' _ (VarE var) = pretty var
@@ -93,7 +93,7 @@ instance Pretty (Expr 'Untyped) where
                                 , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
                                 ]
         pretty' _ (ClauseE clauses) =
-                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map pretty clauses)]
+                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]
 
 instance Pretty (Expr 'Typed) where
         pretty' _ (VarE var) = pretty var

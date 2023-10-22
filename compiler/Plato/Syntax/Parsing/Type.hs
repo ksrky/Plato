@@ -1,4 +1,4 @@
-module Plato.Syntax.Parsing.Type (LType, Type (..)) where
+module Plato.Syntax.Parsing.Type where
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -23,24 +23,10 @@ data Type
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty Type where
-        pretty (VarT var) = pretty var
-        pretty (ConT con) = pretty con
-        pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
-        pretty (ArrT arg res) = prty ArrPrec (unLoc arg) <+> "->" <+> prty TopPrec (unLoc res)
-        pretty (AllT vars body) = braces (hsep (map pretty vars)) <+> pretty body
-        pretty (BinT lhs op rhs) = prty AppPrec (unLoc lhs) <+> pretty op <+> prty AppPrec (unLoc rhs)
-        pretty (FactorT ty) = parens $ pretty ty
-
-data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
-
-precOf :: Type -> Prec
-precOf AllT{} = TopPrec
-precOf ArrT{} = ArrPrec
-precOf AppT{} = AppPrec
-precOf BinT{} = AppPrec
-precOf _ = AtomPrec
-
-prty :: Prec -> Type -> Doc ann
-prty p ty
-        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
-        | otherwise = pretty ty
+        pretty' _ (VarT var) = pretty var
+        pretty' _ (ConT con) = pretty con
+        pretty' p (AppT fun arg) = parenswPrec p 1 $ pretty' 1 fun <+> pretty' 2 arg
+        pretty' p (ArrT arg res) = parenswPrec p 0 $ hsep [pretty' 1 arg, arrow, pretty res]
+        pretty' p (AllT vars body) = parenswPrec p 0 $ hsep [braces (hsep (map pretty vars)), pretty body]
+        pretty' _ (BinT lhs op rhs) = parens $ hsep [pretty' 1 lhs, pretty op, pretty' 1 rhs]
+        pretty' _ (FactorT ty) = parens $ pretty ty

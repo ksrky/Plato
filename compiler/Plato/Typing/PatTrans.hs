@@ -26,19 +26,17 @@ transClauses ::
         Clauses 'Typed ->
         m (Expr 'Typed)
 transClauses tys clauses = do
-        vars <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
-        exp <- match vars clauses
-        return $ foldr (uncurry AbsE) exp vars
+        idtys <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
+        exp <- match (map (\(id, ty) -> (VarE id, ty)) idtys) clauses
+        return $ foldr (uncurry AbsE) exp idtys
 
 transCase ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         Expr 'Typed ->
         m (Expr 'Typed)
 transCase (CaseE exp ty alts) = do
-        var <- labelVarId "cv"
         let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
-        altsexp <- match [(var, ty)] clauses
-        return $ AppE (AbsE var ty altsexp) exp
+        match [(exp, ty)] clauses
 transCase _ = unreachable "Expected type-checked case expression"
 
 constructors :: forall e m. (MonadReader e m, HasTypEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
@@ -65,10 +63,10 @@ isVarorSameCon _ _ = True
 
 match ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
-        [(Ident, Type)] ->
+        [(Expr 'Typed, Type)] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
-match [(var, ty)] [] = return (CaseE (VarE var) ty [])
+match [(exp, ty)] [] = return (CaseE exp ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
 match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
@@ -78,14 +76,14 @@ match (vt : vts) clauses
 
 matchVar ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
-        (Ident, Type) ->
-        [(Ident, Type)] ->
+        (Expr 'Typed, Type) ->
+        [(Expr 'Typed, Type)] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
 matchVar (var, _) rest clauses = do
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
-                (L _ (VarP vp) : pats, exp) -> (pats, substExpr vp (VarE var) exp)
+                (L _ (VarP vp) : pats, exp) -> (pats, substExpr vp var exp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 (L _ TagP{} : _, _) -> unreachable "TagP"
@@ -94,14 +92,14 @@ matchVar (var, _) rest clauses = do
 
 matchCon ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
-        (Ident, Type) ->
-        [(Ident, Type)] ->
+        (Expr 'Typed, Type) ->
+        [(Expr 'Typed, Type)] ->
         Clauses 'Typed ->
         m (Expr 'Typed)
 matchCon (var, ty) rest clauses = do
         constrs <- constructors ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ CaseE (VarE var) ty alts
+        return $ CaseE var ty alts
 
 choose :: Ident -> Clauses 'Typed -> Clauses 'Typed
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
@@ -109,7 +107,7 @@ choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 matchClause ::
         (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
-        [(Ident, Type)] ->
+        [(Expr 'Typed, Type)] ->
         Clauses 'Typed ->
         m (LPat, Expr 'Typed)
 matchClause (con, _) _ [] =
@@ -129,8 +127,8 @@ matchClause (con, arg_tys) vts clauses = do
                 (L _ WildP : ps', e) -> do
                         let dummy_pats = map (const $ noLoc WildP) arg_tys
                         return (dummy_pats ++ ps', e)
-                (L _ AnnP{} : _, _) -> unreachable " received AnnP"
+                (L _ AnnP{} : _, _) -> unreachable "received AnnP"
                 (L _ TagP{} : _, _) -> unreachable "received TagP"
                 ([], e) -> return ([], e)
-        let ats = zip args arg_tys
-        (noLoc $ TagP con ats,) <$> match (ats ++ vts) clauses'
+        let ats = zipWith (\id ty -> (VarE id, ty)) args arg_tys
+        (noLoc $ TagP con (zip args arg_tys),) <$> match (ats ++ vts) clauses'

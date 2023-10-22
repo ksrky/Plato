@@ -18,13 +18,6 @@ data TopDecl
         | LocalD {unLocalD :: LocDecl}
         deriving (Eq, Show)
 
-instance Ord TopDecl where
-        compare x y = compare (tag x) (tag y)
-            where
-                tag :: TopDecl -> Int
-                tag DataD{} = 0
-                tag LocalD{} = 1
-
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
@@ -34,6 +27,7 @@ instance Pretty TopDecl where
                         [ "data"
                         , hsep (pretty con : map pretty args)
                         , "where"
-                        , braces $ map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
+                        , line
+                        , map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
                         ]
         pretty (LocalD ld) = pretty ld

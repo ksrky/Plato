@@ -17,6 +17,8 @@ class Pretty a where
         pretty = pretty' 0
         pretty' :: Int -> a -> Doc ann
         pretty' _ = pretty
+        prettyList :: [a] -> Doc ann
+        prettyList = vsep . map pretty
 
 instance Pretty String where
         pretty = Prettyprinter.pretty
