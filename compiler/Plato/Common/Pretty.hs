@@ -1,30 +1,24 @@
 module Plato.Common.Pretty (
         module Prettyprinter,
-        Pretty (..),
-        sepBy,
-        parenswPrec,
-        wildcard,
-        arrow,
-        dollar,
-        asterisk,
+        module Plato.Common.Pretty
 ) where
 
 import Prettyprinter hiding (Pretty (..))
 import Prettyprinter qualified
 
 class Pretty a where
-        pretty :: a -> Doc ann
-        pretty = pretty' 0
-        pretty' :: Int -> a -> Doc ann
-        pretty' _ = pretty
-        prettyList :: [a] -> Doc ann
-        prettyList = vsep . map pretty
+    pretty :: a -> Doc ann
+    pretty = pretty' 0
+    pretty' :: Int -> a -> Doc ann
+    pretty' _ = pretty
+    prettyList :: [a] -> Doc ann
+    prettyList = vsep . map pretty
 
 instance Pretty String where
-        pretty = Prettyprinter.pretty
+    pretty = Prettyprinter.pretty
 
 instance Pretty Int where
-        pretty = Prettyprinter.pretty
+    pretty = Prettyprinter.pretty
 
 sepBy :: [Doc ann] -> Doc ann -> Doc ann
 sepBy doc sep = concatWith (surround (sep <> space)) doc

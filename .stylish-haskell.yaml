@@ -62,13 +62,13 @@ steps:
       #     # Possible values:
       #     # - "same_line" -- leave "=" AND data constructor on the same line as the type constructor.
       #     # - "indent N" -- insert a new line and N spaces from the beginning of the next line.
-      equals: "indent 8"
+      equals: "indent 4"
       #
       #     # How to format first field of each record constructor.
       #     # Possible values:
       #     # - "same_line" -- "{" and first field goes on the same line as the data constructor.
       #     # - "indent N" -- insert a new line and N spaces from the beginning of the data constructor
-      first_field: "indent 8"
+      first_field: "indent 4"
       #
       #     # How many spaces to insert between the column with "," and the beginning of the comment in the next line.
       field_comment: 2
@@ -432,10 +432,10 @@ steps:
       language_prefix: LANGUAGE
 
   # Replace tabs by spaces. This is disabled by default.
-  # - tabs:
+  - tabs:
   #     # Number of spaces to use for each tab. Default: 8, as specified by the
   #     # Haskell report.
-  #     spaces: 8
+      spaces: 4
 
   # Remove trailing whitespace
   - trailing_whitespace: {}

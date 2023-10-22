@@ -1,7 +1,7 @@
 module Plato.Common.Name where
 
-import Data.Map.Strict qualified as M
-import Data.Text qualified as T
+import Data.Map.Strict     qualified as M
+import Data.Text           qualified as T
 
 import Plato.Common.Pretty
 
@@ -9,30 +9,25 @@ import Plato.Common.Pretty
 -- Name
 ----------------------------------------------------------------
 data Name = Name
-        { nameSpace :: NameSpace
-        , nameText :: T.Text
-        }
+    { nameSpace :: NameSpace
+    , nameText  :: T.Text
+    }
 
 instance Eq Name where
-        n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
+    n1 == n2 = nameSpace n1 == nameSpace n2 && nameText n1 == nameText n2
 
 instance Ord Name where
-        compare n1 n2 = compare (nameText n1) (nameText n2) <> compare (nameSpace n1) (nameSpace n2)
+    compare n1 n2 = compare (nameText n1) (nameText n2) <> compare (nameSpace n1) (nameSpace n2)
 
 instance Show Name where
-        show (Name _ t) = T.unpack t
+    show (Name _ t) = T.unpack t
 
 instance Pretty Name where
-        pretty = viaShow
+    pretty = viaShow
 
 -- | NameSpace
-data NameSpace
-        = VarName
-        | ConName
-        | TyvarName
-        | TyconName
-        | GenName
-        deriving (Eq, Ord, Show)
+data NameSpace = VarName | ConName | TyvarName | TyconName | GenName
+    deriving (Eq, Ord, Show)
 
 varName :: T.Text -> Name
 varName = Name VarName
