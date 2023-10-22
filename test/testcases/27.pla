@@ -1,0 +1,28 @@
+-- multi-branch expressions
+
+data T where
+    T1 : T
+    T2 : T
+
+{-
+ex1 : T -> ({a} a -> a)
+ex1 t = case t of
+    T1 -> \x -> x
+    T2 -> \y -> y
+
+ex2 t = case t of
+    T1 -> \x -> x
+    T2 -> \y -> y
+
+ex3 : T -> ({a} a -> a)
+ex3 T1 = \x -> x
+ex3 T2 = \y -> y
+
+ex4 T1 = \x -> x
+ex4 T2 = \y -> y
+-}
+
+ex5 : T -> ({a} a -> a)
+ex5 t = case t of
+    T1 -> \x -> x
+    T2 -> \y -> y

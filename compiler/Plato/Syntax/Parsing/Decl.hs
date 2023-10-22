@@ -27,6 +27,7 @@ instance Pretty TopDecl where
                         [ "data"
                         , hsep (pretty con : map pretty args)
                         , "where"
-                        , braces $ map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
+                        , line
+                        , map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
                         ]
         pretty (LocalD ld) = pretty ld

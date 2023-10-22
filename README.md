@@ -30,12 +30,11 @@ Source files are written in GHC2021, so at least ghc-9.2 is required.
 
 ### Building and Installing
 
-Currently, ghc-9.2.7, ghc-9.2.8 and ghc-9.4.5 are supported. Choose a specific ghc version, and use the corresponding stack.yaml to install.
-
-```command
-$ cd Plato
-$ stack install --stack-yaml=stack-a.b.c.yaml
+If you are using GHC version 9.4.7, you can install the package using Stack:
 ```
+$ stack install
+```
+If you are not using this GHC version, create your own stack.yaml that aligns with your environment.
 
 `cabal install` can be another option, but make sure that ghc version used by cabal matches the prerequisite.
 
@@ -48,7 +47,7 @@ If you can run the following command, Plato is successfully installed.
 
 ```
 $ plato --version
-Plato version 1.0.0
+Plato version 1.0.3
 ```
 
 ## Getting started
@@ -60,21 +59,29 @@ $ plato A.pla B.pla
 >>
 ```
 
+Note that if B.pla depends on A.pla, these files must be written in the same order as the above command.
+
 Let us run some files under [examples](examples) directory.
 
 ```
 $ cd path/to/Plato
-$ plato examples/fibonacci.pla --libs libraries/base
+$ plato examples/fibonacci.pla -i libraries/base
 >> fib (S (S (S Z)))
 (`S, fold (`S, fold (`Z, `unit)))
 >> :q
-$ plato examples/quick_sort.pla --libs libraries/base
+$ plato examples/quick_sort.pla -i libraries/base
 >> qsort (S (S Z) :: Z :: S Z :: S (S (S Z)) :: Nil)
-(`::, fold ((`Z, `unit), (`::, fold ((`S, fold (`Z, `unit)), (`::,
-fold ((`S, fold (`S, fold (`Z, `unit))), (`::, fold ((`S, fold (`S,
-fold (`S, fold (`Z, `unit)))), (`Nil, `unit)))))))))
+( `::
+, fold ( (`Z, `unit)
+       , ( `::
+         , fold ( (`S, fold (`Z, `unit))
+                , ( `::
+                  , fold ( (`S, fold (`S, fold (`Z, `unit)))
+                         , ( `::
+                           , fold ( (`S, fold (`S, fold (`S, fold (`Z, `unit))))
+                                  , (`Nil, `unit) ) ) ) ) ) ) ) )
 ```
 
-`--libs` option specifies a directory of files that should be imported in advance.
+`-i` option appends a colon-separated list of dirs to the search path. All the files under the search path are compiled before compiling the main files.
 
 Type `plato --help` to check more commands and options.

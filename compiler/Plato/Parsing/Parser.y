@@ -1,5 +1,6 @@
 {
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Plato.Parsing.Parser (
     parser,
@@ -10,6 +11,7 @@ module Plato.Parsing.Parser (
     tokenParser,
 ) where
 
+import Plato.Common.Fixity
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Name
@@ -24,6 +26,7 @@ import Plato.Syntax.Parsing
 
 import Control.Monad.State (lift)
 import Control.Exception.Safe (MonadThrow)
+import qualified Data.List as List
 import qualified Data.Text as T
 import Prettyprinter
 }
@@ -77,31 +80,11 @@ digit                           { (mkLDigit -> Just $$) }
 %%
 
 program     :: { Program }
-            : ';' impdecls ';' topdecls             { reverse $2 ++ [$4] }
-            | ';' topdecls                          { [$2] }
+            : ';' decls                             { $2 }
 
------------------------------------------------------------
--- Instructions
------------------------------------------------------------
-instr       :: { LInstr }
-            : topdecls                              { $1 }
-            | expr                                  { L (getLoc $1) (EvalExpr $1) }
-
------------------------------------------------------------
--- Imports
------------------------------------------------------------
-impdecls    :: { [LInstr] }
-            : impdecls ';' impdecl                  { $3 : $1 } -- Note: throws error unless tail recursion
-            | impdecl                               { [$1] }
-
-impdecl     :: { LInstr }
-            : 'import' conid                        { sL $1 $2 (ImpDecl $2) }
-
------------------------------------------------------------
--- TopDecls
------------------------------------------------------------
-topdecls    :: { LInstr }
-            : decls                                 { L (concatSpans (map getLoc $1)) (TopDecls $1) }
+instr       :: { Instr }
+            : decls                                 { InstrDecls $1 }
+            | expr                                  { InstrEval $1 }
 
 -----------------------------------------------------------
 -- Declarations
@@ -120,7 +103,6 @@ decl        :: { [LTopDecl] }
             | 'data' '(' tyconop ')' tyvarseq datarhs
                                                     { [sL $1 $6 (DataD $3 $5 (unLoc $6))] }
             | fundecl                               { map (fmap LocalD) $1 }
-            | fixdecl                               { [fmap LocalD $1] }
 
 -- | Data declaration
 datarhs     :: { Located [(Ident, LType)] }
@@ -155,9 +137,14 @@ fundecl     :: { [LLocDecl] }
 
 -- | Fixity declaration
 fixdecl     :: { LLocDecl }
-            : 'infix' digit op                      { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Nonfix)) }
-            | 'infixl' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Leftfix)) }
-            | 'infixr' digit op                     { sL $1 $3 (FixityD $3 (Fixity (unLoc $2) Rightfix)) }
+            : 'infix' digit opname                  { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Nonfix)) }
+            | 'infixl' digit opname                 { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Leftfix)) }
+            | 'infixr' digit opname                 { sL $1 $3 (FixityD $3 (Fixity (FixPrec (unLoc $2)) Rightfix)) }
+
+opname      :: { Located Name }
+            : varop                                 { fromIdent $1 }
+            | conop                                 { fromIdent $1 }
+            | 'data' tyconop                        { fromIdent $2 }
 
 -----------------------------------------------------------
 -- Types
@@ -206,7 +193,6 @@ fexpr       :: { LExpr }
 aexpr       :: { LExpr }
             : '(' op ')'                            { sL $1 $3 (VarE $2) }
             | '(' expr ')'                          { sL $1 $3 (FactorE $2) }
-            | '(' expr ':' type ')'                 { sL $1 $5 (AnnE $2 $4) }
             | var                                   { L (getLoc $1) (VarE $1) }
             | con                                   { L (getLoc $1) (VarE $1) }
 
@@ -299,15 +285,15 @@ tycon       :: { Ident }
 
 -- | VarOp
 varop       :: { Ident }
-            : varsym                                {% mkIdent varName $1 }
+            : varsym                                {% mkOper varName $1 }
 
 -- | ConOp
 conop       :: { Ident }
-            : consym                                {% mkIdent conName $1 }
+            : consym                                {% mkOper conName $1 }
 
 -- | TyconOp
 tyconop     :: { Ident }
-            : consym                                {% mkIdent tyconName $1 }
+            : consym                                {% mkOper tyconName $1 }
 
 -- | Op
 op          :: { Ident }
@@ -388,4 +374,9 @@ mkIdent :: (T.Text -> Name) -> Located T.Text -> Parser Ident
 mkIdent f x = do
     u <- freshUniq
     return $ ident (mkLName f x) u
+
+mkOper :: (T.Text -> Name) -> Located T.Text -> Parser Ident
+mkOper f x = do
+    u <- freshUniq
+    return $ oper (mkLName f x) u
 }

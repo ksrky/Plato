@@ -1,53 +1,62 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Core.Eval where
+module Plato.Core.Eval (
+        getIndex,
+        lookupIndex,
+        decl,
+        decl',
+        letn,
+        letn',
+        eval,
+        evalProg,
+) where
 
 import Control.Exception.Safe
 import Control.Monad.Reader
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
+import Plato.Common.Pretty
 import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Result
 import Plato.Syntax.Core
 
-getIndex :: (MonadReader env m, MonadThrow m) => Ident -> Scope -> m Index
+getIndex :: (MonadReader e m, MonadThrow m) => Ident -> Scope -> m Ix
 getIndex id sc = case lookupScope id sc of
         Just i -> return i
         Nothing -> throwError $ hsep ["Not in scope", pretty id]
 
-lookupIndex :: (MonadReader env m, CoreEnv env, MonadIO m) => Index -> m EnvEntry
+lookupIndex :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> m EnvEntry
 lookupIndex i = getE i =<< ask
 
-evalIndex :: (MonadReader env m, CoreEnv env, MonadThrow m, MonadIO m) => Index -> m Val
+evalIndex :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Ix -> m Val
 evalIndex i =
         lookupIndex i >>= \case
                 Index j -> return $ Ne (NVar j)
                 Closure t -> eval t
 
 decl ::
-        (MonadReader e m, CoreEnv e, MonadIO m) =>
+        (MonadReader e m, HasCoreEnv e, MonadIO m) =>
         Ident ->
         PrtInfo ->
         Scope ->
         Maybe (Clos Type) ->
-        m (Index, Scope)
+        m (Ix, Scope)
 decl id fi sc a = do
         i <- extE fi =<< ask
         return (i, extendScope id (i, a) sc)
 
-decl' :: (MonadReader e m, CoreEnv e, MonadIO m) => Ident -> Scope -> m (Index, Scope)
-decl' x sc = decl x PrtInfo{name = x, expand = True} sc Nothing
+decl' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ident -> Scope -> m (Ix, Scope)
+decl' x sc = decl x PrtInfo{prt_ident = x, prt_expand = True} sc Nothing
 
-defn :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> EnvEntry -> m ()
+defn :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> EnvEntry -> m ()
 defn i ei = setE i ei =<< ask
 
-defn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m ()
+defn' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> Clos Type -> m ()
 defn' i = defn i . Closure
 
-letn :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> EnvEntry -> m a -> m a
+letn :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> EnvEntry -> m a -> m a
 letn i ei p = do
         eo <- lookupIndex i
         defn i ei
@@ -55,25 +64,20 @@ letn i ei p = do
         defn i eo
         return a
 
-letn' :: (MonadReader e m, CoreEnv e, MonadIO m) => Index -> Clos Type -> m a -> m a
+letn' :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Ix -> Clos Type -> m a -> m a
 letn' i = letn i . Closure
 
-subst :: (MonadReader e m, CoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
+subst :: (MonadReader e m, HasCoreEnv e, MonadIO m) => Bind (Clos Term) -> Clos Term -> m (Clos Term)
 subst (x, (t, sc)) u = do
         (i, s') <- decl' x sc
         defn' i u
         return (t, s')
 
-unfold :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Bind (Clos Term) -> Val -> m Val
-unfold b (VFold c) = eval =<< subst b c
-unfold b (Ne n) = return (Ne (NUnfold n b))
-unfold _ _ = throwError "Fold expected"
-
-eval :: forall e m. (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> m Val
+eval :: forall e m. (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> m Val
 eval (Var id, sc) = evalIndex =<< getIndex id sc
 eval (Let prog t, sc) = evalProg (prog, sc) >>= curry eval t
 eval (Type, _) = return VType
-eval (Q ps bind body, sc) = return (VQ ps ((bind, body), sc))
+eval (Q ps x arg body, sc) = return (VQ ps (((x, arg), body), sc))
 eval (Lam (x, ty) t, sc) = return $ VLam (((x, ty), t), sc)
 eval (App t u, sc) = eval (t, sc) >>= evalApp (u, sc)
     where
@@ -111,9 +115,14 @@ eval (Force t, s) = force =<< eval (t, s)
         force _ = throwError "Box expected"
 eval (Rec t, s) = return (VRec (t, s))
 eval (Fold t, s) = return (VFold (t, s))
-eval (Unfold (x, t) u, sc) = unfold (x, (u, sc)) =<< eval (t, sc)
+eval (Unfold t, sc) = unfold =<< eval (t, sc)
+    where
+        unfold :: Val -> m Val
+        unfold (VFold c) = eval c
+        unfold (Ne n) = return $ Ne (NUnfold n)
+        unfold _ = throwError "Fold expected"
 
-evalProg :: (MonadReader e m, CoreEnv e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
+evalProg :: (MonadReader e m, HasCoreEnv e, MonadIO m, MonadThrow m) => Clos Prog -> m Scope
 evalProg ([], sc) = return sc
 evalProg ((Decl id _) : tel, sc) = do
         (_, sc') <- decl id (PrtInfo id False) sc Nothing

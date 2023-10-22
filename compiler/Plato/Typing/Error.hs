@@ -1,49 +1,90 @@
 module Plato.Typing.Error (
-        UnificationError (..),
-        InfiniteTypeError (..),
-        instErrHandler,
-        unifunErrHandler,
+        UnificationFail (..),
+        OccursCheckFail (..),
+        SubsCheckFail (..),
+        tcErrorHandler,
+        unifunErrorHandler,
+        kcErrorHandler,
 ) where
 
 import Control.Exception.Safe
-import Prettyprinter
+import Control.Monad.IO.Class
 
 import Plato.Common.Error
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Syntax.Typing
+import Plato.Typing.Zonking
 
-data UnificationError = UnificationError deriving (Show)
-data InfiniteTypeError = InfiniteTypeError deriving (Show)
+data UnificationFail = UnificationFail deriving (Show)
+data OccursCheckFail = OccursCheckFail deriving (Show)
+data SubsCheckFail = SubsCheckFail deriving (Show)
 
-instance Exception UnificationError
-instance Exception InfiniteTypeError
+instance Exception UnificationFail
+instance Exception OccursCheckFail
+instance Exception SubsCheckFail
 
-instErrHandler :: MonadCatch m => Span -> Type -> Type -> [Handler m a]
-instErrHandler sp ty_exp ty_sup =
-        [ Handler $ \UnificationError ->
-                throwLocErr sp $
-                        vsep
-                                [ "Infered type doesn't match expected type from the signature."
-                                , "Expected type:" <+> pretty ty_sup
-                                , " Infered type:" <+> pretty ty_exp
+tcErrorHandler :: (MonadIO m, MonadCatch m) => Span -> Type -> Type -> [Handler m a]
+tcErrorHandler sp ty_act ty_exp =
+        [ Handler $ \UnificationFail -> do
+                ty_act' <- zonk ty_act
+                ty_exp' <- zonk ty_exp
+                throwLocErr sp
+                        $ vsep
+                                [ "Couldn't unify expected type:" <+> pretty ty_exp'
+                                , "            with actual type:" <+> pretty ty_act'
                                 ]
-        , Handler $ \InfiniteTypeError ->
-                throwLocErr sp $
-                        hsep
+        , Handler $ \OccursCheckFail -> do
+                ty_act' <- zonk ty_act
+                ty_exp' <- zonk ty_exp
+                throwLocErr sp
+                        $ hsep
                                 [ "Infinite type:"
-                                , squotes $ pretty ty_exp
+                                , squotes $ pretty ty_exp'
                                 , "~"
-                                , squotes $ pretty ty_sup
+                                , squotes $ pretty ty_act'
+                                ]
+        , Handler $ \SubsCheckFail -> do
+                ty_act' <- zonk ty_act
+                ty_exp' <- zonk ty_exp
+                throwLocErr sp
+                        $ vsep
+                                [ "Couldn't instantiate actual type to expected type. (Impredicative types)"
+                                , "Expected type:" <+> pretty ty_exp'
+                                , "  Actual type:" <+> pretty ty_act'
                                 ]
         ]
 
-unifunErrHandler :: MonadCatch m => Span -> Rho -> [Handler m a]
-unifunErrHandler sp rho =
-        [ Handler $ \(UnificationError{}) ->
-                throwLocErr sp $
-                        vsep
-                                [ "Infered type doesn't match expected type from the signature."
-                                , "Expected type: " <+> pretty rho
-                                , "Infered function type"
+unifunErrorHandler :: (MonadIO m, MonadCatch m) => Span -> Rho -> [Handler m a]
+unifunErrorHandler sp rho =
+        [ Handler $ \UnificationFail -> do
+                rho' <- zonk rho
+                throwLocErr sp
+                        $ vsep
+                                [ "Couldn't unify expected type: _ -> _"
+                                , "            with actual type:" <+> pretty rho'
+                                ]
+        ]
+
+kcErrorHandler :: (MonadIO m, MonadCatch m) => Span -> Kind -> Kind -> [Handler m a]
+kcErrorHandler sp kn_exp kn_act =
+        [ Handler $ \UnificationFail -> do
+                kn_exp' <- zonk kn_exp
+                kn_act' <- zonk kn_act
+                throwLocErr sp
+                        $ vsep
+                                [ "Couldn't match expected kind with actual kind."
+                                , "Expected kind:" <+> pretty kn_exp'
+                                , "  Actual kind:" <+> pretty kn_act'
+                                ]
+        , Handler $ \OccursCheckFail -> do
+                kn_exp' <- zonk kn_exp
+                kn_act' <- zonk kn_act
+                throwLocErr sp
+                        $ hsep
+                                [ "Infinite kind:"
+                                , squotes $ pretty kn_exp'
+                                , "~"
+                                , squotes $ pretty kn_act'
                                 ]
         ]

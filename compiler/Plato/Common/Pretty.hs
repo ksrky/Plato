@@ -1,22 +1,45 @@
 module Plato.Common.Pretty (
         module Prettyprinter,
+        Pretty (..),
         sepBy,
-        contextParens,
-        prettyPrint,
-        PrettyWithContext (..),
+        parenswPrec,
+        wildcard,
+        arrow,
+        dollar,
+        asterisk,
 ) where
 
-import Prettyprinter
-import Prettyprinter.Render.Text
+import Prettyprinter hiding (Pretty (..))
+import Prettyprinter qualified
+
+class Pretty a where
+        pretty :: a -> Doc ann
+        pretty = pretty' 0
+        pretty' :: Int -> a -> Doc ann
+        pretty' _ = pretty
+        prettyList :: [a] -> Doc ann
+        prettyList = vsep . map pretty
+
+instance Pretty String where
+        pretty = Prettyprinter.pretty
+
+instance Pretty Int where
+        pretty = Prettyprinter.pretty
 
 sepBy :: [Doc ann] -> Doc ann -> Doc ann
 sepBy doc sep = concatWith (surround (sep <> space)) doc
 
-contextParens :: Int -> Int -> Doc ann -> Doc ann
-contextParens i j doc = if i > j then parens doc else doc
+parenswPrec :: Int -> Int -> Doc ann -> Doc ann
+parenswPrec i j doc = if i > j then parens doc else doc
 
-prettyPrint :: Pretty a => a -> IO ()
-prettyPrint = putDoc . pretty
+wildcard :: Doc ann
+wildcard = "_"
 
-class PrettyWithContext a where
-        pretty' :: Int -> a -> Doc ann
+arrow :: Doc ann
+arrow = "->"
+
+dollar :: Doc ann
+dollar = "$"
+
+asterisk :: Doc ann
+asterisk = "*"

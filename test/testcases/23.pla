@@ -1,0 +1,9 @@
+-- let polymorphism
+
+data T1 where T1 : T1
+data T2 where T2 : T2
+
+data a :,: b where
+    (:,:) : a -> b -> a :,: b
+
+ex = let f x = x in f T1 :,: f T2

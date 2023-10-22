@@ -1,6 +1,7 @@
 module Plato.Syntax.Typing.Type (
         LType,
         Quant,
+        Quants,
         Type (..),
         TyVar (..),
         MetaTv (..),
@@ -11,7 +12,7 @@ module Plato.Syntax.Typing.Type (
         prQuants,
 ) where
 
-import Data.IORef (IORef)
+import Data.IORef
 
 import Plato.Common.Ident
 import Plato.Common.Location
@@ -25,12 +26,13 @@ import Plato.Syntax.Typing.Kind
 type LType = Located Type
 
 type Quant = (TyVar, Kind)
+type Quants = [Quant]
 
 data Type
         = VarT TyVar
         | ConT Ident
         | ArrT LType LType
-        | AllT [Quant] (Located Rho)
+        | AllT Quants (Located Rho)
         | AppT LType LType
         | MetaT MetaTv
         deriving (Eq, Show)
@@ -40,8 +42,8 @@ type Rho = Type -- σ → ρ
 type Tau = Type -- τ
 
 data TyVar
-        = BoundTv {unTyVar :: Ident}
-        | SkolemTv {unTyVar :: Ident}
+        = BoundTv Ident
+        | FreeTv Ident
         deriving (Ord)
 
 data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
@@ -51,11 +53,11 @@ data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
 ----------------------------------------------------------------
 instance Show TyVar where
         show (BoundTv id) = "(BoundTv " ++ show id ++ ")"
-        show (SkolemTv id) = "(SkolemTv " ++ show id ++ ")"
+        show (FreeTv id) = "(FreeTv " ++ show id ++ ")"
 
 instance Eq TyVar where
         (BoundTv id1) == (BoundTv id2) = id1 == id2
-        (SkolemTv id1) == (SkolemTv id2) = id1 == id2
+        (FreeTv id1) == (FreeTv id2) = id1 == id2
         _ == _ = False
 
 instance Eq MetaTv where
@@ -67,40 +69,32 @@ instance Show MetaTv where
 instance Ord MetaTv where
         MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
 
+instance HasLoc TyVar where
+        getLoc (BoundTv id) = getLoc id
+        getLoc (FreeTv id) = getLoc id
+
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty TyVar where
         pretty (BoundTv id) = pretty id
-        pretty (SkolemTv id) = pretty id
+        pretty (FreeTv id) = pretty id
 
 instance Pretty MetaTv where
-        pretty (MetaTv u _) = "$" <> pretty u
+        pretty (MetaTv u _) = dollar <> pretty u
 
 prQuant :: Quant -> Doc ann
-prQuant (tv, kn) = hcat [pretty tv, colon, pretty kn]
+prQuant (tv, kn) = hsep [pretty tv, colon, pretty kn]
 
 prQuants :: [Quant] -> Doc ann
-prQuants [(tv, kn)] = hcat [pretty tv, colon, pretty kn]
+prQuants [qnt] = prQuant qnt
 prQuants qnts = hsep $ map (parens . prQuant) qnts
 
 instance Pretty Type where
-        pretty (VarT var) = pretty var
-        pretty (ConT con) = pretty con
-        pretty (ArrT arg res) = hsep [prty ArrPrec (unLoc arg), "->", prty TopPrec (unLoc res)]
-        pretty (AllT [] body) = pretty body
-        pretty (AllT qnts body) = hsep [braces (prQuants qnts), pretty body]
-        pretty (AppT fun arg) = pretty fun <+> prty AppPrec (unLoc arg)
-        pretty (MetaT tv) = pretty tv
-
-data Prec = TopPrec | ArrPrec | AppPrec | AtomPrec deriving (Enum)
-
-precOf :: Type -> Prec
-precOf AllT{} = TopPrec
-precOf ArrT{} = ArrPrec
-precOf _ = AtomPrec
-
-prty :: Prec -> Type -> Doc ann
-prty p ty
-        | fromEnum p >= fromEnum (precOf ty) = parens (pretty ty)
-        | otherwise = pretty ty
+        pretty' _ (VarT tv) = pretty tv
+        pretty' _ (ConT tc) = pretty tc
+        pretty' p (ArrT arg res) = parenswPrec p 0 $ hsep [pretty' 1 arg, arrow, pretty res]
+        pretty' p (AllT [] body) = pretty' p body
+        pretty' p (AllT qnts body) = parenswPrec p 0 $ hsep [braces (prQuants qnts), pretty body]
+        pretty' p (AppT fun arg) = parenswPrec p 1 $ pretty' 1 fun <+> pretty' 2 arg
+        pretty' _ (MetaT tv) = pretty tv

@@ -1,114 +1,123 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Plato.Syntax.Typing.Expr (
-        LExpr,
-        Clause,
         Expr (..),
-        prClause,
+        LExpr,
+        XExpr,
+        Clause,
+        Clauses,
+        Alt,
+        Alts,
+        Annot,
+        Bind (..),
+        XBind,
+        XBinds,
 ) where
 
 import Plato.Common.Ident
 import Plato.Common.Location
 import Plato.Common.Pretty
-import Plato.Syntax.Typing.Base (TcFlag (..))
+import Plato.Syntax.Typing.Base
 import Plato.Syntax.Typing.Pat
 import Plato.Syntax.Typing.Type
 
 ----------------------------------------------------------------
 -- Datas and types
 ----------------------------------------------------------------
-type LExpr a = Located (Expr a)
-
-type Clause a = ([LPat], LExpr a)
-
-type Alt a = (LPat, LExpr a)
-
 data Expr (a :: TcFlag) where
         VarE :: Ident -> Expr a
-        AppE :: LExpr a -> LExpr a -> Expr a
-        AbsE :: Ident -> Maybe Type -> LExpr 'Untyped -> Expr 'Untyped
-        AbsEok :: Ident -> Type -> Expr 'Typed -> Expr 'Typed
+        AppE :: XExpr a -> XExpr a -> Expr a
+        AbsE :: Ident -> Annot a -> XExpr a -> Expr a
         TAppE :: Expr 'Typed -> [Type] -> Expr 'Typed
-        TAbsE :: [Quant] -> Expr 'Typed -> Expr 'Typed
-        LetE :: [(Ident, [Clause 'Untyped])] -> [(Ident, LType)] -> LExpr 'Untyped -> Expr 'Untyped
-        LetEok :: [(Ident, LExpr 'Typed)] -> [(Ident, LType)] -> LExpr 'Typed -> Expr 'Typed
-        CaseE :: LExpr 'Untyped -> [Alt 'Untyped] -> Expr 'Untyped
-        CaseEok :: LExpr 'Typed -> Type -> [Alt 'Typed] -> Expr 'Typed
-        AnnE :: LExpr 'Untyped -> Sigma -> Expr 'Untyped
+        TAbsE :: Quants -> Expr 'Typed -> Expr 'Typed
+        LetE :: XBinds a -> XExpr a -> Expr a
+        CaseE :: XExpr a -> Annot a -> Alts a -> Expr a
+        ClauseE :: Clauses 'Untyped -> Expr 'Untyped
 
-----------------------------------------------------------------
--- Basic instances
-----------------------------------------------------------------
-deriving instance Eq (Expr a)
-deriving instance Show (Expr a)
+deriving instance Eq (Expr 'Untyped)
+deriving instance Show (Expr 'Untyped)
+deriving instance Eq (Expr 'Typed)
+deriving instance Show (Expr 'Typed)
 
-instance HasLoc (Clause a) where
-        getLoc (pats, exp) = combineSpans (getLoc pats) (getLoc exp)
+type LExpr a = Located (Expr a)
+
+type family XExpr (a :: TcFlag) where
+        XExpr 'Untyped = LExpr 'Untyped
+        XExpr 'Typed = Expr 'Typed
+
+type Clause (a :: TcFlag) = ([LPat], XExpr a)
+type Clauses (a :: TcFlag) = [Clause a]
+
+type Alt (a :: TcFlag) = (LPat, XExpr a)
+type Alts (a :: TcFlag) = [Alt a]
+
+type family Annot (a :: TcFlag) where
+        Annot 'Untyped = Maybe LType
+        Annot 'Typed = Type
+
+data Bind (a :: TcFlag) = Bind (Ident, Annot a) (XExpr a)
+
+deriving instance Eq (Bind 'Untyped)
+deriving instance Eq (Bind 'Typed)
+deriving instance Show (Bind 'Untyped)
+deriving instance Show (Bind 'Typed)
+
+type family XBind (a :: TcFlag) where
+        XBind 'Untyped = Located (Bind 'Untyped)
+        XBind 'Typed = Bind 'Typed
+
+type XBinds (a :: TcFlag) = Block (XBind a)
 
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
-prClause :: Clause a -> Doc ann
-prClause (pats, exp) = hsep (map prAtomPat pats ++ ["->", pretty exp])
+prClause :: ([LPat], LExpr 'Untyped) -> Doc ann
+prClause (pats, exp) = hsep (map (pretty' 1) pats ++ [arrow, pretty exp])
 
-prBinds :: [(Ident, [Clause 'Untyped])] -> Doc ann
-prBinds bnds =
-        concatWith
-                (surround $ semi <> space)
-                ( map
-                        ( \(id, clses) ->
-                                hsep
-                                        [ pretty id
-                                        , "where"
-                                        , braces $ map prClause clses `sepBy` semi
-                                        ]
-                        )
-                        bnds
-                )
+instance Pretty (Expr 'Untyped) where
+        pretty' _ (VarE var) = pretty var
+        pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
+        pretty' p (AbsE var Nothing body) = parenswPrec p 0 $ hsep [backslash, pretty var, dot, pretty body]
+        pretty' p (AbsE var (Just var_ty) body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (LetE bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (CaseE match _ alts) =
+                parenswPrec p 0
+                        $ hsep
+                                [ "case"
+                                , pretty match
+                                , "of"
+                                , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
+                                ]
+        pretty' _ (ClauseE clauses) =
+                hsep [backslash, "where", encloseSep lbrace rbrace (semi <> space) (map prClause clauses)]
 
-prBinds' :: [(Ident, LExpr 'Typed)] -> Doc ann
-prBinds' bnds = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) bnds `sepBy` semi
-prSpecs :: [(Ident, LType)] -> Doc ann
-prSpecs spcs = map (\(id, exp) -> hsep [pretty id, equals, pretty exp]) spcs `sepBy` semi
+instance Pretty (Expr 'Typed) where
+        pretty' _ (VarE var) = pretty var
+        pretty' p (AppE fun arg) = parenswPrec p 1 $ hsep [pretty' 1 fun, pretty' 2 arg]
+        pretty' p (AbsE var var_ty body) =
+                parenswPrec p 0 $ hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
+        pretty' p (TAppE fun []) = pretty' p fun
+        pretty' p (TAppE fun tyargs) = parenswPrec p 0 $ hsep (pretty' 1 fun : map (pretty' 2) tyargs)
+        pretty' p (TAbsE [] body) = pretty' p body
+        pretty' p (TAbsE qnts body) = parenswPrec p 0 $ hsep [backslash, prQuants qnts, dot, pretty body]
+        pretty' p (LetE bnds body) =
+                parenswPrec p 0 $ hsep ["let", braces $ pretty bnds, "in", pretty body]
+        pretty' p (CaseE match _ alts) =
+                parenswPrec p 0
+                        $ hsep
+                                [ "case"
+                                , pretty match
+                                , "of"
+                                , braces $ map (\(p, e) -> hsep [pretty p, arrow, pretty e]) alts `sepBy` semi
+                                ]
 
-instance Pretty (Expr a) where
-        pretty (VarE var) = pretty var
-        pretty exp@AppE{} = prExpr2 exp
-        pretty (AbsE var Nothing body) = hsep [backslash, pretty var, dot, pretty body]
-        pretty (AbsE var (Just var_ty) body) =
-                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty (AbsEok var var_ty body) =
-                hsep [backslash, pretty var, colon, pretty var_ty, dot, pretty body]
-        pretty (TAppE fun tyargs) = hsep (prExpr1 fun : map pretty tyargs)
-        pretty (TAbsE qnts body) = hsep [backslash, prQuants qnts, dot, pretty body]
-        pretty (LetE bnds spcs body) =
-                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds bnds, "in", pretty body]
-        pretty (LetEok bnds spcs body) =
-                hsep ["let", braces $ prSpecs spcs <> semi <+> prBinds' bnds, "in", pretty body]
-        pretty (CaseE match alts) =
-                hsep
-                        [ "case"
-                        , pretty match
-                        , "of"
-                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
-                        ]
-        pretty (CaseEok match _ alts) =
-                hsep
-                        [ "case"
-                        , prExpr1 (unLoc match)
-                        , "of"
-                        , braces $ map (\(p, e) -> hsep [pretty p, "->", pretty e]) alts `sepBy` semi
-                        ]
-        pretty (AnnE exp ty) = hsep [pretty exp, colon, pretty ty]
+instance Pretty (Bind 'Untyped) where
+        pretty (Bind (id, Just ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]
+        pretty (Bind (id, Nothing) exp) = hsep [pretty id, "where", pretty exp]
 
-prExpr2 :: Expr a -> Doc ann
-prExpr2 e = walk e []
-    where
-        walk :: Expr a -> [Expr a] -> Doc ann
-        walk (AppE fun arg) acc = walk (unLoc fun) (unLoc arg : acc)
-        walk fun args = prExpr1 fun <+> hsep (map prExpr1 args)
-
-prExpr1 :: Expr a -> Doc ann
-prExpr1 e@VarE{} = pretty e
-prExpr1 e = parens (pretty e)
+instance Pretty (Bind 'Typed) where
+        pretty (Bind (id, ty) exp) = hsep [pretty id, colon, pretty ty, "where", pretty exp]

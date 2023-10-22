@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Plato.Core.Normalise where
+module Plato.Core.Normalise (Nf (..)) where
 
 import Control.Exception.Safe
 import Control.Monad
@@ -21,17 +21,17 @@ import Plato.Syntax.Core.Helper
 type Vars = [Ident]
 
 class Nf a b | a -> b where
-        nf :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        nf :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         nf = nf' True
-        quote :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
+        quote :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> a -> m b
         quote = nf' False
-        nf' :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
+        nf' :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Bool -> Vars -> a -> m b
 
 instance Nf (Clos Term) Term where
         nf' True xs t = nf' True xs =<< eval t
         nf' False xs t = qq xs t
 
-instance Nf Index Term where
+instance Nf Ix Term where
         nf' b xs i = do
                 (PrtInfo x shouldExpand) <- prtE i =<< ask
                 lookupIndex i >>= \case
@@ -44,26 +44,26 @@ instance Nf Index Term where
                                 -- the let cannot be expanded if inside a box!
                                         return (Var x)
 
-qq :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
+qq :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => Vars -> Clos Term -> m Term
 qq xs (Var x, s) = quote xs =<< getIndex x s
 -- qq _  (Let _ _ _, _) = return (Label  "*quote-let-not-implemented*")
 qq xs (Let g t, s) = do
         s' <- evalProg (g, s)
         qq (xs ++ decls g) (t, s')
-qq xs (Q ps (x, a) b, s) = do
+qq xs (Q ps x a b, s) = do
         a' <- qq xs (a, s)
         (x', b') <- quote xs (x, (b, s))
-        return (Q ps (x', a') b')
+        return (Q ps x' a' b')
 qq xs (Lift t, s) = Lift <$> qq xs (t, s)
 qq xs (Rec t, s) = Rec <$> qq xs (t, s)
 qq xs (Fold t, s) = Fold <$> qq xs (t, s)
-qq xs (Unfold (x, t) u, s) = do
+qq xs (Unfold t, s) = do
         t' <- qq xs (t, s)
-        (x', u') <- quote xs (x, (u, s))
-        return (Unfold (x', t') u')
+        return (Unfold t')
 qq xs (Lam (x, ty) t, s) = do
         (x', t') <- quote xs (x, (t, s))
-        return (Lam (x', ty) t')
+        ty' <- qq xs (ty, s)
+        return (Lam (x', ty') t')
 qq xs (App t u, s) = do
         t' <- qq xs (t, s)
         u' <- qq xs (u, s)
@@ -99,7 +99,7 @@ instance Nf Val Term where
         nf' b xs (VQ ps (((x, a), c), s)) = do
                 a' <- nf' b xs (a, s)
                 (x', c') <- nf' b xs (x, (c, s))
-                return (Q ps (x', a') c')
+                return (Q ps x' a' c')
         nf' b xs (VLift c) = Lift <$> nf' b xs c
         nf' b xs (VRec c) = Rec <$> nf' b xs c
         nf' b xs (VFold c) = Fold <$> nf' b xs c
@@ -131,7 +131,6 @@ instance Nf Ne Term where
                         return (l, u')
                 return (Case t' lus')
         nf' _ xs (NForce t) = Force <$> nf xs t
-        nf' b xs (NUnfold t xu) = do
+        nf' b xs (NUnfold t) = do
                 t' <- nf' b xs t
-                (x', u') <- nf' b xs xu
-                return (Unfold (x', t') u')
+                return (Unfold t')

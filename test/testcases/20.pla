@@ -1,0 +1,17 @@
+-- No type signatures from version 1.0.2
+
+id x = x
+
+data Bool where
+    True : Bool
+    False : Bool
+
+not True = False
+not False = True
+
+data Maybe a where
+    Just : a -> Maybe a
+    Nothing : Maybe a
+
+fromMaybe d (Just x) = x
+fromMaybe d Nothing = d 

@@ -1,15 +1,10 @@
-module Plato.Common.Uniq (
-        Uniq,
-        uniq2text,
-        HasUniq (..),
-        uniqZero,
-        initUniq,
-) where
+module Plato.Common.Uniq where
 
 import Control.Monad.IO.Class
 import Data.IORef
 import Data.Text qualified as T
-import Prettyprinter
+
+import Plato.Common.Pretty
 
 -- | Uniq
 newtype Uniq = Uniq Word
@@ -25,11 +20,11 @@ instance Pretty Uniq where
         pretty (Uniq w) = viaShow w
 
 class HasUniq a where
-        getUniq :: MonadIO m => a -> m (IORef Uniq)
-        setUniq :: MonadIO m => Uniq -> a -> m ()
-        readUniq :: MonadIO m => a -> m Uniq
+        getUniq :: (MonadIO m) => a -> m (IORef Uniq)
+        setUniq :: (MonadIO m) => Uniq -> a -> m ()
+        readUniq :: (MonadIO m) => a -> m Uniq
         readUniq env = liftIO $ readIORef =<< getUniq env
-        pickUniq :: MonadIO m => a -> m Uniq
+        pickUniq :: (MonadIO m) => a -> m Uniq
         pickUniq env = do
                 ref <- getUniq env
                 u <- liftIO $ readIORef ref
@@ -40,12 +35,12 @@ instance HasUniq (IORef Uniq) where
         getUniq = return
         setUniq uniq ref = liftIO $ writeIORef ref uniq
 
-instance HasUniq a => HasUniq (a, b) where
+instance (HasUniq a) => HasUniq (a, b) where
         getUniq = getUniq . fst
         setUniq uniq = setUniq uniq . fst
 
 uniqZero :: Uniq
 uniqZero = 0
 
-initUniq :: MonadIO m => m (IORef Uniq)
+initUniq :: (MonadIO m) => m (IORef Uniq)
 initUniq = liftIO $ newIORef uniqZero

@@ -1,4 +1,4 @@
-module Plato.Core.Pretty where
+module Plato.Core.Pretty (Print (..)) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -14,7 +14,7 @@ import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Print a where
-        evalPrint :: (MonadReader e m, CoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
+        evalPrint :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
 
 instance Print Ident where
         evalPrint = return . prettyId

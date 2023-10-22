@@ -8,66 +8,48 @@ import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Prettyprinter
 
 import Plato.Common.Error
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Pretty
 import Plato.Common.Uniq
 import Plato.Syntax.Typing
 import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
-import Plato.Typing.Tc.Subst qualified as Subst
+import Plato.Typing.Misc
 import Plato.Typing.Zonking
 
 transClauses ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         [Type] ->
-        [Clause 'Typed] ->
-        m (LExpr 'Typed)
+        Clauses 'Typed ->
+        m (Expr 'Typed)
 transClauses tys clauses = do
-        vars <- mapM (\ty -> (,ty) <$> newVarIdent) tys
-        exp <- match vars clauses
-        return $ L (getLoc exp) $ foldr (uncurry AbsEok) (unLoc exp) vars
+        idtys <- zipWithM (\ty i -> (,ty) <$> labelVarId ("sv" ++ show i)) tys [1 :: Integer ..]
+        exp <- match (map (\(id, ty) -> (VarE id, ty)) idtys) clauses
+        return $ foldr (uncurry AbsE) exp idtys
 
 transCase ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         Expr 'Typed ->
         m (Expr 'Typed)
-transCase (CaseEok exp ty alts) = do
-        var <- newVarIdent
-        let clauses :: [Clause 'Typed] = map (\(p, e) -> ([p], e)) alts
-        altsexp <- match [(var, ty)] clauses
-        return $ AppE (AbsEok var ty <$> altsexp) exp
+transCase (CaseE exp ty alts) = do
+        let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
+        match [(exp, ty)] clauses
 transCase _ = unreachable "Expected type-checked case expression"
 
-constructors :: forall e m. (MonadReader e m, HasConEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
+constructors :: forall e m. (MonadReader e m, HasTypEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
 constructors ty = getCon [] =<< zonk ty
     where
         getCon :: [Type] -> Type -> m Constrs
         getCon acc (AppT fun arg) = getCon (unLoc arg : acc) (unLoc fun)
         getCon acc (ConT tc) = do
-                (params, constrs) <- lookupIdent tc =<< asks getConEnv
-                return (map (\(con, ty) -> (con, Subst.subst params (reverse acc) <$> ty)) constrs)
+                (params, constrs) <- find tc =<< asks getTypEnv
+                mapM (\(con, tys) -> (con,) <$> mapM (substTvs params (reverse acc)) tys) constrs
         getCon _ _ = unreachable "Not a variant type"
 
-subst :: LExpr 'Typed -> Expr 'Typed -> Ident -> LExpr 'Typed
-subst exp replace id = subst' <$> exp
-    where
-        subst' :: Expr 'Typed -> Expr 'Typed
-        subst' (VarE var)
-                | var == id = replace
-                | otherwise = VarE var
-        subst' (AppE fun arg) = AppE (subst' <$> fun) (subst' <$> arg)
-        subst' (AbsEok var ty body) = AbsEok var ty (subst' body)
-        subst' (TAppE exp tyargs) = TAppE (subst' exp) tyargs
-        subst' (TAbsE qnts body) = TAbsE qnts (subst' body)
-        subst' (LetEok bnds sigs body) =
-                LetEok (map (\(id, exp) -> (id, subst' <$> exp)) bnds) sigs (subst' <$> body)
-        subst' (CaseEok match ty alts) =
-                CaseEok (subst' <$> match) ty (map (\(id, exp) -> (id, subst' <$> exp)) alts)
-
-isVar :: Clause a -> Bool
+isVar :: Clause 'Typed -> Bool
 isVar (L _ WildP{} : _, _) = True
 isVar (L _ VarP{} : _, _) = True
 isVar (L _ ConP{} : _, _) = False
@@ -75,16 +57,16 @@ isVar (L _ AnnP{} : _, _) = False
 isVar (L _ TagP{} : _, _) = unreachable "received TagP"
 isVar ([], _) = unreachable "empty pattern row"
 
-isVarorSameCon :: Ident -> Clause a -> Bool
+isVarorSameCon :: Ident -> Clause 'Typed -> Bool
 isVarorSameCon con1 (L _ (ConP con2 _) : _, _) = con1 == con2
 isVarorSameCon _ _ = True
 
 match ::
-        (MonadReader e m, HasConEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
-        [(Ident, Type)] ->
-        [Clause 'Typed] ->
-        m (LExpr 'Typed)
-match [(var, ty)] [] = return $ noLoc (CaseEok (noLoc $ VarE var) ty [])
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        [(Expr 'Typed, Type)] ->
+        Clauses 'Typed ->
+        m (Expr 'Typed)
+match [(exp, ty)] [] = return (CaseE exp ty [])
 match _ [] = throwError "Sequence of absurd pattern is not allowed."
 match [] (([], exp) : _) = return exp
 match [] _ = unreachable "The Number of variables does not equal to the number of patterns"
@@ -93,15 +75,15 @@ match (vt : vts) clauses
         | otherwise = matchCon vt vts clauses
 
 matchVar ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
-        (Ident, Type) ->
-        [(Ident, Type)] ->
-        [Clause 'Typed] ->
-        m (LExpr 'Typed)
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (Expr 'Typed, Type) ->
+        [(Expr 'Typed, Type)] ->
+        Clauses 'Typed ->
+        m (Expr 'Typed)
 matchVar (var, _) rest clauses = do
         let clauses' = (`map` clauses) $ \case
                 (L _ WildP : pats, exp) -> (pats, exp)
-                (L _ (VarP vp) : pats, exp) -> (pats, subst exp (VarE var) vp)
+                (L _ (VarP vp) : pats, exp) -> (pats, substExpr vp var exp)
                 (L _ ConP{} : _, _) -> unreachable "ConP"
                 (L _ AnnP{} : _, _) -> unreachable "AnnP"
                 (L _ TagP{} : _, _) -> unreachable "TagP"
@@ -109,45 +91,44 @@ matchVar (var, _) rest clauses = do
         match rest clauses'
 
 matchCon ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
-        (Ident, Type) ->
-        [(Ident, Type)] ->
-        [Clause 'Typed] ->
-        m (LExpr 'Typed)
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
+        (Expr 'Typed, Type) ->
+        [(Expr 'Typed, Type)] ->
+        Clauses 'Typed ->
+        m (Expr 'Typed)
 matchCon (var, ty) rest clauses = do
         constrs <- constructors ty
         alts <- sequence [matchClause constr rest (choose con clauses) | constr@(con, _) <- constrs]
-        return $ noLoc $ CaseEok (noLoc $ VarE var) ty alts
+        return $ CaseE var ty alts
 
-choose :: Ident -> [Clause 'Typed] -> [Clause 'Typed]
+choose :: Ident -> Clauses 'Typed -> Clauses 'Typed
 choose con clauses = [cls | cls <- clauses, isVarorSameCon con cls]
 
 matchClause ::
-        (MonadReader env m, HasConEnv env, HasUniq env, MonadIO m, MonadThrow m) =>
+        (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadThrow m) =>
         (Ident, [Type]) ->
-        [(Ident, Type)] ->
-        [Clause 'Typed] ->
-        m (LPat, LExpr 'Typed)
+        [(Expr 'Typed, Type)] ->
+        Clauses 'Typed ->
+        m (LPat, Expr 'Typed)
 matchClause (con, _) _ [] =
-        throwError $
-                vsep
+        throwError
+                $ vsep
                         [ "Pattern matching is non-exhaustive."
                         , "Required constructor pattern: " <+> squotes (pretty con)
                         ] -- TODO: error message
 matchClause (con, arg_tys) vts clauses = do
-        args <- mapM (const newVarIdent) arg_tys
+        args <- mapM (\i -> labelVarId ("pv" ++ show i)) [1 .. length arg_tys]
         clauses' <- forM clauses $ \case
                 (L _ (ConP _ ps) : ps', e) -> return (ps ++ ps', e)
                 (L _ (VarP v) : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        let con_exp :: Expr 'Typed =
-                                foldl (AppE . noLoc) (VarE con) (map (noLoc . VarE) args)
-                        return (vps ++ ps', subst e con_exp v)
+                        let con_exp = foldl AppE (VarE con) (map VarE args)
+                            dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', substExpr v con_exp e)
                 (L _ WildP : ps', e) -> do
-                        vps <- mapM (const (noLoc . VarP <$> newVarIdent)) arg_tys
-                        return (vps ++ ps', e)
-                (L _ AnnP{} : _, _) -> unreachable " received AnnP"
+                        let dummy_pats = map (const $ noLoc WildP) arg_tys
+                        return (dummy_pats ++ ps', e)
+                (L _ AnnP{} : _, _) -> unreachable "received AnnP"
                 (L _ TagP{} : _, _) -> unreachable "received TagP"
-                ([], _) -> unreachable "empty patterns"
-        let ats = zip args arg_tys
-        (noLoc $ TagP con ats,) <$> match (ats ++ vts) clauses'
+                ([], e) -> return ([], e)
+        let ats = zipWith (\id ty -> (VarE id, ty)) args arg_tys
+        (noLoc $ TagP con (zip args arg_tys),) <$> match (ats ++ vts) clauses'

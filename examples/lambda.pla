@@ -1,6 +1,3 @@
-import Bool
-import Nat
-
 data Term where
     TVar : Nat -> Term
     TAbs : Term -> Term
@@ -12,6 +9,7 @@ data Val where
     VNil : Val
     VVar : Nat -> Val
     VAbs : Term -> Val
+    VApp : Val -> Val -> Val
     VZero : Val
     VSucc : Val -> Val
 
@@ -45,15 +43,13 @@ subst t =
         )
 
 substTop : Term -> Term -> Term
-substTop s t = shift (Z - S Z) (subst (shift (S Z) s) Z t)
+substTop s t = shift (negate (S Z)) (subst (shift (S Z) s) Z t)
 
 eval : Term -> Val
 eval (TAbs t1) = VAbs t1
 eval (TApp t1 t2) = case eval t1 of
     VAbs t11 -> eval (substTop t2 t11)
-    v1 -> v1
+    v1 -> let v2 = eval t2 in VApp v1 v2
 eval TZero = VZero
-eval (TSucc t1) =
-    let v1 : Val = eval t1
-     in VSucc v1
+eval (TSucc t1) = let v1 = eval t1 in VSucc v1
 eval _ = VNil

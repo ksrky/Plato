@@ -1,43 +1,35 @@
-module Plato.Driver.Context where
+module Plato.Driver.Context (Context, initContext) where
 
 import Control.Monad.IO.Class
 import Data.IORef
 
 import Plato.Common.Uniq
-import Plato.Nicifier.OpParser
+import Plato.Core.Env
 import Plato.PsToTyp.Scoping
-import Plato.Syntax.Core
 import Plato.Typing.Env
 
 data Context = Context
         { ctx_uniq :: !(IORef Uniq)
-        , ctx_fixityEnv :: !FixityEnv
         , ctx_scope :: !Scope
         , ctx_typEnv :: !TypEnv
-        , ctx_conEnv :: !ConEnv
-        , ctx_coreProg :: !Prog
+        , ctx_coreEnv :: !CoreEnv
         }
 
 initContext :: IO Context
 initContext = do
         uref <- initUniq
-        return $
-                Context
+        ceref <- initCoreEnv
+        return
+                $ Context
                         { ctx_uniq = uref
-                        , ctx_fixityEnv = mempty
                         , ctx_scope = mempty
                         , ctx_typEnv = mempty
-                        , ctx_conEnv = mempty
-                        , ctx_coreProg = mempty
+                        , ctx_coreEnv = ceref
                         }
 
 instance HasUniq Context where
         getUniq = return . ctx_uniq
         setUniq uniq ctx = liftIO $ writeIORef (ctx_uniq ctx) uniq
-
-instance HasFixityEnv Context where
-        getFixityEnv = ctx_fixityEnv
-        modifyFixityEnv f ctx = ctx{ctx_fixityEnv = f (ctx_fixityEnv ctx)}
 
 instance HasScope Context where
         getScope = ctx_scope
@@ -47,6 +39,6 @@ instance HasTypEnv Context where
         getTypEnv = ctx_typEnv
         modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
 
-instance HasConEnv Context where
-        getConEnv = ctx_conEnv
-        modifyConEnv f ctx = ctx{ctx_conEnv = f (ctx_conEnv ctx)}
+instance HasCoreEnv Context where
+        getCoreEnv = getCoreEnv . ctx_coreEnv
+        setCoreEnv = setCoreEnv . ctx_coreEnv

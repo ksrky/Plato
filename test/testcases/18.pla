@@ -1,0 +1,11 @@
+id : {a} a -> a
+id x = x
+
+choose : {a} a -> a -> a
+choose x _ = x
+
+ok1 : {a} (a -> a) -> a -> a
+ok1 = choose id
+
+ok2 : ({a} a -> a) -> {a} a -> a
+ok2 = choose id

@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           Plato
-version:        1.0.0
+version:        1.0.3
 description:    Please see the README on GitHub at <https://github.com/ksrky/Plato#readme>
 homepage:       https://github.com/ksrky/Plato#readme
 bug-reports:    https://github.com/ksrky/Plato/issues
@@ -26,12 +26,12 @@ library
   exposed-modules:
       Plato
       Plato.Common.Error
+      Plato.Common.Fixity
       Plato.Common.Ident
       Plato.Common.Location
       Plato.Common.Name
       Plato.Common.Pretty
       Plato.Common.Uniq
-      Plato.Common.Utils
       Plato.Core.Closure
       Plato.Core.Env
       Plato.Core.Equal
@@ -41,14 +41,8 @@ library
       Plato.Core.Result
       Plato.Driver.Context
       Plato.Driver.Flag
-      Plato.Driver.Import
-      Plato.Driver.Info
       Plato.Driver.Interactive
-      Plato.Driver.Logger
       Plato.Driver.Monad
-      Plato.Nicifier
-      Plato.Nicifier.OpParser
-      Plato.Nicifier.OpParser.Resolver
       Plato.Parsing
       Plato.Parsing.Action
       Plato.Parsing.Error
@@ -58,6 +52,7 @@ library
       Plato.Parsing.Parser
       Plato.Parsing.Token
       Plato.PsToTyp
+      Plato.PsToTyp.Resolver
       Plato.PsToTyp.Scoping
       Plato.PsToTyp.SynRstrc
       Plato.PsToTyp.Utils
@@ -81,15 +76,13 @@ library
       Plato.Typing.Error
       Plato.Typing.Kc
       Plato.Typing.Kc.Unify
-      Plato.Typing.Kc.Utils
+      Plato.Typing.Misc
       Plato.Typing.PatTrans
       Plato.Typing.Tc
       Plato.Typing.Tc.Coercion
       Plato.Typing.Tc.InstGen
       Plato.Typing.Tc.SubsCheck
-      Plato.Typing.Tc.Subst
       Plato.Typing.Tc.Unify
-      Plato.Typing.Tc.Utils
       Plato.Typing.Zonking
       Plato.TypToCore
   other-modules:
@@ -122,6 +115,7 @@ library
 executable plato
   main-is: Main.hs
   other-modules:
+      Depends
       Info
       Info.TH
       Options
@@ -158,12 +152,6 @@ test-suite Plato-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Plato.NicifierSpec
-      Plato.Parsing.LexerSpec
-      Plato.Parsing.ParserSpec
-      Plato.PsToTypSpec
-      Plato.TypingSpec
-      Plato.TypToCoreSpec
       Paths_Plato
   hs-source-dirs:
       test

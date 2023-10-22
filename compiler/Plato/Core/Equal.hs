@@ -1,12 +1,12 @@
-module Plato.Core.Equal where
+module Plato.Core.Equal (Equal (..)) where
 
 import Control.Exception.Safe
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Prettyprinter
 
 import Plato.Common.Error
+import Plato.Common.Pretty
 import Plato.Core.Closure
 import Plato.Core.Env
 import Plato.Core.Eval
@@ -14,7 +14,7 @@ import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Equal a where
-        (~) :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => a -> a -> m ()
+        (~) :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => a -> a -> m ()
 
 instance Equal (Clos Term) where
         (~) t u = do
@@ -29,7 +29,7 @@ infix 1 ~
 -- eq' ((t,u),s) = eq (t,s) (u,s)
 
 eqBind ::
-        (MonadReader e m, CoreEnv e, MonadIO m, Closure a) =>
+        (MonadReader e m, HasCoreEnv e, MonadIO m, Closure a) =>
         (a -> a -> m ()) ->
         Bind a ->
         Bind a ->
@@ -65,7 +65,7 @@ instance Equal Val where
                 | otherwise = throwError "Different values"
 
 {- eqBox implements alpha equality -}
-eqBox :: (MonadReader e m, CoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> Clos Term -> m ()
+eqBox :: (MonadReader e m, HasCoreEnv e, MonadThrow m, MonadIO m) => Clos Term -> Clos Term -> m ()
 -- eqBox c c' | c == c' = return ()
 eqBox (Var x, s) (Var y, s') = do
         x' <- getIndex x s
@@ -75,7 +75,7 @@ eqBox (Let p t, s) c = do
         s' <- evalProg (p, s)
         eqBox (t, s') c
 eqBox c c'@(Let _ _, _) = eqBox c' c
-eqBox (Q ps (x, a) b, s) (Q ps' (x', a') b', s') | ps == ps' = do
+eqBox (Q ps x a b, s) (Q ps' x' a' b', s') | ps == ps' = do
         eqBox (a, s) (a', s')
         (x, Boxed (b, s)) ~ (x', Boxed (b', s'))
 eqBox (Lam (x, _) t, s) (Lam (x', _) t', s') = (x, Boxed (t, s)) ~ (x', Boxed (t', s'))
@@ -103,9 +103,7 @@ eqBox (Box t, s) (Box t', s') = eqBox (t, s) (t', s')
 eqBox (Force t, s) (Force t', s') = eqBox (t, s) (t', s')
 eqBox (Rec t, s) (Rec t', s') = eqBox (t, s) (t', s')
 eqBox (Fold t, s) (Fold t', s') = eqBox (t, s) (t', s')
-eqBox (Unfold (x, t) u, s) (Unfold (x', t') u', s') = do
-        eqBox (t, s) (t', s')
-        (x, Boxed (u, s)) ~ (x', Boxed (u', s'))
+eqBox (Unfold t, s) (Unfold t', s') = eqBox (t, s) (t', s')
 eqBox (t, _) (t', _)
         | t == t' = return () -- Type, Label, Enum
         | otherwise = throwError "Different terms"
@@ -113,7 +111,7 @@ eqBox (t, _) (t', _)
 instance Equal Boxed where
         Boxed c ~ Boxed c' = eqBox c c'
 
-instance Equal Index where
+instance Equal Ix where
         i0 ~ i1
                 | i0 == i1 = return ()
                 | otherwise = do
@@ -154,7 +152,5 @@ instance Equal Ne where
                                 eqBranches lus0' lus1'
                 eqBranches _ _ = throwError "Case: branches differ"
         NForce t ~ NForce t' = t ~ t'
-        NUnfold t xu ~ NUnfold t' xu' = do
-                t ~ t'
-                xu ~ xu'
+        NUnfold t ~ NUnfold t' = t ~ t'
         t ~ u = throwError $ hsep ["Different neutrals:", pretty t, "/=", pretty u]

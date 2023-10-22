@@ -1,6 +1,7 @@
 data a :,: b where
     (:,:) : a -> b -> a :,: b
 
+infixr 1 data :,:
 infixr 1 :,:
 
 fst : {a b} a :,: b -> a
@@ -17,3 +18,5 @@ uncurry f (x :,: y) = f x y
 
 swap : {a b} a :,: b -> b :,: a
 swap (x :,: y) = y :,: x
+
+data Unit where Unit : Unit
