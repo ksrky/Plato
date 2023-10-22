@@ -74,7 +74,7 @@ steps:
       field_comment: 2
       #
       #     # How many spaces to insert before "deriving" clause. Deriving clauses are always on separate lines.
-      deriving: 8
+      deriving: 4
       #
       #     # How many spaces to insert before "via" clause counted from indentation of deriving clause
       #     # Possible values:
