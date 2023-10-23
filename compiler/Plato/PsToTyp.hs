@@ -9,7 +9,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.Graph
-import Data.List                  qualified as List
+import Data.List              qualified as List
 import GHC.Stack
 
 import Plato.Common.Error

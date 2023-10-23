@@ -7,7 +7,7 @@ import Control.Exception.Safe
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Data.Tuple                 qualified as Tuple
+import Data.Tuple             qualified as Tuple
 
 import Plato.Common.Error
 import Plato.Common.Location

@@ -1,11 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Parsing (
-    parseFile,
-    parsePartial,
-    parseExpr,
-    parseDecls,
-) where
+module Plato.Parsing (parseDecls, parseExpr, parseFile, parsePartial) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
