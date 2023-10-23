@@ -11,17 +11,17 @@ import Plato.Parsing.Token
 
 catchPsErrors :: (MonadCatch m) => m a -> m a
 catchPsErrors =
-        ( `catches`
-                [ Handler $ \(LexError sp msg) -> throwLocErr sp (pretty msg)
-                , Handler $ \(PsError sp tok) -> throwLocErr sp $ hsep ["parse error at", pretty tok]
-                ]
-        )
+    ( `catches`
+        [ Handler $ \(LexError sp msg) -> throwLocErr sp (pretty msg)
+        , Handler $ \(PsError sp tok) -> throwLocErr sp $ hsep ["parse error at", pretty tok]
+        ]
+    )
 
 -- | Lexical error
 data LexError = LexError Span String
 
 instance Show LexError where
-        show _ = "Lexer error"
+    show _ = "Lexer error"
 
 instance Exception LexError
 
@@ -32,7 +32,7 @@ throwLexError sp msg = lift $ throw $ LexError sp msg
 data PsError = PsError Span Token
 
 instance Show PsError where
-        show _ = "Parser error"
+    show _ = "Parser error"
 
 instance Exception PsError
 
