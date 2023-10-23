@@ -1,9 +1,4 @@
-module Plato.Driver.Interactive (
-        Interactive,
-        runInteractive,
-        evalCore,
-        printList,
-) where
+module Plato.Driver.Interactive (Interactive, evalCore, printList, runInteractive) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -18,23 +13,23 @@ import Plato.Core.Pretty
 import Plato.Driver.Monad
 import Plato.Syntax.Core
 
-data InteractEnv = InteractEnv {int_scope :: Scope}
+data InteractEnv = InteractEnv { int_scope :: Scope
+                                 }
 
 type Interactive m = ReaderT InteractEnv m
 
 runInteractive ::
-        (PlatoMonad m) =>
-        Interactive m a ->
-        m a
+    (PlatoMonad m) =>
+    Interactive m a -> m a
 runInteractive m = do
-        env <- readCoreEnv =<< getContext
-        runReaderT m $ InteractEnv{int_scope = restoreScope env}
+    env <- readCoreEnv =<< getContext
+    runReaderT m $ InteractEnv{int_scope = restoreScope env}
 
 evalCore :: (PlatoMonad m) => Term -> Interactive m ()
 evalCore t = do
-        sc <- asks int_scope
-        lift $ applyContext $ liftIO . putDoc =<< evalPrint =<< eval (t, sc)
-        liftIO $ putStrLn ""
+    sc <- asks int_scope
+    lift $ applyContext $ liftIO . putDoc =<< evalPrint =<< eval (t, sc)
+    liftIO $ putStrLn ""
 
 printList :: (Pretty a) => [a] -> IO ()
 printList = putDocW 100 . (<> line) . vsep . map pretty

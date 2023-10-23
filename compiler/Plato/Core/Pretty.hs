@@ -14,20 +14,20 @@ import Plato.Core.Result
 import Plato.Syntax.Core
 
 class Print a where
-        evalPrint :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
+    evalPrint :: (MonadReader e m, HasCoreEnv e, HasUniq e, MonadThrow m, MonadIO m) => a -> m (Doc ann)
 
 instance Print Ident where
-        evalPrint = return . prettyId
+    evalPrint = return . prettyId
 
 instance Print Val where
         -- original impl uses 'quote', but need to expand inside fold for the final result
-        evalPrint a = evalPrint =<< nf [] a
+    evalPrint a = evalPrint =<< nf [] a
 
 instance Print (Clos Term) where
-        evalPrint a = evalPrint =<< quote [] a
+    evalPrint a = evalPrint =<< quote [] a
 
 instance Print Ne where
-        evalPrint a = evalPrint =<< quote [] a
+    evalPrint a = evalPrint =<< quote [] a
 
 instance Print Term where
         evalPrint = return . pretty
