@@ -68,7 +68,7 @@ steps:
       #     # Possible values:
       #     # - "same_line" -- "{" and first field goes on the same line as the data constructor.
       #     # - "indent N" -- insert a new line and N spaces from the beginning of the data constructor
-      first_field: "indent 4"
+      first_field: "same_line"
       #
       #     # How many spaces to insert between the column with "," and the beginning of the comment in the next line.
       field_comment: 2

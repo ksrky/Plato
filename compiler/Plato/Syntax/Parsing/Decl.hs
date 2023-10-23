@@ -14,20 +14,15 @@ import Plato.Syntax.Parsing.Type
 type LTopDecl = Located TopDecl
 
 data TopDecl
-        = DataD Ident [Ident] [(Ident, LType)]
-        | LocalD {unLocalD :: LocDecl}
-        deriving (Eq, Show)
+    = DataD Ident [Ident] [(Ident, LType)]
+    | LocalD LocDecl
+    deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Pretty printing
 ----------------------------------------------------------------
 instance Pretty TopDecl where
-        pretty (DataD con args constrs) =
-                hsep
-                        [ "data"
-                        , hsep (pretty con : map pretty args)
-                        , "where"
-                        , line
-                        , map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi
-                        ]
-        pretty (LocalD ld) = pretty ld
+    pretty (DataD con args constrs) =
+            hsep [ "data", hsep (pretty con : map pretty args), "where", line
+                 , map (\(id, ty) -> hsep [pretty id, colon, pretty ty]) constrs `sepBy` semi]
+    pretty (LocalD ld) = pretty ld

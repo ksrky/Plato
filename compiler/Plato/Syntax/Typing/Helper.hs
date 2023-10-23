@@ -27,7 +27,7 @@ newUniq = pickUniq =<< ask
 
 unTyVar :: TyVar -> Ident
 unTyVar (BoundTv id) = id
-unTyVar (FreeTv id) = id
+unTyVar (FreeTv id)  = id
 
 -- | Variable generation
 labelVarId :: (MonadReader e m, HasUniq e, MonadIO m) => String -> m Ident
@@ -64,10 +64,10 @@ writeMetaKv (MetaKv _ ref) ty = writeMIORef ref (Just ty)
 
 splitConstrTy :: Rho -> ([Sigma], Tau)
 splitConstrTy = go []
- where
-  go :: [Sigma] -> Rho -> ([Sigma], Tau)
-  go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
-  go acc tau = (reverse acc, tau)
+  where
+    go :: [Sigma] -> Rho -> ([Sigma], Tau)
+    go acc (ArrT sigma rho) = go (unLoc sigma : acc) (unLoc rho)
+    go acc tau              = (reverse acc, tau)
 
 dataSignat :: Quants -> Kind
 dataSignat = foldr (\(_, kn1) kn2 -> ArrK kn1 kn2) StarK
