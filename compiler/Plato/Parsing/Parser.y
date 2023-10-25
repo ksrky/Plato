@@ -4,7 +4,7 @@
 
 module Plato.Parsing.Parser (
     parser,
-    instrParser,
+    commandParser,
     exprParser,
     typeParser,
     declsParser,
@@ -37,7 +37,7 @@ import Prettyprinter
 %error { parseError }
 
 %name parser program
-%name instrParser instr
+%name commandParser command
 %name exprParser expr
 %name typeParser type
 %name declsParser decls
@@ -82,9 +82,9 @@ digit                           { (mkLDigit -> Just $$) }
 program     :: { Program }
             : ';' decls                             { $2 }
 
-instr       :: { Instr }
-            : decls                                 { InstrDecls $1 }
-            | expr                                  { InstrEval $1 }
+command       :: { Command }
+            : decls                                 { CommandDecls $1 }
+            | expr                                  { CommandEval $1 }
 
 -----------------------------------------------------------
 -- Declarations

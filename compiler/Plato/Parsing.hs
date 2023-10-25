@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Plato.Parsing (parseDecls, parseExpr, parseFile, parsePartial) where
+module Plato.Parsing (parseFile, parsePartial, parseExpr, parseDecls, parseCommand) where
 
 import Control.Exception.Safe
 import Control.Monad.IO.Class
@@ -30,12 +30,6 @@ parseFile src = catchPsErrors $ do
     (prog, _) <- liftIO $ parse src uref inp parser
     return prog
 
-{- parseInstr :: (MonadReader e m, HasUniq e, MonadIO m, MonadCatch m) => T.Text -> m Instr
-parseInstr inp = do
-        uref <- getUniq =<< ask
-        (instr, _) <- liftIO $ parseLine uref inp instrParser
-        updateContext $ opParseInstr instr -}
-
 parsePartial :: (MonadReader e m, HasUniq e, MonadIO m) => Parser a -> T.Text -> m a
 parsePartial parser inp = do
     uref <- getUniq =<< ask
@@ -46,3 +40,6 @@ parseExpr = catchPsErrors . parsePartial exprParser
 
 parseDecls :: (MonadReader e m, HasUniq e, MonadIO m, MonadCatch m) => T.Text -> m [LTopDecl]
 parseDecls = catchPsErrors . parsePartial declsParser
+
+parseCommand :: (MonadReader e m, HasUniq e, MonadIO m, MonadCatch m) => T.Text -> m Command
+parseCommand = catchPsErrors . parsePartial commandParser
