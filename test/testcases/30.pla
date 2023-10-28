@@ -1,0 +1,5 @@
+const : {a b} a -> b -> a
+const x y = x
+
+const' : {a} a -> {b} b -> a
+const' x y = x

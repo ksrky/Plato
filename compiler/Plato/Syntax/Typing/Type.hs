@@ -34,7 +34,10 @@ data TyVar
     | FreeTv Ident
     deriving (Ord)
 
-data MetaTv = MetaTv Uniq (IORef (Maybe Tau))
+data MetaTv = MetaTv { meta_uniq     :: Uniq
+                       , meta_repres :: IORef (Maybe Tau)
+                       , meta_quant  :: Maybe Quant
+                       }
 
 ----------------------------------------------------------------
 -- Basic interfaces
@@ -49,13 +52,13 @@ instance Eq TyVar where
     _ == _                         = False
 
 instance Eq MetaTv where
-    (MetaTv u1 _) == (MetaTv u2 _) = u1 == u2
+    (MetaTv u1 _ _) == (MetaTv u2 _ _) = u1 == u2
 
 instance Show MetaTv where
-    show (MetaTv u _) = show u
+    show (MetaTv u _ _) = show u
 
 instance Ord MetaTv where
-    MetaTv u1 _ `compare` MetaTv u2 _ = u1 `compare` u2
+    MetaTv u1 _ _ `compare` MetaTv u2 _ _ = u1 `compare` u2
 
 instance HasLoc TyVar where
     getLoc (BoundTv id) = getLoc id
@@ -69,7 +72,7 @@ instance Pretty TyVar where
     pretty (FreeTv id)  = pretty id
 
 instance Pretty MetaTv where
-    pretty (MetaTv u _) = dollar <> pretty u
+    pretty (MetaTv u _ _) = dollar <> pretty u
 
 prQuant :: Quant -> Doc ann
 prQuant (tv, kn) = hsep [pretty tv, colon, pretty kn]

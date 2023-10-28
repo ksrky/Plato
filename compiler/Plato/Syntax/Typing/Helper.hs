@@ -34,20 +34,23 @@ labelVarId :: (MonadReader e m, HasUniq e, MonadIO m) => String -> m Ident
 labelVarId = freshIdent . str2varName
 
 -- | Type variable generation
-newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Type
-newTyVar = MetaT <$> newMetaTv
+newTyVar :: (MonadReader e m, HasUniq e, MonadIO m) =>  m Type
+newTyVar = MetaT <$> newMetaTv Nothing
+
+renewTyVar :: (MonadReader e m, HasUniq e, MonadIO m) => Quant -> m Type
+renewTyVar qn = MetaT <$> newMetaTv (Just qn)
 
 newFreeTv :: (MonadReader e m, HasUniq e, MonadIO m) => TyVar -> m TyVar
 newFreeTv tv = FreeTv <$> reassignUniq (unTyVar tv)
 
-newMetaTv :: (MonadReader e m, HasUniq e, MonadIO m) => m MetaTv
-newMetaTv = MetaTv <$> newUniq <*> newMIORef Nothing
+newMetaTv :: (MonadReader e m, HasUniq e, MonadIO m) => Maybe Quant -> m MetaTv
+newMetaTv mbqn = MetaTv <$> newUniq <*> newMIORef Nothing <*> return mbqn
 
 readMetaTv :: (MonadIO m) => MetaTv -> m (Maybe Type)
-readMetaTv (MetaTv _ ref) = readMIORef ref
+readMetaTv (MetaTv _ ref _) = readMIORef ref
 
 writeMetaTv :: (MonadIO m) => MetaTv -> Type -> m ()
-writeMetaTv (MetaTv _ ref) ty = writeMIORef ref (Just ty)
+writeMetaTv (MetaTv _ ref _) ty = writeMIORef ref (Just ty)
 
 -- | Kind variable generation
 newKnVar :: (MonadReader e m, HasUniq e, MonadIO m) => m Kind

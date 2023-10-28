@@ -19,7 +19,7 @@ import Plato.Typing.Tc.Coercion
 -- | Instantiation
 instantiate :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, Rho)
 instantiate (AllT qns tau) = do
-    tys <- mapM (const newTyVar) qns
+    tys <- mapM renewTyVar qns
     tau' <- substTvs (map fst qns) tys (unLoc tau)
     return (instTrans tys, tau')
 instantiate ty = return (mempty, ty)
@@ -55,10 +55,19 @@ quantify [] rho = return ([], rho)
 quantify tvs rho = do
     ftvs <- mconcat <$> (mapM getFreeTvs =<< getEnvTypes)
     let ftvnames = map (nameIdent . unTyVar) (S.toList ftvs)
-    newtvs <- zipWithM (\n -> const $ BoundTv <$> freshIdent n) (nameSupply List.\\ ftvnames) tvs
-    zipWithM_ writeMetaTv tvs (map VarT newtvs)
-    qns <- mapM (\tv -> (tv,) <$> newKnVar) newtvs
+    qns <- zipWithM newQuant (nameSupply List.\\ ftvnames) tvs
     return (qns, AllT qns (noLoc rho))
+
+newQuant :: (MonadReader e m, HasUniq e, MonadIO m) => Name -> MetaTv -> m Quant
+newQuant _ mtv@(MetaTv{meta_quant =Just (tv, kn)}) = do
+    tv' <- newFreeTv tv
+    writeMetaTv mtv (VarT tv')
+    return (tv', kn)
+newQuant name mtv@(MetaTv{meta_quant =Nothing}) = do
+    tv <- BoundTv <$> freshIdent name
+    writeMetaTv mtv (VarT tv)
+    kn <- newKnVar
+    return (tv, kn)
 
 nameSupply :: [Name]
 nameSupply = [str2tyvarName (x : show i) | i <- [1 :: Integer .. 10], x <- ['a' .. 'z']]
