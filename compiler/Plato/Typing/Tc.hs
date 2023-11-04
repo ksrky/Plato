@@ -34,10 +34,6 @@ data Expected a
     = Infer (IORef a)
     | Check a
 
-instance (Show a) => Show (Expected a) where
-    show Infer{}    = "{tyref}"
-    show (Check ty) = show ty
-
 checkPats ::
     (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m, MonadCatch m) =>
     [LPat] -> [Sigma] -> m ([LPat], [(Ident, Sigma)])
@@ -197,7 +193,7 @@ checkSigma exp sigma = do
         vsep
             [ "Polymorphic recursion is not allowed."
             , "The following type variables are instantiated by different types:"
-                    <+> concatWith (surround (semi <> space)) (map pretty (S.toList bad_tvs))
+                    <+> concatWith (surround (comma <> space)) (map pretty (S.toList bad_tvs))
             ]
     return $ unCoer (coer <> genTrans qns) exp'
 

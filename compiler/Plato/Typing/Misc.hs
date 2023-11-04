@@ -2,7 +2,8 @@
 {-# LANGUAGE GADTs     #-}
 
 module Plato.Typing.Misc
-    ( getEnvTypes
+    ( freshTvNames
+    , getEnvTypes
     , getFreeTvs
     , getMetaKvs
     , getMetaTvs
@@ -12,13 +13,16 @@ module Plato.Typing.Misc
 
 import Control.Monad.IO.Class
 import Control.Monad.Reader
+import Data.List              qualified as List
 import Data.Map.Strict        qualified as M
 import Data.Set               qualified as S
 import GHC.Stack
 
 import Plato.Common.Ident
 import Plato.Common.Location
+import Plato.Common.Name
 import Plato.Syntax.Typing
+import Plato.Syntax.Typing.Helper
 import Plato.Typing.Env
 import Plato.Typing.Zonking
 
@@ -87,3 +91,11 @@ substExpr id exp body = subst' body
         LetE (fmap (\(Bind idty exp) -> Bind idty (subst' exp)) bnds) (subst' body)
     subst' (CaseE test ann_ty alts) =
         CaseE (subst' test) ann_ty (map (\(pat, exp) -> (pat, subst' exp)) alts)
+
+freshTvNames :: (MonadReader e m, HasTypEnv e, MonadIO m) => m [Name]
+freshTvNames = do
+    ftvs <- mconcat <$> (mapM getFreeTvs =<< getEnvTypes)
+    let ftvnames = map (nameIdent . unTyVar) (S.toList ftvs)
+    return $ supply List.\\ ftvnames
+  where
+    supply = [str2tyvarName (x : show i) | x <- ['a' .. 'z'], i <- [1 :: Integer ..]]

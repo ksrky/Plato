@@ -19,9 +19,7 @@ import Plato.Typing.Tc.Unify
   Checks whether sigma1 is subsumption of (more polymorphic than) sigma2
   and returns coercion of sigma1 to sigma2.
 -}
-subsCheck ::
-    (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-    Sigma -> Sigma -> m Coercion
+subsCheck :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Sigma -> m Coercion
 subsCheck sigma1 sigma2 = do
     (coer1, qns, rho2) <- skolemise sigma2
     coer2 <- subsCheckRho sigma1 rho2
@@ -31,9 +29,7 @@ subsCheck sigma1 sigma2 = do
     return $ deepskolTrans qns coer1 coer2
 
 -- | Subsumption checking. Coersing sigma to rho.
-subsCheckRho ::
-    (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) =>
-    Sigma -> Rho -> m Coercion
+subsCheckRho :: (MonadReader e m, HasUniq e, MonadIO m, MonadThrow m) => Sigma -> Rho -> m Coercion
 subsCheckRho sigma1@AllT{} rho2 = do
     (coer1, rho1) <- instantiate sigma1
     coer2 <- subsCheckRho rho1 rho2

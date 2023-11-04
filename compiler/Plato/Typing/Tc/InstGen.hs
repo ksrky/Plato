@@ -3,7 +3,6 @@ module Plato.Typing.Tc.InstGen (generalize, instantiate, skolemise) where
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader.Class
-import Data.List                  qualified as List
 import Data.Set                   qualified as S
 
 import Plato.Common.Ident
@@ -25,12 +24,12 @@ instantiate (AllT qns tau) = do
 instantiate ty = return (mempty, ty)
 
 -- | Skolemisation
-skolemise ::
-    (MonadReader e m, HasUniq e, MonadIO m) =>
-    Sigma -> m (Coercion, [Quant], Rho)
+skolemise :: (MonadReader e m, HasUniq e, MonadIO m) => Sigma -> m (Coercion, [Quant], Rho)
 skolemise (AllT qns rho) = do
     qns1 <- mapM (\(tv, mbkn) -> (,mbkn) <$> newFreeTv tv) qns
     (coer, qns2, rho') <- skolemise =<< substTvs (map fst qns) (map (VarT . fst) qns1) (unLoc rho)
+    -- ftvs <- getFreeTvs rho'
+    -- let qns1' =  filter (\(tv, _) -> tv `S.member` ftvs) qns1
     return (prpolyTrans qns1 coer, qns1 ++ qns2, rho')
 skolemise (ArrT arg_ty res_ty) = do
     (coer, qns, res_ty') <- skolemise (unLoc res_ty)
@@ -39,9 +38,7 @@ skolemise (ArrT arg_ty res_ty) = do
 skolemise rho = return (mempty, [], rho)
 
 -- | Generalization
-generalize ::
-    (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) =>
-    Rho -> m ([Quant], Sigma)
+generalize :: (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) => Rho -> m ([Quant], Sigma)
 generalize ty = do
     env_tvs <- mapM getMetaTvs =<< getEnvTypes
     res_tvs <- getMetaTvs ty
@@ -49,13 +46,11 @@ generalize ty = do
     quantify (S.toList all_tvs) ty
 
 quantify ::
-    (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) =>
-    [MetaTv] -> Rho -> m ([Quant], Sigma)
+    (MonadReader e m, HasTypEnv e, HasUniq e, MonadIO m) => [MetaTv] -> Rho -> m ([Quant], Sigma)
 quantify [] rho = return ([], rho)
 quantify tvs rho = do
-    ftvs <- mconcat <$> (mapM getFreeTvs =<< getEnvTypes)
-    let ftvnames = map (nameIdent . unTyVar) (S.toList ftvs)
-    qns <- zipWithM newQuant (nameSupply List.\\ ftvnames) tvs
+    names <- freshTvNames
+    qns <- zipWithM newQuant names tvs
     return (qns, AllT qns (noLoc rho))
 
 newQuant :: (MonadReader e m, HasUniq e, MonadIO m) => Name -> MetaTv -> m Quant
@@ -68,6 +63,3 @@ newQuant name mtv@(MetaTv{meta_quant =Nothing}) = do
     writeMetaTv mtv (VarT tv)
     kn <- newKnVar
     return (tv, kn)
-
-nameSupply :: [Name]
-nameSupply = [str2tyvarName (x : show i) | i <- [1 :: Integer .. 10], x <- ['a' .. 'z']]

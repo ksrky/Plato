@@ -34,7 +34,7 @@ transCase ::
 transCase (CaseE exp ty alts) = do
     let clauses :: Clauses 'Typed = map (\(p, e) -> ([p], e)) alts
     match [(exp, ty)] clauses
-transCase _ = unreachable "Expected type-checked case expression"
+transCase exp = return exp -- warning "Expected type-checked case expression"
 
 constructors :: forall e m. (MonadReader e m, HasTypEnv e, MonadThrow m, MonadIO m) => Type -> m Constrs
 constructors ty = getCon [] =<< zonk ty

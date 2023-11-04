@@ -1,0 +1,6 @@
+id : {a b} a -> a
+id x = x
+
+data T where T : T
+
+ex = id T

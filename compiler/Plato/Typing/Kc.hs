@@ -20,8 +20,7 @@ checkKindStar :: (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO
 checkKindStar ty = checkKind ty StarK
 
 inferKind ::
-    (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) =>
-    LType -> m (LType, Kind)
+    (MonadReader e m, HasTypEnv e, HasUniq e, MonadCatch m, MonadIO m) => LType -> m (LType, Kind)
 inferKind ty = do
     exp_kn <- newKnVar
     checkKind ty exp_kn

@@ -75,7 +75,5 @@ kcErrorHandler sp kn_exp kn_act =
             kn_act' <- zonk kn_act
             throwLocErr sp $ hsep
                 [ "Infinite kind:"
-                , squotes $ pretty kn_exp'
-                , "~"
-                , squotes $ pretty kn_act']
+                , squotes $ pretty kn_exp', "~", squotes $ pretty kn_act']
     ]
