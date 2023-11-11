@@ -1,16 +1,16 @@
-module Plato (
-    runPlato,
-    compileToCore,
-    evaluateCore,
-    module Plato.Driver.Flag,
-    module Plato.Driver.Interactive,
-    module Plato.Driver.Monad,
-) where
+module Plato
+    ( module Plato.Driver.Flag
+    , module Plato.Driver.Interactive
+    , module Plato.Driver.Monad
+    , compileToCore
+    , evaluateCore
+    , runPlato
+    ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Data.Text                qualified as T
+import Data.Text              qualified as T
 
 import Plato.Common.Error
 import Plato.Driver.Context

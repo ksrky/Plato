@@ -1,6 +1,6 @@
 module Plato.Parsing.Layout where
 
-import                Data.Text             qualified as T
+import Data.Text qualified as T
 
 import                Plato.Common.Location
 import                Plato.Parsing.Action

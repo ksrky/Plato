@@ -1,7 +1,7 @@
 module Plato.Common.Name where
 
-import Data.Map.Strict     qualified as M
-import Data.Text           qualified as T
+import Data.Map.Strict qualified as M
+import Data.Text       qualified as T
 
 import Plato.Common.Pretty
 

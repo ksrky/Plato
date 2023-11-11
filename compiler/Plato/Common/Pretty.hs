@@ -1,7 +1,4 @@
-module Plato.Common.Pretty (
-        module Prettyprinter,
-        module Plato.Common.Pretty
-) where
+module Plato.Common.Pretty (module Plato.Common.Pretty, module Prettyprinter) where
 
 import Prettyprinter hiding (Pretty (..))
 import Prettyprinter qualified

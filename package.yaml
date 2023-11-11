@@ -28,6 +28,7 @@ dependencies:
   - directory
   - filepath
   - hslogger
+  - lens
   - mtl
   - prettyprinter
   - safe-exceptions

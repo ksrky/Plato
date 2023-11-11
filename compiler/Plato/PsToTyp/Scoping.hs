@@ -14,14 +14,15 @@ import Plato.PsToTyp.Utils
 type Scope = M.Map Name Ident
 
 class HasScope e where
-        getScope :: e -> Scope
-        modifyScope :: (Scope -> Scope) -> e -> e
+        getScope ::   e -> Scope
         setScope :: Scope -> e -> e
         setScope = modifyScope . const
+        modifyScope :: (Scope -> Scope) -> e -> e
+        modifyScope f e = setScope (f (getScope e)) e
 
 instance HasScope Scope where
         getScope = id
-        modifyScope = id
+        setScope = const
 
 scoping :: (MonadReader e m, HasScope e, MonadThrow m) => Ident -> m Ident
 scoping id = do

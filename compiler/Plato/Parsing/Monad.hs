@@ -55,22 +55,21 @@ movePosn pos inp = case T.uncons inp of
 ----------------------------------------------------------------
 -- Parser monad
 ----------------------------------------------------------------
-data PsState = PsState
-    { -- | file name
-      parser_file  :: !FilePath
-      -- | position at current input location
-    , parser_pos   :: !PsPosn
-      -- | the current input
-    , parser_inp   :: T.Text
-      -- | the character before the input
-    , parser_chr   :: !Char
-      -- | rest of the bytes for the current char
-    , parser_bytes :: [Word8]
-      -- | the current startcode
-    , parser_scd   :: !Int
-      -- | ParserUserState will be defined in the user program
-    , parser_ust   :: PsUserState
-    }
+data PsState = PsState { -- | file name
+                         parser_file    :: !FilePath
+                         -- | position at current input location
+                         , parser_pos   :: !PsPosn
+                         -- | the current input
+                         , parser_inp   :: T.Text
+                         -- | the character before the input
+                         , parser_chr   :: !Char
+                         -- | rest of the bytes for the current char
+                         , parser_bytes :: [Word8]
+                         -- | the current startcode
+                         , parser_scd   :: !Int
+                         -- | ParserUserState will be defined in the user program
+                         , parser_ust   :: PsUserState
+                         }
 
 newtype ParserT m a
     = ParserT { runParserT :: PsState -> m (a, PsState) }
@@ -149,11 +148,10 @@ setStartCode scd = modify $ \s -> s{parser_scd = scd}
 ----------------------------------------------------------------
 -- PsUserState
 ----------------------------------------------------------------
-data PsUserState = PsUserState
-    { ust_commentDepth :: Int
-    , ust_indentLevels :: [Int]
-    , ust_uniq         :: IORef Uniq
-    }
+data PsUserState = PsUserState { ust_commentDepth   :: Int
+                                 , ust_indentLevels :: [Int]
+                                 , ust_uniq         :: IORef Uniq
+                                 }
 
 getUserState :: Monad m => ParserT m PsUserState
 getUserState = gets parser_ust
@@ -190,11 +188,9 @@ setIndentLevels lev = do
 -- Uniq ------------------------------------------
 instance HasUniq PsUserState where
     getUniq = getUniq . ust_uniq
-    setUniq uniq ust = setUniq uniq (ust_uniq ust)
 
 instance HasUniq PsState where
     getUniq = getUniq . parser_ust
-    setUniq uniq pst = setUniq uniq (parser_ust pst)
 
 freshUniq :: MonadIO m => ParserT m Uniq
 freshUniq =  pickUniq =<< get

@@ -34,10 +34,11 @@ data TyVar
     | FreeTv Ident
     deriving (Ord)
 
-data MetaTv = MetaTv { meta_uniq     :: Uniq
-                       , meta_repres :: IORef (Maybe Tau)
-                       , meta_quant  :: Maybe Quant
-                       }
+data MetaTv = MetaTv
+    { meta_uniq   :: Uniq
+    , meta_repres :: IORef (Maybe Tau)
+    , meta_quant  :: Maybe Quant
+    }
 
 ----------------------------------------------------------------
 -- Basic interfaces

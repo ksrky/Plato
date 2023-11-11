@@ -1,6 +1,6 @@
 module Plato.Driver.Context (Context, initContext) where
 
-import Control.Monad.IO.Class
+
 import Data.IORef
 
 import Plato.Common.Uniq
@@ -8,11 +8,12 @@ import Plato.Core.Env
 import Plato.PsToTyp.Scoping
 import Plato.Typing.Env
 
-data Context = Context { ctx_uniq      :: !(IORef Uniq)
-                         , ctx_scope   :: !Scope
-                         , ctx_typEnv  :: !TypEnv
-                         , ctx_coreEnv :: !CoreEnv
-                         }
+data Context = Context
+    { ctx_uniq    :: !(IORef Uniq)
+    , ctx_scope   :: !Scope
+    , ctx_typEnv  :: !TypEnv
+    , ctx_coreEnv :: !CoreEnv
+    }
 
 initContext :: IO Context
 initContext = do
@@ -27,16 +28,14 @@ initContext = do
 
 instance HasUniq Context where
     getUniq = return . ctx_uniq
-    setUniq uniq ctx = liftIO $ writeIORef (ctx_uniq ctx) uniq
 
 instance HasScope Context where
-    getScope = ctx_scope
-    modifyScope f ctx = ctx{ctx_scope = f (ctx_scope ctx)}
+    getScope =  ctx_scope
+    setScope sc ctx = ctx{ctx_scope = sc}
 
 instance HasTypEnv Context where
     getTypEnv = ctx_typEnv
-    modifyTypEnv f ctx = ctx{ctx_typEnv = f (ctx_typEnv ctx)}
+    setTypEnv env ctx = ctx{ctx_typEnv = env}
 
 instance HasCoreEnv Context where
     getCoreEnv = getCoreEnv . ctx_coreEnv
-    setCoreEnv = setCoreEnv . ctx_coreEnv

@@ -104,6 +104,7 @@ library
     , directory
     , filepath
     , hslogger
+    , lens
     , mtl
     , prettyprinter
     , safe-exceptions
@@ -138,6 +139,7 @@ executable plato
     , filepath
     , haskeline
     , hslogger
+    , lens
     , mtl
     , optparse-applicative
     , prettyprinter
@@ -172,6 +174,7 @@ test-suite Plato-test
     , hslogger
     , hspec
     , hspec-discover
+    , lens
     , mtl
     , prettyprinter
     , safe-exceptions

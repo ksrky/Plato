@@ -1,8 +1,8 @@
 module Plato.Parsing.Action where
 
-import                Control.Monad.State
-import                Data.Text             qualified as T
-import                GHC.Stack
+import Control.Monad.State
+import Data.Text           qualified as T
+import GHC.Stack
 
 import                Plato.Common.Error
 import                Plato.Common.Location

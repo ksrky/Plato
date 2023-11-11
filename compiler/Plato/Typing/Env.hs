@@ -50,9 +50,10 @@ instance Monoid TypEnv where
 
 class HasTypEnv a where
     getTypEnv :: a -> TypEnv
-    modifyTypEnv :: (TypEnv -> TypEnv) -> a -> a
     setTypEnv :: TypEnv -> a -> a
     setTypEnv = modifyTypEnv . const
+    modifyTypEnv :: (TypEnv -> TypEnv) -> a -> a
+    modifyTypEnv f a = setTypEnv (f $ getTypEnv a) a
     modifySignats :: (Signats -> Signats) -> a -> a
     modifySignats f = modifyTypEnv $ \env -> env{typ_signats = f $ typ_signats env}
     modifyDataBinds :: (DataBinds -> DataBinds) -> a -> a
@@ -60,7 +61,7 @@ class HasTypEnv a where
 
 instance HasTypEnv TypEnv where
     getTypEnv = id
-    modifyTypEnv = id
+    setTypEnv = const
 
 class EnvManager a where
     extend :: Ident -> a -> TypEnv -> TypEnv

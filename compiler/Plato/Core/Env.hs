@@ -26,9 +26,10 @@ data EnvEntry
     | Closure (Clos Term)
     deriving (Show)
 
-data PrtInfo = PrtInfo { prt_ident    :: Ident
-                         , prt_expand :: Bool
-                         }
+data PrtInfo = PrtInfo
+    { prt_ident  :: Ident
+    , prt_expand :: Bool
+    }
 
 type EnvEntries = V.Vector (EnvEntry, PrtInfo)
 
@@ -40,12 +41,14 @@ initCoreEnv = newIORef mempty
 class HasCoreEnv e where
     getCoreEnv :: (MonadIO m) => e -> m (IORef EnvEntries)
     setCoreEnv :: (MonadIO m) => e -> EnvEntries -> m ()
+    setCoreEnv e envent = do
+        ref <-  getCoreEnv e
+        liftIO $ writeIORef ref envent
     readCoreEnv :: (MonadIO m) => e -> m EnvEntries
     readCoreEnv ref = liftIO . readIORef =<< getCoreEnv ref
 
 instance HasCoreEnv CoreEnv where
     getCoreEnv = return
-    setCoreEnv ref = liftIO . writeIORef ref
 
 extE :: (HasCoreEnv e, MonadIO m) => PrtInfo -> e -> m Ix
 extE fi ref = do

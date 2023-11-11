@@ -13,8 +13,9 @@ import Plato.Core.Pretty
 import Plato.Driver.Monad
 import Plato.Syntax.Core
 
-data InteractEnv = InteractEnv { int_scope :: Scope
-                                 }
+data InteractEnv = InteractEnv
+    { int_scope :: Scope
+    }
 
 type Interactive m = ReaderT InteractEnv m
 

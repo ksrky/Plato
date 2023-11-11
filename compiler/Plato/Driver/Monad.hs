@@ -23,9 +23,10 @@ import Plato.Driver.Flag
 ----------------------------------------------------------------
 -- Plato Env
 ----------------------------------------------------------------
-data PlatoEnv = PlatoEnv { plt_context :: !Context
-                           , plt_flags :: [Flag]
-                           }
+data PlatoEnv = PlatoEnv
+    { plt_context :: !Context
+    , plt_flags   :: [Flag]
+    }
 
 initPlatoEnv :: IO PlatoEnv
 initPlatoEnv = do
@@ -35,8 +36,9 @@ initPlatoEnv = do
 ----------------------------------------------------------------
 -- Session
 ----------------------------------------------------------------
-data Session = Session { unSession :: !(IORef PlatoEnv)
-                         }
+data Session = Session
+    { unSession :: !(IORef PlatoEnv)
+    }
 
 initSession :: (MonadIO m) => m Session
 initSession = liftIO $ Session <$> (newIORef =<< initPlatoEnv)
