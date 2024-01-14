@@ -1,4 +1,4 @@
-indentation: 8
+indentation: 4
 function-arrows: trailing
 comma-style: leading
 import-export-style: diff-friendly
